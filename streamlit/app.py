@@ -70,7 +70,11 @@ footer    { visibility: hidden; }
 header    { visibility: hidden; }
 
 /* ── App shell ── */
-.stApp { background: #050d1a; }
+.stApp {
+    background: #020810;
+    background-image: radial-gradient(circle, rgba(14,32,64,0.7) 1px, transparent 1px);
+    background-size: 30px 30px;
+}
 .block-container { padding-top: 2rem !important; }
 
 /* ── Sidebar ── */
@@ -88,8 +92,10 @@ header    { visibility: hidden; }
     transition: background 0.15s !important;
 }
 [data-testid="stSidebar"] .stRadio label:has(input:checked) {
-    background: #0e2040 !important;
-    color: #e8f0fe !important;
+    background: rgba(59,130,246,0.08) !important;
+    color: #93c5fd !important;
+    border-left: 3px solid #3b82f6 !important;
+    box-shadow: inset 0 0 20px rgba(59,130,246,0.05) !important;
 }
 
 /* ── Inputs & textareas ── */
@@ -228,9 +234,10 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
     transition: transform 0.18s, box-shadow 0.18s;
 }
 .metric-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 36px rgba(37,99,235,0.18);
-    border-color: #1a3560;
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 16px 48px rgba(37,99,235,0.22), 0 0 0 1px rgba(59,130,246,0.2);
+    border-color: rgba(59,130,246,0.25);
+    transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
 }
 .metric-card::after {
     content: '';
@@ -239,10 +246,10 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
     height: 2px;
     border-radius: 16px 16px 0 0;
 }
-.accent-blue::after   { background: linear-gradient(90deg, #1d4ed8, #3b82f6); }
-.accent-green::after  { background: linear-gradient(90deg, #059669, #34d399); }
-.accent-amber::after  { background: linear-gradient(90deg, #d97706, #fbbf24); }
-.accent-red::after    { background: linear-gradient(90deg, #dc2626, #f87171); }
+.accent-blue::after   { background: linear-gradient(90deg, #1d4ed8, #60a5fa, #93c5fd); box-shadow: 0 0 10px rgba(59,130,246,0.7); }
+.accent-green::after  { background: linear-gradient(90deg, #059669, #34d399, #6ee7b7); box-shadow: 0 0 10px rgba(16,185,129,0.7); }
+.accent-amber::after  { background: linear-gradient(90deg, #d97706, #fbbf24, #fde68a); box-shadow: 0 0 10px rgba(245,158,11,0.7); }
+.accent-red::after    { background: linear-gradient(90deg, #dc2626, #f87171, #fca5a5); box-shadow: 0 0 10px rgba(220,38,38,0.7); }
 
 .metric-label {
     font-size: 0.62rem;
@@ -254,13 +261,16 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
 }
 .metric-value {
     font-size: 1.8rem;
-    font-weight: 700;
-    color: #e8f0fe;
+    font-weight: 800;
+    background: linear-gradient(135deg, #93c5fd 0%, #dbeafe 50%, #c7d2fe 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     letter-spacing: -0.03em;
     line-height: 1;
     margin-bottom: 0.38rem;
 }
-.metric-max { font-size: 1rem; color: #4a7aaa; font-weight: 500; letter-spacing: 0; }
+.metric-max { font-size: 1rem; color: #4a7aaa; -webkit-text-fill-color: #4a7aaa; font-weight: 500; letter-spacing: 0; }
 .metric-sub { font-size: 0.69rem; color: #4a7aaa; }
 .ch-up   { color: #34d399; font-weight: 600; }
 .ch-down { color: #f87171; font-weight: 600; }
@@ -277,7 +287,7 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
     align-items: center;
 }
 .csat-score-side { text-align: center; padding-right: 2rem; border-right: 1px solid #0e2040; }
-.csat-number { font-size: 2.8rem; font-weight: 700; color: #e8f0fe; letter-spacing: -0.04em; line-height: 1; }
+.csat-number { font-size: 3rem; font-weight: 800; background: linear-gradient(135deg, #93c5fd 0%, #dbeafe 50%, #c7d2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.04em; line-height: 1; }
 .csat-stars { color: #f59e0b; font-size: 1.05rem; margin: 8px 0 5px; letter-spacing: 3px; }
 .csat-count { font-size: 0.7rem; color: #4a7aaa; }
 .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -299,40 +309,71 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
 ────────────────────────────────────────────────────── */
 
 .hero-banner {
-    background: linear-gradient(135deg, #07142a 0%, #091e3a 50%, #060f20 100%);
-    border: 1px solid #0e2040;
-    border-radius: 22px;
+    background: linear-gradient(135deg, #060e20 0%, #0b1a35 40%, #07102a 100%);
+    border: 1px solid rgba(59,130,246,0.18);
+    border-radius: 24px;
     padding: 2rem 2.2rem;
     margin-bottom: 1.8rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 40px rgba(37,99,235,0.08), inset 0 1px 0 rgba(255,255,255,0.04);
 }
-.hero-title { font-size: 1.4rem; font-weight: 700; color: #e8f0fe; letter-spacing: -0.025em; margin-bottom: 0.3rem; }
-.hero-sub   { font-size: 0.83rem; color: #4a7aaa; }
+.hero-banner::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -60px;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 70%);
+    pointer-events: none;
+}
+.hero-banner::after {
+    content: '';
+    position: absolute;
+    bottom: -100px; left: 25%;
+    width: 250px; height: 250px;
+    background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%);
+    pointer-events: none;
+}
+.hero-title {
+    font-size: 1.45rem; font-weight: 800;
+    background: linear-gradient(135deg, #dbeafe 0%, #e8f0fe 60%, #c7d2fe 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.025em; margin-bottom: 0.3rem;
+    position: relative; z-index: 1;
+}
+.hero-sub   { font-size: 0.83rem; color: #3a5f8a; position: relative; z-index: 1; }
 .live-badge {
     background: rgba(16,185,129,0.08);
-    border: 1px solid rgba(16,185,129,0.22);
+    border: 1px solid rgba(16,185,129,0.2);
     color: #10b981;
     font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
     padding: 6px 14px; border-radius: 99px; white-space: nowrap;
+    position: relative; z-index: 1;
+    text-shadow: 0 0 10px rgba(16,185,129,0.4);
 }
+.live-dot { display: inline-block; animation: pulse-dot 2s ease-in-out infinite; }
 
 /* ──────────────────────────────────────────────────────
    CLIENT REPOSITORY
 ────────────────────────────────────────────────────── */
 
 .client-repo-card {
-    background: #091525;
-    border: 1px solid #0e2040;
-    border-radius: 16px;
+    background: linear-gradient(145deg, #081626 0%, #050e1c 100%);
+    border: 1px solid rgba(13,32,64,0.9);
+    border-radius: 18px;
     padding: 18px 20px 14px;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
     height: 100%;
 }
 .client-repo-card:hover {
-    border-color: #1a3560;
-    box-shadow: 0 8px 28px rgba(37,99,235,0.12);
+    border-color: rgba(59,130,246,0.3);
+    box-shadow: 0 12px 40px rgba(37,99,235,0.15), 0 0 0 1px rgba(59,130,246,0.12);
+    transform: translateY(-2px);
 }
 .tag-chip {
     display: inline-block;
@@ -397,12 +438,118 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
 .client-name { color: #e8f0fe; font-weight: 600; font-size: 0.88rem; }
 .email-pill {
     display: inline-block;
-    background: #0e2040;
-    color: #4a7aaa;
+    background: #0a1a32;
+    color: #3a5f8a;
     font-size: 0.7rem;
     padding: 3px 10px;
     border-radius: 99px;
     margin: 3px 3px 0 0;
+    border: 1px solid #0d1e38;
+}
+
+/* ── Keyframe animations ── */
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(0.78); }
+}
+
+/* ── Section chips ── */
+.section-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(59,130,246,0.07);
+    border: 1px solid rgba(59,130,246,0.16);
+    color: #60a5fa;
+    font-size: 0.61rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 99px;
+    margin-bottom: 14px;
+}
+.section-chip::before {
+    content: '';
+    width: 5px; height: 5px;
+    background: #3b82f6;
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(59,130,246,0.9);
+}
+
+/* ── Client avatar ── */
+.client-avatar {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 800;
+    flex-shrink: 0;
+    letter-spacing: -0.02em;
+}
+
+/* ── Template card ── */
+.tmpl-card {
+    border-radius: 12px;
+    padding: 10px 10px 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease;
+}
+.tmpl-card:hover {
+    transform: translateY(-3px) scale(1.04);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.5);
+}
+
+/* ── Metric card gradient bg override ── */
+.metric-card { background: linear-gradient(145deg, #081626 0%, #050e1c 100%) !important; }
+
+/* ── CSAT section gradient bg ── */
+.csat-section { background: linear-gradient(145deg, #081626 0%, #050e1c 100%) !important; }
+.csat-section:hover { border-color: rgba(59,130,246,0.18) !important; transition: border-color 0.25s; }
+
+/* ── Bar fill glow ── */
+.bar-fill { box-shadow: 0 0 6px rgba(59,130,246,0.5); }
+
+/* ── CSAT stars glow ── */
+.csat-stars { text-shadow: 0 0 8px rgba(245,158,11,0.5); }
+.resp-stars { text-shadow: 0 0 6px rgba(245,158,11,0.4); }
+
+/* ── Draft card gradient ── */
+.draft-card {
+    background: linear-gradient(145deg, #081626 0%, #050e1c 100%) !important;
+    transition: border-color 0.25s ease;
+}
+.draft-card:hover { border-color: rgba(59,130,246,0.2) !important; }
+
+/* ── Stat card hover ── */
+.stat-card {
+    background: linear-gradient(145deg, #081626 0%, #050e1c 100%) !important;
+    transition: all 0.25s ease;
+}
+.stat-card:hover {
+    border-color: rgba(59,130,246,0.2) !important;
+    box-shadow: 0 8px 24px rgba(37,99,235,0.1) !important;
+}
+
+/* ── EM header subtle glow ── */
+.em-header {
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 30px rgba(37,99,235,0.07);
+}
+.em-header::before {
+    content: '';
+    position: absolute;
+    top: -50px; right: -30px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+/* ── Primary button spring ── */
+.stButton > button[kind="primary"]:hover {
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: 0 8px 32px rgba(37,99,235,0.55), 0 0 0 1px rgba(59,130,246,0.4) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -411,9 +558,20 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
 
 with st.sidebar:
     st.markdown("""
-    <div style="padding:8px 4px 20px;">
-        <div style="color:#e8f0fe;font-weight:700;font-size:1rem;letter-spacing:-0.015em;">Convin Data Labs</div>
-        <div style="color:#1e3a5f;font-size:0.7rem;margin-top:3px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;">Analytics</div>
+    <div style="padding:8px 4px 22px;">
+        <div style="display:flex;align-items:center;gap:11px;">
+            <div style="
+                width:36px;height:36px;border-radius:10px;flex-shrink:0;
+                background:linear-gradient(135deg,#1d4ed8,#3b82f6);
+                display:flex;align-items:center;justify-content:center;
+                font-size:0.72rem;font-weight:800;color:#fff;letter-spacing:-0.01em;
+                box-shadow:0 4px 14px rgba(59,130,246,0.5);
+            ">CDL</div>
+            <div>
+                <div style="color:#dbeafe;font-weight:700;font-size:0.93rem;letter-spacing:-0.015em;line-height:1.2;">Convin Data Labs</div>
+                <div style="color:#1e3a5f;font-size:0.63rem;margin-top:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">Analytics</div>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -506,6 +664,7 @@ def _render_period_content(period: str):
     </div>
     """, unsafe_allow_html=True)
 
+    st.markdown('<div class="section-chip">Key Metrics</div>', unsafe_allow_html=True)
     csat_card = f"""<div class="metric-card accent-amber">
         <div class="metric-label">CSAT Score</div>
         <div class="metric-value">{score}<span class="metric-max"> / 5</span></div>
@@ -521,10 +680,11 @@ def _render_period_content(period: str):
         f'<span class="bar-pct">{r["pct"]}%</span><span class="bar-count">{r["count"]}</span></div>'
         for r in csat["dist"]
     )
+    st.markdown('<div class="section-chip">Customer Satisfaction</div>', unsafe_allow_html=True)
     st.markdown(f"""<div class="csat-section">
         <div class="csat-score-side">
             <div style="color:#4a7aaa;font-size:0.62rem;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;margin-bottom:14px;">CSAT</div>
-            <div class="csat-number">{score}<span style="font-size:1.1rem;color:#4a7aaa;font-weight:500;">/5</span></div>
+            <div class="csat-number">{score}<span style="font-size:1.1rem;color:#4a7aaa;font-weight:500;-webkit-text-fill-color:#4a7aaa;">/5</span></div>
             <div class="csat-stars">{stars}</div>
             <div class="csat-count">{csat['responses']} ratings</div>
         </div>
@@ -554,6 +714,7 @@ def _render_period_content(period: str):
     else:
         email_rows = EMAIL_ANALYTICS
 
+    st.markdown('<div class="section-chip">Email Activity</div>', unsafe_allow_html=True)
     st.markdown(f"""<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="color:#e8f0fe;font-size:0.92rem;font-weight:600;">Email Activity</div>
         <div style="color:#1e3a5f;font-size:0.68rem;font-weight:500;">{len(email_rows)} emails</div>
@@ -569,7 +730,7 @@ def render_overview():
             <div class="hero-title">Good morning, Animesh 👋</div>
             <div class="hero-sub">Convin Data Labs · Campaign Analytics Dashboard</div>
         </div>
-        <div class="live-badge">● Live</div>
+        <div class="live-badge"><span class="live-dot">●</span> Live</div>
     </div>""", unsafe_allow_html=True)
 
     tab_d, tab_w, tab_m = st.tabs(["📅  Daily", "📅  Weekly", "📅  Monthly"])
@@ -586,6 +747,28 @@ _STATUS_CFG = {
     "Inactive": ("#0e2040", "#4a7aaa", "#4a7aaa"),
 }
 
+_AVATAR_GRADS = [
+    ("linear-gradient(135deg,#1d4ed8,#3b82f6)", "#fff"),
+    ("linear-gradient(135deg,#059669,#34d399)", "#fff"),
+    ("linear-gradient(135deg,#7c3aed,#a78bfa)", "#fff"),
+    ("linear-gradient(135deg,#d97706,#fbbf24)", "#fff"),
+    ("linear-gradient(135deg,#0284c7,#38bdf8)", "#fff"),
+    ("linear-gradient(135deg,#db2777,#f472b6)", "#fff"),
+]
+
+
+def _avatar(company: str) -> str:
+    words = [w for w in company.split() if w]
+    if len(words) >= 2:
+        initials = (words[0][0] + words[1][0]).upper()
+    elif words:
+        initials = words[0][:2].upper()
+    else:
+        initials = "??"
+    grad, color = _AVATAR_GRADS[abs(hash(company)) % len(_AVATAR_GRADS)]
+    return (f'<div class="client-avatar" style="background:{grad};color:{color};">'
+            f'{initials}</div>')
+
 
 def _render_client_card(c: dict):
     cid    = c["id"]
@@ -599,13 +782,17 @@ def _render_client_card(c: dict):
     contact_html = f'<div style="color:#4a7aaa;font-size:0.75rem;margin-bottom:8px;">👤 {c["contact"]}</div>' if c.get("contact") else ""
     tags_html    = f'<div style="margin-bottom:8px;">{tag_chips}</div>' if tag_chips else ""
 
+    avatar_html = _avatar(c.get("company", ""))
     st.markdown(
         f'<div class="client-repo-card" style="border-top:2px solid {sline};">'
-        f'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">'
+        f'<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">'
+        f'{avatar_html}'
+        f'<div style="flex:1;min-width:0;">'
+        f'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
         f'<div style="color:#e8f0fe;font-weight:700;font-size:0.95rem;line-height:1.3;">{c.get("company","")}</div>'
         f'<span style="background:{sbg};color:{sfg};font-size:0.58rem;font-weight:700;letter-spacing:0.1em;'
-        f'text-transform:uppercase;padding:3px 9px;border-radius:99px;white-space:nowrap;margin-left:8px;">{status}</span>'
-        f'</div>{contact_html}'
+        f'text-transform:uppercase;padding:3px 9px;border-radius:99px;white-space:nowrap;">{status}</span>'
+        f'</div></div></div>{contact_html}'
         f'<div style="margin-bottom:8px;">{email_pills}</div>'
         f'{tags_html}{notes_html}'
         f'<div style="color:#1e3a5f;font-size:0.61rem;margin-top:4px;">Added {c.get("added_at","—")}</div>'
