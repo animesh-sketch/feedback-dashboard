@@ -1,0 +1,750 @@
+<!doctype html>
+<html ⚡4email data-css-strict>
+<head>
+  <meta charset="utf-8" />
+  <script async src="https://cdn.ampproject.org/v0.js"></script>
+  <script async custom-element="amp-form"    src="https://cdn.ampproject.org/v0/amp-form-0.1.js"></script>
+  <script async custom-element="amp-bind"    src="https://cdn.ampproject.org/v0/amp-bind-0.1.js"></script>
+  <script async custom-element="amp-img"     src="https://cdn.ampproject.org/v0/amp-img-0.1.js"></script>
+
+  <!-- AMP boilerplate — do not edit -->
+  <style amp4email-boilerplate>body{-webkit-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-moz-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-ms-animation:-amp-start 8s steps(1,end) 0s 1 normal both;animation:-amp-start 8s steps(1,end) 0s 1 normal both}@-webkit-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-moz-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-ms-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}</style>
+  <noscript><style amp-boilerplate>body{-webkit-animation:none;-moz-animation:none;-ms-animation:none;animation:none}</style></noscript>
+
+  <!-- ─── Custom styles ─────────────────────────────────────────── -->
+  <style amp-custom>
+
+    /* ── Reset ── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      color: #1e293b;
+    }
+
+    /* ── Wrapper ── */
+    .email-wrapper {
+      max-width: 620px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 0;
+    }
+
+    /* ── Header bar ── */
+    .header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      padding: 28px 40px;
+      text-align: left;
+    }
+    .header-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .logo-text {
+      color: #ffffff;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .header-meta {
+      margin-top: 6px;
+      color: rgba(255,255,255,0.65);
+      font-size: 12px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 40px 40px 32px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .hero-label {
+      display: inline-block;
+      background: #ede9fe;
+      color: #6d28d9;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 4px 10px;
+      border-radius: 99px;
+      margin-bottom: 14px;
+    }
+    .hero h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.25;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+    }
+    .hero p {
+      font-size: 15px;
+      color: #64748b;
+      line-height: 1.65;
+    }
+    .hero-divider {
+      width: 40px;
+      height: 3px;
+      background: linear-gradient(90deg, #7c3aed, #4f46e5);
+      border-radius: 2px;
+      margin-top: 20px;
+    }
+
+    /* ── Section ── */
+    .section {
+      padding: 32px 40px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: #94a3b8;
+      margin-bottom: 16px;
+    }
+    .body-text {
+      font-size: 15px;
+      color: #475569;
+      line-height: 1.7;
+    }
+
+    /* ── Screenshots grid ── */
+    .screenshots-grid {
+      display: table;
+      width: 100%;
+      border-spacing: 0;
+    }
+    .screenshot-cell {
+      display: table-cell;
+      width: 50%;
+      padding-right: 8px;
+      vertical-align: top;
+    }
+    .screenshot-cell:last-child { padding-right: 0; padding-left: 8px; }
+
+    .screenshot-slot {
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px dashed #e2e8f0;
+      background: #f8fafc;
+    }
+    .screenshot-slot amp-img,
+    .screenshot-slot img {
+      width: 100%;
+      border-radius: 10px;
+      display: block;
+    }
+    .screenshot-caption {
+      font-size: 12px;
+      color: #94a3b8;
+      text-align: center;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* Single wide screenshot */
+    .screenshot-wide {
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px dashed #e2e8f0;
+      background: #f8fafc;
+      margin-bottom: 16px;
+    }
+
+    /* ── Key highlights ── */
+    .highlights {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .highlights li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 14px;
+      color: #475569;
+      line-height: 1.5;
+    }
+    .highlights li:last-child { border-bottom: none; }
+    .hi-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      background: #ede9fe;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      margin-top: 1px;
+    }
+    .highlights strong { color: #1e293b; }
+
+    /* ── PPT CTA ── */
+    .cta-section {
+      text-align: center;
+      padding: 36px 40px;
+      background: linear-gradient(180deg, #faf5ff 0%, #ede9fe 100%);
+      border-top: 1px solid #e9d5ff;
+      border-bottom: 1px solid #e9d5ff;
+    }
+    .cta-label {
+      font-size: 12px;
+      color: #7c3aed;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin-bottom: 10px;
+    }
+    .cta-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .cta-sub {
+      font-size: 13px;
+      color: #7c3aed;
+      margin-bottom: 22px;
+    }
+    .cta-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #ffffff !important;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 14px 32px;
+      border-radius: 99px;
+      letter-spacing: 0.2px;
+    }
+    .cta-btn-icon { margin-right: 6px; }
+
+    /* ── Survey section ── */
+    .survey-section {
+      padding: 36px 40px 40px;
+      background: #0f172a;
+    }
+    .survey-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .survey-label {
+      display: inline-block;
+      background: rgba(124,58,237,0.3);
+      color: #a78bfa;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 4px 12px;
+      border-radius: 99px;
+      margin-bottom: 12px;
+    }
+    .survey-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+    .survey-sub {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    /* Star rating */
+    .stars-row {
+      display: table;
+      margin: 0 auto 24px;
+      border-spacing: 6px;
+    }
+    .star-cell {
+      display: table-cell;
+      vertical-align: middle;
+    }
+    .star-btn {
+      display: block;
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: #1e2d3d;
+      border: 2px solid #1e3a5f;
+      color: #94a3b8;
+      font-size: 22px;
+      text-align: center;
+      line-height: 48px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+    .star-btn.active-1 { background:#2d1f0e; border-color:#b45309; color:#fbbf24; }
+    .star-btn.active-2 { background:#2d1f0e; border-color:#b45309; color:#fbbf24; }
+    .star-btn.active-3 { background:#1d2a1a; border-color:#15803d; color:#4ade80; }
+    .star-btn.active-4 { background:#0f2a1f; border-color:#059669; color:#34d399; }
+    .star-btn.active-5 { background:#0f2520; border-color:#047857; color:#6ee7b7; }
+
+    .star-labels {
+      display: table;
+      width: 100%;
+      margin-bottom: 24px;
+      border-spacing: 0;
+    }
+    .star-label-cell {
+      display: table-cell;
+      width: 33.33%;
+      font-size: 11px;
+      color: #475569;
+    }
+    .star-label-cell:nth-child(2) { text-align: center; }
+    .star-label-cell:last-child   { text-align: right; }
+
+    /* Comment box */
+    .comment-wrap {
+      margin-bottom: 20px;
+    }
+    .comment-label {
+      display: block;
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+    .comment-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      color: #f1f5f9;
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 72px;
+    }
+    .comment-input::placeholder { color: #475569; }
+
+    /* Submit */
+    .submit-btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      letter-spacing: 0.2px;
+    }
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    /* Success / error states */
+    .survey-success {
+      text-align: center;
+      padding: 20px;
+    }
+    .success-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+    .success-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 6px;
+    }
+    .success-sub {
+      font-size: 13px;
+      color: #64748b;
+    }
+    .error-msg {
+      text-align: center;
+      color: #fca5a5;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      padding: 28px 40px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+    }
+    .footer-links {
+      margin-bottom: 12px;
+    }
+    .footer-links a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 12px;
+      margin: 0 10px;
+    }
+    .footer-address {
+      font-size: 11px;
+      color: #cbd5e1;
+      line-height: 1.7;
+    }
+    .footer-address a { color: #94a3b8; text-decoration: none; }
+
+    /* ── Mobile ── */
+    @media only screen and (max-width: 480px) {
+      .hero { padding: 28px 24px 24px; }
+      .hero h1 { font-size: 22px; }
+      .section { padding: 24px; }
+      .cta-section { padding: 28px 24px; }
+      .survey-section { padding: 28px 24px 32px; }
+      .footer { padding: 24px; }
+      .screenshots-grid { display: block; }
+      .screenshot-cell { display: block; width: 100%; padding: 0 0 12px 0; }
+      .screenshot-cell:last-child { padding: 0; }
+      .star-btn { width: 44px; height: 44px; font-size: 18px; line-height: 40px; }
+    }
+
+  </style>
+</head>
+
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     AMP STATE — tracks selected star + submission
+═══════════════════════════════════════════════ -->
+<amp-state id="survey">
+  <script type="application/json">
+    { "star": 0, "done": false }
+  </script>
+</amp-state>
+
+<!-- ═══════════════════════════════════════════════
+     EMAIL WRAPPER
+═══════════════════════════════════════════════ -->
+<div class="email-wrapper">
+
+
+  <!-- ── HEADER ──────────────────────────────── -->
+  <div class="header">
+    <span class="logo-text">⚡ PulseSignal</span>
+    <!--
+      EDIT: swap "PulseSignal" for your company/product name
+    -->
+    <div class="header-meta">Product Update · February 2026</div>
+  </div>
+
+
+  <!-- ── HERO ────────────────────────────────── -->
+  <div class="hero">
+    <span class="hero-label">Product Update</span>
+    <!--
+      EDIT: change the label ↑ e.g. "Monthly Report", "New Release", "Case Study"
+    -->
+
+    <h1>
+      Here's what we shipped this month 🚀
+    </h1>
+    <!--
+      EDIT: replace the heading ↑
+    -->
+
+    <p class="body-text">
+      We've been heads-down building features you asked for.
+      Here's a quick look at what's new — and we'd love to know what you think.
+    </p>
+    <!--
+      EDIT: replace the paragraph ↑
+    -->
+
+    <div class="hero-divider"></div>
+  </div>
+
+
+  <!-- ── SCREENSHOTS ─────────────────────────── -->
+  <div class="section">
+    <div class="section-title">What's New</div>
+
+    <!--
+      ┌─────────────────────────────────────────────────┐
+      │  PASTE YOUR SCREENSHOTS HERE                    │
+      │                                                 │
+      │  Replace the src="" values below with your      │
+      │  image URLs (hosted on S3, Imgur, etc.)         │
+      │                                                 │
+      │  AMP requires width + height on amp-img.        │
+      │  Recommended: 520×300 for full-width,           │
+      │               250×180 for side-by-side.         │
+      └─────────────────────────────────────────────────┘
+    -->
+
+    <!-- Screenshot 1 — full width -->
+    <div class="screenshot-wide">
+      <amp-img
+        src="https://placehold.co/540x300/1e293b/94a3b8?text=Screenshot+1+%E2%80%94+Paste+your+image+URL+here"
+        alt="Feature screenshot 1"
+        width="540"
+        height="300"
+        layout="responsive"
+      ></amp-img>
+    </div>
+    <p class="screenshot-caption">
+      Caption for screenshot 1 — describe what the user is seeing
+      <!-- EDIT: caption ↑ -->
+    </p>
+
+    <!-- Screenshots 2 + 3 — side by side -->
+    <div style="height:20px;"></div>
+    <div class="screenshots-grid">
+      <div class="screenshot-cell">
+        <div class="screenshot-slot">
+          <amp-img
+            src="https://placehold.co/262x180/1e293b/94a3b8?text=Screenshot+2"
+            alt="Feature screenshot 2"
+            width="262"
+            height="180"
+            layout="responsive"
+          ></amp-img>
+        </div>
+        <p class="screenshot-caption">Caption 2 <!-- EDIT --></p>
+      </div>
+      <div class="screenshot-cell">
+        <div class="screenshot-slot">
+          <amp-img
+            src="https://placehold.co/262x180/1e293b/94a3b8?text=Screenshot+3"
+            alt="Feature screenshot 3"
+            width="262"
+            height="180"
+            layout="responsive"
+          ></amp-img>
+        </div>
+        <p class="screenshot-caption">Caption 3 <!-- EDIT --></p>
+      </div>
+    </div>
+
+    <!-- Key highlights list -->
+    <div style="height:24px;"></div>
+    <ul class="highlights">
+      <!--
+        EDIT: list your key changes / bullet points below.
+        Add or remove <li> items as needed.
+      -->
+      <li>
+        <span class="hi-dot">✦</span>
+        <span><strong>Faster dashboard</strong> — load times reduced by 60% across all views.</span>
+      </li>
+      <li>
+        <span class="hi-dot">✦</span>
+        <span><strong>New NPS chart</strong> — see score trends by cohort and campaign.</span>
+      </li>
+      <li>
+        <span class="hi-dot">✦</span>
+        <span><strong>CSV export</strong> — download filtered feedback in one click.</span>
+      </li>
+    </ul>
+  </div>
+
+
+  <!-- ── PPT / DECK LINK ─────────────────────── -->
+  <div class="cta-section">
+    <div class="cta-label">Deep Dive</div>
+    <div class="cta-title">View the Full Presentation</div>
+    <div class="cta-sub">Slides · 12 min read</div>
+    <!--
+      EDIT: replace the href below with your Google Slides / PowerPoint / Notion link
+    -->
+    <a
+      href="https://docs.google.com/presentation/d/YOUR_PPT_LINK_HERE"
+      class="cta-btn"
+      target="_blank"
+    >
+      <span class="cta-btn-icon">📊</span> Open Presentation
+    </a>
+    <!--
+      EDIT: change button label ↑ e.g. "View Deck", "Open Report"
+    -->
+  </div>
+
+
+  <!-- ── SURVEY ──────────────────────────────── -->
+  <!--
+    This is an AMP interactive survey — works inside Gmail, Yahoo Mail, and Outlook.
+    No redirect needed. The form submits directly from the email.
+
+    EDIT:
+      • action="..." → point to your survey API endpoint
+      • Add hidden fields for campaign_id, recipient_email via merge tags
+  -->
+  <div class="survey-section">
+
+    <div class="survey-header">
+      <span class="survey-label">Quick Survey</span>
+      <div class="survey-title">How do you feel about this update?</div>
+      <div class="survey-sub">Takes 15 seconds. Your feedback shapes our roadmap.</div>
+    </div>
+
+    <amp-form
+      method="POST"
+      action="https://YOUR_API_ENDPOINT/survey/respond"
+      action-xhr="https://YOUR_API_ENDPOINT/survey/respond"
+      on="submit-success:AMP.setState({survey:{star:survey.star,done:true}})"
+    >
+      <!--
+        Hidden fields — replace {{merge_tags}} with your ESP's variables
+        e.g. for Mailchimp: *|CAMPAIGN_ID|*
+             for SendGrid:  {{campaign_id}}
+             for customer.io: {{ customer.id }}
+      -->
+      <input type="hidden" name="campaign_id"  value="{{CAMPAIGN_ID}}" />
+      <input type="hidden" name="recipient_id" value="{{RECIPIENT_ID}}" />
+      <input type="hidden" name="survey_type"  value="CSAT" />
+
+      <!-- Star value bound to AMP state -->
+      <input type="hidden" name="score" [value]="survey.star" value="0" />
+
+      <!-- ── FORM (hidden after submit) ── -->
+      <div [hidden]="survey.done">
+
+        <!-- Star rating buttons -->
+        <div class="stars-row">
+          <div class="star-cell">
+            <span
+              class="star-btn"
+              [class]="survey.star >= 1 ? 'star-btn active-1' : 'star-btn'"
+              on="tap:AMP.setState({survey:{star:1,done:false}})"
+              role="button"
+              tabindex="0"
+              aria-label="1 star — Very dissatisfied"
+            >★</span>
+          </div>
+          <div class="star-cell">
+            <span
+              class="star-btn"
+              [class]="survey.star >= 2 ? 'star-btn active-2' : 'star-btn'"
+              on="tap:AMP.setState({survey:{star:2,done:false}})"
+              role="button"
+              tabindex="0"
+              aria-label="2 stars"
+            >★</span>
+          </div>
+          <div class="star-cell">
+            <span
+              class="star-btn"
+              [class]="survey.star >= 3 ? 'star-btn active-3' : 'star-btn'"
+              on="tap:AMP.setState({survey:{star:3,done:false}})"
+              role="button"
+              tabindex="0"
+              aria-label="3 stars — Neutral"
+            >★</span>
+          </div>
+          <div class="star-cell">
+            <span
+              class="star-btn"
+              [class]="survey.star >= 4 ? 'star-btn active-4' : 'star-btn'"
+              on="tap:AMP.setState({survey:{star:4,done:false}})"
+              role="button"
+              tabindex="0"
+              aria-label="4 stars"
+            >★</span>
+          </div>
+          <div class="star-cell">
+            <span
+              class="star-btn"
+              [class]="survey.star >= 5 ? 'star-btn active-5' : 'star-btn'"
+              on="tap:AMP.setState({survey:{star:5,done:false}})"
+              role="button"
+              tabindex="0"
+              aria-label="5 stars — Very satisfied"
+            >★</span>
+          </div>
+        </div>
+
+        <div class="star-labels">
+          <span class="star-label-cell">😞 Not great</span>
+          <span class="star-label-cell">😐 Okay</span>
+          <span class="star-label-cell">😍 Loved it</span>
+        </div>
+
+        <!-- Optional comment -->
+        <div class="comment-wrap">
+          <label class="comment-label" for="comment">
+            Anything specific you'd like us to know? (optional)
+          </label>
+          <textarea
+            id="comment"
+            name="comment"
+            class="comment-input"
+            placeholder="Tell us what you think…"
+            rows="3"
+          ></textarea>
+        </div>
+
+        <!-- Submit -->
+        <button
+          type="submit"
+          class="submit-btn"
+          [disabled]="survey.star == 0"
+          disabled
+        >
+          Submit Feedback →
+        </button>
+
+        <!-- AMP form error state -->
+        <div submit-error>
+          <p class="error-msg">⚠️ Something went wrong. Please try again.</p>
+        </div>
+      </div>
+
+      <!-- ── SUCCESS STATE ── -->
+      <div class="survey-success" hidden [hidden]="!survey.done">
+        <div class="success-icon">🎉</div>
+        <div class="success-title">Thank you!</div>
+        <p class="success-sub">
+          Your feedback helps us build better products.<br />
+          We'll follow up if anything needs attention.
+        </p>
+      </div>
+
+    </amp-form>
+  </div>
+
+
+  <!-- ── FOOTER ──────────────────────────────── -->
+  <div class="footer">
+    <div class="footer-links">
+      <a href="{{UNSUBSCRIBE_URL}}">Unsubscribe</a>
+      <a href="{{PREFERENCES_URL}}">Email preferences</a>
+      <a href="{{PRIVACY_URL}}">Privacy policy</a>
+    </div>
+    <div class="footer-address">
+      <!--
+        EDIT: your company address (legally required in most countries)
+      -->
+      PulseSignal Inc. · 123 Market Street, Suite 400 · San Francisco, CA 94105<br />
+      You're receiving this because you're a PulseSignal customer.
+    </div>
+  </div>
+
+
+</div><!-- /email-wrapper -->
+
+</body>
+</html>
