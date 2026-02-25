@@ -5,8 +5,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 import streamlit as st
 import pandas as pd
 import streamlit.components.v1 as components
-from data import CAMPAIGN_ANALYTICS, CSAT_RESPONDENTS
-from email_builder import build_email_html
+from data import ANALYTICS_BY_PERIOD, EMAIL_ANALYTICS, CSAT_RESPONDENTS, DAILY_DATES, WEEKLY_DATES
+from email_builder import build_email_html, TEMPLATE_NAMES
 import auth
 import gmail_sender
 
@@ -36,6 +36,7 @@ def _blank_draft(idx: int) -> dict:
         "report_link": "",
         "survey_question": "Was this report useful to you?",
         "show_preview": False,
+        "template": 1,
     }
 
 if "drafts" not in st.session_state:
@@ -270,7 +271,6 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
     grid-template-columns: 150px 1fr;
     gap: 2.5rem;
     align-items: center;
-    margin-top: 0;
 }
 .csat-score-side {
     text-align: center;
@@ -344,72 +344,6 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
     white-space: nowrap;
 }
 
-/* KPI grid */
-.kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 14px;
-    margin-bottom: 2.5rem;
-}
-.kpi-card {
-    background: #091525;
-    border: 1px solid #0e2040;
-    border-radius: 18px;
-    padding: 1.3rem 1.4rem 1.1rem;
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
-    cursor: default;
-}
-.kpi-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 40px rgba(37,99,235,0.2);
-    border-color: #1a3560;
-}
-.kpi-card::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    border-radius: 18px 18px 0 0;
-}
-.kpi-card.trend-good::after { background: linear-gradient(90deg, #059669, #34d399); }
-.kpi-card.trend-bad::after  { background: linear-gradient(90deg, #dc2626, #f87171); }
-.kpi-label {
-    font-size: 0.67rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #4a7aaa;
-    margin-bottom: 0.75rem;
-}
-.kpi-value {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #e8f0fe;
-    letter-spacing: -0.03em;
-    line-height: 1;
-    margin-bottom: 0.4rem;
-}
-.kpi-delta {
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-bottom: 0.15rem;
-}
-.kpi-delta.good { color: #34d399; }
-.kpi-delta.bad  { color: #f87171; }
-.kpi-period { font-size: 0.67rem; color: #1e3a5f; margin-top: 0.1rem; }
-
-/* section divider label */
-.sec-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #1e3a5f;
-    margin-bottom: 1.2rem;
-}
-
 /* ──────────────────────────────────────────────────────
    EMAIL MAKER COMPONENTS
 ────────────────────────────────────────────────────── */
@@ -436,6 +370,17 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
     padding: 16px 18px;
     margin-bottom: 12px;
 }
+
+/* Template picker cards */
+.tmpl-card {
+    border-radius: 12px;
+    padding: 14px 10px;
+    text-align: center;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+.tmpl-card:hover { transform: translateY(-2px); }
 
 /* Client cards */
 .client-card {
@@ -481,7 +426,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown('<div style="color:#1e3a5f;font-size:0.68rem;font-weight:500;">Feb 2026 · v1.0</div>', unsafe_allow_html=True)
 
-# ─── Overview ─────────────────────────────────────────────────────────────────
+# ─── Metric card helpers ──────────────────────────────────────────────────────
 
 def _accent(m: dict) -> str:
     if not m["up_good"]:
@@ -507,11 +452,150 @@ def _metric_card_html(m: dict) -> str:
     </div>"""
 
 
-def render_overview():
-    data = CAMPAIGN_ANALYTICS
-    csat = data["csat"]
+# ─── Email analytics table ────────────────────────────────────────────────────
 
-    # ── Hero ──────────────────────────────────────────────────────────────────
+def _email_table_html(rows: list) -> str:
+    if not rows:
+        return '<div style="text-align:center;padding:32px;color:#1e3a5f;font-size:0.84rem;">No email activity for this period.</div>'
+
+    def dbadge(v):
+        return '<span style="color:#22c55e;font-weight:700;">✓</span>' if v else '<span style="color:#f87171;font-weight:700;">✗</span>'
+    def sbadge(v):
+        return '<span style="color:#3b82f6;font-weight:600;">✓</span>' if v else '<span style="color:#1e3a5f;">—</span>'
+    def scbadge(s):
+        if s is None:
+            return '<span style="color:#1e3a5f;">—</span>'
+        c = {1:"#f87171",2:"#fb923c",3:"#fbbf24",4:"#34d399",5:"#22c55e"}
+        return f'<span style="color:{c[s]};font-weight:700;">{s}★</span>'
+
+    th = 'style="color:#4a7aaa;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:10px 12px;text-align:left;white-space:nowrap;background:#070f1e;"'
+    tc = 'style="font-size:0.73rem;padding:9px 12px;border-bottom:1px solid #0a1e38;text-align:center;"'
+    headers = ["Email", "Campaign", "Del", "Open", "Click", "Resp", "Score", "Date"]
+    hrow = f'<tr>{"".join(f"<th {th}>{h}</th>" for h in headers)}</tr>'
+
+    brows = "".join(
+        f"""<tr>
+          <td style="font-size:0.72rem;padding:9px 12px;border-bottom:1px solid #0a1e38;color:#e8f0fe;">{r['email']}</td>
+          <td style="font-size:0.67rem;padding:9px 12px;border-bottom:1px solid #0a1e38;color:#4a7aaa;white-space:nowrap;">{r['campaign']}</td>
+          <td {tc}>{dbadge(r['delivered'])}</td>
+          <td {tc}>{sbadge(r['opened'])}</td>
+          <td {tc}>{sbadge(r['clicked'])}</td>
+          <td {tc}>{sbadge(r['responded'])}</td>
+          <td {tc}>{scbadge(r['score'])}</td>
+          <td style="font-size:0.67rem;padding:9px 12px;border-bottom:1px solid #0a1e38;color:#1e3a5f;text-align:right;">{r['date']}</td>
+        </tr>"""
+        for r in rows
+    )
+    return f"""
+    <div style="background:#091525;border:1px solid #0e2040;border-radius:16px;overflow:hidden;">
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>{hrow}</thead>
+          <tbody>{brows}</tbody>
+        </table>
+      </div>
+    </div>"""
+
+
+# ─── Period content renderer ──────────────────────────────────────────────────
+
+def _render_period_content(period: str):
+    data  = ANALYTICS_BY_PERIOD[period]
+    csat  = data["csat"]
+    score = csat["score"]
+    full_stars = int(score)
+    stars_html = "★" * full_stars + "☆" * (5 - full_stars)
+
+    # Section header
+    st.markdown(f"""
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="color:#e8f0fe;font-size:0.92rem;font-weight:600;">{data['label']}</div>
+        <div style="color:#1e3a5f;font-size:0.7rem;font-weight:500;letter-spacing:0.03em;">Updated {data['updated']}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Row 1: Sent · Open Rate · Click to Open · CSAT Score
+    csat_card = f"""
+    <div class="metric-card accent-amber">
+        <div class="metric-label">CSAT Score</div>
+        <div class="metric-value">{score}<span class="metric-max"> / 5</span></div>
+        <div class="metric-sub">
+            <span style="color:#f59e0b;letter-spacing:2px;">{stars_html}</span>
+            &nbsp;·&nbsp;{csat['responses']} ratings
+        </div>
+    </div>"""
+    row1 = "".join(_metric_card_html(m) for m in data["metrics"][:3]) + csat_card
+
+    # Row 2: Delivered · Bounce · Unsubscribe · Blocked
+    row2 = "".join(_metric_card_html(m) for m in data["metrics"][3:])
+
+    st.markdown(
+        f'<div class="analytics-grid">{row1}</div>'
+        f'<div class="analytics-grid">{row2}</div>',
+        unsafe_allow_html=True,
+    )
+
+    # CSAT Breakdown
+    bars_html = "".join(
+        f"""<div class="bar-row">
+            <span class="bar-star">{r['star']}★</span>
+            <div class="bar-track"><div class="bar-fill" style="width:{r['pct']}%"></div></div>
+            <span class="bar-pct">{r['pct']}%</span>
+            <span class="bar-count">{r['count']}</span>
+        </div>"""
+        for r in csat["dist"]
+    )
+    st.markdown(f"""
+    <div class="csat-section">
+        <div class="csat-score-side">
+            <div style="color:#4a7aaa;font-size:0.62rem;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;margin-bottom:14px;">CSAT</div>
+            <div class="csat-number">{score}<span style="font-size:1.1rem;color:#4a7aaa;font-weight:500;">/5</span></div>
+            <div class="csat-stars">{stars_html}</div>
+            <div class="csat-count">{csat['responses']} ratings</div>
+        </div>
+        <div>
+            <div style="color:#4a7aaa;font-size:0.62rem;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;margin-bottom:14px;">Rating Distribution</div>
+            {bars_html}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # CSAT Respondents expander
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    respondents = CSAT_RESPONDENTS[:csat["responses"]]
+    with st.expander(f"👥  View Responses  ({csat['responses']})", expanded=False):
+        rows_html = "".join(
+            f"""<div class="resp-row">
+                <div class="resp-name">{r['name']}</div>
+                <div class="resp-email">{r['email']}</div>
+                <div class="resp-stars">{"★" * r['rating']}{"☆" * (5 - r['rating'])}</div>
+                <div class="resp-date">{r['date']}</div>
+            </div>"""
+            for r in respondents
+        )
+        st.markdown(f'<div style="padding:4px 2px;">{rows_html}</div>', unsafe_allow_html=True)
+
+    # Email Activity
+    st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+    if period == "Daily":
+        email_rows = [r for r in EMAIL_ANALYTICS if r["date"] in DAILY_DATES]
+    elif period == "Weekly":
+        email_rows = [r for r in EMAIL_ANALYTICS if r["date"] in WEEKLY_DATES]
+    else:
+        email_rows = EMAIL_ANALYTICS
+
+    st.markdown(f"""
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="color:#e8f0fe;font-size:0.92rem;font-weight:600;">Email Activity</div>
+        <div style="color:#1e3a5f;font-size:0.68rem;font-weight:500;">{len(email_rows)} emails</div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown(_email_table_html(email_rows), unsafe_allow_html=True)
+
+
+# ─── Overview ─────────────────────────────────────────────────────────────────
+
+def render_overview():
     st.markdown("""
     <div class="hero-banner">
         <div>
@@ -522,86 +606,14 @@ def render_overview():
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Section header ────────────────────────────────────────────────────────
-    st.markdown(f"""
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div style="color:#e8f0fe;font-size:0.92rem;font-weight:600;">{data['label']}</div>
-        <div style="color:#1e3a5f;font-size:0.7rem;font-weight:500;letter-spacing:0.03em;">
-            Updated {data['updated']}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    tab_d, tab_w, tab_m = st.tabs(["📅  Daily", "📅  Weekly", "📅  Monthly"])
+    with tab_d:
+        _render_period_content("Daily")
+    with tab_w:
+        _render_period_content("Weekly")
+    with tab_m:
+        _render_period_content("Monthly")
 
-    # ── Row 1: Sent · Open · Click to Open · CSAT ─────────────────────────────
-    score      = csat["score"]
-    full_stars = int(score)
-    stars_html = "★" * full_stars + "☆" * (5 - full_stars)
-    csat_card  = f"""
-    <div class="metric-card accent-amber">
-        <div class="metric-label">CSAT Score</div>
-        <div class="metric-value">{score}<span class="metric-max"> / 5</span></div>
-        <div class="metric-sub">
-            <span style="color:#f59e0b;letter-spacing:2px;">{stars_html}</span>
-            &nbsp;·&nbsp;{csat['responses']} ratings
-        </div>
-    </div>"""
-
-    row1 = "".join(_metric_card_html(m) for m in data["metrics"][:3]) + csat_card
-
-    # ── Row 2: Delivered · Bounce · Unsubscribe · Blocked ─────────────────────
-    row2 = "".join(_metric_card_html(m) for m in data["metrics"][3:])
-
-    st.markdown(
-        f'<div class="analytics-grid">{row1}</div>'
-        f'<div class="analytics-grid">{row2}</div>',
-        unsafe_allow_html=True,
-    )
-
-    # ── CSAT Breakdown ────────────────────────────────────────────────────────
-    bars_html = "".join(
-        f"""<div class="bar-row">
-            <span class="bar-star">{r['star']}★</span>
-            <div class="bar-track"><div class="bar-fill" style="width:{r['pct']}%"></div></div>
-            <span class="bar-pct">{r['pct']}%</span>
-            <span class="bar-count">{r['count']}</span>
-        </div>"""
-        for r in csat["dist"]
-    )
-
-    st.markdown(f"""
-    <div class="csat-section">
-        <div class="csat-score-side">
-            <div style="color:#4a7aaa;font-size:0.62rem;font-weight:700;letter-spacing:0.11em;
-                        text-transform:uppercase;margin-bottom:14px;">CSAT</div>
-            <div class="csat-number">{score}<span style="font-size:1.1rem;color:#4a7aaa;
-                font-weight:500;">/5</span></div>
-            <div class="csat-stars">{stars_html}</div>
-            <div class="csat-count">{csat['responses']} ratings</div>
-        </div>
-        <div>
-            <div style="color:#4a7aaa;font-size:0.62rem;font-weight:700;letter-spacing:0.11em;
-                        text-transform:uppercase;margin-bottom:14px;">Rating Distribution</div>
-            {bars_html}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ── CSAT Respondents ──────────────────────────────────────────────────────
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-    with st.expander(f"👥  View Responses  ({csat['responses']})", expanded=False):
-        rows_html = "".join(
-            f"""<div class="resp-row">
-                <div class="resp-name">{r['name']}</div>
-                <div class="resp-email">{r['email']}</div>
-                <div class="resp-stars">{"★" * r['rating']}{"☆" * (5 - r['rating'])}</div>
-                <div class="resp-date">{r['date']}</div>
-            </div>"""
-            for r in CSAT_RESPONDENTS
-        )
-        st.markdown(
-            f'<div style="padding:4px 2px;">{rows_html}</div>',
-            unsafe_allow_html=True,
-        )
 
 # ─── Draft helpers ────────────────────────────────────────────────────────────
 
@@ -610,6 +622,37 @@ STATUS_META = {
     "draft": ("#0d2515", "#6ee7b7", "In Progress"),
     "ready": ("#0a1535", "#60a5fa", "Ready"),
 }
+
+_TMPL_TEXT_COLORS = ["#c9a96e", "#2563eb", "#ffffff", "#a78bfa", "#8b5e3c"]
+_TMPL_BG_COLORS   = ["#0d1b2a", "#f1f5f9", "#1e3a8a", "#13111f", "#f4ede0"]
+
+
+def _template_picker(d: dict, key_suffix: str):
+    """Render a 5-card template selector. Updates d['template'] on click."""
+    st.markdown('<div style="color:#4a7aaa;font-size:0.75rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">Email Template</div>', unsafe_allow_html=True)
+    cols = st.columns(5)
+    for ti, (tname, tdesc, tswatch) in enumerate(TEMPLATE_NAMES):
+        tid = ti + 1
+        is_sel = d.get("template", 1) == tid
+        tc     = _TMPL_TEXT_COLORS[ti]
+        border = "#3b82f6" if is_sel else "#0e2040"
+        with cols[ti]:
+            st.markdown(
+                f'<div class="tmpl-card" style="background:{tswatch};border:2px solid {border};">'
+                f'<div style="color:{tc};font-size:0.68rem;font-weight:700;letter-spacing:0.04em;">{tname}</div>'
+                f'<div style="color:{tc};font-size:0.57rem;opacity:0.6;margin-top:3px;">{tdesc[:16]}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            if st.button(
+                "✓" if is_sel else "Use",
+                key=f"tmpl_{key_suffix}_{ti}",
+                use_container_width=True,
+                type="primary" if is_sel else "secondary",
+            ):
+                d["template"] = tid
+                st.rerun()
+
 
 def render_drafts_tab():
     st.markdown('<div style="color:#e8f0fe;font-size:1rem;font-weight:600;margin-bottom:4px;">Drafts</div>', unsafe_allow_html=True)
@@ -620,6 +663,7 @@ def render_drafts_tab():
     for i, (col, draft) in enumerate(zip(cols, st.session_state.drafts)):
         bg, fg, lbl = STATUS_META[draft["status"]]
         with col:
+            tname = TEMPLATE_NAMES[draft.get("template", 1) - 1][0]
             st.markdown(
                 f"""<div class="draft-card">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
@@ -627,12 +671,17 @@ def render_drafts_tab():
                         <span style="background:{bg};color:{fg};font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:3px 9px;border-radius:99px;">{lbl}</span>
                     </div>
                     <div style="color:#1e3a5f;font-size:0.72rem;">{draft['client'] or 'No client set'}</div>
+                    <div style="color:#1e3a5f;font-size:0.65rem;margin-top:3px;">Template: {tname}</div>
                 </div>""",
                 unsafe_allow_html=True,
             )
 
             with st.expander("✏️ Edit Draft", expanded=draft["status"] == "empty"):
                 d = st.session_state.drafts[i]
+
+                _template_picker(d, f"d{i}")
+                st.markdown("")
+
                 d["name"]     = st.text_input("Draft Name", value=d["name"],     key=f"dname_{i}")
                 d["client"]   = st.text_input("Client",     value=d["client"],   key=f"dclient_{i}", placeholder="e.g. Acme Corp")
                 d["headline"] = st.text_area("Headline",    value=d["headline"], key=f"dhead_{i}",   height=80,  placeholder="e.g. February showed strong growth…")
@@ -669,8 +718,8 @@ def render_drafts_tab():
     for i, draft in enumerate(st.session_state.drafts):
         if draft.get("show_preview"):
             st.markdown("---")
-            st.markdown(f"#### Preview — {draft['name']}")
-            components.html(build_email_html(draft), height=1400, scrolling=True)
+            st.markdown(f"#### Preview — {draft['name']}  ·  {TEMPLATE_NAMES[draft.get('template',1)-1][0]}")
+            components.html(build_email_html(draft, draft.get("template", 1)), height=1400, scrolling=True)
 
 
 # ─── Email Maker ──────────────────────────────────────────────────────────────
@@ -704,6 +753,9 @@ def render_email_maker():
         ei = draft_names.index(chosen)
         d  = st.session_state.drafts[ei]
         st.markdown("---")
+
+        _template_picker(d, f"e{ei}")
+        st.markdown("")
 
         cc1, cc2 = st.columns(2)
         with cc1: d["name"]   = st.text_input("Draft Name", value=d["name"],   key=f"ed_name_{ei}")
@@ -744,8 +796,8 @@ def render_email_maker():
 
         if d.get("show_preview"):
             st.markdown("---")
-            st.markdown(f"#### Preview — {d['name']}")
-            components.html(build_email_html(d), height=1400, scrolling=True)
+            st.markdown(f"#### Preview — {d['name']}  ·  {TEMPLATE_NAMES[d.get('template',1)-1][0]}")
+            components.html(build_email_html(d, d.get("template", 1)), height=1400, scrolling=True)
 
     # ── Email Preview ─────────────────────────────────────────────────────────
     with tab_preview:
@@ -850,7 +902,7 @@ def render_email_maker():
                             st.session_state["credentials"],
                             all_emails,
                             subject,
-                            build_email_html(send_draft),
+                            build_email_html(send_draft, send_draft.get("template", 1)),
                             st.session_state.get("user_email", ""),
                         )
                     if result["sent"]:

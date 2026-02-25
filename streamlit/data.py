@@ -243,3 +243,114 @@ ACTION_QUEUE = [
         "sla_breached": False,
     },
 ]
+
+# ─── Analytics by Period ──────────────────────────────────────────────────────
+
+ANALYTICS_BY_PERIOD = {
+    "Daily": {
+        "label":   "Today  ·  Feb 25, 2026",
+        "updated": "15 min ago",
+        "metrics": [
+            {"label": "Total Sent",       "value": "12",    "sub": None,         "change": +8.3,  "up_good": True},
+            {"label": "Open Rate",        "value": "41.7%", "sub": "5 opens",    "change": +5.3,  "up_good": True},
+            {"label": "Click to Open",    "value": "20.0%", "sub": "1 click",    "change": +12.4, "up_good": True},
+            {"label": "Delivered Rate",   "value": "100%",  "sub": "12 emails",  "change": +8.3,  "up_good": True},
+            {"label": "Bounce Rate",      "value": "0.0%",  "sub": None,         "change": None,  "up_good": False},
+            {"label": "Unsubscribe Rate", "value": "0.0%",  "sub": None,         "change": None,  "up_good": False},
+            {"label": "Blocked Rate",     "value": "16.7%", "sub": "2 emails",   "change": -5.1,  "up_good": False},
+        ],
+        "csat": {
+            "score":     4.5,
+            "responses": 4,
+            "dist": [
+                {"star": 5, "pct": 75, "count": 3},
+                {"star": 4, "pct": 25, "count": 1},
+                {"star": 3, "pct": 0,  "count": 0},
+                {"star": 2, "pct": 0,  "count": 0},
+                {"star": 1, "pct": 0,  "count": 0},
+            ],
+        },
+    },
+    "Weekly": {
+        "label":   "This Week  ·  Feb 19–25, 2026",
+        "updated": "1 hour ago",
+        "metrics": [
+            {"label": "Total Sent",       "value": "34",    "sub": None,          "change": +25.9, "up_good": True},
+            {"label": "Open Rate",        "value": "38.2%", "sub": "13 opens",    "change": +8.1,  "up_good": True},
+            {"label": "Click to Open",    "value": "15.4%", "sub": "2 clicks",    "change": +31.0, "up_good": True},
+            {"label": "Delivered Rate",   "value": "100%",  "sub": "34 emails",   "change": +25.9, "up_good": True},
+            {"label": "Bounce Rate",      "value": "0.0%",  "sub": None,          "change": None,  "up_good": False},
+            {"label": "Unsubscribe Rate", "value": "0.0%",  "sub": None,          "change": None,  "up_good": False},
+            {"label": "Blocked Rate",     "value": "23.5%", "sub": "8 emails",    "change": +10.2, "up_good": False},
+        ],
+        "csat": {
+            "score":     4.3,
+            "responses": 11,
+            "dist": [
+                {"star": 5, "pct": 55, "count": 6},
+                {"star": 4, "pct": 27, "count": 3},
+                {"star": 3, "pct": 9,  "count": 1},
+                {"star": 2, "pct": 9,  "count": 1},
+                {"star": 1, "pct": 0,  "count": 0},
+            ],
+        },
+    },
+    "Monthly": {
+        "label":   "All Campaigns  ·  Feb 2026",
+        "updated": "2 hours ago",
+        "metrics": [
+            {"label": "Total Sent",       "value": "88",    "sub": None,          "change": +71.7, "up_good": True},
+            {"label": "Open Rate",        "value": "36.4%", "sub": "32 opens",    "change": +10.2, "up_good": True},
+            {"label": "Click to Open",    "value": "9.4%",  "sub": "3 clicks",    "change": +43.6, "up_good": True},
+            {"label": "Delivered Rate",   "value": "100%",  "sub": "88 emails",   "change": +71.7, "up_good": True},
+            {"label": "Bounce Rate",      "value": "0.0%",  "sub": None,          "change": None,  "up_good": False},
+            {"label": "Unsubscribe Rate", "value": "0.0%",  "sub": None,          "change": None,  "up_good": False},
+            {"label": "Blocked Rate",     "value": "28.5%", "sub": "35 emails",   "change": +23.8, "up_good": False},
+        ],
+        "csat": {
+            "score":     4.2,
+            "responses": 24,
+            "dist": [
+                {"star": 5, "pct": 46, "count": 11},
+                {"star": 4, "pct": 33, "count": 8},
+                {"star": 3, "pct": 12, "count": 3},
+                {"star": 2, "pct": 8,  "count": 2},
+                {"star": 1, "pct": 0,  "count": 0},
+            ],
+        },
+    },
+}
+
+# ─── Email-wise Analytics ─────────────────────────────────────────────────────
+
+DAILY_DATES  = {"Feb 25"}
+WEEKLY_DATES = {"Feb 18", "Feb 19", "Feb 20", "Feb 21", "Feb 22", "Feb 23", "Feb 24", "Feb 25"}
+
+EMAIL_ANALYTICS = [
+    {"email": "kai.l@nextlayer.io",     "campaign": "Post-Purchase CSAT",   "delivered": True,  "opened": True,  "clicked": True,  "responded": False, "score": None, "date": "Feb 25"},
+    {"email": "diana.p@cleardata.co",   "campaign": "Q1 NPS Pulse",         "delivered": True,  "opened": False, "clicked": False, "responded": False, "score": None, "date": "Feb 25"},
+    {"email": "marco.v@edgescale.dev",  "campaign": "Onboarding Feedback",  "delivered": True,  "opened": True,  "clicked": False, "responded": True,  "score": 5,    "date": "Feb 25"},
+    {"email": "marcus.w@techcorp.io",   "campaign": "Post-Purchase CSAT",   "delivered": True,  "opened": True,  "clicked": False, "responded": True,  "score": 2,    "date": "Feb 24"},
+    {"email": "priya.s@finflow.com",    "campaign": "Post-Purchase CSAT",   "delivered": True,  "opened": True,  "clicked": False, "responded": True,  "score": 1,    "date": "Feb 24"},
+    {"email": "chloe.m@clearpath.com",  "campaign": "Q1 NPS Pulse",         "delivered": True,  "opened": True,  "clicked": True,  "responded": True,  "score": 4,    "date": "Feb 24"},
+    {"email": "j.ellis@buildhq.co",     "campaign": "Q1 NPS Pulse",         "delivered": True,  "opened": True,  "clicked": True,  "responded": True,  "score": 3,    "date": "Feb 23"},
+    {"email": "harper.w@coreloop.com",  "campaign": "Post-Purchase CSAT",   "delivered": True,  "opened": False, "clicked": False, "responded": False, "score": None, "date": "Feb 23"},
+    {"email": "ryan.t@peakdata.io",     "campaign": "Support Resolution",    "delivered": True,  "opened": True,  "clicked": False, "responded": True,  "score": 3,    "date": "Feb 23"},
+    {"email": "sofia@novahq.io",        "campaign": "Support Resolution",    "delivered": True,  "opened": False, "clicked": False, "responded": False, "score": None, "date": "Feb 22"},
+    {"email": "b.hall@irongate.dev",    "campaign": "Post-Purchase CSAT",   "delivered": True,  "opened": True,  "clicked": False, "responded": True,  "score": 2,    "date": "Feb 22"},
+    {"email": "sam.k@growthco.io",      "campaign": "Onboarding Feedback",  "delivered": True,  "opened": True,  "clicked": True,  "responded": True,  "score": 5,    "date": "Feb 22"},
+    {"email": "d.park@cloudbyte.dev",   "campaign": "Churn-Risk Survey",    "delivered": True,  "opened": True,  "clicked": False, "responded": True,  "score": 1,    "date": "Feb 22"},
+    {"email": "liam.s@gridworks.dev",   "campaign": "Q1 NPS Pulse",         "delivered": True,  "opened": True,  "clicked": False, "responded": True,  "score": 4,    "date": "Feb 21"},
+    {"email": "elijah.g@datavault.io",  "campaign": "Support Resolution",    "delivered": True,  "opened": True,  "clicked": True,  "responded": True,  "score": 3,    "date": "Feb 21"},
+    {"email": "nina.r@clearsky.com",    "campaign": "Q1 NPS Pulse",         "delivered": True,  "opened": False, "clicked": False, "responded": False, "score": None, "date": "Feb 21"},
+    {"email": "ava.c@skybridge.io",     "campaign": "Onboarding Feedback",  "delivered": True,  "opened": True,  "clicked": True,  "responded": True,  "score": 4,    "date": "Feb 21"},
+    {"email": "amira.h@medlink.org",    "campaign": "Post-Purchase CSAT",   "delivered": True,  "opened": True,  "clicked": False, "responded": True,  "score": 3,    "date": "Feb 20"},
+    {"email": "lena.v@insightful.co",   "campaign": "Onboarding Feedback",  "delivered": True,  "opened": True,  "clicked": True,  "responded": True,  "score": 4,    "date": "Feb 20"},
+    {"email": "raj.m@digitalpulse.in",  "campaign": "Churn-Risk Survey",    "delivered": True,  "opened": True,  "clicked": False, "responded": True,  "score": 2,    "date": "Feb 20"},
+    {"email": "c.lee@pulsenet.co",      "campaign": "Post-Purchase CSAT",   "delivered": True,  "opened": False, "clicked": False, "responded": False, "score": None, "date": "Feb 20"},
+    {"email": "tom.b@stackdev.io",      "campaign": "Post-Purchase CSAT",   "delivered": False, "opened": False, "clicked": False, "responded": False, "score": None, "date": "Feb 19"},
+    {"email": "yui.k@fusionlab.jp",     "campaign": "Q1 NPS Pulse",         "delivered": True,  "opened": True,  "clicked": True,  "responded": True,  "score": 5,    "date": "Feb 19"},
+    {"email": "a.young@driftworks.com", "campaign": "Support Resolution",    "delivered": True,  "opened": True,  "clicked": False, "responded": True,  "score": 2,    "date": "Feb 19"},
+    {"email": "o.taylor@nexuspoint.io", "campaign": "Onboarding Feedback",  "delivered": True,  "opened": True,  "clicked": True,  "responded": True,  "score": 4,    "date": "Feb 18"},
+    {"email": "ben.o@fortescale.co",    "campaign": "Onboarding Feedback",  "delivered": True,  "opened": True,  "clicked": False, "responded": True,  "score": 3,    "date": "Feb 18"},
+]
