@@ -13,7 +13,7 @@ import gmail_sender
 # ─── Page config ──────────────────────────────────────────────────────────────
 
 st.set_page_config(
-    page_title="LivePure",
+    page_title="Convin Data Labs",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -28,23 +28,11 @@ def _blank_draft(idx: int) -> dict:
     return {
         "name": f"Draft {idx + 1}",
         "status": "empty",
-        "report_type": "Monthly Analytics Report",
-        "date": "February 2026",
         "client": "",
-        "analyst": "Animesh Koner",
         "headline": "",
-        "intro": "",
-        "kpis": [
-            {"label": "Metric 1", "value": "—", "delta": "", "trend": "up",   "period": ""},
-            {"label": "Metric 2", "value": "—", "delta": "", "trend": "up",   "period": ""},
-            {"label": "Metric 3", "value": "—", "delta": "", "trend": "down", "period": ""},
-            {"label": "Metric 4", "value": "—", "delta": "", "trend": "down", "period": ""},
-        ],
-        "chart1_url": "", "chart1_caption": "Fig. 1",
-        "chart2_url": "", "chart2_caption": "Fig. 2",
-        "chart3_url": "", "chart3_caption": "Fig. 3",
-        "insight": "",
-        "findings": ["", "", "", ""],
+        "body": "",
+        "screenshot_url": "",
+        "screenshot_caption": "",
         "report_link": "",
         "survey_question": "Was this report useful to you?",
         "show_preview": False,
@@ -371,7 +359,7 @@ label { color: #4b5563 !important; font-size: 0.8rem !important; }
 with st.sidebar:
     st.markdown("""
     <div style="padding:8px 4px 20px;">
-        <div style="color:#e2e8f0;font-weight:700;font-size:1rem;letter-spacing:-0.015em;">⚡ LivePure</div>
+        <div style="color:#e2e8f0;font-weight:700;font-size:1rem;letter-spacing:-0.015em;">Convin Data Labs</div>
         <div style="color:#1e2d45;font-size:0.7rem;margin-top:3px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;">Analytics</div>
     </div>
     """, unsafe_allow_html=True)
@@ -440,46 +428,23 @@ def render_drafts_tab():
                         <span style="color:#e2e8f0;font-weight:600;font-size:0.88rem;">{draft['name']}</span>
                         <span style="background:{bg};color:{fg};font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:3px 9px;border-radius:99px;">{lbl}</span>
                     </div>
-                    <div style="color:#1f2937;font-size:0.72rem;">{draft['client'] or 'No client'} · {draft['report_type']}</div>
+                    <div style="color:#1f2937;font-size:0.72rem;">{draft['client'] or 'No client set'}</div>
                 </div>""",
                 unsafe_allow_html=True,
             )
 
             with st.expander("✏️ Edit Draft", expanded=draft["status"] == "empty"):
                 d = st.session_state.drafts[i]
-                d["name"]        = st.text_input("Draft Name",    value=d["name"],        key=f"dname_{i}")
-                d["client"]      = st.text_input("Client",        value=d["client"],      key=f"dclient_{i}",  placeholder="Acme Corp")
-                d["report_type"] = st.text_input("Report Type",   value=d["report_type"], key=f"drtype_{i}")
-                d["date"]        = st.text_input("Date",          value=d["date"],        key=f"ddate_{i}")
-                d["headline"]    = st.text_area("Headline",       value=d["headline"],    key=f"dhead_{i}",    height=80)
-                d["intro"]       = st.text_area("Intro",          value=d["intro"],       key=f"dintro_{i}",   height=90)
+                d["name"]     = st.text_input("Draft Name", value=d["name"],     key=f"dname_{i}")
+                d["client"]   = st.text_input("Client",     value=d["client"],   key=f"dclient_{i}", placeholder="e.g. Acme Corp")
+                d["headline"] = st.text_area("Headline",    value=d["headline"], key=f"dhead_{i}",   height=80,  placeholder="e.g. February showed strong growth…")
+                d["body"]     = st.text_area("Email Body",  value=d["body"],     key=f"dbody_{i}",   height=120, placeholder="Write the main body of the email…")
 
-                st.markdown('<div style="color:#374151;font-size:0.75rem;font-weight:600;margin:8px 0 4px;">KPIs</div>', unsafe_allow_html=True)
-                for k in range(4):
-                    kc1, kc2, kc3 = st.columns([2, 2, 1])
-                    with kc1:
-                        d["kpis"][k]["label"] = st.text_input(f"Label {k+1}", value=d["kpis"][k]["label"], key=f"klbl_{i}_{k}")
-                        d["kpis"][k]["value"] = st.text_input(f"Value {k+1}", value=d["kpis"][k]["value"], key=f"kval_{i}_{k}")
-                    with kc2:
-                        d["kpis"][k]["delta"]  = st.text_input(f"Delta {k+1}",  value=d["kpis"][k]["delta"],  key=f"kdlt_{i}_{k}", placeholder="↑ 12%")
-                        d["kpis"][k]["period"] = st.text_input(f"Period {k+1}", value=d["kpis"][k]["period"], key=f"kper_{i}_{k}")
-                    with kc3:
-                        d["kpis"][k]["trend"] = st.selectbox(f"↑↓", ["up", "down"], index=0 if d["kpis"][k]["trend"] == "up" else 1, key=f"ktrnd_{i}_{k}")
+                st.markdown('<div style="color:#374151;font-size:0.75rem;font-weight:600;margin:10px 0 4px;">Screenshot</div>', unsafe_allow_html=True)
+                d["screenshot_url"]     = st.text_input("Image URL",  value=d["screenshot_url"],     key=f"ssu_{i}", placeholder="https://…")
+                d["screenshot_caption"] = st.text_input("Caption",    value=d["screenshot_caption"], key=f"ssc_{i}", placeholder="Optional caption")
 
-                st.markdown('<div style="color:#374151;font-size:0.75rem;font-weight:600;margin:8px 0 4px;">Charts — paste URLs</div>', unsafe_allow_html=True)
-                d["chart1_url"]     = st.text_input("Chart 1 URL",     value=d["chart1_url"],     key=f"c1u_{i}", placeholder="https://…")
-                d["chart1_caption"] = st.text_input("Chart 1 Caption", value=d["chart1_caption"], key=f"c1c_{i}")
-                d["chart2_url"]     = st.text_input("Chart 2 URL",     value=d["chart2_url"],     key=f"c2u_{i}", placeholder="https://…")
-                d["chart2_caption"] = st.text_input("Chart 2 Caption", value=d["chart2_caption"], key=f"c2c_{i}")
-                d["chart3_url"]     = st.text_input("Chart 3 URL",     value=d["chart3_url"],     key=f"c3u_{i}", placeholder="https://…")
-                d["chart3_caption"] = st.text_input("Chart 3 Caption", value=d["chart3_caption"], key=f"c3c_{i}")
-
-                d["insight"] = st.text_area("Key Insight", value=d["insight"], key=f"dins_{i}", height=80)
-
-                st.markdown('<div style="color:#374151;font-size:0.75rem;font-weight:600;margin:8px 0 4px;">Findings (up to 4)</div>', unsafe_allow_html=True)
-                for f in range(4):
-                    d["findings"][f] = st.text_input(f"Finding {f+1}", value=d["findings"][f], key=f"dfnd_{i}_{f}", placeholder=f"Finding {f+1}…")
-
+                st.markdown('<div style="color:#374151;font-size:0.75rem;font-weight:600;margin:10px 0 4px;">Links</div>', unsafe_allow_html=True)
                 d["report_link"]     = st.text_input("Full Report URL",  value=d["report_link"],     key=f"dlink_{i}", placeholder="https://docs.google.com/…")
                 d["survey_question"] = st.text_input("Survey Question",  value=d["survey_question"], key=f"dsq_{i}")
 
@@ -507,7 +472,7 @@ def render_drafts_tab():
         if draft.get("show_preview"):
             st.markdown("---")
             st.markdown(f"#### Preview — {draft['name']}")
-            components.html(build_email_html(draft), height=1600, scrolling=True)
+            components.html(build_email_html(draft), height=1400, scrolling=True)
 
 
 # ─── Email Maker ──────────────────────────────────────────────────────────────
@@ -534,7 +499,7 @@ def render_email_maker():
     # ── Edit Body ─────────────────────────────────────────────────────────────
     with tab_editor:
         st.markdown('<div style="color:#e2e8f0;font-size:1rem;font-weight:600;margin-bottom:4px;">Edit Email Body</div>', unsafe_allow_html=True)
-        st.caption("Fill in every section. Hit Preview at the bottom to see it rendered.")
+        st.caption("Select a draft and fill in the fields below.")
 
         draft_names = [d["name"] for d in st.session_state.drafts]
         chosen = st.radio("Editing:", draft_names, horizontal=True, key="editor_draft_pick")
@@ -542,51 +507,27 @@ def render_email_maker():
         d  = st.session_state.drafts[ei]
         st.markdown("---")
 
-        st.markdown('<div style="color:#374151;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Header & Meta</div>', unsafe_allow_html=True)
-        hc1, hc2, hc3 = st.columns(3)
-        with hc1: d["client"]      = st.text_input("Client / Company", value=d["client"],      key=f"ed_client_{ei}", placeholder="Acme Corp")
-        with hc2: d["report_type"] = st.text_input("Report Type",      value=d["report_type"], key=f"ed_rtype_{ei}")
-        with hc3: d["date"]        = st.text_input("Date",             value=d["date"],        key=f"ed_date_{ei}")
-        st.markdown("---")
+        cc1, cc2 = st.columns(2)
+        with cc1: d["name"]   = st.text_input("Draft Name", value=d["name"],   key=f"ed_name_{ei}")
+        with cc2: d["client"] = st.text_input("Client",     value=d["client"], key=f"ed_client_{ei}", placeholder="Acme Corp")
 
-        st.markdown('<div style="color:#374151;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Hero Section</div>', unsafe_allow_html=True)
-        d["headline"] = st.text_area("Headline",      value=d["headline"], key=f"ed_head_{ei}",  height=80,  placeholder="e.g. February showed strong growth with one risk area.")
-        d["intro"]    = st.text_area("Intro Paragraph", value=d["intro"],  key=f"ed_intro_{ei}", height=100, placeholder="2–3 sentence overview of the report…")
-        st.markdown("---")
+        st.markdown("")
+        d["headline"] = st.text_area("Headline", value=d["headline"], key=f"ed_head_{ei}", height=80, placeholder="e.g. February showed strong growth with one risk area.")
+        d["body"]     = st.text_area("Email Body", value=d["body"],   key=f"ed_body_{ei}", height=160, placeholder="Write the main body of the email…")
 
-        st.markdown('<div style="color:#374151;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">KPI Strip — 4 metrics</div>', unsafe_allow_html=True)
-        for k in range(4):
-            kc1, kc2, kc3, kc4, kc5 = st.columns([2, 2, 2, 2, 1])
-            with kc1: d["kpis"][k]["label"]  = st.text_input(f"Metric {k+1}",  value=d["kpis"][k]["label"],  key=f"ed_klbl_{ei}_{k}", placeholder="Conversion Rate")
-            with kc2: d["kpis"][k]["value"]  = st.text_input("Value",          value=d["kpis"][k]["value"],  key=f"ed_kval_{ei}_{k}", placeholder="4.7%")
-            with kc3: d["kpis"][k]["delta"]  = st.text_input("Delta",          value=d["kpis"][k]["delta"],  key=f"ed_kdlt_{ei}_{k}", placeholder="↑ 0.6pp")
-            with kc4: d["kpis"][k]["period"] = st.text_input("Period",         value=d["kpis"][k]["period"], key=f"ed_kper_{ei}_{k}", placeholder="vs last month")
-            with kc5: d["kpis"][k]["trend"]  = st.selectbox("↑↓", ["up", "down"], index=0 if d["kpis"][k]["trend"] == "up" else 1, key=f"ed_ktrnd_{ei}_{k}")
         st.markdown("---")
+        st.markdown('<div style="color:#374151;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Screenshot</div>', unsafe_allow_html=True)
+        su1, su2 = st.columns([3, 2])
+        with su1: d["screenshot_url"]     = st.text_input("Image URL", value=d["screenshot_url"],     key=f"ed_ssu_{ei}", placeholder="https://…")
+        with su2: d["screenshot_caption"] = st.text_input("Caption",   value=d["screenshot_caption"], key=f"ed_ssc_{ei}", placeholder="Optional")
 
-        st.markdown('<div style="color:#374151;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Charts — paste hosted image URLs</div>', unsafe_allow_html=True)
-        for ci, label in enumerate(["Chart 1 (full width)", "Chart 2 (left half)", "Chart 3 (right half)"]):
-            cc1, cc2 = st.columns([3, 2])
-            key = f"chart{ci+1}"
-            with cc1: d[f"{key}_url"]     = st.text_input(f"{label} — URL",     value=d[f"{key}_url"],     key=f"ed_{key}u_{ei}", placeholder="https://…")
-            with cc2: d[f"{key}_caption"] = st.text_input(f"{label} — Caption", value=d[f"{key}_caption"], key=f"ed_{key}c_{ei}")
         st.markdown("---")
-
-        st.markdown('<div style="color:#374151;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Key Insight</div>', unsafe_allow_html=True)
-        d["insight"] = st.text_area("", value=d["insight"], key=f"ed_ins_{ei}", height=90, label_visibility="collapsed", placeholder="The single most important takeaway…")
-        st.markdown("---")
-
-        st.markdown('<div style="color:#374151;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Findings (up to 4)</div>', unsafe_allow_html=True)
-        for fi in range(4):
-            d["findings"][fi] = st.text_input(f"Finding {fi+1}", value=d["findings"][fi], key=f"ed_fnd_{ei}_{fi}", placeholder=f"Finding {fi+1} — leave blank to hide")
-        st.markdown("---")
-
-        st.markdown('<div style="color:#374151;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Report Link & Survey</div>', unsafe_allow_html=True)
+        st.markdown('<div style="color:#374151;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Links & Survey</div>', unsafe_allow_html=True)
         lc1, lc2 = st.columns(2)
-        with lc1: d["report_link"]     = st.text_input("Full Report URL", value=d["report_link"],     key=f"ed_link_{ei}", placeholder="https://docs.google.com/…")
-        with lc2: d["survey_question"] = st.text_input("Survey Question", value=d["survey_question"], key=f"ed_sq_{ei}")
-        st.markdown("---")
+        with lc1: d["report_link"]     = st.text_input("Full Report URL",  value=d["report_link"],     key=f"ed_link_{ei}", placeholder="https://docs.google.com/…")
+        with lc2: d["survey_question"] = st.text_input("Survey Question",  value=d["survey_question"], key=f"ed_sq_{ei}")
 
+        st.markdown("---")
         bc1, bc2, bc3 = st.columns(3)
         with bc1:
             if st.button("Save Draft", key=f"ed_save_{ei}", use_container_width=True):
@@ -606,7 +547,7 @@ def render_email_maker():
         if d.get("show_preview"):
             st.markdown("---")
             st.markdown(f"#### Preview — {d['name']}")
-            components.html(build_email_html(d), height=1600, scrolling=True)
+            components.html(build_email_html(d), height=1400, scrolling=True)
 
     # ── Email Preview ─────────────────────────────────────────────────────────
     with tab_preview:
