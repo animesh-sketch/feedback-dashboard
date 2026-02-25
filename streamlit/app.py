@@ -39,7 +39,7 @@ def _blank_draft(idx: int) -> dict:
     }
 
 if "drafts" not in st.session_state:
-    st.session_state.drafts = [_blank_draft(i) for i in range(3)]
+    st.session_state.drafts = [_blank_draft(i) for i in range(2)]
 
 # ─── OAuth callback handler ───────────────────────────────────────────────────
 
@@ -1002,7 +1002,7 @@ def render_drafts_tab():
     st.caption("Up to 3 email drafts — edit, preview, and send independently.")
     st.markdown("")
 
-    cols = st.columns(3)
+    cols = st.columns(2)
     for i, (col, draft) in enumerate(zip(cols, st.session_state.drafts)):
         bg, fg, lbl = STATUS_META[draft["status"]]
         tname = TEMPLATE_NAMES[draft.get("template", 1) - 1][0]
