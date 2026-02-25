@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import streamlit as st
 import pandas as pd
 import streamlit.components.v1 as components
-from data import HEALTH_KPIS, format_kpi, format_delta, delta_is_positive
+from data import CAMPAIGN_ANALYTICS
 from email_builder import build_email_html
 import auth
 import gmail_sender
@@ -204,6 +204,98 @@ hr { border-color: #0f172a !important; margin: 1.5rem 0 !important; }
 label { color: #4b5563 !important; font-size: 0.8rem !important; }
 
 /* ──────────────────────────────────────────────────────
+   CAMPAIGN ANALYTICS DASHBOARD
+────────────────────────────────────────────────────── */
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.metric-card {
+    background: #0a0e1a;
+    border: 1px solid #111827;
+    border-radius: 16px;
+    padding: 1.2rem 1.35rem 1rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.18s, box-shadow 0.18s;
+}
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 36px rgba(0,0,0,0.4);
+    border-color: #1a2540;
+}
+.metric-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 16px 16px 0 0;
+}
+.accent-blue::after   { background: linear-gradient(90deg, #2563eb, #4f46e5); }
+.accent-green::after  { background: linear-gradient(90deg, #059669, #34d399); }
+.accent-amber::after  { background: linear-gradient(90deg, #d97706, #fbbf24); }
+.accent-red::after    { background: linear-gradient(90deg, #dc2626, #f87171); }
+
+.metric-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: #374151;
+    margin-bottom: 0.65rem;
+}
+.metric-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 0.38rem;
+}
+.metric-max { font-size: 1rem; color: #374151; font-weight: 500; letter-spacing: 0; }
+.metric-sub { font-size: 0.69rem; color: #374151; }
+.ch-up   { color: #34d399; font-weight: 600; }
+.ch-down { color: #f87171; font-weight: 600; }
+
+/* CSAT breakdown card */
+.csat-section {
+    background: #0a0e1a;
+    border: 1px solid #111827;
+    border-radius: 16px;
+    padding: 1.4rem 1.8rem;
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 2.5rem;
+    align-items: center;
+    margin-top: 0;
+}
+.csat-score-side {
+    text-align: center;
+    padding-right: 2rem;
+    border-right: 1px solid #111827;
+}
+.csat-number {
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    letter-spacing: -0.04em;
+    line-height: 1;
+}
+.csat-stars { color: #f59e0b; font-size: 1.05rem; margin: 8px 0 5px; letter-spacing: 3px; }
+.csat-count { font-size: 0.7rem; color: #374151; }
+
+.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.bar-row:last-child { margin-bottom: 0; }
+.bar-star  { font-size: 0.67rem; color: #4b5563; width: 18px; text-align: right; flex-shrink: 0; }
+.bar-track { flex: 1; height: 5px; background: #111827; border-radius: 99px; overflow: hidden; }
+.bar-fill  { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #d97706, #fbbf24); }
+.bar-pct   { font-size: 0.67rem; color: #374151; width: 28px; text-align: right; flex-shrink: 0; }
+.bar-count { font-size: 0.64rem; color: #1f2937; width: 14px; flex-shrink: 0; }
+
+/* ──────────────────────────────────────────────────────
    OVERVIEW PAGE COMPONENTS
 ────────────────────────────────────────────────────── */
 
@@ -377,33 +469,108 @@ with st.sidebar:
 
 # ─── Overview ─────────────────────────────────────────────────────────────────
 
+def _accent(m: dict) -> str:
+    if not m["up_good"]:
+        return "accent-green" if m["value"] == "0.0%" else "accent-red"
+    return "accent-green" if m["value"] == "100%" else "accent-blue"
+
+
+def _metric_card_html(m: dict) -> str:
+    sub_parts = []
+    if m["sub"]:
+        sub_parts.append(f'<span style="color:#1f2937;">{m["sub"]}</span>')
+    if m["change"] is not None:
+        good  = (m["change"] > 0) == m["up_good"]
+        cls   = "ch-up" if good else "ch-down"
+        arrow = "↑" if m["change"] > 0 else "↓"
+        sub_parts.append(f'<span class="{cls}">{arrow} {abs(m["change"]):.1f}%</span>')
+    sub_html = (" · ".join(sub_parts)) if sub_parts else "—"
+    return f"""
+    <div class="metric-card {_accent(m)}">
+        <div class="metric-label">{m['label']}</div>
+        <div class="metric-value">{m['value']}</div>
+        <div class="metric-sub">{sub_html}</div>
+    </div>"""
+
+
 def render_overview():
+    data = CAMPAIGN_ANALYTICS
+    csat = data["csat"]
+
+    # ── Hero ──────────────────────────────────────────────────────────────────
     st.markdown("""
     <div class="hero-banner">
         <div>
             <div class="hero-title">Good morning, Animesh 👋</div>
-            <div class="hero-sub">Feedback health snapshot · February 2026</div>
+            <div class="hero-sub">Convin Data Labs · Campaign Analytics Dashboard</div>
         </div>
         <div class="live-badge">● Live</div>
     </div>
     """, unsafe_allow_html=True)
 
-    cards_html = ""
-    for m in HEALTH_KPIS:
-        value   = format_kpi(m)
-        delta   = format_delta(m)
-        good    = delta_is_positive(m)
-        arrow   = "▲" if (m.value - m.previous) > 0 else "▼"
-        t_class = "good" if good else "bad"
-        cards_html += f"""
-        <div class="kpi-card trend-{t_class}">
-            <div class="kpi-label">{m.label}</div>
-            <div class="kpi-value">{value}</div>
-            <div class="kpi-delta {t_class}">{arrow}&nbsp;{delta}</div>
-            <div class="kpi-period">vs last 30 days</div>
-        </div>"""
+    # ── Section header ────────────────────────────────────────────────────────
+    st.markdown(f"""
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="color:#e2e8f0;font-size:0.92rem;font-weight:600;">{data['label']}</div>
+        <div style="color:#1f2937;font-size:0.7rem;font-weight:500;letter-spacing:0.03em;">
+            Updated {data['updated']}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown(f'<div class="kpi-grid">{cards_html}</div>', unsafe_allow_html=True)
+    # ── Row 1: Sent · Open · Click to Open · CSAT ─────────────────────────────
+    score      = csat["score"]
+    full_stars = int(score)
+    stars_html = "★" * full_stars + "☆" * (5 - full_stars)
+    csat_card  = f"""
+    <div class="metric-card accent-amber">
+        <div class="metric-label">CSAT Score</div>
+        <div class="metric-value">{score}<span class="metric-max"> / 5</span></div>
+        <div class="metric-sub">
+            <span style="color:#f59e0b;letter-spacing:2px;">{stars_html}</span>
+            &nbsp;·&nbsp;{csat['responses']} ratings
+        </div>
+    </div>"""
+
+    row1 = "".join(_metric_card_html(m) for m in data["metrics"][:3]) + csat_card
+
+    # ── Row 2: Delivered · Bounce · Unsubscribe · Blocked ─────────────────────
+    row2 = "".join(_metric_card_html(m) for m in data["metrics"][3:])
+
+    st.markdown(
+        f'<div class="analytics-grid">{row1}</div>'
+        f'<div class="analytics-grid">{row2}</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── CSAT Breakdown ────────────────────────────────────────────────────────
+    bars_html = "".join(
+        f"""<div class="bar-row">
+            <span class="bar-star">{r['star']}★</span>
+            <div class="bar-track"><div class="bar-fill" style="width:{r['pct']}%"></div></div>
+            <span class="bar-pct">{r['pct']}%</span>
+            <span class="bar-count">{r['count']}</span>
+        </div>"""
+        for r in csat["dist"]
+    )
+
+    st.markdown(f"""
+    <div class="csat-section">
+        <div class="csat-score-side">
+            <div style="color:#374151;font-size:0.62rem;font-weight:700;letter-spacing:0.11em;
+                        text-transform:uppercase;margin-bottom:14px;">CSAT</div>
+            <div class="csat-number">{score}<span style="font-size:1.1rem;color:#374151;
+                font-weight:500;">/5</span></div>
+            <div class="csat-stars">{stars_html}</div>
+            <div class="csat-count">{csat['responses']} ratings</div>
+        </div>
+        <div>
+            <div style="color:#374151;font-size:0.62rem;font-weight:700;letter-spacing:0.11em;
+                        text-transform:uppercase;margin-bottom:14px;">Rating Distribution</div>
+            {bars_html}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ─── Draft helpers ────────────────────────────────────────────────────────────
 

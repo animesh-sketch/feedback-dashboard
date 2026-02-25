@@ -2,6 +2,33 @@ from dataclasses import dataclass, field
 from typing import Optional
 from datetime import datetime, timezone
 
+# ─── Campaign Analytics ───────────────────────────────────────────────────────
+
+CAMPAIGN_ANALYTICS = {
+    "label":   "All Campaigns",
+    "updated": "2 hours ago",
+    "metrics": [
+        {"label": "Total Sent",       "value": "88",    "sub": None,          "change": +71.7, "up_good": True},
+        {"label": "Open Rate",        "value": "36.4%", "sub": "32 opens",    "change": +10.2, "up_good": True},
+        {"label": "Click to Open",    "value": "9.4%",  "sub": "3 clicks",    "change": +43.6, "up_good": True},
+        {"label": "Delivered Rate",   "value": "100%",  "sub": "88 emails",   "change": +71.7, "up_good": True},
+        {"label": "Bounce Rate",      "value": "0.0%",  "sub": None,          "change": None,  "up_good": False},
+        {"label": "Unsubscribe Rate", "value": "0.0%",  "sub": None,          "change": None,  "up_good": False},
+        {"label": "Blocked Rate",     "value": "28.5%", "sub": "35 emails",   "change": +23.8, "up_good": False},
+    ],
+    "csat": {
+        "score":     4.2,
+        "responses": 24,
+        "dist": [
+            {"star": 5, "pct": 46, "count": 11},
+            {"star": 4, "pct": 33, "count": 8},
+            {"star": 3, "pct": 12, "count": 3},
+            {"star": 2, "pct": 8,  "count": 2},
+            {"star": 1, "pct": 0,  "count": 0},
+        ],
+    },
+}
+
 # ─── KPI Data ─────────────────────────────────────────────────────────────────
 
 @dataclass
