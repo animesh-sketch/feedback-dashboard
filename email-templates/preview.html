@@ -1,209 +1,236 @@
 <!doctype html>
 <!--
-  BROWSER PREVIEW
-  Open in any browser to see exactly how the email looks.
-  Do NOT use this file for sending — use campaign-survey.amp.html.
+  DATA ANALYST REPORT EMAIL — Browser Preview
+  ─────────────────────────────────────────────
+  Open in any browser to preview.
+  Send using campaign-survey.amp.html via your ESP.
+
+  EDIT POINTS are marked with  ← EDIT
 -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Email Preview</title>
+  <title>Report Email Preview</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background: #e8e3db;
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Inter', sans-serif;
       color: #1c1c1c;
       -webkit-font-smoothing: antialiased;
       padding: 40px 16px 60px;
     }
 
-    /* ── Preview chrome ── */
+    /* Preview bar */
     .preview-bar {
-      max-width: 600px;
+      max-width: 620px;
       margin: 0 auto 16px;
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
     }
-    .preview-label {
-      font-family: 'Inter', sans-serif;
-      font-size: 11px;
-      color: #8a7e72;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-    .preview-badge {
-      font-family: 'Inter', sans-serif;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      background: #fef3c7;
-      color: #92400e;
-      padding: 4px 12px;
-      border-radius: 2px;
-    }
+    .preview-label { font-size: 11px; color: #8a7e72; letter-spacing: 1px; text-transform: uppercase; }
+    .preview-badge { font-size: 10px; font-weight: 600; background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 2px; }
 
-    /* ── Wrapper ── */
-    .wrap {
-      max-width: 600px;
-      margin: 0 auto;
-      background: #ffffff;
-      box-shadow: 0 8px 48px rgba(0,0,0,0.18);
-    }
+    /* Wrapper */
+    .wrap { max-width: 620px; margin: 0 auto; background: #fff; box-shadow: 0 8px 48px rgba(0,0,0,0.15); }
 
     /* ── Header ── */
     .header {
       background: #0d1b2a;
-      padding: 32px 48px;
+      padding: 28px 48px;
       border-bottom: 3px solid #b8962e;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
     .brand {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 20px;
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
       font-weight: 400;
-      color: #ffffff;
-      letter-spacing: 3px;
+      color: #fff;
+      letter-spacing: 2px;
       text-transform: uppercase;
     }
     .brand-dot { color: #b8962e; }
-    .header-tagline {
-      font-family: 'Inter', sans-serif;
+    .header-right { text-align: right; }
+    .header-right .report-type {
       font-size: 10px;
-      color: #6a8aaa;
+      font-weight: 700;
       letter-spacing: 2px;
       text-transform: uppercase;
-      margin-top: 6px;
+      color: #b8962e;
+    }
+    .header-right .report-date {
+      font-size: 11px;
+      color: #4a6a8a;
+      margin-top: 3px;
     }
 
-    /* ── Dateline ── */
-    .dateline {
-      padding: 11px 48px;
+    /* ── Recipient bar ── */
+    .recipient-bar {
       background: #faf9f7;
       border-bottom: 1px solid #e4ded6;
+      padding: 12px 48px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    .dateline span {
-      font-family: 'Inter', sans-serif;
-      font-size: 10px;
+    .recipient-bar span {
+      font-size: 11px;
       color: #9c8e80;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
+    .recipient-bar strong { color: #4a4a4a; font-weight: 600; }
 
     /* ── Hero ── */
     .hero {
-      padding: 48px 48px 40px;
+      padding: 44px 48px 36px;
       border-bottom: 1px solid #ede8e0;
     }
     .kicker {
-      font-family: 'Inter', sans-serif;
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 2.5px;
       text-transform: uppercase;
       color: #b8962e;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     .hero h1 {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 30px;
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
       font-weight: 600;
-      line-height: 1.2;
+      line-height: 1.25;
       color: #0d1b2a;
-      letter-spacing: -0.3px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
-    .hero-rule {
-      width: 48px;
-      height: 2px;
-      background: #b8962e;
-      margin: 20px 0;
+    .hero-rule { width: 44px; height: 2px; background: #b8962e; margin: 18px 0; }
+    .hero-body { font-size: 14px; line-height: 1.8; color: #4a4a4a; }
+
+    /* ── KPI Strip ── */
+    .kpi-strip {
+      background: #0d1b2a;
+      padding: 0;
+      display: flex;
+      border-bottom: 3px solid #b8962e;
     }
-    .hero-body {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 15px;
-      line-height: 1.8;
-      color: #4a4a4a;
+    .kpi-item {
+      flex: 1;
+      padding: 24px 20px;
+      text-align: center;
+      border-right: 1px solid #1e3050;
+    }
+    .kpi-item:last-child { border-right: none; }
+    .kpi-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #4a6a8a;
+      margin-bottom: 8px;
+    }
+    .kpi-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      font-weight: 600;
+      color: #f0ede8;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .kpi-delta {
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .up   { color: #6abf6a; }
+    .down { color: #e06060; }
+    .flat { color: #4a6a8a; }
+    .kpi-sub {
+      font-size: 10px;
+      color: #2a4a6a;
+      margin-top: 2px;
     }
 
     /* ── Section ── */
-    .section {
-      padding: 40px 48px;
-      border-bottom: 1px solid #ede8e0;
-    }
+    .section { padding: 36px 48px; border-bottom: 1px solid #ede8e0; }
     .section-label {
-      font-family: 'Inter', sans-serif;
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 2.5px;
       text-transform: uppercase;
       color: #b8962e;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
+    .section-body { font-size: 14px; line-height: 1.8; color: #4a4a4a; }
 
-    /* ── Screenshots ── */
-    .img-full {
+    /* ── Charts / Screenshots ── */
+    .chart-full {
       width: 100%;
       border: 1px solid #ddd8d0;
       display: block;
       margin-bottom: 8px;
+      background: #f8f6f2;
     }
-    .img-caption {
-      font-family: 'Inter', sans-serif;
+    .chart-caption {
       font-size: 11px;
       color: #9c8e80;
       font-style: italic;
       margin-bottom: 28px;
       padding-left: 2px;
     }
-    .img-row {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 8px;
-    }
-    .img-col { flex: 1; }
-    .img-col img {
-      width: 100%;
-      border: 1px solid #ddd8d0;
-      display: block;
-    }
-    .img-col .img-caption { margin-bottom: 0; }
+    .chart-row { display: flex; gap: 16px; margin-bottom: 8px; }
+    .chart-col { flex: 1; }
+    .chart-col img { width: 100%; border: 1px solid #ddd8d0; display: block; background: #f8f6f2; }
+    .chart-col .chart-caption { margin-bottom: 0; }
 
-    /* ── Bullets ── */
-    .bullet-list {
+    /* ── Insight callout ── */
+    .insight-box {
+      background: #faf9f7;
+      border-left: 3px solid #b8962e;
+      padding: 16px 20px;
+      margin: 24px 0 0;
+    }
+    .insight-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #b8962e;
+      margin-bottom: 6px;
+    }
+    .insight-text { font-size: 14px; line-height: 1.7; color: #1c1c1c; }
+
+    /* ── Findings list ── */
+    .findings {
       list-style: none;
       border-top: 1px solid #ede8e0;
       margin-top: 24px;
     }
-    .bullet-list li {
+    .findings li {
       display: flex;
       gap: 14px;
-      padding: 14px 0;
+      padding: 13px 0;
       border-bottom: 1px solid #ede8e0;
-      font-family: 'Playfair Display', Georgia, serif;
       font-size: 14px;
       color: #4a4a4a;
-      line-height: 1.7;
+      line-height: 1.6;
+      align-items: flex-start;
     }
-    .b-num {
-      font-family: 'Inter', sans-serif;
-      font-size: 11px;
+    .f-num {
+      font-size: 10px;
       font-weight: 700;
       color: #b8962e;
+      letter-spacing: 1px;
       flex-shrink: 0;
       padding-top: 3px;
+      width: 24px;
     }
-    .bullet-list strong { color: #0d1b2a; }
+    .findings strong { color: #0d1b2a; }
 
-    /* ── CTA block ── */
+    /* ── Report CTA ── */
     .cta-block {
       padding: 44px 48px;
       background: #faf9f7;
@@ -211,7 +238,6 @@
       text-align: center;
     }
     .cta-eyebrow {
-      font-family: 'Inter', sans-serif;
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 2.5px;
@@ -220,36 +246,29 @@
       margin-bottom: 12px;
     }
     .cta-heading {
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Playfair Display', serif;
       font-size: 22px;
       font-weight: 400;
       color: #0d1b2a;
       margin-bottom: 6px;
     }
-    .cta-meta {
-      font-family: 'Inter', sans-serif;
-      font-size: 12px;
-      color: #9c8e80;
-      margin-bottom: 28px;
-    }
+    .cta-meta { font-size: 12px; color: #9c8e80; margin-bottom: 28px; }
     .cta-btn {
       display: inline-block;
       background: #0d1b2a;
-      color: #ffffff;
+      color: #fff;
       text-decoration: none;
-      font-family: 'Inter', sans-serif;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 2px;
       text-transform: uppercase;
-      padding: 16px 44px;
+      padding: 15px 44px;
       transition: background 0.2s;
     }
     .cta-btn:hover { background: #1a3050; }
     .cta-ghost {
       display: inline-block;
-      margin-top: 16px;
-      font-family: 'Inter', sans-serif;
+      margin-top: 14px;
       font-size: 11px;
       font-weight: 600;
       letter-spacing: 1px;
@@ -260,10 +279,7 @@
     }
 
     /* ── Survey ── */
-    .survey-wrap {
-      background: #0d1b2a;
-      padding: 44px 48px 48px;
-    }
+    .survey-wrap { background: #0d1b2a; padding: 44px 48px 48px; }
     .survey-top {
       text-align: center;
       padding-bottom: 28px;
@@ -271,7 +287,6 @@
       margin-bottom: 32px;
     }
     .survey-kicker {
-      font-family: 'Inter', sans-serif;
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 2.5px;
@@ -280,35 +295,23 @@
       margin-bottom: 12px;
     }
     .survey-heading {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 22px;
+      font-family: 'Playfair Display', serif;
+      font-size: 21px;
       font-weight: 400;
       color: #f0ede8;
       margin-bottom: 8px;
     }
-    .survey-sub {
-      font-family: 'Inter', sans-serif;
-      font-size: 13px;
-      color: #4a6a8a;
-    }
+    .survey-sub { font-size: 12px; color: #4a6a8a; }
 
     /* Stars */
-    .stars-row {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
+    .stars-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
     .star {
-      width: 56px;
-      height: 56px;
+      width: 56px; height: 56px;
       background: #0a1520;
       border: 1px solid #1e3050;
       color: #1e3050;
       font-size: 26px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       cursor: pointer;
       transition: all 0.15s;
       user-select: none;
@@ -322,17 +325,10 @@
       justify-content: space-between;
       margin-bottom: 28px;
     }
-    .star-scale span {
-      font-family: 'Inter', sans-serif;
-      font-size: 10px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: #2a4a6a;
-    }
+    .star-scale span { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #2a4a6a; }
 
     .field-label {
       display: block;
-      font-family: 'Inter', sans-serif;
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 1.5px;
@@ -346,12 +342,11 @@
       background: #080f18;
       border: 1px solid #1e3050;
       color: #c8d8e8;
-      font-family: 'Playfair Display', Georgia, serif;
+      font-family: 'Inter', sans-serif;
       font-size: 14px;
       resize: vertical;
       min-height: 80px;
       outline: none;
-      transition: border-color 0.15s;
     }
     .field-input:focus { border-color: #b8962e; }
     .field-input::placeholder { color: #1e3050; }
@@ -363,7 +358,6 @@
       padding: 16px;
       background: #b8962e;
       color: #0d1b2a;
-      font-family: 'Inter', sans-serif;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 2px;
@@ -375,30 +369,13 @@
     .submit-btn:hover:not(:disabled) { background: #d4a832; }
     .submit-btn:disabled { opacity: 0.25; cursor: default; }
 
-    /* Thank you */
-    .survey-thanks {
-      text-align: center;
-      padding: 16px 0;
-      display: none;
-    }
-    .thanks-rule {
-      width: 40px;
-      height: 1px;
-      background: #b8962e;
-      margin: 16px auto;
-    }
+    .survey-thanks { text-align: center; padding: 16px 0; display: none; }
+    .thanks-rule { width: 40px; height: 1px; background: #b8962e; margin: 16px auto; }
     .thanks-heading {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 20px;
-      color: #f0ede8;
-      margin-bottom: 10px;
+      font-family: 'Playfair Display', serif;
+      font-size: 20px; color: #f0ede8; margin-bottom: 10px;
     }
-    .thanks-sub {
-      font-family: 'Inter', sans-serif;
-      font-size: 13px;
-      color: #4a6a8a;
-      line-height: 1.8;
-    }
+    .thanks-sub { font-size: 13px; color: #4a6a8a; line-height: 1.8; }
 
     /* ── Footer ── */
     .footer {
@@ -408,113 +385,189 @@
       text-align: center;
     }
     .footer-links { margin-bottom: 12px; }
-    .footer-links a {
-      font-family: 'Inter', sans-serif;
-      font-size: 11px;
-      color: #9c8e80;
-      text-decoration: none;
-      margin: 0 14px;
-    }
+    .footer-links a { font-size: 11px; color: #9c8e80; text-decoration: none; margin: 0 12px; }
     .footer-links a:hover { color: #4a4a4a; }
-    .footer-addr {
-      font-family: 'Inter', sans-serif;
-      font-size: 11px;
-      color: #c0b8ae;
-      line-height: 1.8;
-    }
+    .footer-addr { font-size: 11px; color: #c0b8ae; line-height: 1.8; }
 
     @media (max-width: 480px) {
       body { padding: 0 0 40px; }
       .wrap { box-shadow: none; }
-      .header, .dateline, .hero, .section,
-      .cta-block, .survey-wrap, .footer { padding-left: 20px; padding-right: 20px; }
-      .hero h1 { font-size: 24px; }
-      .img-row { flex-direction: column; }
+      .header { flex-direction: column; gap: 10px; padding: 24px; text-align: center; }
+      .header-right { text-align: center; }
+      .recipient-bar { flex-direction: column; gap: 4px; padding: 12px 24px; }
+      .hero, .section, .cta-block, .survey-wrap, .footer { padding-left: 20px; padding-right: 20px; }
+      .kpi-strip { flex-wrap: wrap; }
+      .kpi-item { min-width: 50%; border-right: none; border-bottom: 1px solid #1e3050; }
+      .chart-row { flex-direction: column; }
       .star { width: 46px; height: 46px; font-size: 20px; }
     }
-
   </style>
 </head>
 <body>
 
 <div class="preview-bar">
   <span class="preview-label">Browser Preview</span>
-  <span class="preview-badge">Not for sending — use the .amp.html file</span>
+  <span class="preview-badge">Not for sending — use .amp.html</span>
 </div>
 
 <div class="wrap">
 
-  <!-- Header -->
+  <!-- ══ HEADER ══ -->
   <div class="header">
     <div class="brand">Pulse<span class="brand-dot">·</span>Signal</div>
-    <div class="header-tagline">Customer Intelligence Platform</div>
+    <!-- ← EDIT: your company name -->
+    <div class="header-right">
+      <div class="report-type">Monthly Analytics Report</div>
+      <!-- ← EDIT: report type -->
+      <div class="report-date">February 2026</div>
+      <!-- ← EDIT: date -->
+    </div>
   </div>
 
-  <!-- Dateline -->
-  <div class="dateline">
-    <span>Product Update</span>
-    <span>February 2026</span>
+  <!-- ══ RECIPIENT BAR ══ -->
+  <div class="recipient-bar">
+    <span>Prepared for <strong>Acme Corporation</strong></span>
+    <!-- ← EDIT: client name -->
+    <span>Analyst: <strong>Animesh Koner</strong></span>
+    <!-- ← EDIT: your name -->
   </div>
 
-  <!-- Hero -->
+  <!-- ══ HERO ══ -->
   <div class="hero">
-    <div class="kicker">What's New</div>
-    <h1>A faster, smarter dashboard — built from your feedback.</h1>
+    <div class="kicker">Executive Summary</div>
+    <!-- ← EDIT: section label -->
+    <h1>February performance was strong — with one area that needs attention.</h1>
+    <!-- ← EDIT: headline -->
     <div class="hero-rule"></div>
     <p class="hero-body">
-      Over the past month, we shipped three features requested by more than 60% of our customers.
-      Below is a brief walkthrough — and we would genuinely value your reaction at the end.
+      This report covers key metrics for February 2026 across acquisition, engagement, and retention.
+      Overall performance improved month-over-month, though customer churn in the mid-tier segment
+      warrants a closer look. Full findings and the raw data are linked below.
     </p>
+    <!-- ← EDIT: intro paragraph -->
   </div>
 
-  <!-- Screenshots -->
+  <!-- ══ KPI STRIP ══ -->
+  <!-- ← EDIT: update all 4 values, labels, and deltas -->
+  <div class="kpi-strip">
+    <div class="kpi-item">
+      <div class="kpi-label">Conversion Rate</div>
+      <div class="kpi-value">4.7%</div>
+      <div class="kpi-delta up">↑ 0.6pp</div>
+      <div class="kpi-sub">vs Jan 2026</div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-label">Monthly Revenue</div>
+      <div class="kpi-value">$84K</div>
+      <div class="kpi-delta up">↑ 12%</div>
+      <div class="kpi-sub">vs Jan 2026</div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-label">Churn Rate</div>
+      <div class="kpi-value">3.2%</div>
+      <div class="kpi-delta down">↑ 0.8pp</div>
+      <div class="kpi-sub">vs Jan 2026</div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-label">NPS Score</div>
+      <div class="kpi-value">+42</div>
+      <div class="kpi-delta down">↓ 9pts</div>
+      <div class="kpi-sub">vs Jan 2026</div>
+    </div>
+  </div>
+
+  <!-- ══ CHARTS ══ -->
   <div class="section">
-    <div class="section-label">Visual Overview</div>
+    <div class="section-label">Charts &amp; Visualisations</div>
 
-    <!-- Screenshot 1 — full width -->
+    <!--
+      HOW TO ADD YOUR CHARTS
+      1. Export your chart as an image (PNG/JPG)
+      2. Host it (S3, Cloudinary, Google Drive public link, etc.)
+      3. Replace the src="" below with your image URL
+      4. Update the caption
+    -->
+
+    <!-- Chart 1 — full width -->
     <img
-      class="img-full"
-      src="https://placehold.co/504x280/0d1b2a/b8962e?text=Screenshot+1+%E2%80%94+replace+src+%3D+%22%22"
-      alt="Screenshot 1"
+      class="chart-full"
+      src="https://placehold.co/524x260/0d1b2a/b8962e?text=Chart+1+%E2%80%94+paste+your+image+URL"
+      alt="Chart 1"
     />
-    <p class="img-caption">Fig. 1 — Write a short caption describing what is shown above.</p>
+    <p class="chart-caption">Fig. 1 — Monthly revenue trend, January–February 2026. Replace with your chart.</p>
+    <!-- ← EDIT: caption -->
 
-    <!-- Screenshots 2 & 3 — side by side -->
-    <div class="img-row">
-      <div class="img-col">
-        <img src="https://placehold.co/240x160/0d1b2a/b8962e?text=Screenshot+2" alt="Screenshot 2" />
-        <p class="img-caption">Fig. 2 — Caption for screenshot 2.</p>
+    <!-- Charts 2 & 3 — side by side -->
+    <div class="chart-row">
+      <div class="chart-col">
+        <img src="https://placehold.co/246x180/0d1b2a/b8962e?text=Chart+2" alt="Chart 2" />
+        <p class="chart-caption">Fig. 2 — Conversion funnel by channel.</p>
+        <!-- ← EDIT -->
       </div>
-      <div class="img-col">
-        <img src="https://placehold.co/240x160/0d1b2a/b8962e?text=Screenshot+3" alt="Screenshot 3" />
-        <p class="img-caption">Fig. 3 — Caption for screenshot 3.</p>
+      <div class="chart-col">
+        <img src="https://placehold.co/246x180/0d1b2a/b8962e?text=Chart+3" alt="Chart 3" />
+        <p class="chart-caption">Fig. 3 — Churn by customer segment.</p>
+        <!-- ← EDIT -->
       </div>
     </div>
 
-    <!-- Key highlights -->
-    <ul class="bullet-list">
-      <li><span class="b-num">01</span><span><strong>Dashboard load time</strong> reduced by 60% — faster data, less waiting.</span></li>
-      <li><span class="b-num">02</span><span><strong>NPS trend chart</strong> now breaks down scores by customer cohort and campaign.</span></li>
-      <li><span class="b-num">03</span><span><strong>One-click CSV export</strong> for any filtered feedback view.</span></li>
+    <!-- Key insight callout -->
+    <div class="insight-box">
+      <div class="insight-label">Key Insight</div>
+      <p class="insight-text">
+        Mid-tier churn increased by 0.8pp despite overall revenue growth — primarily driven by
+        customers on the legacy pricing plan. Recommend a targeted retention campaign before Q2.
+      </p>
+      <!-- ← EDIT: your main insight -->
+    </div>
+  </div>
+
+  <!-- ══ FINDINGS ══ -->
+  <div class="section">
+    <div class="section-label">Top Findings</div>
+
+    <!-- ← EDIT: add / remove / rewrite findings -->
+    <ul class="findings">
+      <li>
+        <span class="f-num">01</span>
+        <span><strong>Organic search</strong> drove 38% of new signups in February — up from 24% in January, likely due to the SEO changes shipped on Feb 3rd.</span>
+      </li>
+      <li>
+        <span class="f-num">02</span>
+        <span><strong>Mid-tier churn</strong> rose to 3.2%. Exit survey data points to pricing as the primary reason (mentioned in 61% of responses).</span>
+      </li>
+      <li>
+        <span class="f-num">03</span>
+        <span><strong>Support ticket volume</strong> dropped 18% after the onboarding flow update — reducing cost-to-serve by an estimated $4,200/month.</span>
+      </li>
+      <li>
+        <span class="f-num">04</span>
+        <span><strong>Mobile sessions</strong> now account for 52% of all traffic. Dashboard load time on mobile is still 3.4s — recommend optimisation in March.</span>
+      </li>
     </ul>
   </div>
 
-  <!-- Presentation CTA -->
+  <!-- ══ FULL REPORT LINK ══ -->
   <div class="cta-block">
-    <div class="cta-eyebrow">Full Presentation</div>
-    <div class="cta-heading">View the complete deck</div>
-    <div class="cta-meta">12 slides &nbsp;·&nbsp; 8 minute read</div>
-    <a href="#" class="cta-btn">Open Presentation</a>
+    <div class="cta-eyebrow">Full Report</div>
+    <div class="cta-heading">Access the complete analysis</div>
+    <div class="cta-meta">Includes raw data · Methodology · Appendix</div>
+    <!-- ← EDIT: describe what's in the full report -->
+
+    <a href="#" class="cta-btn">Open Full Report</a>
+    <!-- ← EDIT: replace href="#" with your Google Slides / Notion / PDF link -->
+
     <br />
     <a href="#" class="cta-ghost">Download as PDF →</a>
+    <!-- ← EDIT: direct PDF link, or remove this line -->
   </div>
 
-  <!-- Survey -->
+  <!-- ══ SURVEY ══ -->
   <div class="survey-wrap">
     <div class="survey-top">
-      <div class="survey-kicker">Your Opinion Matters</div>
-      <div class="survey-heading">How do you rate this update?</div>
-      <div class="survey-sub">One question. Fifteen seconds.</div>
+      <div class="survey-kicker">Quick Feedback</div>
+      <div class="survey-heading">Was this report useful to you?</div>
+      <div class="survey-sub">Takes 15 seconds. Helps us improve future reports.</div>
     </div>
 
     <div id="survey-form">
@@ -526,54 +579,55 @@
         <div class="star" data-val="5">★</div>
       </div>
       <div class="star-scale">
-        <span>Poor</span>
-        <span>Average</span>
-        <span>Excellent</span>
+        <span>Not useful</span>
+        <span>Somewhat</span>
+        <span>Very useful</span>
       </div>
-      <label class="field-label" for="comment">Additional comments (optional)</label>
-      <textarea id="comment" class="field-input" placeholder="Share anything specific on your mind…" rows="3"></textarea>
-      <button id="submit-btn" class="submit-btn" disabled>Submit Response</button>
+      <label class="field-label" for="comment">What would make this report more valuable? (optional)</label>
+      <!-- ← EDIT: change the question if needed -->
+      <textarea id="comment" class="field-input" placeholder="e.g. Add cohort breakdown, include YoY comparison…" rows="3"></textarea>
+      <button id="submit-btn" class="submit-btn" disabled>Submit Feedback</button>
     </div>
 
     <div id="survey-thanks" class="survey-thanks">
-      <div class="survey-kicker">Response Received</div>
+      <div class="survey-kicker">Thank You</div>
       <div class="thanks-rule"></div>
-      <div class="thanks-heading">Thank you for your time.</div>
+      <div class="thanks-heading">Your feedback has been noted.</div>
       <p class="thanks-sub">
-        Your response has been recorded.<br />
-        We review every submission and follow up where needed.
+        We incorporate all responses into the next report cycle.<br />
+        Reach out directly if you need anything clarified.
       </p>
     </div>
   </div>
 
-  <!-- Footer -->
+  <!-- ══ FOOTER ══ -->
   <div class="footer">
     <div class="footer-links">
       <a href="#">Unsubscribe</a>
       <a href="#">Preferences</a>
-      <a href="#">Privacy</a>
+      <a href="#">Privacy Policy</a>
     </div>
     <div class="footer-addr">
-      PulseSignal Inc. &nbsp;·&nbsp; 123 Market Street, Suite 400 &nbsp;·&nbsp; San Francisco, CA 94105<br />
-      You are receiving this because you are a registered PulseSignal customer.
+      PulseSignal Inc. &nbsp;·&nbsp; 123 Market Street, Suite 400 &nbsp;·&nbsp; San Francisco, CA 94105
+      <!-- ← EDIT: your company address -->
+      <br />
+      You are receiving this report because you are a registered client.
     </div>
   </div>
 
-</div>
+</div><!-- /wrap -->
 
 <script>
   let selected = 0;
-  const stars = document.querySelectorAll('.star');
-  const btn   = document.getElementById('submit-btn');
+  const stars  = document.querySelectorAll('.star');
+  const btn    = document.getElementById('submit-btn');
 
   stars.forEach(star => {
     star.addEventListener('click', () => {
       selected = parseInt(star.dataset.val);
       stars.forEach((s, i) => {
         s.className = 'star';
-        if (i < selected) {
-          s.classList.add(selected <= 2 ? 'active-low' : 'active-high');
-        }
+        if (i < selected) s.classList.add(selected <= 2 ? 'active-low' : 'active-high');
       });
       btn.disabled = false;
     });
