@@ -75,11 +75,14 @@ header    { visibility: hidden; }
 .block-container { padding-top: 2rem !important; }
 
 /* ── Sidebar ── */
-[data-testid="stSidebar"] {
-    background: #1a3468 !important;
-    border-right: none !important;
+[data-testid="stSidebar"],
+[data-testid="stSidebar"] > div,
+[data-testid="stSidebar"] > div > div,
+section[data-testid="stSidebar"] {
+    background-color: #ffffff !important;
+    border-right: 1px solid #dde8ff !important;
 }
-[data-testid="stSidebar"] * { color: #bfdbfe !important; }
+[data-testid="stSidebar"] * { color: #0f172a !important; }
 [data-testid="stSidebar"] .stRadio > div { gap: 2px !important; }
 [data-testid="stSidebar"] .stRadio label {
     font-size: 0.84rem !important;
@@ -87,11 +90,12 @@ header    { visibility: hidden; }
     padding: 8px 10px !important;
     border-radius: 8px !important;
     transition: background 0.15s !important;
+    color: #475569 !important;
 }
 [data-testid="stSidebar"] .stRadio label:has(input:checked) {
-    background: rgba(255,255,255,0.12) !important;
-    color: #ffffff !important;
-    border-left: 3px solid #93c5fd !important;
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+    border-left: 3px solid #2563eb !important;
 }
 
 /* ── Inputs & textareas ── */
@@ -530,8 +534,8 @@ with st.sidebar:
                 box-shadow:0 4px 14px rgba(59,130,246,0.5);
             ">CDL</div>
             <div>
-                <div style="color:#dbeafe;font-weight:700;font-size:0.93rem;letter-spacing:-0.015em;line-height:1.2;">Convin Data Labs</div>
-                <div style="color:#93c5fd;font-size:0.63rem;margin-top:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">Analytics</div>
+                <div style="color:#0f172a;font-weight:700;font-size:0.93rem;letter-spacing:-0.015em;line-height:1.2;">Convin Data Labs</div>
+                <div style="color:#64748b;font-size:0.63rem;margin-top:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">Analytics</div>
             </div>
         </div>
     </div>
@@ -546,7 +550,7 @@ with st.sidebar:
     st.markdown("---")
     auth.render_login_sidebar()
     st.markdown("---")
-    st.markdown('<div style="color:#7aa0d0;font-size:0.68rem;font-weight:500;">Feb 2026 · v1.0</div>', unsafe_allow_html=True)
+    st.markdown('<div style="color:#94a3b8;font-size:0.68rem;font-weight:500;">Feb 2026 · v1.0</div>', unsafe_allow_html=True)
 
 # ─── Analytics helpers ────────────────────────────────────────────────────────
 
