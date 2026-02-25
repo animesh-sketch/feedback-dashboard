@@ -14,15 +14,70 @@ _FILE = os.path.join(os.path.dirname(__file__), "clients.json")
 STATUSES = ["Active", "At Risk", "Inactive"]
 
 
+SAMPLE_CLIENTS = [
+    {
+        "id": "demo0001",
+        "company": "Acme Corp",
+        "contact": "Sarah Johnson",
+        "emails": ["sarah@acmecorp.com", "reports@acmecorp.com"],
+        "status": "Active",
+        "tags": ["Enterprise", "Q1"],
+        "notes": "Quarterly review scheduled for March.",
+        "added_at": "Jan 10, 2026",
+    },
+    {
+        "id": "demo0002",
+        "company": "Stellar Dynamics",
+        "contact": "Raj Patel",
+        "emails": ["raj.patel@stellardyn.com"],
+        "status": "Active",
+        "tags": ["SaaS", "High Priority"],
+        "notes": "Interested in expanding to 3 more teams.",
+        "added_at": "Jan 22, 2026",
+    },
+    {
+        "id": "demo0003",
+        "company": "Nova Retail",
+        "contact": "Emma Clarke",
+        "emails": ["emma@novaretail.io", "analytics@novaretail.io"],
+        "status": "At Risk",
+        "tags": ["Retail", "Renewal Due"],
+        "notes": "Renewal due in April — needs check-in call.",
+        "added_at": "Feb 01, 2026",
+    },
+    {
+        "id": "demo0004",
+        "company": "Bridgewater Finance",
+        "contact": "Michael Torres",
+        "emails": ["m.torres@bridgewaterfinance.com"],
+        "status": "Active",
+        "tags": ["Finance", "Enterprise"],
+        "notes": "Prefers executive summary format.",
+        "added_at": "Feb 10, 2026",
+    },
+    {
+        "id": "demo0005",
+        "company": "Greenleaf Solutions",
+        "contact": "Priya Mehta",
+        "emails": ["priya@greenleaf.co", "ops@greenleaf.co"],
+        "status": "Inactive",
+        "tags": ["SMB"],
+        "notes": "On hold since Feb — follow up in Q2.",
+        "added_at": "Feb 14, 2026",
+    },
+]
+
+
 def load() -> list:
-    """Return all clients from disk. Returns [] if file missing or corrupt."""
+    """Return all clients from disk. Falls back to sample data if file missing."""
     if not os.path.exists(_FILE):
-        return []
+        return SAMPLE_CLIENTS
     try:
         with open(_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            return data if data else SAMPLE_CLIENTS
     except (json.JSONDecodeError, OSError):
-        return []
+        return SAMPLE_CLIENTS
 
 
 def save(clients: list) -> None:
