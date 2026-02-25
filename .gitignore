@@ -25,3 +25,6 @@ dist-ssr
 
 # Streamlit secrets (never commit real credentials)
 .streamlit/secrets.toml
+
+# Client repository (contains real client data)
+streamlit/clients.json
