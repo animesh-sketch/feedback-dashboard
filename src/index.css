@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    @apply bg-[#0f1117] text-slate-100 antialiased;
+    margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-600;
+  }
+}
+
+@layer utilities {
+  .card {
+    @apply bg-[#161b27] border border-slate-800 rounded-2xl;
+  }
+  .card-hover {
+    @apply hover:border-slate-700 hover:bg-[#1a2030] transition-all duration-200;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+  .btn {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer;
+    border: none;
+    outline: none;
+  }
+  .btn-primary {
+    @apply bg-violet-600 hover:bg-violet-500 text-white;
+  }
+  .btn-ghost {
+    @apply bg-slate-800 hover:bg-slate-700 text-slate-200;
+  }
+  .btn-danger {
+    @apply bg-rose-900/40 hover:bg-rose-800/60 text-rose-300;
+    border: 1px solid rgba(159, 18, 57, 0.4);
+  }
+  .btn-success {
+    @apply bg-emerald-900/40 hover:bg-emerald-800/60 text-emerald-300;
+    border: 1px solid rgba(6, 78, 59, 0.4);
+  }
+  .btn-warning {
+    @apply bg-amber-900/40 hover:bg-amber-800/60 text-amber-300;
+    border: 1px solid rgba(120, 53, 15, 0.4);
+  }
+}
