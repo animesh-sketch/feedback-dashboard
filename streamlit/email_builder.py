@@ -80,6 +80,12 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
     <div style="font-family:'Playfair Display',serif;font-size:20px;color:#0d1b2a;margin-bottom:24px;">Access the complete analysis</div>
     <a href="{rl}" style="display:inline-block;background:#0d1b2a;color:#fff;text-decoration:none;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:14px 40px;">Open Full Report</a>
   </div>
+  <div style="padding:30px 44px 26px;background:#faf9f7;border-top:1px solid #ede8e0;border-bottom:1px solid #ede8e0;">
+    <p style="font-size:14px;line-height:1.8;color:#6a5c4e;font-style:italic;margin-bottom:10px;">Warm regards,</p>
+    <p style="font-family:'Playfair Display',serif;font-size:17px;font-weight:600;color:#0d1b2a;margin-bottom:3px;">Animesh Koner</p>
+    <p style="font-size:12px;color:#b8962e;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;">Convin Data Labs</p>
+    <div style="width:40px;height:1px;background:#b8962e;margin-top:14px;"></div>
+  </div>
   <div style="background:#0d1b2a;padding:40px 44px 44px;">
     <div style="text-align:center;padding-bottom:24px;border-bottom:1px solid #1e3050;margin-bottom:28px;">
       <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#b8962e;margin-bottom:10px;">Quick Feedback</div>
@@ -145,6 +151,11 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
     <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:14px;">Full Report Available</div>
     <a href="{rl}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;font-size:12px;font-weight:600;padding:14px 42px;border-radius:10px;letter-spacing:0.01em;">Open Full Report →</a>
   </div>
+  <div style="padding:28px 40px 24px;border-bottom:1px solid #f3f4f6;">
+    <p style="font-size:13px;color:#9ca3af;margin-bottom:8px;">Best regards,</p>
+    <p style="font-size:16px;font-weight:700;color:#111827;letter-spacing:-0.01em;margin-bottom:3px;">Animesh Koner</p>
+    <p style="font-size:12px;color:#2563eb;font-weight:600;">Convin Data Labs</p>
+  </div>
   <div style="padding:36px 40px;border-bottom:1px solid #f3f4f6;">
     <div style="text-align:center;margin-bottom:20px;">
       <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563eb;margin-bottom:10px;">Quick Feedback</div>
@@ -208,6 +219,11 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
     <div style="font-size:20px;font-weight:700;color:#0f172a;margin-bottom:24px;">Access the complete report</div>
     <a href="{rl}" style="display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:16px 48px;letter-spacing:0.03em;">Open Full Report →</a>
   </div>
+  <div style="padding:28px 44px 24px;background:#f8faff;border-bottom:2px solid #dbeafe;">
+    <p style="font-size:13px;color:#6b7280;margin-bottom:8px;">Best regards,</p>
+    <p style="font-size:17px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;margin-bottom:3px;">Animesh Koner</p>
+    <p style="font-size:12px;color:#1d4ed8;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Convin Data Labs</p>
+  </div>
   <div style="background:#1d4ed8;padding:40px 44px 44px;">
     <div style="text-align:center;padding-bottom:24px;border-bottom:1px solid rgba(255,255,255,0.12);margin-bottom:28px;">
       <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Quick Feedback</div>
@@ -269,6 +285,11 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
   <div style="padding:36px 40px;background:#0f172a;border-bottom:1px solid #1e293b;text-align:center;">
     <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#475569;margin-bottom:14px;">Full Analysis</div>
     <a href="{rl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;text-decoration:none;font-size:12px;font-weight:600;padding:14px 44px;border-radius:10px;letter-spacing:0.03em;box-shadow:0 4px 20px rgba(124,58,237,0.35);">Open Full Report →</a>
+  </div>
+  <div style="padding:28px 40px 24px;background:#0f172a;border-top:1px solid #1e293b;border-bottom:1px solid #1e293b;">
+    <p style="font-size:13px;color:#475569;margin-bottom:8px;">Warm regards,</p>
+    <p style="font-size:16px;font-weight:700;color:#f8fafc;letter-spacing:-0.01em;margin-bottom:3px;">Animesh Koner</p>
+    <p style="font-size:12px;color:#a78bfa;font-weight:500;letter-spacing:0.05em;">Convin Data Labs</p>
   </div>
   <div style="background:#0d0d1a;padding:40px 40px 44px;border-top:1px solid #1e293b;">
     <div style="text-align:center;padding-bottom:24px;border-bottom:1px solid #1e293b;margin-bottom:28px;">
@@ -334,6 +355,12 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
   <div style="padding:36px 48px;background:#faf5ed;border-bottom:1px solid #d5c4a8;text-align:center;">
     <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#8b7355;margin-bottom:14px;">Full Report Available</div>
     <a href="{rl}" style="display:inline-block;border:1.5px solid #2c1a0e;color:#2c1a0e;text-decoration:none;font-family:'Playfair Display',serif;font-size:13px;padding:12px 40px;letter-spacing:0.04em;">Open Full Report</a>
+  </div>
+  <div style="padding:32px 48px 28px;border-bottom:1px solid #d5c4a8;">
+    <p style="font-size:14px;color:#8b7355;font-style:italic;margin-bottom:10px;">Warm regards,</p>
+    <p style="font-family:'Playfair Display',serif;font-size:18px;color:#2c1a0e;margin-bottom:4px;">Animesh Koner</p>
+    <p style="font-size:12px;color:#c9a96e;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;">Convin Data Labs</p>
+    <div style="width:48px;height:1px;background:#c9a96e;margin-top:16px;"></div>
   </div>
   <div style="padding:36px 48px;border-bottom:1px solid #d5c4a8;">
     <div style="text-align:center;margin-bottom:22px;">
