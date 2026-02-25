@@ -89,8 +89,8 @@ def render_login_sidebar() -> None:
     if st.session_state.get("credentials"):
         email = st.session_state.get("user_email", "")
         st.markdown(
-            f'<div style="color:#86efac;font-size:0.78rem;font-weight:600;margin-bottom:2px;">✓ Signed in</div>'
-            f'<div style="color:#64748b;font-size:0.75rem;word-break:break-all;margin-bottom:8px;">{email}</div>',
+            f'<div style="color:#16a34a;font-size:0.78rem;font-weight:600;margin-bottom:2px;">✓ Signed in</div>'
+            f'<div style="color:#475569;font-size:0.75rem;word-break:break-all;margin-bottom:8px;">{email}</div>',
             unsafe_allow_html=True,
         )
         if st.button("Sign out", key="signout_btn", use_container_width=True):

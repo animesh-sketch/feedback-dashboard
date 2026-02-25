@@ -75,28 +75,23 @@ header    { visibility: hidden; }
 .block-container { padding-top: 2rem !important; }
 
 /* ── Sidebar ── */
-[data-testid="stSidebar"],
-[data-testid="stSidebar"] > div,
-[data-testid="stSidebar"] > div > div,
-section[data-testid="stSidebar"] {
-    background-color: #ffffff !important;
-    border-right: 1px solid #dde8ff !important;
-}
-[data-testid="stSidebar"] * { color: #0f172a !important; }
-[data-testid="stSidebar"] .stRadio > div { gap: 2px !important; }
-[data-testid="stSidebar"] .stRadio label {
-    font-size: 0.84rem !important;
-    font-weight: 500 !important;
+section[data-testid="stSidebar"] { background: #ffffff !important; }
+section[data-testid="stSidebar"] > div { background: #ffffff !important; }
+section[data-testid="stSidebar"] label { color: #374151 !important; font-size: 0.86rem !important; font-weight: 500 !important; }
+section[data-testid="stSidebar"] p { color: #374151 !important; }
+section[data-testid="stSidebar"] span { color: #374151 !important; }
+section[data-testid="stSidebar"] .stRadio > div { gap: 2px !important; }
+section[data-testid="stSidebar"] .stRadio label {
     padding: 8px 10px !important;
     border-radius: 8px !important;
     transition: background 0.15s !important;
-    color: #475569 !important;
 }
-[data-testid="stSidebar"] .stRadio label:has(input:checked) {
+section[data-testid="stSidebar"] .stRadio label:has(input:checked) {
     background: #eff6ff !important;
     color: #1d4ed8 !important;
     border-left: 3px solid #2563eb !important;
 }
+section[data-testid="stSidebar"] hr { border-color: #e2e8f0 !important; }
 
 /* ── Inputs & textareas ── */
 [data-testid="stTextInput"] input,
