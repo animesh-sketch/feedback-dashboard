@@ -9,6 +9,7 @@ from data import (
     HEALTH_KPIS, CAMPAIGNS, ACTION_QUEUE,
     format_kpi, format_delta, delta_is_positive,
 )
+from email_builder import build_email_html
 
 # ─── Page config ──────────────────────────────────────────────────────────────
 
@@ -22,7 +23,36 @@ st.set_page_config(
 # ─── Session state defaults ───────────────────────────────────────────────────
 
 if "clients" not in st.session_state:
-    st.session_state.clients = []   # list of {name, emails: []}
+    st.session_state.clients = []
+
+def _blank_draft(idx: int) -> dict:
+    return {
+        "name": f"Draft {idx + 1}",
+        "status": "empty",           # empty / draft / ready
+        "report_type": "Monthly Analytics Report",
+        "date": "February 2026",
+        "client": "",
+        "analyst": "Animesh Koner",
+        "headline": "",
+        "intro": "",
+        "kpis": [
+            {"label": "Metric 1", "value": "—", "delta": "", "trend": "up", "period": ""},
+            {"label": "Metric 2", "value": "—", "delta": "", "trend": "up", "period": ""},
+            {"label": "Metric 3", "value": "—", "delta": "", "trend": "down", "period": ""},
+            {"label": "Metric 4", "value": "—", "delta": "", "trend": "down", "period": ""},
+        ],
+        "chart1_url": "", "chart1_caption": "Fig. 1",
+        "chart2_url": "", "chart2_caption": "Fig. 2",
+        "chart3_url": "", "chart3_caption": "Fig. 3",
+        "insight": "",
+        "findings": ["", "", "", ""],
+        "report_link": "",
+        "survey_question": "Was this report useful to you?",
+        "show_preview": False,
+    }
+
+if "drafts" not in st.session_state:
+    st.session_state.drafts = [_blank_draft(i) for i in range(3)]
 
 # ─── Global CSS ───────────────────────────────────────────────────────────────
 
@@ -227,13 +257,119 @@ def render_smart_actions():
         if st.button("⬇️  Export Negative Feedback", use_container_width=True):
             st.toast("Preparing CSV export…")
 
+# ─── Drafts ───────────────────────────────────────────────────────────────────
+
+STATUS_COLORS = {
+    "empty": ("#1e2535", "#64748b"),
+    "draft": ("#1c2a10", "#86efac"),
+    "ready": ("#1a1040", "#a78bfa"),
+}
+STATUS_LABELS = {"empty": "Empty", "draft": "In Progress", "ready": "Ready to Send"}
+
+def render_drafts_tab():
+    st.markdown("#### Email Drafts")
+    st.caption("Create up to 3 email drafts simultaneously. Edit, preview, and send each independently.")
+    st.markdown("")
+
+    cols = st.columns(3)
+
+    for i, (col, draft) in enumerate(zip(cols, st.session_state.drafts)):
+        bg, fg = STATUS_COLORS[draft["status"]]
+        with col:
+            # ── Draft header card ──
+            st.markdown(
+                f"""<div style="background:#161b27;border:1px solid #1e2535;border-radius:14px;padding:16px 18px;margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                        <span style="color:#f1f5f9;font-weight:600;font-size:0.9rem;">{draft['name']}</span>
+                        <span style="background:{bg};color:{fg};font-size:0.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:99px;">{STATUS_LABELS[draft['status']]}</span>
+                    </div>
+                    <div style="color:#475569;font-size:0.75rem;">{draft['client'] or 'No client set'} · {draft['report_type']}</div>
+                </div>""",
+                unsafe_allow_html=True,
+            )
+
+            with st.expander("✏️ Edit Draft", expanded=draft["status"] == "empty"):
+                d = st.session_state.drafts[i]
+
+                d["name"]        = st.text_input("Draft Name",    value=d["name"],        key=f"dname_{i}")
+                d["client"]      = st.text_input("Client Name",   value=d["client"],      key=f"dclient_{i}",   placeholder="e.g. Acme Corp")
+                d["report_type"] = st.text_input("Report Type",   value=d["report_type"], key=f"drtype_{i}")
+                d["date"]        = st.text_input("Date",          value=d["date"],        key=f"ddate_{i}")
+                d["headline"]    = st.text_area("Headline",       value=d["headline"],    key=f"dhead_{i}",     height=80,  placeholder="e.g. February showed strong growth with one risk area.")
+                d["intro"]       = st.text_area("Intro Paragraph",value=d["intro"],       key=f"dintro_{i}",    height=100, placeholder="Brief overview of the report…")
+
+                st.markdown("**KPIs** (4 metrics)")
+                for k in range(4):
+                    kc1, kc2, kc3 = st.columns([2, 2, 1])
+                    with kc1:
+                        d["kpis"][k]["label"] = st.text_input(f"Label {k+1}", value=d["kpis"][k]["label"], key=f"klbl_{i}_{k}")
+                        d["kpis"][k]["value"] = st.text_input(f"Value {k+1}", value=d["kpis"][k]["value"], key=f"kval_{i}_{k}")
+                    with kc2:
+                        d["kpis"][k]["delta"]  = st.text_input(f"Delta {k+1}", value=d["kpis"][k]["delta"],  key=f"kdlt_{i}_{k}", placeholder="↑ 12%")
+                        d["kpis"][k]["period"] = st.text_input(f"Period {k+1}", value=d["kpis"][k]["period"], key=f"kper_{i}_{k}", placeholder="vs last month")
+                    with kc3:
+                        d["kpis"][k]["trend"] = st.selectbox(f"Trend {k+1}", ["up", "down"], index=0 if d["kpis"][k]["trend"]=="up" else 1, key=f"ktrnd_{i}_{k}")
+
+                st.markdown("**Charts** — paste image URLs")
+                d["chart1_url"]     = st.text_input("Chart 1 URL (full width)", value=d["chart1_url"],     key=f"c1u_{i}", placeholder="https://…")
+                d["chart1_caption"] = st.text_input("Chart 1 Caption",          value=d["chart1_caption"], key=f"c1c_{i}")
+                d["chart2_url"]     = st.text_input("Chart 2 URL (left)",        value=d["chart2_url"],     key=f"c2u_{i}", placeholder="https://…")
+                d["chart2_caption"] = st.text_input("Chart 2 Caption",           value=d["chart2_caption"], key=f"c2c_{i}")
+                d["chart3_url"]     = st.text_input("Chart 3 URL (right)",       value=d["chart3_url"],     key=f"c3u_{i}", placeholder="https://…")
+                d["chart3_caption"] = st.text_input("Chart 3 Caption",           value=d["chart3_caption"], key=f"c3c_{i}")
+
+                d["insight"] = st.text_area("Key Insight", value=d["insight"], key=f"dins_{i}", height=80)
+
+                st.markdown("**Findings** (up to 4)")
+                for f in range(4):
+                    d["findings"][f] = st.text_input(f"Finding {f+1}", value=d["findings"][f], key=f"dfnd_{i}_{f}", placeholder=f"Finding {f+1}…")
+
+                d["report_link"]      = st.text_input("Full Report URL", value=d["report_link"],      key=f"dlink_{i}", placeholder="https://docs.google.com/…")
+                d["survey_question"]  = st.text_input("Survey Question", value=d["survey_question"],  key=f"dsq_{i}")
+
+                # Status
+                sc1, sc2 = st.columns(2)
+                with sc1:
+                    if st.button("💾 Save as Draft", key=f"save_{i}", use_container_width=True):
+                        st.session_state.drafts[i]["status"] = "draft"
+                        st.toast(f"{d['name']} saved.", icon="💾")
+                        st.rerun()
+                with sc2:
+                    if st.button("✅ Mark Ready", key=f"ready_{i}", use_container_width=True, type="primary"):
+                        st.session_state.drafts[i]["status"] = "ready"
+                        st.toast(f"{d['name']} marked ready to send.", icon="✅")
+                        st.rerun()
+
+            # ── Preview toggle ──
+            if st.button("👁 Preview Email", key=f"prev_{i}", use_container_width=True):
+                st.session_state.drafts[i]["show_preview"] = not draft["show_preview"]
+                st.rerun()
+
+            # ── Reset ──
+            if draft["status"] != "empty":
+                if st.button("🗑 Reset Draft", key=f"reset_{i}", use_container_width=True):
+                    st.session_state.drafts[i] = _blank_draft(i)
+                    st.rerun()
+
+    # ── Full-width previews (shown below columns) ──
+    for i, draft in enumerate(st.session_state.drafts):
+        if draft.get("show_preview"):
+            st.markdown("---")
+            st.markdown(f"#### Preview — {draft['name']}")
+            components.html(build_email_html(draft), height=1600, scrolling=True)
+
+
 # ─── Email Maker ──────────────────────────────────────────────────────────────
 
 def render_email_maker():
     st.markdown('<p class="page-title">📧 Email Maker</p>', unsafe_allow_html=True)
     st.markdown('<p class="page-sub" style="margin-bottom:1.5rem;">Build your report email and manage client recipients.</p>', unsafe_allow_html=True)
 
-    tab_preview, tab_recipients = st.tabs(["📄 Email Preview", "👥 Recipients"])
+    tab_drafts, tab_preview, tab_recipients = st.tabs(["✏️ Drafts", "📄 Email Preview", "👥 Recipients"])
+
+    # ── Tab 0: Drafts ─────────────────────────────────────────────────────────
+    with tab_drafts:
+        render_drafts_tab()
 
     # ── Tab 1: Email Preview ──────────────────────────────────────────────────
     with tab_preview:
