@@ -28,3 +28,7 @@ dist-ssr
 
 # Client repository (contains real client data)
 streamlit/clients.json
+
+# Python cache
+__pycache__/
+*.pyc
