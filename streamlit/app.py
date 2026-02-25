@@ -590,7 +590,7 @@ def _email_table_html(rows: list) -> str:
 
     th = 'style="color:#64748b;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:10px 12px;text-align:left;white-space:nowrap;background:#f8faff;"'
     tc = 'style="font-size:0.73rem;padding:9px 12px;border-bottom:1px solid #e8f0fe;text-align:center;"'
-    headers = ["Email", "Campaign", "Del", "Open", "Click", "Resp", "Score", "Date"]
+    headers = ["Email", "DL Report Name", "Del", "Open", "Click", "Resp", "Score", "Date"]
     hrow = f'<tr>{"".join(f"<th {th}>{h}</th>" for h in headers)}</tr>'
     brows = "".join(
         f"""<tr>
