@@ -2,6 +2,39 @@ from dataclasses import dataclass, field
 from typing import Optional
 from datetime import datetime, timezone
 
+# ─── CSAT Respondents ─────────────────────────────────────────────────────────
+
+CSAT_RESPONDENTS = [
+    # 5-star (11)
+    {"name": "Aiden Clarke",   "email": "a.clarke@techwave.io",   "rating": 5, "date": "Feb 24"},
+    {"name": "Maya Patel",     "email": "maya.p@growthhub.com",   "rating": 5, "date": "Feb 23"},
+    {"name": "Lucas Bennett",  "email": "l.bennett@scalex.co",    "rating": 5, "date": "Feb 23"},
+    {"name": "Zara Ali",       "email": "zara.ali@dataflow.org",  "rating": 5, "date": "Feb 22"},
+    {"name": "Ethan Moore",    "email": "e.moore@cloudnine.dev",  "rating": 5, "date": "Feb 22"},
+    {"name": "Isabelle Roy",   "email": "i.roy@brightmind.co",    "rating": 5, "date": "Feb 21"},
+    {"name": "Noah Fischer",   "email": "n.fischer@synapse.io",   "rating": 5, "date": "Feb 21"},
+    {"name": "Sophia Nguyen",  "email": "sophia.n@launchpad.com", "rating": 5, "date": "Feb 20"},
+    {"name": "Owen Kim",       "email": "o.kim@neostack.dev",     "rating": 5, "date": "Feb 20"},
+    {"name": "Layla Hassan",   "email": "l.hassan@finsight.io",   "rating": 5, "date": "Feb 19"},
+    {"name": "James Wu",       "email": "j.wu@orbitmedia.co",     "rating": 5, "date": "Feb 19"},
+    # 4-star (8)
+    {"name": "Chloe Martin",   "email": "c.martin@clearpath.com", "rating": 4, "date": "Feb 24"},
+    {"name": "Ryan Torres",    "email": "r.torres@peakdata.io",   "rating": 4, "date": "Feb 23"},
+    {"name": "Mia Johnson",    "email": "mia.j@springboard.co",   "rating": 4, "date": "Feb 22"},
+    {"name": "Liam Scott",     "email": "liam.s@gridworks.dev",   "rating": 4, "date": "Feb 21"},
+    {"name": "Ava Chen",       "email": "ava.chen@skybridge.io",  "rating": 4, "date": "Feb 21"},
+    {"name": "Mason Brown",    "email": "m.brown@logicbase.com",  "rating": 4, "date": "Feb 20"},
+    {"name": "Emma Davis",     "email": "e.davis@zenflow.co",     "rating": 4, "date": "Feb 19"},
+    {"name": "Oliver Taylor",  "email": "o.taylor@nexuspoint.io", "rating": 4, "date": "Feb 18"},
+    # 3-star (3)
+    {"name": "Harper Wilson",  "email": "h.wilson@coreloop.com",  "rating": 3, "date": "Feb 23"},
+    {"name": "Elijah Green",   "email": "e.green@datavault.io",   "rating": 3, "date": "Feb 21"},
+    {"name": "Charlotte Lee",  "email": "c.lee@pulsenet.co",      "rating": 3, "date": "Feb 20"},
+    # 2-star (2)
+    {"name": "Benjamin Hall",  "email": "b.hall@irongate.dev",    "rating": 2, "date": "Feb 22"},
+    {"name": "Amelia Young",   "email": "a.young@driftworks.com", "rating": 2, "date": "Feb 19"},
+]
+
 # ─── Campaign Analytics ───────────────────────────────────────────────────────
 
 CAMPAIGN_ANALYTICS = {
