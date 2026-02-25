@@ -937,8 +937,10 @@ STATUS_META = {
     "ready": ("#eff6ff", "#2563eb", "Ready"),
 }
 
-_TMPL_TEXT_COLORS = ["#c9a96e", "#2563eb", "#ffffff", "#a78bfa", "#8b5e3c"]
-_TMPL_BG_COLORS   = ["#0d1b2a", "#f1f5f9", "#1e3a8a", "#13111f", "#f4ede0"]
+_TMPL_TEXT_COLORS = ["#c9a96e", "#2563eb", "#ffffff", "#a78bfa", "#8b5e3c",
+                     "#06b6d4", "#ea580c", "#10b981", "#f97316"]
+_TMPL_BG_COLORS   = ["#0d1b2a", "#f1f5f9", "#1e3a8a", "#13111f", "#f4ede0",
+                     "#040d18", "#fff3e8", "#0b1f14", "#1a1a1a"]
 
 
 def _screenshot_input(d: dict, key_suffix: str):
@@ -973,24 +975,27 @@ def _screenshot_input(d: dict, key_suffix: str):
 
 def _template_picker(d: dict, key_suffix: str):
     st.markdown('<div style="color:#64748b;font-size:0.75rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">Email Template</div>', unsafe_allow_html=True)
-    cols = st.columns(5)
-    for ti, (tname, tdesc, tswatch) in enumerate(TEMPLATE_NAMES):
-        tid    = ti + 1
-        is_sel = d.get("template", 1) == tid
-        tc     = _TMPL_TEXT_COLORS[ti]
-        border = "#2563eb" if is_sel else "#dde8ff"
-        with cols[ti]:
-            st.markdown(
-                f'<div class="tmpl-card" style="background:{tswatch};border:2px solid {border};">'
-                f'<div style="color:{tc};font-size:0.68rem;font-weight:700;letter-spacing:0.04em;">{tname}</div>'
-                f'<div style="color:{tc};font-size:0.57rem;opacity:0.6;margin-top:3px;">{tdesc[:16]}</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-            if st.button("✓" if is_sel else "Use", key=f"tmpl_{key_suffix}_{ti}",
-                         use_container_width=True, type="primary" if is_sel else "secondary"):
-                d["template"] = tid
-                st.rerun()
+    for row_start in range(0, len(TEMPLATE_NAMES), 5):
+        row_items = TEMPLATE_NAMES[row_start:row_start + 5]
+        cols = st.columns(len(row_items))
+        for j, (tname, tdesc, tswatch) in enumerate(row_items):
+            ti     = row_start + j
+            tid    = ti + 1
+            is_sel = d.get("template", 1) == tid
+            tc     = _TMPL_TEXT_COLORS[ti]
+            border = "#2563eb" if is_sel else "#dde8ff"
+            with cols[j]:
+                st.markdown(
+                    f'<div class="tmpl-card" style="background:{tswatch};border:2px solid {border};">'
+                    f'<div style="color:{tc};font-size:0.68rem;font-weight:700;letter-spacing:0.04em;">{tname}</div>'
+                    f'<div style="color:{tc};font-size:0.57rem;opacity:0.6;margin-top:3px;">{tdesc[:16]}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                if st.button("✓" if is_sel else "Use", key=f"tmpl_{key_suffix}_{ti}",
+                             use_container_width=True, type="primary" if is_sel else "secondary"):
+                    d["template"] = tid
+                    st.rerun()
 
 
 def render_drafts_tab():
@@ -1068,8 +1073,8 @@ def render_email_maker():
         </div>
     </div>""", unsafe_allow_html=True)
 
-    tab_drafts, tab_editor, tab_recipients = st.tabs(
-        ["✏️  Drafts", "📝  Edit Body", "📤  Send"]
+    tab_drafts, tab_editor, tab_recipients, tab_ai = st.tabs(
+        ["✏️  Drafts", "📝  Edit Body", "📤  Send", "🤖  AI Check"]
     )
 
     # ── Drafts ────────────────────────────────────────────────────────────────
@@ -1192,6 +1197,93 @@ def render_email_maker():
             st.download_button("⬇️  Export Recipients CSV", data=csv,
                                file_name="convin_recipients.csv", mime="text/csv",
                                use_container_width=True)
+
+    # ── AI Grammar & Spell Check ───────────────────────────────────────────────
+    with tab_ai:
+        st.markdown('<div style="color:#0f172a;font-size:1rem;font-weight:600;margin-bottom:4px;">AI Writing Assistant</div>', unsafe_allow_html=True)
+        st.caption("Fix spelling mistakes and grammar errors in your email drafts using AI.")
+        st.markdown("")
+
+        # Source selector
+        ai_source = st.radio("Text source:", ["Pick a draft", "Paste custom text"], horizontal=True, key="ai_source")
+
+        if ai_source == "Pick a draft":
+            draft_names = [d["name"] for d in st.session_state.drafts]
+            ai_draft_name = st.selectbox("Select draft to check:", draft_names, key="ai_draft_pick")
+            ai_idx = draft_names.index(ai_draft_name)
+            ai_d = st.session_state.drafts[ai_idx]
+            ai_text_parts = []
+            if ai_d.get("headline"):
+                ai_text_parts.append(f"Headline: {ai_d['headline']}")
+            if ai_d.get("body"):
+                ai_text_parts.append(f"Body: {ai_d['body']}")
+            ai_input = "\n\n".join(ai_text_parts) or ""
+            st.markdown('<div style="color:#64748b;font-size:0.75rem;margin-bottom:6px;">Text from draft:</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="background:#f8faff;border:1px solid #dde8ff;border-radius:10px;padding:14px 16px;font-size:0.83rem;color:#475569;white-space:pre-wrap;min-height:60px;">{ai_input or "— draft is empty —"}</div>', unsafe_allow_html=True)
+        else:
+            ai_input = st.text_area("Paste your text here:", height=160, key="ai_custom_text",
+                                    placeholder="Type or paste your headline, body, or any email text…")
+
+        st.markdown("")
+        if st.button("✨ Check & Fix Grammar", type="primary", use_container_width=False, key="ai_check_btn"):
+            if not ai_input.strip():
+                st.warning("Please enter some text to check.")
+            else:
+                api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+                if not api_key:
+                    st.error("ANTHROPIC_API_KEY not found in secrets. Add it to .streamlit/secrets.toml to use AI checking.")
+                else:
+                    try:
+                        import anthropic as _anthropic
+                        _client = _anthropic.Anthropic(api_key=api_key)
+                        with st.spinner("Checking grammar and spelling…"):
+                            _msg = _client.messages.create(
+                                model="claude-haiku-4-5-20251001",
+                                max_tokens=1024,
+                                messages=[{
+                                    "role": "user",
+                                    "content": (
+                                        "You are a professional editor. Fix ALL spelling mistakes and grammar errors "
+                                        "in the following text. Keep the meaning, tone, and structure exactly the same. "
+                                        "Reply in two clearly labelled sections:\n\n"
+                                        "CORRECTED TEXT:\n<the fixed version>\n\n"
+                                        "CHANGES MADE:\n<bullet list of what was fixed, or 'No errors found.' if perfect>\n\n"
+                                        f"Text to check:\n{ai_input}"
+                                    ),
+                                }],
+                            )
+                        _reply = _msg.content[0].text
+                        if "CORRECTED TEXT:" in _reply and "CHANGES MADE:" in _reply:
+                            _corrected = _reply.split("CORRECTED TEXT:")[1].split("CHANGES MADE:")[0].strip()
+                            _changes   = _reply.split("CHANGES MADE:")[1].strip()
+                        else:
+                            _corrected = _reply
+                            _changes   = ""
+
+                        st.markdown('<div style="color:#059669;font-size:0.8rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">Corrected Text</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;font-size:0.85rem;color:#14532d;white-space:pre-wrap;">{_corrected}</div>', unsafe_allow_html=True)
+
+                        if _changes:
+                            st.markdown('<div style="color:#2563eb;font-size:0.8rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin:14px 0 8px;">Changes Made</div>', unsafe_allow_html=True)
+                            st.markdown(f'<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;font-size:0.83rem;color:#1e3a5f;white-space:pre-wrap;">{_changes}</div>', unsafe_allow_html=True)
+
+                        # Apply to draft option
+                        if ai_source == "Pick a draft" and _corrected:
+                            st.markdown("")
+                            if st.button("Apply corrected text to draft", key="ai_apply_btn"):
+                                if ai_d.get("headline") and "Headline:" in ai_input:
+                                    _lines = _corrected.split("\n\n")
+                                    for _l in _lines:
+                                        if _l.startswith("Headline:"):
+                                            st.session_state.drafts[ai_idx]["headline"] = _l.replace("Headline:", "").strip()
+                                        elif _l.startswith("Body:"):
+                                            st.session_state.drafts[ai_idx]["body"] = _l.replace("Body:", "").strip()
+                                else:
+                                    st.session_state.drafts[ai_idx]["body"] = _corrected
+                                st.toast("Draft updated with corrected text.", icon="✅")
+                                st.rerun()
+                    except Exception as _e:
+                        st.error(f"AI check failed: {_e}")
 
 
 # ─── Route pages ──────────────────────────────────────────────────────────────
