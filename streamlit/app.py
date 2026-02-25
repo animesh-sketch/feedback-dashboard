@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import streamlit as st
 import pandas as pd
 import streamlit.components.v1 as components
+import base64
 from data import ANALYTICS_BY_PERIOD, EMAIL_ANALYTICS, CSAT_RESPONDENTS, DAILY_DATES, WEEKLY_DATES
 from email_builder import build_email_html, TEMPLATE_NAMES
 import client_store
@@ -979,6 +980,36 @@ _TMPL_TEXT_COLORS = ["#c9a96e", "#2563eb", "#ffffff", "#a78bfa", "#8b5e3c"]
 _TMPL_BG_COLORS   = ["#0d1b2a", "#f1f5f9", "#1e3a8a", "#13111f", "#f4ede0"]
 
 
+def _screenshot_input(d: dict, key_suffix: str):
+    st.markdown('<div style="color:#4a7aaa;font-size:0.75rem;font-weight:600;margin:10px 0 6px;">Screenshot</div>', unsafe_allow_html=True)
+
+    # Show preview + remove button if an image is already stored
+    if d.get("screenshot_url", "").startswith("data:"):
+        st.image(d["screenshot_url"], width=220)
+        if st.button("✕ Remove image", key=f"rm_img_{key_suffix}"):
+            d["screenshot_url"] = ""
+            st.rerun()
+    else:
+        uploaded = st.file_uploader(
+            "Upload image", type=["png", "jpg", "jpeg", "gif", "webp"],
+            key=f"upload_{key_suffix}", label_visibility="collapsed",
+        )
+        if uploaded:
+            b64 = base64.b64encode(uploaded.read()).decode()
+            d["screenshot_url"] = f"data:{uploaded.type};base64,{b64}"
+            st.rerun()
+
+        d["screenshot_url"] = st.text_input(
+            "Or paste image URL", value=d.get("screenshot_url", ""),
+            key=f"ssu_{key_suffix}", placeholder="https://…",
+        )
+
+    d["screenshot_caption"] = st.text_input(
+        "Caption", value=d.get("screenshot_caption", ""),
+        key=f"ssc_{key_suffix}", placeholder="Optional caption",
+    )
+
+
 def _template_picker(d: dict, key_suffix: str):
     st.markdown('<div style="color:#4a7aaa;font-size:0.75rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">Email Template</div>', unsafe_allow_html=True)
     cols = st.columns(5)
@@ -1032,9 +1063,7 @@ def render_drafts_tab():
                 d["headline"] = st.text_area("Headline",    value=d["headline"], key=f"dhead_{i}",   height=80,  placeholder="e.g. February showed strong growth…")
                 d["body"]     = st.text_area("Email Body",  value=d["body"],     key=f"dbody_{i}",   height=120, placeholder="Write the main body of the email…")
 
-                st.markdown('<div style="color:#4a7aaa;font-size:0.75rem;font-weight:600;margin:10px 0 4px;">Screenshot</div>', unsafe_allow_html=True)
-                d["screenshot_url"]     = st.text_input("Image URL", value=d["screenshot_url"],     key=f"ssu_{i}", placeholder="https://…")
-                d["screenshot_caption"] = st.text_input("Caption",   value=d["screenshot_caption"], key=f"ssc_{i}", placeholder="Optional caption")
+                _screenshot_input(d, f"d{i}")
 
                 st.markdown('<div style="color:#4a7aaa;font-size:0.75rem;font-weight:600;margin:10px 0 4px;">Links</div>', unsafe_allow_html=True)
                 d["report_link"]     = st.text_input("Full Report URL",  value=d["report_link"],     key=f"dlink_{i}", placeholder="https://docs.google.com/…")
@@ -1108,10 +1137,7 @@ def render_email_maker():
         d["body"]     = st.text_area("Email Body", value=d["body"],     key=f"ed_body_{ei}", height=160, placeholder="Write the main body of the email…")
 
         st.markdown("---")
-        st.markdown('<div style="color:#4a7aaa;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Screenshot</div>', unsafe_allow_html=True)
-        su1, su2 = st.columns([3, 2])
-        with su1: d["screenshot_url"]     = st.text_input("Image URL", value=d["screenshot_url"],     key=f"ed_ssu_{ei}", placeholder="https://…")
-        with su2: d["screenshot_caption"] = st.text_input("Caption",   value=d["screenshot_caption"], key=f"ed_ssc_{ei}", placeholder="Optional")
+        _screenshot_input(d, f"e{ei}")
 
         st.markdown("---")
         st.markdown('<div style="color:#4a7aaa;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Links & Survey</div>', unsafe_allow_html=True)
