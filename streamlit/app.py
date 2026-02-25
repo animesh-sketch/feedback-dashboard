@@ -365,13 +365,127 @@ def render_email_maker():
     st.markdown('<p class="page-title">📧 Email Maker</p>', unsafe_allow_html=True)
     st.markdown('<p class="page-sub" style="margin-bottom:1.5rem;">Build your report email and manage client recipients.</p>', unsafe_allow_html=True)
 
-    tab_drafts, tab_preview, tab_recipients = st.tabs(["✏️ Drafts", "📄 Email Preview", "👥 Recipients"])
+    tab_drafts, tab_editor, tab_preview, tab_recipients = st.tabs(["✏️ Drafts", "📝 Edit Email Body", "📄 Email Preview", "👥 Recipients"])
 
     # ── Tab 0: Drafts ─────────────────────────────────────────────────────────
     with tab_drafts:
         render_drafts_tab()
 
-    # ── Tab 1: Email Preview ──────────────────────────────────────────────────
+    # ── Tab 1: Edit Email Body ────────────────────────────────────────────────
+    with tab_editor:
+        st.markdown("#### Edit Email Body")
+        st.caption("Fill in every section of the email. Hit **Preview** at the bottom to see it rendered.")
+
+        # Pick which draft to edit
+        draft_names = [d["name"] for d in st.session_state.drafts]
+        chosen = st.radio("Editing draft:", draft_names, horizontal=True, key="editor_draft_pick")
+        ei = draft_names.index(chosen)
+        d  = st.session_state.drafts[ei]
+
+        st.markdown("---")
+
+        # ── Header info ──────────────────────────────────
+        st.markdown("**📋 Header & Meta**")
+        hc1, hc2, hc3 = st.columns(3)
+        with hc1:
+            d["client"]      = st.text_input("Client / Company",  value=d["client"],      key=f"ed_client_{ei}",  placeholder="Acme Corp")
+        with hc2:
+            d["report_type"] = st.text_input("Report Type",        value=d["report_type"], key=f"ed_rtype_{ei}")
+        with hc3:
+            d["date"]        = st.text_input("Date",               value=d["date"],        key=f"ed_date_{ei}")
+
+        st.markdown("---")
+
+        # ── Hero ─────────────────────────────────────────
+        st.markdown("**✍️ Hero Section**")
+        d["headline"] = st.text_area(
+            "Headline",
+            value=d["headline"],
+            key=f"ed_head_{ei}",
+            height=80,
+            placeholder="e.g. February showed strong growth with one risk area.",
+        )
+        d["intro"] = st.text_area(
+            "Intro Paragraph",
+            value=d["intro"],
+            key=f"ed_intro_{ei}",
+            height=110,
+            placeholder="Write a 2–3 sentence overview of the report…",
+        )
+
+        st.markdown("---")
+
+        # ── KPIs ─────────────────────────────────────────
+        st.markdown("**📊 KPI Strip** — 4 metrics shown at the top of the report")
+        for k in range(4):
+            kc1, kc2, kc3, kc4, kc5 = st.columns([2, 2, 2, 2, 1])
+            with kc1: d["kpis"][k]["label"]  = st.text_input(f"Metric {k+1} Label",  value=d["kpis"][k]["label"],  key=f"ed_klbl_{ei}_{k}", placeholder="Conversion Rate")
+            with kc2: d["kpis"][k]["value"]  = st.text_input(f"Value",               value=d["kpis"][k]["value"],  key=f"ed_kval_{ei}_{k}", placeholder="4.7%")
+            with kc3: d["kpis"][k]["delta"]  = st.text_input(f"Delta",               value=d["kpis"][k]["delta"],  key=f"ed_kdlt_{ei}_{k}", placeholder="↑ 0.6pp")
+            with kc4: d["kpis"][k]["period"] = st.text_input(f"Period",              value=d["kpis"][k]["period"], key=f"ed_kper_{ei}_{k}", placeholder="vs last month")
+            with kc5: d["kpis"][k]["trend"]  = st.selectbox(f"↑↓", ["up","down"],   index=0 if d["kpis"][k]["trend"]=="up" else 1, key=f"ed_ktrnd_{ei}_{k}")
+
+        st.markdown("---")
+
+        # ── Charts ───────────────────────────────────────
+        st.markdown("**🖼 Charts** — paste your image URLs (hosted on Drive, S3, Cloudinary, etc.)")
+        for ci, label in enumerate(["Chart 1 (full width)", "Chart 2 (left half)", "Chart 3 (right half)"]):
+            cc1, cc2 = st.columns([3, 2])
+            key = f"chart{ci+1}"
+            with cc1: d[f"{key}_url"]     = st.text_input(f"{label} — URL",     value=d[f"{key}_url"],     key=f"ed_{key}u_{ei}", placeholder="https://…")
+            with cc2: d[f"{key}_caption"] = st.text_input(f"{label} — Caption", value=d[f"{key}_caption"], key=f"ed_{key}c_{ei}")
+
+        st.markdown("---")
+
+        # ── Insight ──────────────────────────────────────
+        st.markdown("**💡 Key Insight** — the single most important takeaway")
+        d["insight"] = st.text_area("Insight", value=d["insight"], key=f"ed_ins_{ei}", height=90, label_visibility="collapsed", placeholder="e.g. Churn rose 0.8pp — driven by legacy plan customers. Recommend retention campaign.")
+
+        st.markdown("---")
+
+        # ── Findings ─────────────────────────────────────
+        st.markdown("**🔍 Findings** — numbered list (add up to 4)")
+        for fi in range(4):
+            d["findings"][fi] = st.text_input(
+                f"Finding {fi+1}",
+                value=d["findings"][fi],
+                key=f"ed_fnd_{ei}_{fi}",
+                placeholder=f"Finding {fi+1} — leave blank to hide",
+            )
+
+        st.markdown("---")
+
+        # ── Report link & survey ─────────────────────────
+        st.markdown("**🔗 Report Link & Survey**")
+        lc1, lc2 = st.columns(2)
+        with lc1: d["report_link"]     = st.text_input("Full Report URL",  value=d["report_link"],     key=f"ed_link_{ei}", placeholder="https://docs.google.com/…")
+        with lc2: d["survey_question"] = st.text_input("Survey Question",  value=d["survey_question"], key=f"ed_sq_{ei}")
+
+        st.markdown("---")
+
+        # ── Save & preview ───────────────────────────────
+        bc1, bc2, bc3 = st.columns(3)
+        with bc1:
+            if st.button("💾 Save as Draft", key=f"ed_save_{ei}", use_container_width=True):
+                st.session_state.drafts[ei]["status"] = "draft"
+                st.toast(f"{d['name']} saved.", icon="💾")
+                st.rerun()
+        with bc2:
+            if st.button("✅ Mark Ready to Send", key=f"ed_ready_{ei}", use_container_width=True, type="primary"):
+                st.session_state.drafts[ei]["status"] = "ready"
+                st.toast(f"{d['name']} is ready to send.", icon="✅")
+                st.rerun()
+        with bc3:
+            if st.button("👁 Preview This Email", key=f"ed_prev_{ei}", use_container_width=True):
+                st.session_state.drafts[ei]["show_preview"] = True
+                st.rerun()
+
+        if d.get("show_preview"):
+            st.markdown("---")
+            st.markdown(f"#### Live Preview — {d['name']}")
+            components.html(build_email_html(d), height=1600, scrolling=True)
+
+    # ── Tab 2: Email Preview ──────────────────────────────────────────────────
     with tab_preview:
         st.markdown("#### Live Email Preview")
         st.caption("This is exactly how the email looks in a client's inbox.")
