@@ -34,7 +34,6 @@ def _blank_draft(idx: int) -> dict:
         "screenshot_caption": "",
         "report_link": "",
         "survey_question": "Was this report useful to you?",
-        "show_preview": False,
         "template": 1,
     }
 
@@ -71,19 +70,15 @@ footer    { visibility: hidden; }
 header    { visibility: hidden; }
 
 /* ── App shell ── */
-.stApp {
-    background: #020810;
-    background-image: radial-gradient(circle, rgba(14,32,64,0.7) 1px, transparent 1px);
-    background-size: 30px 30px;
-}
+.stApp { background: #f0f5ff; }
 .block-container { padding-top: 2rem !important; }
 
 /* ── Sidebar ── */
 [data-testid="stSidebar"] {
-    background: #070f1e !important;
-    border-right: 1px solid #0e2040 !important;
+    background: #1a3468 !important;
+    border-right: none !important;
 }
-[data-testid="stSidebar"] * { color: #4a7aaa !important; }
+[data-testid="stSidebar"] * { color: #bfdbfe !important; }
 [data-testid="stSidebar"] .stRadio > div { gap: 2px !important; }
 [data-testid="stSidebar"] .stRadio label {
     font-size: 0.84rem !important;
@@ -93,37 +88,36 @@ header    { visibility: hidden; }
     transition: background 0.15s !important;
 }
 [data-testid="stSidebar"] .stRadio label:has(input:checked) {
-    background: rgba(59,130,246,0.08) !important;
-    color: #93c5fd !important;
-    border-left: 3px solid #3b82f6 !important;
-    box-shadow: inset 0 0 20px rgba(59,130,246,0.05) !important;
+    background: rgba(255,255,255,0.12) !important;
+    color: #ffffff !important;
+    border-left: 3px solid #93c5fd !important;
 }
 
 /* ── Inputs & textareas ── */
 [data-testid="stTextInput"] input,
 [data-testid="stTextArea"] textarea {
-    background: #091525 !important;
-    border: 1px solid #0e2040 !important;
+    background: #ffffff !important;
+    border: 1px solid #dde8ff !important;
     border-radius: 10px !important;
-    color: #c8d8f0 !important;
+    color: #0f172a !important;
     font-size: 0.84rem !important;
 }
 [data-testid="stTextInput"] input:focus,
 [data-testid="stTextArea"] textarea:focus {
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important;
 }
 [data-testid="stSelectbox"] > div > div {
-    background: #091525 !important;
-    border: 1px solid #0e2040 !important;
+    background: #ffffff !important;
+    border: 1px solid #dde8ff !important;
     border-radius: 10px !important;
-    color: #c8d8f0 !important;
+    color: #0f172a !important;
 }
 [data-testid="stMultiSelect"] > div > div {
-    background: #091525 !important;
-    border: 1px solid #0e2040 !important;
+    background: #ffffff !important;
+    border: 1px solid #dde8ff !important;
     border-radius: 10px !important;
-    color: #c8d8f0 !important;
+    color: #0f172a !important;
 }
 
 /* ── Buttons ── */
@@ -138,35 +132,36 @@ header    { visibility: hidden; }
 .stButton > button[kind="primary"] {
     background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
     color: #fff !important;
-    box-shadow: 0 2px 12px rgba(37,99,235,0.3) !important;
+    box-shadow: 0 2px 12px rgba(37,99,235,0.25) !important;
 }
 .stButton > button[kind="primary"]:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 6px 24px rgba(37,99,235,0.5) !important;
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: 0 8px 28px rgba(37,99,235,0.4), 0 0 0 1px rgba(59,130,246,0.3) !important;
 }
 .stButton > button[kind="secondary"] {
-    background: #091525 !important;
-    border: 1px solid #0e2040 !important;
-    color: #4a7aaa !important;
+    background: #ffffff !important;
+    border: 1px solid #dde8ff !important;
+    color: #2563eb !important;
 }
 .stButton > button[kind="secondary"]:hover {
-    background: #0e2040 !important;
-    color: #7aa0d0 !important;
+    background: #f0f5ff !important;
+    border-color: #93c5fd !important;
+    color: #1d4ed8 !important;
 }
 
 /* ── Download button ── */
 [data-testid="stDownloadButton"] button {
-    background: #091525 !important;
-    border: 1px solid #0e2040 !important;
+    background: #ffffff !important;
+    border: 1px solid #dde8ff !important;
     border-radius: 10px !important;
-    color: #4a7aaa !important;
+    color: #2563eb !important;
     font-size: 0.82rem !important;
 }
 
 /* ── Tabs ── */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
     background: transparent !important;
-    border-bottom: 1px solid #0e2040 !important;
+    border-bottom: 1px solid #dde8ff !important;
     gap: 0 !important;
     padding: 0 !important;
 }
@@ -174,13 +169,13 @@ header    { visibility: hidden; }
     background: transparent !important;
     font-size: 0.83rem !important;
     font-weight: 500 !important;
-    color: #4a7aaa !important;
+    color: #64748b !important;
     padding: 10px 22px !important;
     border-bottom: 2px solid transparent !important;
 }
 [aria-selected="true"][data-baseweb="tab"] {
-    color: #e8f0fe !important;
-    border-bottom: 2px solid #3b82f6 !important;
+    color: #1d4ed8 !important;
+    border-bottom: 2px solid #2563eb !important;
 }
 [data-testid="stTabs"] [data-baseweb="tab-panel"] {
     padding-top: 1.5rem !important;
@@ -188,20 +183,20 @@ header    { visibility: hidden; }
 
 /* ── Expander ── */
 [data-testid="stExpander"] {
-    background: #091525 !important;
-    border: 1px solid #0e2040 !important;
+    background: #ffffff !important;
+    border: 1px solid #dde8ff !important;
     border-radius: 12px !important;
 }
 [data-testid="stExpander"] summary {
     font-size: 0.84rem !important;
     font-weight: 500 !important;
-    color: #4a7aaa !important;
+    color: #475569 !important;
 }
 
 /* ── Forms ── */
 [data-testid="stForm"] {
-    background: #091525 !important;
-    border: 1px solid #0e2040 !important;
+    background: #ffffff !important;
+    border: 1px solid #dde8ff !important;
     border-radius: 14px !important;
 }
 
@@ -209,11 +204,11 @@ header    { visibility: hidden; }
 [data-testid="stAlert"] { border-radius: 10px !important; font-size: 0.84rem !important; }
 
 /* ── Divider ── */
-hr { border-color: #0e2040 !important; margin: 1.5rem 0 !important; }
+hr { border-color: #dde8ff !important; margin: 1.5rem 0 !important; }
 
 /* ── Caption / small text ── */
-[data-testid="stCaptionContainer"] p { color: #4a7aaa !important; font-size: 0.77rem !important; }
-label { color: #4a7aaa !important; font-size: 0.8rem !important; }
+[data-testid="stCaptionContainer"] p { color: #64748b !important; font-size: 0.77rem !important; }
+label { color: #475569 !important; font-size: 0.8rem !important; }
 
 /* ──────────────────────────────────────────────────────
    CAMPAIGN ANALYTICS DASHBOARD
@@ -226,83 +221,83 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
     margin-bottom: 12px;
 }
 .metric-card {
-    background: #091525;
-    border: 1px solid #0e2040;
+    background: #ffffff;
+    border: 1px solid #dde8ff;
     border-radius: 16px;
     padding: 1.2rem 1.35rem 1rem;
     position: relative;
     overflow: hidden;
     transition: transform 0.18s, box-shadow 0.18s;
+    box-shadow: 0 1px 8px rgba(37,99,235,0.06);
 }
 .metric-card:hover {
     transform: translateY(-4px) scale(1.01);
-    box-shadow: 0 16px 48px rgba(37,99,235,0.22), 0 0 0 1px rgba(59,130,246,0.2);
-    border-color: rgba(59,130,246,0.25);
+    box-shadow: 0 14px 40px rgba(37,99,235,0.14), 0 0 0 1px rgba(59,130,246,0.15);
+    border-color: rgba(59,130,246,0.3);
     transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
 }
 .metric-card::after {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0;
-    height: 2px;
+    height: 3px;
     border-radius: 16px 16px 0 0;
 }
-.accent-blue::after   { background: linear-gradient(90deg, #1d4ed8, #60a5fa, #93c5fd); box-shadow: 0 0 10px rgba(59,130,246,0.7); }
-.accent-green::after  { background: linear-gradient(90deg, #059669, #34d399, #6ee7b7); box-shadow: 0 0 10px rgba(16,185,129,0.7); }
-.accent-amber::after  { background: linear-gradient(90deg, #d97706, #fbbf24, #fde68a); box-shadow: 0 0 10px rgba(245,158,11,0.7); }
-.accent-red::after    { background: linear-gradient(90deg, #dc2626, #f87171, #fca5a5); box-shadow: 0 0 10px rgba(220,38,38,0.7); }
+.accent-blue::after   { background: linear-gradient(90deg, #1d4ed8, #60a5fa, #93c5fd); }
+.accent-green::after  { background: linear-gradient(90deg, #059669, #34d399, #6ee7b7); }
+.accent-amber::after  { background: linear-gradient(90deg, #d97706, #fbbf24, #fde68a); }
+.accent-red::after    { background: linear-gradient(90deg, #dc2626, #f87171, #fca5a5); }
 
 .metric-label {
     font-size: 0.62rem;
     font-weight: 700;
     letter-spacing: 0.11em;
     text-transform: uppercase;
-    color: #4a7aaa;
+    color: #94a3b8;
     margin-bottom: 0.65rem;
 }
 .metric-value {
     font-size: 1.8rem;
     font-weight: 800;
-    background: linear-gradient(135deg, #93c5fd 0%, #dbeafe 50%, #c7d2fe 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #0f172a;
+    -webkit-text-fill-color: #0f172a;
     letter-spacing: -0.03em;
     line-height: 1;
     margin-bottom: 0.38rem;
 }
-.metric-max { font-size: 1rem; color: #4a7aaa; -webkit-text-fill-color: #4a7aaa; font-weight: 500; letter-spacing: 0; }
-.metric-sub { font-size: 0.69rem; color: #4a7aaa; }
-.ch-up   { color: #34d399; font-weight: 600; }
-.ch-down { color: #f87171; font-weight: 600; }
+.metric-max { font-size: 1rem; color: #94a3b8; -webkit-text-fill-color: #94a3b8; font-weight: 500; letter-spacing: 0; }
+.metric-sub { font-size: 0.69rem; color: #64748b; }
+.ch-up   { color: #059669; font-weight: 600; }
+.ch-down { color: #dc2626; font-weight: 600; }
 
 /* CSAT breakdown */
 .csat-section {
-    background: #091525;
-    border: 1px solid #0e2040;
+    background: #ffffff;
+    border: 1px solid #dde8ff;
     border-radius: 16px;
     padding: 1.4rem 1.8rem;
     display: grid;
     grid-template-columns: 150px 1fr;
     gap: 2.5rem;
     align-items: center;
+    box-shadow: 0 1px 8px rgba(37,99,235,0.05);
 }
-.csat-score-side { text-align: center; padding-right: 2rem; border-right: 1px solid #0e2040; }
-.csat-number { font-size: 3rem; font-weight: 800; background: linear-gradient(135deg, #93c5fd 0%, #dbeafe 50%, #c7d2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.04em; line-height: 1; }
+.csat-score-side { text-align: center; padding-right: 2rem; border-right: 1px solid #dde8ff; }
+.csat-number { font-size: 3rem; font-weight: 800; color: #1d4ed8; -webkit-text-fill-color: #1d4ed8; letter-spacing: -0.04em; line-height: 1; }
 .csat-stars { color: #f59e0b; font-size: 1.05rem; margin: 8px 0 5px; letter-spacing: 3px; }
-.csat-count { font-size: 0.7rem; color: #4a7aaa; }
+.csat-count { font-size: 0.7rem; color: #94a3b8; }
 .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .bar-row:last-child { margin-bottom: 0; }
-.bar-star  { font-size: 0.67rem; color: #4a7aaa; width: 18px; text-align: right; flex-shrink: 0; }
-.bar-track { flex: 1; height: 5px; background: #0e2040; border-radius: 99px; overflow: hidden; }
+.bar-star  { font-size: 0.67rem; color: #94a3b8; width: 18px; text-align: right; flex-shrink: 0; }
+.bar-track { flex: 1; height: 5px; background: #e8f0fe; border-radius: 99px; overflow: hidden; }
 .bar-fill  { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #1d4ed8, #3b82f6); }
-.bar-pct   { font-size: 0.67rem; color: #4a7aaa; width: 28px; text-align: right; flex-shrink: 0; }
-.bar-count { font-size: 0.64rem; color: #1e3a5f; width: 14px; flex-shrink: 0; }
-.resp-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #0e2040; }
+.bar-pct   { font-size: 0.67rem; color: #64748b; width: 28px; text-align: right; flex-shrink: 0; }
+.bar-count { font-size: 0.64rem; color: #94a3b8; width: 14px; flex-shrink: 0; }
+.resp-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #e8f0fe; }
 .resp-row:last-child { border-bottom: none; }
-.resp-name  { color: #e8f0fe; font-size: 0.78rem; font-weight: 600; min-width: 130px; }
-.resp-email { color: #4a7aaa; font-size: 0.73rem; flex: 1; }
-.resp-date  { color: #1e3a5f; font-size: 0.68rem; min-width: 50px; text-align: right; }
+.resp-name  { color: #0f172a; font-size: 0.78rem; font-weight: 600; min-width: 130px; }
+.resp-email { color: #64748b; font-size: 0.73rem; flex: 1; }
+.resp-date  { color: #94a3b8; font-size: 0.68rem; min-width: 50px; text-align: right; }
 .resp-stars { color: #f59e0b; font-size: 0.75rem; letter-spacing: 1px; min-width: 70px; text-align: right; }
 
 /* ──────────────────────────────────────────────────────
@@ -310,8 +305,8 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
 ────────────────────────────────────────────────────── */
 
 .hero-banner {
-    background: linear-gradient(135deg, #060e20 0%, #0b1a35 40%, #07102a 100%);
-    border: 1px solid rgba(59,130,246,0.18);
+    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 55%, #2563eb 100%);
+    border: none;
     border-radius: 24px;
     padding: 2rem 2.2rem;
     margin-bottom: 1.8rem;
@@ -320,14 +315,14 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
     justify-content: space-between;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 4px 40px rgba(37,99,235,0.08), inset 0 1px 0 rgba(255,255,255,0.04);
+    box-shadow: 0 8px 40px rgba(29,78,216,0.22);
 }
 .hero-banner::before {
     content: '';
     position: absolute;
     top: -80px; right: -60px;
     width: 320px; height: 320px;
-    background: radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
     pointer-events: none;
 }
 .hero-banner::after {
@@ -335,27 +330,24 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
     position: absolute;
     bottom: -100px; left: 25%;
     width: 250px; height: 250px;
-    background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 70%);
     pointer-events: none;
 }
 .hero-title {
     font-size: 1.45rem; font-weight: 800;
-    background: linear-gradient(135deg, #dbeafe 0%, #e8f0fe 60%, #c7d2fe 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #ffffff;
+    -webkit-text-fill-color: #ffffff;
     letter-spacing: -0.025em; margin-bottom: 0.3rem;
     position: relative; z-index: 1;
 }
-.hero-sub   { font-size: 0.83rem; color: #3a5f8a; position: relative; z-index: 1; }
+.hero-sub   { font-size: 0.83rem; color: rgba(255,255,255,0.7); position: relative; z-index: 1; }
 .live-badge {
-    background: rgba(16,185,129,0.08);
-    border: 1px solid rgba(16,185,129,0.2);
-    color: #10b981;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #ffffff;
     font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
     padding: 6px 14px; border-radius: 99px; white-space: nowrap;
     position: relative; z-index: 1;
-    text-shadow: 0 0 10px rgba(16,185,129,0.4);
 }
 .live-dot { display: inline-block; animation: pulse-dot 2s ease-in-out infinite; }
 
@@ -364,28 +356,29 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
 ────────────────────────────────────────────────────── */
 
 .client-repo-card {
-    background: linear-gradient(145deg, #081626 0%, #050e1c 100%);
-    border: 1px solid rgba(13,32,64,0.9);
+    background: #ffffff;
+    border: 1px solid #dde8ff;
     border-radius: 18px;
     padding: 18px 20px 14px;
     transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
     height: 100%;
+    box-shadow: 0 1px 6px rgba(37,99,235,0.05);
 }
 .client-repo-card:hover {
-    border-color: rgba(59,130,246,0.3);
-    box-shadow: 0 12px 40px rgba(37,99,235,0.15), 0 0 0 1px rgba(59,130,246,0.12);
+    border-color: rgba(59,130,246,0.4);
+    box-shadow: 0 10px 36px rgba(37,99,235,0.12);
     transform: translateY(-2px);
 }
 .tag-chip {
     display: inline-block;
-    background: rgba(59,130,246,0.1);
-    color: #60a5fa;
+    background: #eff6ff;
+    color: #2563eb;
     font-size: 0.61rem;
     font-weight: 600;
     padding: 2px 9px;
     border-radius: 99px;
     margin: 2px 2px 0 0;
-    border: 1px solid rgba(59,130,246,0.18);
+    border: 1px solid #bfdbfe;
 }
 
 /* Stats grid */
@@ -396,10 +389,16 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
     margin-bottom: 1.5rem;
 }
 .stat-card {
-    background: #091525;
-    border: 1px solid #0e2040;
+    background: #ffffff;
+    border: 1px solid #dde8ff;
     border-radius: 14px;
     padding: 1rem 1.2rem;
+    box-shadow: 0 1px 4px rgba(37,99,235,0.04);
+    transition: all 0.25s ease;
+}
+.stat-card:hover {
+    border-color: rgba(59,130,246,0.25) !important;
+    box-shadow: 0 6px 20px rgba(37,99,235,0.09) !important;
 }
 
 /* ──────────────────────────────────────────────────────
@@ -407,51 +406,65 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
 ────────────────────────────────────────────────────── */
 
 .em-header {
-    background: linear-gradient(135deg, #07142a 0%, #070f20 100%);
-    border: 1px solid #0e2040;
+    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+    border: none;
     border-radius: 20px;
     padding: 1.6rem 2rem;
     margin-bottom: 1.5rem;
     display: flex;
     align-items: center;
     gap: 1rem;
+    box-shadow: 0 6px 30px rgba(29,78,216,0.2);
+    position: relative;
+    overflow: hidden;
+}
+.em-header::before {
+    content: '';
+    position: absolute;
+    top: -50px; right: -30px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    pointer-events: none;
 }
 .em-icon  { font-size: 1.6rem; line-height: 1; }
-.em-title { font-size: 1.2rem; font-weight: 700; color: #e8f0fe; letter-spacing: -0.02em; }
-.em-sub   { font-size: 0.8rem; color: #4a7aaa; margin-top: 0.15rem; }
+.em-title { font-size: 1.2rem; font-weight: 700; color: #ffffff; -webkit-text-fill-color: #ffffff; letter-spacing: -0.02em; }
+.em-sub   { font-size: 0.8rem; color: rgba(255,255,255,0.7); -webkit-text-fill-color: rgba(255,255,255,0.7); margin-top: 0.15rem; }
 
 .draft-card {
-    background: #091525;
-    border: 1px solid #0e2040;
+    background: #ffffff;
+    border: 1px solid #dde8ff;
     border-radius: 16px;
     padding: 16px 18px;
     margin-bottom: 12px;
+    box-shadow: 0 1px 6px rgba(37,99,235,0.05);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
+.draft-card:hover { border-color: rgba(59,130,246,0.3) !important; box-shadow: 0 4px 20px rgba(37,99,235,0.09) !important; }
 .client-card {
-    background: #091525;
-    border: 1px solid #0e2040;
+    background: #ffffff;
+    border: 1px solid #dde8ff;
     border-radius: 12px;
     padding: 14px 18px;
     margin-bottom: 8px;
     transition: border-color 0.15s;
 }
-.client-card:hover { border-color: #1a3560; }
-.client-name { color: #e8f0fe; font-weight: 600; font-size: 0.88rem; }
+.client-card:hover { border-color: #93c5fd; }
+.client-name { color: #0f172a; font-weight: 600; font-size: 0.88rem; }
 .email-pill {
     display: inline-block;
-    background: #0a1a32;
-    color: #3a5f8a;
+    background: #eff6ff;
+    color: #2563eb;
     font-size: 0.7rem;
     padding: 3px 10px;
     border-radius: 99px;
     margin: 3px 3px 0 0;
-    border: 1px solid #0d1e38;
+    border: 1px solid #bfdbfe;
 }
 
 /* ── Keyframe animations ── */
 @keyframes pulse-dot {
     0%, 100% { opacity: 1; transform: scale(1); }
-    50%       { opacity: 0.5; transform: scale(0.78); }
+    50%       { opacity: 0.6; transform: scale(0.82); }
 }
 
 /* ── Section chips ── */
@@ -459,9 +472,9 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: rgba(59,130,246,0.07);
-    border: 1px solid rgba(59,130,246,0.16);
-    color: #60a5fa;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
     font-size: 0.61rem;
     font-weight: 700;
     letter-spacing: 0.1em;
@@ -473,9 +486,8 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
 .section-chip::before {
     content: '';
     width: 5px; height: 5px;
-    background: #3b82f6;
+    background: #2563eb;
     border-radius: 50%;
-    box-shadow: 0 0 6px rgba(59,130,246,0.9);
 }
 
 /* ── Client avatar ── */
@@ -498,59 +510,7 @@ label { color: #4a7aaa !important; font-size: 0.8rem !important; }
 }
 .tmpl-card:hover {
     transform: translateY(-3px) scale(1.04);
-    box-shadow: 0 10px 28px rgba(0,0,0,0.5);
-}
-
-/* ── Metric card gradient bg override ── */
-.metric-card { background: linear-gradient(145deg, #081626 0%, #050e1c 100%) !important; }
-
-/* ── CSAT section gradient bg ── */
-.csat-section { background: linear-gradient(145deg, #081626 0%, #050e1c 100%) !important; }
-.csat-section:hover { border-color: rgba(59,130,246,0.18) !important; transition: border-color 0.25s; }
-
-/* ── Bar fill glow ── */
-.bar-fill { box-shadow: 0 0 6px rgba(59,130,246,0.5); }
-
-/* ── CSAT stars glow ── */
-.csat-stars { text-shadow: 0 0 8px rgba(245,158,11,0.5); }
-.resp-stars { text-shadow: 0 0 6px rgba(245,158,11,0.4); }
-
-/* ── Draft card gradient ── */
-.draft-card {
-    background: linear-gradient(145deg, #081626 0%, #050e1c 100%) !important;
-    transition: border-color 0.25s ease;
-}
-.draft-card:hover { border-color: rgba(59,130,246,0.2) !important; }
-
-/* ── Stat card hover ── */
-.stat-card {
-    background: linear-gradient(145deg, #081626 0%, #050e1c 100%) !important;
-    transition: all 0.25s ease;
-}
-.stat-card:hover {
-    border-color: rgba(59,130,246,0.2) !important;
-    box-shadow: 0 8px 24px rgba(37,99,235,0.1) !important;
-}
-
-/* ── EM header subtle glow ── */
-.em-header {
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 4px 30px rgba(37,99,235,0.07);
-}
-.em-header::before {
-    content: '';
-    position: absolute;
-    top: -50px; right: -30px;
-    width: 200px; height: 200px;
-    background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
-    pointer-events: none;
-}
-
-/* ── Primary button spring ── */
-.stButton > button[kind="primary"]:hover {
-    transform: translateY(-2px) scale(1.02) !important;
-    box-shadow: 0 8px 32px rgba(37,99,235,0.55), 0 0 0 1px rgba(59,130,246,0.4) !important;
+    box-shadow: 0 8px 24px rgba(37,99,235,0.15);
 }
 </style>
 """, unsafe_allow_html=True)
@@ -570,7 +530,7 @@ with st.sidebar:
             ">CDL</div>
             <div>
                 <div style="color:#dbeafe;font-weight:700;font-size:0.93rem;letter-spacing:-0.015em;line-height:1.2;">Convin Data Labs</div>
-                <div style="color:#1e3a5f;font-size:0.63rem;margin-top:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">Analytics</div>
+                <div style="color:#93c5fd;font-size:0.63rem;margin-top:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">Analytics</div>
             </div>
         </div>
     </div>
@@ -585,7 +545,7 @@ with st.sidebar:
     st.markdown("---")
     auth.render_login_sidebar()
     st.markdown("---")
-    st.markdown('<div style="color:#1e3a5f;font-size:0.68rem;font-weight:500;">Feb 2026 · v1.0</div>', unsafe_allow_html=True)
+    st.markdown('<div style="color:#7aa0d0;font-size:0.68rem;font-weight:500;">Feb 2026 · v1.0</div>', unsafe_allow_html=True)
 
 # ─── Analytics helpers ────────────────────────────────────────────────────────
 
@@ -598,7 +558,7 @@ def _accent(m: dict) -> str:
 def _metric_card_html(m: dict) -> str:
     sub_parts = []
     if m["sub"]:
-        sub_parts.append(f'<span style="color:#1e3a5f;">{m["sub"]}</span>')
+        sub_parts.append(f'<span style="color:#94a3b8;">{m["sub"]}</span>')
     if m["change"] is not None:
         good  = (m["change"] > 0) == m["up_good"]
         cls   = "ch-up" if good else "ch-down"
@@ -615,36 +575,36 @@ def _metric_card_html(m: dict) -> str:
 
 def _email_table_html(rows: list) -> str:
     if not rows:
-        return '<div style="text-align:center;padding:32px;color:#1e3a5f;font-size:0.84rem;">No email activity for this period.</div>'
+        return '<div style="text-align:center;padding:32px;color:#94a3b8;font-size:0.84rem;">No email activity for this period.</div>'
 
     def dbadge(v):
         return '<span style="color:#22c55e;font-weight:700;">✓</span>' if v else '<span style="color:#f87171;font-weight:700;">✗</span>'
     def sbadge(v):
-        return '<span style="color:#3b82f6;font-weight:600;">✓</span>' if v else '<span style="color:#1e3a5f;">—</span>'
+        return '<span style="color:#3b82f6;font-weight:600;">✓</span>' if v else '<span style="color:#94a3b8;">—</span>'
     def scbadge(s):
         if s is None:
-            return '<span style="color:#1e3a5f;">—</span>'
+            return '<span style="color:#94a3b8;">—</span>'
         c = {1:"#f87171",2:"#fb923c",3:"#fbbf24",4:"#34d399",5:"#22c55e"}
         return f'<span style="color:{c[s]};font-weight:700;">{s}★</span>'
 
-    th = 'style="color:#4a7aaa;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:10px 12px;text-align:left;white-space:nowrap;background:#070f1e;"'
-    tc = 'style="font-size:0.73rem;padding:9px 12px;border-bottom:1px solid #0a1e38;text-align:center;"'
+    th = 'style="color:#64748b;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:10px 12px;text-align:left;white-space:nowrap;background:#f8faff;"'
+    tc = 'style="font-size:0.73rem;padding:9px 12px;border-bottom:1px solid #e8f0fe;text-align:center;"'
     headers = ["Email", "Campaign", "Del", "Open", "Click", "Resp", "Score", "Date"]
     hrow = f'<tr>{"".join(f"<th {th}>{h}</th>" for h in headers)}</tr>'
     brows = "".join(
         f"""<tr>
-          <td style="font-size:0.72rem;padding:9px 12px;border-bottom:1px solid #0a1e38;color:#e8f0fe;">{r['email']}</td>
-          <td style="font-size:0.67rem;padding:9px 12px;border-bottom:1px solid #0a1e38;color:#4a7aaa;white-space:nowrap;">{r['campaign']}</td>
+          <td style="font-size:0.72rem;padding:9px 12px;border-bottom:1px solid #e8f0fe;color:#0f172a;">{r['email']}</td>
+          <td style="font-size:0.67rem;padding:9px 12px;border-bottom:1px solid #e8f0fe;color:#64748b;white-space:nowrap;">{r['campaign']}</td>
           <td {tc}>{dbadge(r['delivered'])}</td>
           <td {tc}>{sbadge(r['opened'])}</td>
           <td {tc}>{sbadge(r['clicked'])}</td>
           <td {tc}>{sbadge(r['responded'])}</td>
           <td {tc}>{scbadge(r['score'])}</td>
-          <td style="font-size:0.67rem;padding:9px 12px;border-bottom:1px solid #0a1e38;color:#1e3a5f;text-align:right;">{r['date']}</td>
+          <td style="font-size:0.67rem;padding:9px 12px;border-bottom:1px solid #e8f0fe;color:#94a3b8;text-align:right;">{r['date']}</td>
         </tr>"""
         for r in rows
     )
-    return f"""<div style="background:#091525;border:1px solid #0e2040;border-radius:16px;overflow:hidden;">
+    return f"""<div style="background:#ffffff;border:1px solid #dde8ff;border-radius:16px;overflow:hidden;">
       <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
         <thead>{hrow}</thead><tbody>{brows}</tbody>
       </table></div></div>"""
@@ -660,8 +620,8 @@ def _render_period_content(period: str):
 
     st.markdown(f"""
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div style="color:#e8f0fe;font-size:0.92rem;font-weight:600;">{data['label']}</div>
-        <div style="color:#1e3a5f;font-size:0.7rem;font-weight:500;letter-spacing:0.03em;">Updated {data['updated']}</div>
+        <div style="color:#0f172a;font-size:0.92rem;font-weight:600;">{data['label']}</div>
+        <div style="color:#94a3b8;font-size:0.7rem;font-weight:500;letter-spacing:0.03em;">Updated {data['updated']}</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -684,13 +644,13 @@ def _render_period_content(period: str):
     st.markdown('<div class="section-chip">Customer Satisfaction</div>', unsafe_allow_html=True)
     st.markdown(f"""<div class="csat-section">
         <div class="csat-score-side">
-            <div style="color:#4a7aaa;font-size:0.62rem;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;margin-bottom:14px;">CSAT</div>
-            <div class="csat-number">{score}<span style="font-size:1.1rem;color:#4a7aaa;font-weight:500;-webkit-text-fill-color:#4a7aaa;">/5</span></div>
+            <div style="color:#64748b;font-size:0.62rem;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;margin-bottom:14px;">CSAT</div>
+            <div class="csat-number">{score}<span style="font-size:1.1rem;color:#64748b;font-weight:500;-webkit-text-fill-color:#64748b;">/5</span></div>
             <div class="csat-stars">{stars}</div>
             <div class="csat-count">{csat['responses']} ratings</div>
         </div>
         <div>
-            <div style="color:#4a7aaa;font-size:0.62rem;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;margin-bottom:14px;">Rating Distribution</div>
+            <div style="color:#64748b;font-size:0.62rem;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;margin-bottom:14px;">Rating Distribution</div>
             {bars}
         </div>
     </div>""", unsafe_allow_html=True)
@@ -717,8 +677,8 @@ def _render_period_content(period: str):
 
     st.markdown('<div class="section-chip">Email Activity</div>', unsafe_allow_html=True)
     st.markdown(f"""<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div style="color:#e8f0fe;font-size:0.92rem;font-weight:600;">Email Activity</div>
-        <div style="color:#1e3a5f;font-size:0.68rem;font-weight:500;">{len(email_rows)} emails</div>
+        <div style="color:#0f172a;font-size:0.92rem;font-weight:600;">Email Activity</div>
+        <div style="color:#94a3b8;font-size:0.68rem;font-weight:500;">{len(email_rows)} emails</div>
     </div>""", unsafe_allow_html=True)
     st.markdown(_email_table_html(email_rows), unsafe_allow_html=True)
 
@@ -743,9 +703,9 @@ def render_overview():
 # ─── Clients ──────────────────────────────────────────────────────────────────
 
 _STATUS_CFG = {
-    "Active":   ("#0d2515", "#34d399", "#059669"),
-    "At Risk":  ("#2a1500", "#fbbf24", "#d97706"),
-    "Inactive": ("#0e2040", "#4a7aaa", "#4a7aaa"),
+    "Active":   ("#dcfce7", "#16a34a", "#059669"),
+    "At Risk":  ("#fef9c3", "#d97706", "#f59e0b"),
+    "Inactive": ("#f1f5f9", "#64748b", "#94a3b8"),
 }
 
 _AVATAR_GRADS = [
@@ -779,8 +739,8 @@ def _render_client_card(c: dict):
     email_pills = " ".join(f'<span class="email-pill">{e}</span>' for e in c.get("emails", []))
     tag_chips   = " ".join(f'<span class="tag-chip">{t}</span>'   for t in c.get("tags",   []))
     notes_raw   = c.get("notes", "")
-    notes_html  = f'<div style="color:#1e3a5f;font-size:0.7rem;line-height:1.5;margin-bottom:8px;">{notes_raw[:80]}{"…" if len(notes_raw)>80 else ""}</div>' if notes_raw else ""
-    contact_html = f'<div style="color:#4a7aaa;font-size:0.75rem;margin-bottom:8px;">👤 {c["contact"]}</div>' if c.get("contact") else ""
+    notes_html  = f'<div style="color:#94a3b8;font-size:0.7rem;line-height:1.5;margin-bottom:8px;">{notes_raw[:80]}{"…" if len(notes_raw)>80 else ""}</div>' if notes_raw else ""
+    contact_html = f'<div style="color:#64748b;font-size:0.75rem;margin-bottom:8px;">👤 {c["contact"]}</div>' if c.get("contact") else ""
     tags_html    = f'<div style="margin-bottom:8px;">{tag_chips}</div>' if tag_chips else ""
 
     avatar_html = _avatar(c.get("company", ""))
@@ -790,13 +750,13 @@ def _render_client_card(c: dict):
         f'{avatar_html}'
         f'<div style="flex:1;min-width:0;">'
         f'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
-        f'<div style="color:#e8f0fe;font-weight:700;font-size:0.95rem;line-height:1.3;">{c.get("company","")}</div>'
+        f'<div style="color:#0f172a;font-weight:700;font-size:0.95rem;line-height:1.3;">{c.get("company","")}</div>'
         f'<span style="background:{sbg};color:{sfg};font-size:0.58rem;font-weight:700;letter-spacing:0.1em;'
         f'text-transform:uppercase;padding:3px 9px;border-radius:99px;white-space:nowrap;">{status}</span>'
         f'</div></div></div>{contact_html}'
         f'<div style="margin-bottom:8px;">{email_pills}</div>'
         f'{tags_html}{notes_html}'
-        f'<div style="color:#1e3a5f;font-size:0.61rem;margin-top:4px;">Added {c.get("added_at","—")}</div>'
+        f'<div style="color:#94a3b8;font-size:0.61rem;margin-top:4px;">Added {c.get("added_at","—")}</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -871,20 +831,20 @@ def render_clients():
 
     st.markdown(f"""<div class="stats-grid">
         <div class="stat-card">
-            <div style="color:#4a7aaa;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Clients</div>
-            <div style="color:#e8f0fe;font-size:1.8rem;font-weight:700;letter-spacing:-0.03em;">{len(all_clients)}</div>
+            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Clients</div>
+            <div style="color:#0f172a;font-size:1.8rem;font-weight:700;letter-spacing:-0.03em;">{len(all_clients)}</div>
         </div>
         <div class="stat-card" style="border-top:2px solid #059669;">
-            <div style="color:#4a7aaa;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Active</div>
+            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Active</div>
             <div style="color:#34d399;font-size:1.8rem;font-weight:700;">{active_n}</div>
         </div>
         <div class="stat-card" style="border-top:2px solid #d97706;">
-            <div style="color:#4a7aaa;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">At Risk</div>
+            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">At Risk</div>
             <div style="color:#fbbf24;font-size:1.8rem;font-weight:700;">{at_risk_n}</div>
         </div>
         <div class="stat-card">
-            <div style="color:#4a7aaa;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Email Addresses</div>
-            <div style="color:#e8f0fe;font-size:1.8rem;font-weight:700;">{total_em}</div>
+            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Email Addresses</div>
+            <div style="color:#0f172a;font-size:1.8rem;font-weight:700;">{total_em}</div>
         </div>
     </div>""", unsafe_allow_html=True)
 
@@ -898,7 +858,7 @@ def render_clients():
 
             tags_raw = st.text_input("Tags", placeholder="Enterprise, Q1, High Priority (comma-separated)")
 
-            st.markdown('<div style="color:#4a7aaa;font-size:0.75rem;font-weight:600;margin:10px 0 6px;">Email Addresses (up to 5)</div>', unsafe_allow_html=True)
+            st.markdown('<div style="color:#64748b;font-size:0.75rem;font-weight:600;margin:10px 0 6px;">Email Addresses (up to 5)</div>', unsafe_allow_html=True)
             ec1, ec2 = st.columns(2)
             with ec1:
                 e1 = st.text_input("Email 1 *", placeholder="primary@company.com")
@@ -944,10 +904,10 @@ def render_clients():
 
     # ── Client Cards Grid ─────────────────────────────────────────────────────
     if not filtered:
-        st.markdown('<div style="text-align:center;padding:60px 20px;color:#1e3a5f;font-size:0.84rem;">No clients found. Add one above.</div>', unsafe_allow_html=True)
+        st.markdown('<div style="text-align:center;padding:60px 20px;color:#94a3b8;font-size:0.84rem;">No clients found. Add one above.</div>', unsafe_allow_html=True)
         return
 
-    st.markdown(f'<div style="color:#4a7aaa;font-size:0.75rem;font-weight:600;margin-bottom:14px;">{len(filtered)} client{"s" if len(filtered)!=1 else ""}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="color:#64748b;font-size:0.75rem;font-weight:600;margin-bottom:14px;">{len(filtered)} client{"s" if len(filtered)!=1 else ""}</div>', unsafe_allow_html=True)
 
     for i in range(0, len(filtered), 3):
         cols = st.columns(3)
@@ -971,9 +931,9 @@ def render_clients():
 # ─── Draft helpers ────────────────────────────────────────────────────────────
 
 STATUS_META = {
-    "empty": ("#0e2040", "#4a7aaa", "Empty"),
-    "draft": ("#0d2515", "#6ee7b7", "In Progress"),
-    "ready": ("#0a1535", "#60a5fa", "Ready"),
+    "empty": ("#f1f5f9", "#94a3b8", "Empty"),
+    "draft": ("#dcfce7", "#16a34a", "In Progress"),
+    "ready": ("#eff6ff", "#2563eb", "Ready"),
 }
 
 _TMPL_TEXT_COLORS = ["#c9a96e", "#2563eb", "#ffffff", "#a78bfa", "#8b5e3c"]
@@ -981,7 +941,7 @@ _TMPL_BG_COLORS   = ["#0d1b2a", "#f1f5f9", "#1e3a8a", "#13111f", "#f4ede0"]
 
 
 def _screenshot_input(d: dict, key_suffix: str):
-    st.markdown('<div style="color:#4a7aaa;font-size:0.75rem;font-weight:600;margin:10px 0 6px;">Screenshot</div>', unsafe_allow_html=True)
+    st.markdown('<div style="color:#64748b;font-size:0.75rem;font-weight:600;margin:10px 0 6px;">Screenshot</div>', unsafe_allow_html=True)
 
     # Show preview + remove button if an image is already stored
     if d.get("screenshot_url", "").startswith("data:"):
@@ -1011,13 +971,13 @@ def _screenshot_input(d: dict, key_suffix: str):
 
 
 def _template_picker(d: dict, key_suffix: str):
-    st.markdown('<div style="color:#4a7aaa;font-size:0.75rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">Email Template</div>', unsafe_allow_html=True)
+    st.markdown('<div style="color:#64748b;font-size:0.75rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">Email Template</div>', unsafe_allow_html=True)
     cols = st.columns(5)
     for ti, (tname, tdesc, tswatch) in enumerate(TEMPLATE_NAMES):
         tid    = ti + 1
         is_sel = d.get("template", 1) == tid
         tc     = _TMPL_TEXT_COLORS[ti]
-        border = "#3b82f6" if is_sel else "#0e2040"
+        border = "#2563eb" if is_sel else "#dde8ff"
         with cols[ti]:
             st.markdown(
                 f'<div class="tmpl-card" style="background:{tswatch};border:2px solid {border};">'
@@ -1033,7 +993,7 @@ def _template_picker(d: dict, key_suffix: str):
 
 
 def render_drafts_tab():
-    st.markdown('<div style="color:#e8f0fe;font-size:1rem;font-weight:600;margin-bottom:4px;">Drafts</div>', unsafe_allow_html=True)
+    st.markdown('<div style="color:#0f172a;font-size:1rem;font-weight:600;margin-bottom:4px;">Drafts</div>', unsafe_allow_html=True)
     st.caption("Up to 3 email drafts — edit, preview, and send independently.")
     st.markdown("")
 
@@ -1045,11 +1005,11 @@ def render_drafts_tab():
             st.markdown(
                 f'<div class="draft-card">'
                 f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">'
-                f'<span style="color:#e8f0fe;font-weight:600;font-size:0.88rem;">{draft["name"]}</span>'
+                f'<span style="color:#0f172a;font-weight:600;font-size:0.88rem;">{draft["name"]}</span>'
                 f'<span style="background:{bg};color:{fg};font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:3px 9px;border-radius:99px;">{lbl}</span>'
                 f'</div>'
-                f'<div style="color:#1e3a5f;font-size:0.72rem;">{draft["client"] or "No client set"}</div>'
-                f'<div style="color:#1e3a5f;font-size:0.65rem;margin-top:3px;">Template: {tname}</div>'
+                f'<div style="color:#94a3b8;font-size:0.72rem;">{draft["client"] or "No client set"}</div>'
+                f'<div style="color:#94a3b8;font-size:0.65rem;margin-top:3px;">Template: {tname}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -1065,7 +1025,7 @@ def render_drafts_tab():
 
                 _screenshot_input(d, f"d{i}")
 
-                st.markdown('<div style="color:#4a7aaa;font-size:0.75rem;font-weight:600;margin:10px 0 4px;">Links</div>', unsafe_allow_html=True)
+                st.markdown('<div style="color:#64748b;font-size:0.75rem;font-weight:600;margin:10px 0 4px;">Links</div>', unsafe_allow_html=True)
                 d["report_link"]     = st.text_input("Full Report URL",  value=d["report_link"],     key=f"dlink_{i}", placeholder="https://docs.google.com/…")
                 d["survey_question"] = st.text_input("Survey Question",  value=d["survey_question"], key=f"dsq_{i}")
 
@@ -1081,19 +1041,11 @@ def render_drafts_tab():
                         st.toast(f"{d['name']} ready to send.", icon="✅")
                         st.rerun()
 
-            if st.button("👁 Preview", key=f"prev_{i}", use_container_width=True):
-                st.session_state.drafts[i]["show_preview"] = not draft["show_preview"]
-                st.rerun()
             if draft["status"] != "empty":
                 if st.button("Reset", key=f"reset_{i}", use_container_width=True):
                     st.session_state.drafts[i] = _blank_draft(i)
                     st.rerun()
 
-    for i, draft in enumerate(st.session_state.drafts):
-        if draft.get("show_preview"):
-            st.markdown("---")
-            st.markdown(f"#### Preview — {draft['name']}  ·  {TEMPLATE_NAMES[draft.get('template',1)-1][0]}")
-            components.html(build_email_html(draft, draft.get("template", 1)), height=1400, scrolling=True)
 
 
 # ─── Email Maker ──────────────────────────────────────────────────────────────
@@ -1107,8 +1059,8 @@ def render_email_maker():
         </div>
     </div>""", unsafe_allow_html=True)
 
-    tab_drafts, tab_editor, tab_preview, tab_recipients = st.tabs(
-        ["✏️  Drafts", "📝  Edit Body", "📄  Preview", "📤  Send"]
+    tab_drafts, tab_editor, tab_recipients = st.tabs(
+        ["✏️  Drafts", "📝  Edit Body", "📤  Send"]
     )
 
     # ── Drafts ────────────────────────────────────────────────────────────────
@@ -1117,7 +1069,7 @@ def render_email_maker():
 
     # ── Edit Body ─────────────────────────────────────────────────────────────
     with tab_editor:
-        st.markdown('<div style="color:#e8f0fe;font-size:1rem;font-weight:600;margin-bottom:4px;">Edit Email Body</div>', unsafe_allow_html=True)
+        st.markdown('<div style="color:#0f172a;font-size:1rem;font-weight:600;margin-bottom:4px;">Edit Email Body</div>', unsafe_allow_html=True)
         st.caption("Select a draft and fill in the fields below.")
 
         draft_names = [d["name"] for d in st.session_state.drafts]
@@ -1140,13 +1092,13 @@ def render_email_maker():
         _screenshot_input(d, f"e{ei}")
 
         st.markdown("---")
-        st.markdown('<div style="color:#4a7aaa;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Links & Survey</div>', unsafe_allow_html=True)
+        st.markdown('<div style="color:#64748b;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Links & Survey</div>', unsafe_allow_html=True)
         lc1, lc2 = st.columns(2)
         with lc1: d["report_link"]     = st.text_input("Full Report URL", value=d["report_link"],     key=f"ed_link_{ei}", placeholder="https://docs.google.com/…")
         with lc2: d["survey_question"] = st.text_input("Survey Question", value=d["survey_question"], key=f"ed_sq_{ei}")
 
         st.markdown("---")
-        bc1, bc2, bc3 = st.columns(3)
+        bc1, bc2 = st.columns(2)
         with bc1:
             if st.button("Save Draft", key=f"ed_save_{ei}", use_container_width=True):
                 st.session_state.drafts[ei]["status"] = "draft"
@@ -1157,42 +1109,20 @@ def render_email_maker():
                 st.session_state.drafts[ei]["status"] = "ready"
                 st.toast(f"{d['name']} is ready.", icon="✅")
                 st.rerun()
-        with bc3:
-            if st.button("👁 Preview Email", key=f"ed_prev_{ei}", use_container_width=True):
-                st.session_state.drafts[ei]["show_preview"] = True
-                st.rerun()
-
-        if d.get("show_preview"):
-            st.markdown("---")
-            st.markdown(f"#### Preview — {d['name']}  ·  {TEMPLATE_NAMES[d.get('template',1)-1][0]}")
-            components.html(build_email_html(d, d.get("template", 1)), height=1400, scrolling=True)
-
-    # ── Email Preview ─────────────────────────────────────────────────────────
-    with tab_preview:
-        st.markdown('<div style="color:#e8f0fe;font-size:1rem;font-weight:600;margin-bottom:4px;">Email Preview</div>', unsafe_allow_html=True)
-        st.caption("Exactly how the email looks in a client's inbox.")
-        preview_path = os.path.join(os.path.dirname(__file__), "..", "email-templates", "preview.html")
-        try:
-            with open(os.path.abspath(preview_path), "r", encoding="utf-8") as f:
-                html_content = f.read()
-            html_content = html_content.replace('<div class="preview-bar">', '<div class="preview-bar" style="display:none">')
-            components.html(html_content, height=1500, scrolling=True)
-        except FileNotFoundError:
-            st.error("preview.html not found. Make sure email-templates/preview.html exists.")
 
     # ── Send ──────────────────────────────────────────────────────────────────
     with tab_recipients:
-        st.markdown('<div style="color:#e8f0fe;font-size:1rem;font-weight:600;margin-bottom:4px;">Send Report</div>', unsafe_allow_html=True)
+        st.markdown('<div style="color:#0f172a;font-size:1rem;font-weight:600;margin-bottom:4px;">Send Report</div>', unsafe_allow_html=True)
         st.caption("Select recipients from the Client Repository and send a draft.")
 
         repo_clients = client_store.load()
 
         if not repo_clients:
             st.markdown(
-                '<div style="background:#091525;border:1px solid #0e2040;border-radius:14px;padding:24px;'
-                'text-align:center;color:#4a7aaa;font-size:0.84rem;">'
+                '<div style="background:#ffffff;border:1px solid #dde8ff;border-radius:14px;padding:24px;'
+                'text-align:center;color:#64748b;font-size:0.84rem;">'
                 '🏢 No clients in repository yet.<br>'
-                '<span style="font-size:0.76rem;color:#1e3a5f;">Go to <strong style="color:#4a7aaa;">🏢 Clients</strong> in the sidebar to add clients first.</span>'
+                '<span style="font-size:0.76rem;color:#94a3b8;">Go to <strong style="color:#64748b;">🏢 Clients</strong> in the sidebar to add clients first.</span>'
                 '</div>',
                 unsafe_allow_html=True,
             )
@@ -1202,7 +1132,7 @@ def render_email_maker():
             send_draft_name = st.selectbox("Which draft to send?", draft_names, key="send_draft_pick")
             send_draft = st.session_state.drafts[draft_names.index(send_draft_name)]
             tpl_name = TEMPLATE_NAMES[send_draft.get("template",1)-1][0]
-            st.markdown(f'<div style="color:#1e3a5f;font-size:0.7rem;margin-bottom:16px;">Template: <span style="color:#4a7aaa;">{tpl_name}</span></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="color:#94a3b8;font-size:0.7rem;margin-bottom:16px;">Template: <span style="color:#64748b;">{tpl_name}</span></div>', unsafe_allow_html=True)
 
             # Recipient multiselect from repository
             options = [f"{c['company']}  ({', '.join(c['emails'][:2])}{'…' if len(c['emails'])>2 else ''})" for c in repo_clients]
@@ -1218,12 +1148,12 @@ def render_email_maker():
                     for c in selected_clients
                 )
                 st.markdown(f'<div style="margin:10px 0 16px;">{pills}</div>', unsafe_allow_html=True)
-                st.markdown(f'<div style="color:#4a7aaa;font-size:0.73rem;margin-bottom:16px;">{len(selected_clients)} clients · {len(all_emails)} email addresses total</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="color:#64748b;font-size:0.73rem;margin-bottom:16px;">{len(selected_clients)} clients · {len(all_emails)} email addresses total</div>', unsafe_allow_html=True)
 
             if not st.session_state.get("credentials"):
                 st.markdown(
-                    '<div style="background:#091525;border:1px solid #0e2040;border-radius:14px;'
-                    'padding:18px;text-align:center;color:#4a7aaa;font-size:0.82rem;">'
+                    '<div style="background:#ffffff;border:1px solid #dde8ff;border-radius:14px;'
+                    'padding:18px;text-align:center;color:#64748b;font-size:0.82rem;">'
                     '🔒 Sign in with Google (sidebar) to send emails</div>',
                     unsafe_allow_html=True,
                 )
