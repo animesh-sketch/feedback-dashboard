@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Streamlit secrets (never commit real credentials)
+.streamlit/secrets.toml
