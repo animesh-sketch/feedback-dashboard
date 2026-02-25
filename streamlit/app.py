@@ -34,6 +34,7 @@ def _blank_draft(idx: int) -> dict:
         "screenshot_caption": "",
         "report_link": "",
         "survey_question": "Was this report useful to you?",
+        "show_preview": False,
         "template": 1,
     }
 
@@ -1041,11 +1042,19 @@ def render_drafts_tab():
                         st.toast(f"{d['name']} ready to send.", icon="✅")
                         st.rerun()
 
+            if st.button("👁 Preview", key=f"prev_{i}", use_container_width=True):
+                st.session_state.drafts[i]["show_preview"] = not draft.get("show_preview", False)
+                st.rerun()
             if draft["status"] != "empty":
                 if st.button("Reset", key=f"reset_{i}", use_container_width=True):
                     st.session_state.drafts[i] = _blank_draft(i)
                     st.rerun()
 
+    for i, draft in enumerate(st.session_state.drafts):
+        if draft.get("show_preview"):
+            st.markdown("---")
+            st.markdown(f"#### Preview — {draft['name']}  ·  {TEMPLATE_NAMES[draft.get('template',1)-1][0]}")
+            components.html(build_email_html(draft, draft.get("template", 1)), height=1400, scrolling=True)
 
 
 # ─── Email Maker ──────────────────────────────────────────────────────────────
