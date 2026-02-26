@@ -32,8 +32,12 @@ def _blank_draft(idx: int) -> dict:
         "body": "",
         "screenshot_url": "",
         "screenshot_caption": "",
+        "img2_url": "",
+        "img2_caption": "",
+        "img3_url": "",
+        "img3_caption": "",
         "report_link": "",
-        "survey_question": "Was this report useful to you?",
+        "survey_question": "How would you rate this insights report?",
         "show_preview": False,
         "template": 1,
     }
@@ -618,6 +622,17 @@ def _render_period_content(period: str):
     score = csat["score"]
     stars = "★" * int(score) + "☆" * (5 - int(score))
 
+    # Pre-filter email rows for drill-down panels
+    if period == "Daily":
+        email_rows = [r for r in EMAIL_ANALYTICS if r["date"] in DAILY_DATES]
+    elif period == "Weekly":
+        email_rows = [r for r in EMAIL_ANALYTICS if r["date"] in WEEKLY_DATES]
+    else:
+        email_rows = EMAIL_ANALYTICS
+
+    opened_rows  = [r for r in email_rows if r["opened"]]
+    clicked_rows = [r for r in email_rows if r["clicked"]]
+
     st.markdown(f"""
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div style="color:#0f172a;font-size:0.92rem;font-weight:600;">{data['label']}</div>
@@ -627,13 +642,44 @@ def _render_period_content(period: str):
 
     st.markdown('<div class="section-chip">Key Metrics</div>', unsafe_allow_html=True)
     csat_card = f"""<div class="metric-card accent-amber">
-        <div class="metric-label">CSAT Score</div>
+        <div class="metric-label">Report Score</div>
         <div class="metric-value">{score}<span class="metric-max"> / 5</span></div>
         <div class="metric-sub"><span style="color:#f59e0b;letter-spacing:2px;">{stars}</span>&nbsp;·&nbsp;{csat['responses']} ratings</div>
     </div>"""
     row1 = "".join(_metric_card_html(m) for m in data["metrics"][:3]) + csat_card
     row2 = "".join(_metric_card_html(m) for m in data["metrics"][3:])
     st.markdown(f'<div class="analytics-grid">{row1}</div><div class="analytics-grid">{row2}</div>', unsafe_allow_html=True)
+
+    # ── Drill-down: who opened / who clicked ──────────────────────────────────
+    col_o, col_c = st.columns(2)
+
+    def _people_rows_html(rows, action_key):
+        if not rows:
+            return '<div style="color:#94a3b8;font-size:0.78rem;padding:8px 0;">No data for this period.</div>'
+        items = "".join(
+            f'<div style="display:flex;align-items:center;gap:10px;padding:7px 0;'
+            f'border-bottom:1px solid #f1f5f9;">'
+            f'<div style="width:8px;height:8px;border-radius:50%;background:#2563eb;flex-shrink:0;"></div>'
+            f'<div style="flex:1;min-width:0;">'
+            f'<div style="font-size:0.79rem;font-weight:600;color:#0f172a;white-space:nowrap;'
+            f'overflow:hidden;text-overflow:ellipsis;">{r["email"]}</div>'
+            f'<div style="font-size:0.7rem;color:#64748b;">{r["campaign"]} · {r["date"]}</div>'
+            f'</div>'
+            f'<div style="font-size:0.68rem;color:#94a3b8;flex-shrink:0;">{r["date"]}</div>'
+            f'</div>'
+            for r in rows
+        )
+        return f'<div style="max-height:260px;overflow-y:auto;">{items}</div>'
+
+    with col_o:
+        with st.expander(f"👁  Who Opened  ({len(opened_rows)})", expanded=False):
+            st.markdown(_people_rows_html(opened_rows, "opened"), unsafe_allow_html=True)
+
+    with col_c:
+        with st.expander(f"👆  Who Clicked  ({len(clicked_rows)})", expanded=False):
+            st.markdown(_people_rows_html(clicked_rows, "clicked"), unsafe_allow_html=True)
+
+    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
     bars = "".join(
         f'<div class="bar-row"><span class="bar-star">{r["star"]}★</span>'
@@ -644,7 +690,7 @@ def _render_period_content(period: str):
     st.markdown('<div class="section-chip">Customer Satisfaction</div>', unsafe_allow_html=True)
     st.markdown(f"""<div class="csat-section">
         <div class="csat-score-side">
-            <div style="color:#64748b;font-size:0.62rem;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;margin-bottom:14px;">CSAT</div>
+            <div style="color:#64748b;font-size:0.62rem;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;margin-bottom:14px;">Report Score</div>
             <div class="csat-number">{score}<span style="font-size:1.1rem;color:#64748b;font-weight:500;-webkit-text-fill-color:#64748b;">/5</span></div>
             <div class="csat-stars">{stars}</div>
             <div class="csat-count">{csat['responses']} ratings</div>
@@ -657,7 +703,7 @@ def _render_period_content(period: str):
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
     respondents = CSAT_RESPONDENTS[:csat["responses"]]
-    with st.expander(f"👥  View Responses  ({csat['responses']})", expanded=False):
+    with st.expander(f"👥  View Report Ratings  ({csat['responses']})", expanded=False):
         rows_html = "".join(
             f'<div class="resp-row"><div class="resp-name">{r["name"]}</div>'
             f'<div class="resp-email">{r["email"]}</div>'
@@ -668,19 +714,14 @@ def _render_period_content(period: str):
         st.markdown(f'<div style="padding:4px 2px;">{rows_html}</div>', unsafe_allow_html=True)
 
     st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
-    if period == "Daily":
-        email_rows = [r for r in EMAIL_ANALYTICS if r["date"] in DAILY_DATES]
-    elif period == "Weekly":
-        email_rows = [r for r in EMAIL_ANALYTICS if r["date"] in WEEKLY_DATES]
-    else:
-        email_rows = EMAIL_ANALYTICS
-
     st.markdown('<div class="section-chip">Email Activity</div>', unsafe_allow_html=True)
     st.markdown(f"""<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="color:#0f172a;font-size:0.92rem;font-weight:600;">Email Activity</div>
         <div style="color:#94a3b8;font-size:0.68rem;font-weight:500;">{len(email_rows)} emails</div>
     </div>""", unsafe_allow_html=True)
     st.markdown(_email_table_html(email_rows), unsafe_allow_html=True)
+
+    _render_ai_summary(period, csat, respondents)
 
 
 # ─── Overview ─────────────────────────────────────────────────────────────────
@@ -689,7 +730,7 @@ def render_overview():
     st.markdown("""<div class="hero-banner">
         <div>
             <div class="hero-title">Good morning, Animesh 👋</div>
-            <div class="hero-sub">Convin Data Labs · Campaign Analytics Dashboard</div>
+            <div class="hero-sub">Convin Data Labs · Insights Report Feedback Dashboard</div>
         </div>
         <div class="live-badge"><span class="live-dot">●</span> Live</div>
     </div>""", unsafe_allow_html=True)
@@ -698,6 +739,111 @@ def render_overview():
     with tab_d: _render_period_content("Daily")
     with tab_w: _render_period_content("Weekly")
     with tab_m: _render_period_content("Monthly")
+
+
+# ─── AI Feedback Summariser ───────────────────────────────────────────────────
+
+def _render_ai_summary(period: str, csat_data: dict, respondents: list):
+    """Renders the AI Feedback Summary section for a given analytics period."""
+    st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="section-chip">🤖 AI Feedback Summary</div>', unsafe_allow_html=True)
+
+    ss_key = f"ai_summary_{period}"
+    err_key = f"ai_summary_err_{period}"
+
+    if st.session_state.get(ss_key):
+        s = st.session_state[ss_key]
+
+        def _card(title, items, bg, border, tc, dot):
+            bullets = "".join(
+                f'<div style="display:flex;gap:8px;margin-bottom:6px;">'
+                f'<span style="color:{dot};font-size:0.85rem;flex-shrink:0;">●</span>'
+                f'<span style="font-size:0.8rem;color:{tc};line-height:1.5;">{item}</span></div>'
+                for item in items
+            )
+            return (
+                f'<div style="background:{bg};border:1px solid {border};border-radius:12px;'
+                f'padding:14px 16px;margin-bottom:12px;">'
+                f'<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
+                f'text-transform:uppercase;color:{dot};margin-bottom:10px;">{title}</div>'
+                f'{bullets}</div>'
+            )
+
+        sentiment_html = (
+            f'<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;'
+            f'padding:14px 16px;margin-bottom:12px;">'
+            f'<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
+            f'text-transform:uppercase;color:#0284c7;margin-bottom:8px;">Overall Sentiment</div>'
+            f'<div style="font-size:0.84rem;color:#0f172a;line-height:1.6;">{s.get("sentiment","—")}</div>'
+            f'</div>'
+        )
+        themes_html  = _card("Key Themes",           s.get("themes", []),  "#f0fdf4", "#bbf7d0", "#166534", "#16a34a")
+        issues_html  = _card("Top Issues",           s.get("issues", []),  "#fff7ed", "#fed7aa", "#9a3412", "#ea580c")
+        actions_html = _card("Recommended Actions",  s.get("actions", []), "#eff6ff", "#bfdbfe", "#1e3a5f", "#2563eb")
+
+        st.markdown(sentiment_html + themes_html + issues_html + actions_html, unsafe_allow_html=True)
+
+        col_r, col_c = st.columns([1, 4])
+        with col_r:
+            if st.button("↺ Regenerate", key=f"ai_regen_{period}", use_container_width=True):
+                st.session_state.pop(ss_key, None)
+                st.session_state.pop(err_key, None)
+                st.rerun()
+        return
+
+    if st.session_state.get(err_key):
+        st.error(st.session_state[err_key])
+
+    if st.button("✨ Generate AI Summary", key=f"ai_gen_{period}", type="primary"):
+        api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            st.session_state[err_key] = "ANTHROPIC_API_KEY not found in secrets."
+            st.rerun()
+        else:
+            dist  = csat_data.get("dist", [])
+            score = csat_data.get("score", "N/A")
+            total = csat_data.get("responses", 0)
+            dist_text = "  ".join(f'{r["star"]}★: {r["count"]} ({r["pct"]}%)' for r in dist)
+
+            from data import ACTION_QUEUE
+            comments_text = "\n".join(
+                f'- [{item["priority"].split()[0]}] {item["name"]}: "{item["comment"]}"'
+                for item in ACTION_QUEUE if item.get("comment")
+            ) or "No detailed comments available."
+
+            prompt = (
+                f"You are an expert data analytics insights analyst. Stakeholders have rated and reviewed data reports sent by the analytics team. Analyze their feedback and return a JSON object.\n\n"
+                f"Report Score: {score}/5 ({total} responses)\n"
+                f"Rating breakdown: {dist_text}\n\n"
+                f"Stakeholder comments on the reports:\n{comments_text}\n\n"
+                f"Return ONLY valid JSON (no markdown, no explanation) with exactly these keys:\n"
+                f'{{"sentiment": "1-2 sentence overall sentiment about the insights reports", '
+                f'"themes": ["theme 1", "theme 2", "theme 3"], '
+                f'"issues": ["issue 1 with the reports", "issue 2", "issue 3"], '
+                f'"actions": ["action 1 for the data team", "action 2", "action 3"]}}'
+            )
+
+            try:
+                import anthropic as _anthropic, json as _json
+                _client = _anthropic.Anthropic(api_key=api_key)
+                with st.spinner("Analysing feedback with AI…"):
+                    _msg = _client.messages.create(
+                        model="claude-haiku-4-5-20251001",
+                        max_tokens=512,
+                        messages=[{"role": "user", "content": prompt}],
+                    )
+                raw = _msg.content[0].text.strip()
+                # Strip markdown code fences if present
+                if raw.startswith("```"):
+                    raw = raw.split("```")[1]
+                    if raw.startswith("json"):
+                        raw = raw[4:]
+                parsed = _json.loads(raw)
+                st.session_state[ss_key] = parsed
+                st.session_state.pop(err_key, None)
+            except Exception as e:
+                st.session_state[err_key] = f"AI error: {e}"
+            st.rerun()
 
 
 # ─── Clients ──────────────────────────────────────────────────────────────────
@@ -775,6 +921,44 @@ def _render_client_card(c: dict):
             st.rerun()
 
     if st.session_state.get(f"editing_{cid}"):
+        # ── Email address management (outside form so delete/add buttons work) ──
+        st.markdown(
+            '<div style="color:#64748b;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;'
+            'text-transform:uppercase;margin:6px 0 6px;">Email Addresses</div>',
+            unsafe_allow_html=True,
+        )
+        current_emails = list(c.get("emails", []))
+        for idx, em in enumerate(current_emails):
+            ec1, ec2 = st.columns([5, 1])
+            with ec1:
+                st.markdown(
+                    f'<div style="background:#f0f5ff;border:1px solid #dde8ff;border-radius:8px;'
+                    f'padding:6px 10px;font-size:0.78rem;color:#1d4ed8;">{em}</div>',
+                    unsafe_allow_html=True,
+                )
+            with ec2:
+                if st.button("✕", key=f"del_em_{cid}_{idx}", use_container_width=True, help="Remove this email"):
+                    client_store.update(cid, {"emails": [e for j, e in enumerate(current_emails) if j != idx]})
+                    st.toast(f"Removed {em}", icon="🗑")
+                    st.rerun()
+
+        ae1, ae2 = st.columns([5, 1])
+        with ae1:
+            new_em = st.text_input(
+                "new_email", key=f"add_em_{cid}",
+                placeholder="Add email address…",
+                label_visibility="collapsed",
+            )
+        with ae2:
+            if st.button("＋", key=f"add_em_btn_{cid}", use_container_width=True, help="Add email"):
+                if new_em.strip():
+                    client_store.update(cid, {"emails": current_emails + [new_em.strip()]})
+                    st.toast(f"Added {new_em.strip()}", icon="✅")
+                    st.rerun()
+
+        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+
+        # ── Other fields form ─────────────────────────────────────────────────
         with st.form(f"edit_f_{cid}"):
             ec1, ec2 = st.columns(2)
             with ec1:
@@ -819,7 +1003,7 @@ def render_clients():
         <div class="em-icon">🏢</div>
         <div>
             <div class="em-title">Client Repository</div>
-            <div class="em-sub">Manage clients, contacts, tags, and email addresses.</div>
+            <div class="em-sub">Manage stakeholders, contacts, tags, and email addresses.</div>
         </div>
     </div>""", unsafe_allow_html=True)
 
@@ -942,34 +1126,46 @@ _TMPL_BG_COLORS   = ["#0d1b2a", "#f1f5f9", "#1e3a8a", "#13111f", "#f4ede0",
                      "#040d18", "#fff3e8", "#0b1f14", "#1a1a1a"]
 
 
+def _single_image_slot(d: dict, url_key: str, cap_key: str, label: str, key_suffix: str):
+    """Renders one image upload/paste slot inside an expander."""
+    has_img = bool(d.get(url_key, ""))
+    with st.expander(f"🖼 {label}{'  ✓' if has_img else '  (optional)'}", expanded=has_img):
+        current_url = d.get(url_key, "")
+        if current_url.startswith("data:") or (current_url.startswith("http") and current_url):
+            st.image(current_url, width=220)
+            if st.button("✕ Remove", key=f"rm_{url_key}_{key_suffix}", use_container_width=False):
+                d[url_key] = ""
+                d[cap_key] = ""
+                st.rerun()
+        else:
+            uploaded = st.file_uploader(
+                "Upload", type=["png", "jpg", "jpeg", "gif", "webp"],
+                key=f"up_{url_key}_{key_suffix}", label_visibility="collapsed",
+            )
+            if uploaded:
+                b64 = base64.b64encode(uploaded.read()).decode()
+                d[url_key] = f"data:{uploaded.type};base64,{b64}"
+                st.rerun()
+            d[url_key] = st.text_input(
+                "Or paste URL", value=current_url,
+                key=f"url_{url_key}_{key_suffix}", placeholder="https://…",
+                label_visibility="visible",
+            )
+        d[cap_key] = st.text_input(
+            "Caption", value=d.get(cap_key, ""),
+            key=f"cap_{url_key}_{key_suffix}", placeholder="Optional caption",
+        )
+
+
 def _screenshot_input(d: dict, key_suffix: str):
-    st.markdown('<div style="color:#64748b;font-size:0.75rem;font-weight:600;margin:10px 0 6px;">Screenshot</div>', unsafe_allow_html=True)
-
-    # Show preview + remove button if an image is already stored
-    if d.get("screenshot_url", "").startswith("data:"):
-        st.image(d["screenshot_url"], width=220)
-        if st.button("✕ Remove image", key=f"rm_img_{key_suffix}"):
-            d["screenshot_url"] = ""
-            st.rerun()
-    else:
-        uploaded = st.file_uploader(
-            "Upload image", type=["png", "jpg", "jpeg", "gif", "webp"],
-            key=f"upload_{key_suffix}", label_visibility="collapsed",
-        )
-        if uploaded:
-            b64 = base64.b64encode(uploaded.read()).decode()
-            d["screenshot_url"] = f"data:{uploaded.type};base64,{b64}"
-            st.rerun()
-
-        d["screenshot_url"] = st.text_input(
-            "Or paste image URL", value=d.get("screenshot_url", ""),
-            key=f"ssu_{key_suffix}", placeholder="https://…",
-        )
-
-    d["screenshot_caption"] = st.text_input(
-        "Caption", value=d.get("screenshot_caption", ""),
-        key=f"ssc_{key_suffix}", placeholder="Optional caption",
+    st.markdown(
+        '<div style="color:#64748b;font-size:0.75rem;font-weight:700;letter-spacing:0.06em;'
+        'text-transform:uppercase;margin:10px 0 6px;">Images</div>',
+        unsafe_allow_html=True,
     )
+    _single_image_slot(d, "screenshot_url", "screenshot_caption", "Image 1 — Main Screenshot", key_suffix)
+    _single_image_slot(d, "img2_url",        "img2_caption",        "Image 2",                   key_suffix)
+    _single_image_slot(d, "img3_url",        "img3_caption",        "Image 3",                   key_suffix)
 
 
 def _template_picker(d: dict, key_suffix: str):
@@ -1057,8 +1253,13 @@ def render_drafts_tab():
     for i, draft in enumerate(st.session_state.drafts):
         if draft.get("show_preview"):
             st.markdown("---")
-            st.markdown(f"#### Preview — {draft['name']}  ·  {TEMPLATE_NAMES[draft.get('template',1)-1][0]}")
-            components.html(build_email_html(draft, draft.get("template", 1)), height=1400, scrolling=True)
+            tpl_name = TEMPLATE_NAMES[draft.get("template", 1) - 1][0]
+            st.markdown(f'<div style="color:#0f172a;font-size:0.88rem;font-weight:600;margin:8px 0;">Preview · {draft["name"]} · {tpl_name}</div>', unsafe_allow_html=True)
+            try:
+                html_content = build_email_html(draft, draft.get("template", 1))
+                components.html(html_content, height=2200, scrolling=True)
+            except Exception as e:
+                st.error(f"Preview error: {e}")
 
 
 # ─── Email Maker ──────────────────────────────────────────────────────────────
@@ -1068,7 +1269,7 @@ def render_email_maker():
         <div class="em-icon">📧</div>
         <div>
             <div class="em-title">Email Maker</div>
-            <div class="em-sub">Build report emails and send to clients via Gmail.</div>
+            <div class="em-sub">Build insights report emails and send to stakeholders via Gmail.</div>
         </div>
     </div>""", unsafe_allow_html=True)
 
@@ -1111,7 +1312,7 @@ def render_email_maker():
         with lc2: d["survey_question"] = st.text_input("Survey Question", value=d["survey_question"], key=f"ed_sq_{ei}")
 
         st.markdown("---")
-        bc1, bc2 = st.columns(2)
+        bc1, bc2, bc3 = st.columns(3)
         with bc1:
             if st.button("Save Draft", key=f"ed_save_{ei}", use_container_width=True):
                 st.session_state.drafts[ei]["status"] = "draft"
@@ -1122,6 +1323,19 @@ def render_email_maker():
                 st.session_state.drafts[ei]["status"] = "ready"
                 st.toast(f"{d['name']} is ready.", icon="✅")
                 st.rerun()
+        with bc3:
+            if st.button("👁 Preview Email", key=f"ed_prev_{ei}", use_container_width=True):
+                st.session_state[f"ed_show_preview_{ei}"] = not st.session_state.get(f"ed_show_preview_{ei}", False)
+                st.rerun()
+
+        if st.session_state.get(f"ed_show_preview_{ei}", False):
+            tpl_name = TEMPLATE_NAMES[d.get("template", 1) - 1][0]
+            st.markdown(f'<div style="color:#0f172a;font-size:0.88rem;font-weight:600;margin:16px 0 8px;">Preview · {tpl_name}</div>', unsafe_allow_html=True)
+            try:
+                html_content = build_email_html(d, d.get("template", 1))
+                components.html(html_content, height=2200, scrolling=True)
+            except Exception as e:
+                st.error(f"Preview error: {e}")
 
     # ── Send ──────────────────────────────────────────────────────────────────
     with tab_recipients:

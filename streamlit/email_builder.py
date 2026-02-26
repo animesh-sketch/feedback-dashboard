@@ -26,10 +26,27 @@ def build_email_html(draft: dict, template_id: int = 1) -> str:
     sc = draft.get("screenshot_caption")  or ""
     rl = draft.get("report_link")         or "#"
     sq = draft.get("survey_question")     or "Was this report useful to you?"
+
+    # Build extra images block (img2, img3) rendered after the main screenshot
+    extra_parts = []
+    for i in (2, 3):
+        url = draft.get(f"img{i}_url") or ""
+        cap = draft.get(f"img{i}_caption") or ""
+        if url:
+            cap_html = (f'<p style="font-size:11px;font-style:italic;margin-top:8px;'
+                        f'color:#9c8e80;text-align:center;">{cap}</p>') if cap else ""
+            extra_parts.append(
+                f'<div style="padding:0 44px 24px;">'
+                f'<img src="{url}" alt="Image {i}" '
+                f'style="width:100%;display:block;border-radius:8px;"/>'
+                f'{cap_html}</div>'
+            )
+    extra_imgs_html = "".join(extra_parts)
+
     builders = {1: _tpl_executive, 2: _tpl_minimal,
                 3: _tpl_bold_blue, 4: _tpl_modern, 5: _tpl_classic,
                 6: _tpl_neon, 7: _tpl_sunrise, 8: _tpl_forest, 9: _tpl_carbon}
-    return builders.get(template_id, _tpl_executive)(c, h, b, ss, sc, rl, sq)
+    return builders.get(template_id, _tpl_executive)(c, h, b, ss, sc, rl, sq, extra_imgs_html)
 
 
 # ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -43,7 +60,7 @@ def _screenshot(url, caption, wrap_css="", img_css=""):
 
 # ─── Template 1: Executive ────────────────────────────────────────────────────
 
-def _tpl_executive(c, h, b, ss, sc, rl, sq):
+def _tpl_executive(c, h, b, ss, sc, rl, sq, extra_imgs_html=""):
     css = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@400;500;600&display=swap');
@@ -79,7 +96,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
     <div style="width:44px;height:2px;background:#b8962e;margin:0 0 20px;"></div>
     <p style="font-size:14px;line-height:1.85;color:#4a4a4a;">{b}</p>
   </div>
-  {ss_html}
+  {ss_html}{extra_imgs_html}
   <div style="padding:40px 44px;background:#faf9f7;border-bottom:1px solid #ede8e0;text-align:center;">
     <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#9c8e80;margin-bottom:10px;">Full Report</div>
     <div style="font-family:'Playfair Display',serif;font-size:20px;color:#0d1b2a;margin-bottom:24px;">Access the complete analysis</div>
@@ -115,7 +132,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
 
 # ─── Template 2: Minimal ──────────────────────────────────────────────────────
 
-def _tpl_minimal(c, h, b, ss, sc, rl, sq):
+def _tpl_minimal(c, h, b, ss, sc, rl, sq, extra_imgs_html=""):
     css = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -151,7 +168,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
     <h1 style="font-size:28px;font-weight:700;color:#111827;line-height:1.3;margin-bottom:20px;letter-spacing:-0.02em;">{h}</h1>
     <p style="font-size:14px;line-height:1.85;color:#4b5563;">{b}</p>
   </div>
-  {ss_html}
+  {ss_html}{extra_imgs_html}
   <div style="padding:36px 40px;background:#f9fafb;border-bottom:1px solid #f3f4f6;text-align:center;">
     <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:14px;">Full Report Available</div>
     <a href="{rl}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;font-size:12px;font-weight:600;padding:14px 42px;border-radius:10px;letter-spacing:0.01em;">Open Full Report →</a>
@@ -184,7 +201,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
 
 # ─── Template 3: Bold Blue ────────────────────────────────────────────────────
 
-def _tpl_bold_blue(c, h, b, ss, sc, rl, sq):
+def _tpl_bold_blue(c, h, b, ss, sc, rl, sq, extra_imgs_html=""):
     css = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
@@ -218,7 +235,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
     <div style="width:60px;height:4px;background:#1d4ed8;border-radius:2px;margin-bottom:24px;"></div>
     <p style="font-size:15px;line-height:1.8;color:#374151;">{b}</p>
   </div>
-  {ss_html}
+  {ss_html}{extra_imgs_html}
   <div style="padding:40px 44px;text-align:center;border-bottom:1px solid #e5e7eb;background:#f8faff;">
     <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#93c5fd;margin-bottom:12px;">Full Analysis Ready</div>
     <div style="font-size:20px;font-weight:700;color:#0f172a;margin-bottom:24px;">Access the complete report</div>
@@ -252,7 +269,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
 
 # ─── Template 4: Modern ───────────────────────────────────────────────────────
 
-def _tpl_modern(c, h, b, ss, sc, rl, sq):
+def _tpl_modern(c, h, b, ss, sc, rl, sq, extra_imgs_html=""):
     css = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -286,7 +303,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
     <div style="width:40px;height:2px;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:2px;margin-bottom:20px;"></div>
     <p style="font-size:14px;line-height:1.85;color:#64748b;">{b}</p>
   </div>
-  {ss_html}
+  {ss_html}{extra_imgs_html}
   <div style="padding:36px 40px;background:#0f172a;border-bottom:1px solid #1e293b;text-align:center;">
     <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#475569;margin-bottom:14px;">Full Analysis</div>
     <a href="{rl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;text-decoration:none;font-size:12px;font-weight:600;padding:14px 44px;border-radius:10px;letter-spacing:0.03em;box-shadow:0 4px 20px rgba(124,58,237,0.35);">Open Full Report →</a>
@@ -319,7 +336,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
 
 # ─── Template 5: Classic ──────────────────────────────────────────────────────
 
-def _tpl_classic(c, h, b, ss, sc, rl, sq):
+def _tpl_classic(c, h, b, ss, sc, rl, sq, extra_imgs_html=""):
     css = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lora:wght@400;500;600&display=swap');
@@ -356,7 +373,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
     <div style="text-align:center;margin-bottom:24px;"><div style="display:inline-block;width:80px;height:1px;background:#c9a96e;"></div><span style="color:#c9a96e;font-size:14px;padding:0 10px;">◆</span><div style="display:inline-block;width:80px;height:1px;background:#c9a96e;"></div></div>
     <p style="font-size:14px;line-height:1.95;color:#3d2b1f;text-align:justify;">{b}</p>
   </div>
-  {ss_html}
+  {ss_html}{extra_imgs_html}
   <div style="padding:36px 48px;background:#faf5ed;border-bottom:1px solid #d5c4a8;text-align:center;">
     <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#8b7355;margin-bottom:14px;">Full Report Available</div>
     <a href="{rl}" style="display:inline-block;border:1.5px solid #2c1a0e;color:#2c1a0e;text-decoration:none;font-family:'Playfair Display',serif;font-size:13px;padding:12px 40px;letter-spacing:0.04em;">Open Full Report</a>
@@ -391,7 +408,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
 
 # ─── Template 6: Neon ─────────────────────────────────────────────────────────
 
-def _tpl_neon(c, h, b, ss, sc, rl, sq):
+def _tpl_neon(c, h, b, ss, sc, rl, sq, extra_imgs_html=""):
     css = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -426,7 +443,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
     <div style="width:50px;height:2px;background:linear-gradient(90deg,#06b6d4,transparent);margin-bottom:20px;box-shadow:0 0 8px rgba(6,182,212,0.6);"></div>
     <p style="font-size:14px;line-height:1.85;color:#475569;">{b}</p>
   </div>
-  {ss_html}
+  {ss_html}{extra_imgs_html}
   <div style="padding:36px 40px;background:#030b14;border-bottom:1px solid #0c2a3a;text-align:center;">
     <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#164e63;margin-bottom:14px;">Full Analysis Ready</div>
     <a href="{rl}" style="display:inline-block;background:transparent;border:1.5px solid #06b6d4;color:#06b6d4;text-decoration:none;font-size:12px;font-weight:700;padding:13px 44px;border-radius:8px;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 0 16px rgba(6,182,212,0.2);">Open Full Report →</a>
@@ -459,7 +476,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
 
 # ─── Template 7: Sunrise ──────────────────────────────────────────────────────
 
-def _tpl_sunrise(c, h, b, ss, sc, rl, sq):
+def _tpl_sunrise(c, h, b, ss, sc, rl, sq, extra_imgs_html=""):
     css = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700;800&display=swap');
@@ -497,7 +514,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
     <h1 style="font-family:'Poppins',sans-serif;font-size:26px;font-weight:700;color:#1c0a00;line-height:1.3;margin-bottom:20px;letter-spacing:-0.01em;">{h}</h1>
     <p style="font-size:14px;line-height:1.85;color:#57534e;">{b}</p>
   </div>
-  {ss_html}
+  {ss_html}{extra_imgs_html}
   <div style="padding:36px 44px;background:#fff8f3;border-bottom:1px solid #fde8d0;text-align:center;">
     <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#c2410c;margin-bottom:14px;">Full Report Available</div>
     <a href="{rl}" style="display:inline-block;background:linear-gradient(135deg,#ea580c,#f97316);color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:14px 44px;border-radius:12px;letter-spacing:0.02em;box-shadow:0 4px 20px rgba(234,88,12,0.3);">Open Full Report →</a>
@@ -530,7 +547,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
 
 # ─── Template 8: Forest ───────────────────────────────────────────────────────
 
-def _tpl_forest(c, h, b, ss, sc, rl, sq):
+def _tpl_forest(c, h, b, ss, sc, rl, sq, extra_imgs_html=""):
     css = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -565,7 +582,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
     <div style="width:48px;height:2px;background:linear-gradient(90deg,#10b981,transparent);margin-bottom:20px;border-radius:2px;"></div>
     <p style="font-size:14px;line-height:1.85;color:#4b7a5e;">{b}</p>
   </div>
-  {ss_html}
+  {ss_html}{extra_imgs_html}
   <div style="padding:36px 44px;background:#071a0e;border-bottom:1px solid #132e1c;text-align:center;">
     <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#166534;margin-bottom:14px;">Full Analysis Ready</div>
     <a href="{rl}" style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:14px 44px;border-radius:10px;letter-spacing:0.04em;box-shadow:0 4px 20px rgba(16,185,129,0.25);">Open Full Report →</a>
@@ -598,7 +615,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
 
 # ─── Template 9: Carbon ───────────────────────────────────────────────────────
 
-def _tpl_carbon(c, h, b, ss, sc, rl, sq):
+def _tpl_carbon(c, h, b, ss, sc, rl, sq, extra_imgs_html=""):
     css = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -639,7 +656,7 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
     <div style="width:56px;height:3px;background:#f97316;margin-bottom:22px;"></div>
     <p style="font-size:14px;line-height:1.85;color:#888;">{b}</p>
   </div>
-  {ss_html}
+  {ss_html}{extra_imgs_html}
   <div style="padding:38px 44px;background:#141414;border-bottom:1px solid #222;text-align:center;">
     <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#555;margin-bottom:14px;">Full Analysis Ready</div>
     <a href="{rl}" style="display:inline-block;background:#f97316;color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:15px 48px;letter-spacing:0.04em;text-transform:uppercase;">Open Report →</a>
