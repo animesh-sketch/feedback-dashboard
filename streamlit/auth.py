@@ -17,20 +17,14 @@ def _hash(password: str) -> str:
 
 
 _DEFAULT_EMAIL = "convinlabs@convin.ai"
-_DEFAULT_HASH  = "ceaadd8c459a44325ca9a3d6482f78a03587da8124c69c9a87196a1cc9243e72"
 
 
-def check_credentials(email: str, password: str) -> bool:
+def check_credentials(email: str) -> bool:
     try:
         expected_email = st.secrets.get("USER_EMAIL", _DEFAULT_EMAIL)
-        expected_hash  = st.secrets.get("USER_HASH",  _DEFAULT_HASH)
     except Exception:
         expected_email = _DEFAULT_EMAIL
-        expected_hash  = _DEFAULT_HASH
-    return (
-        email.strip().lower() == expected_email.strip().lower()
-        and _hash(password) == expected_hash
-    )
+    return email.strip().lower() == expected_email.strip().lower()
 
 
 def render_login_sidebar() -> None:

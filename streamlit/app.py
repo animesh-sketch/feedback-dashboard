@@ -417,15 +417,14 @@ def _render_login_page():
 
     _, col, _ = st.columns([1, 1.4, 1])
     with col:
-        email    = st.text_input("Email", placeholder="you@example.com", key="login_email")
-        password = st.text_input("Password", type="password", key="login_password")
+        email = st.text_input("Email", placeholder="you@example.com", key="login_email")
         if st.button("Sign in", type="primary", use_container_width=True, key="login_btn"):
-            if auth.check_credentials(email, password):
+            if auth.check_credentials(email):
                 st.session_state["logged_in"]  = True
                 st.session_state["user_email"] = email.strip().lower()
                 st.rerun()
             else:
-                st.error("Invalid email or password.")
+                st.error("Invalid email address.")
 
 if not st.session_state.get("logged_in"):
     _render_login_page()
