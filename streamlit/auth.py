@@ -21,12 +21,14 @@ _DEFAULT_HASH  = "ceaadd8c459a44325ca9a3d6482f78a03587da8124c69c9a87196a1cc9243e
 
 
 def check_credentials(email: str, password: str) -> bool:
-    expected_email = st.secrets.get("USER_EMAIL", _DEFAULT_EMAIL)
-    expected_hash  = st.secrets.get("USER_HASH",  _DEFAULT_HASH)
+    try:
+        expected_email = st.secrets.get("USER_EMAIL", _DEFAULT_EMAIL)
+        expected_hash  = st.secrets.get("USER_HASH",  _DEFAULT_HASH)
+    except Exception:
+        expected_email = _DEFAULT_EMAIL
+        expected_hash  = _DEFAULT_HASH
     return (
-        bool(expected_email)
-        and email.strip().lower() == expected_email.strip().lower()
-        and bool(expected_hash)
+        email.strip().lower() == expected_email.strip().lower()
         and _hash(password) == expected_hash
     )
 
