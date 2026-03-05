@@ -45,24 +45,6 @@ def _blank_draft(idx: int) -> dict:
 if "drafts" not in st.session_state:
     st.session_state.drafts = [_blank_draft(i) for i in range(2)]
 
-# ─── OAuth callback handler ───────────────────────────────────────────────────
-
-_params = st.query_params
-if "code" in _params and not st.session_state.get("credentials"):
-    try:
-        _redirect_uri = st.secrets.get("REDIRECT_URI", "http://localhost:8501")
-        _creds = auth.exchange_code_for_token(_params["code"], _redirect_uri)
-        _email = auth.get_user_email(_creds)
-        st.session_state["credentials"] = _creds
-        st.session_state["user_email"] = _email
-        for _k in ["oauth_state", "pending_auth_url"]:
-            st.session_state.pop(_k, None)
-        st.query_params.clear()
-        st.rerun()
-    except Exception as _e:
-        st.error(f"Google sign-in failed: {_e}")
-        st.query_params.clear()
-
 # ─── Global CSS ───────────────────────────────────────────────────────────────
 
 st.markdown("""
@@ -399,6 +381,55 @@ label { color: #475569 !important; font-size: 0.8rem !important; }
 .tmpl-card:hover { opacity: 0.85; }
 </style>
 """, unsafe_allow_html=True)
+
+# ─── Login gate ───────────────────────────────────────────────────────────────
+
+def _render_login_page():
+    st.markdown("""
+    <style>
+    .login-wrap {
+        max-width: 360px;
+        margin: 8vh auto 0;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 2.4rem 2rem 2rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        text-align: center;
+    }
+    .login-logo {
+        width: 40px; height: 40px;
+        background: #2563eb;
+        border-radius: 8px;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 0.75rem; font-weight: 700; color: #fff;
+        margin-bottom: 1rem;
+    }
+    .login-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 0.2rem; }
+    .login-sub   { font-size: 0.8rem; color: #94a3b8; margin-bottom: 1.8rem; }
+    </style>
+    <div class="login-wrap">
+        <div class="login-logo">CDL</div>
+        <div class="login-title">Convin Data Labs</div>
+        <div class="login-sub">Sign in to continue</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    _, col, _ = st.columns([1, 1.4, 1])
+    with col:
+        email    = st.text_input("Email", placeholder="you@example.com", key="login_email")
+        password = st.text_input("Password", type="password", key="login_password")
+        if st.button("Sign in", type="primary", use_container_width=True, key="login_btn"):
+            if auth.check_credentials(email, password):
+                st.session_state["logged_in"]  = True
+                st.session_state["user_email"] = email.strip().lower()
+                st.rerun()
+            else:
+                st.error("Invalid email or password.")
+
+if not st.session_state.get("logged_in"):
+    _render_login_page()
+    st.stop()
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -1243,19 +1274,12 @@ def render_email_maker():
                 st.markdown(f'<div style="margin:10px 0 16px;">{pills}</div>', unsafe_allow_html=True)
                 st.markdown(f'<div style="color:#64748b;font-size:0.73rem;margin-bottom:16px;">{len(selected_clients)} clients · {len(all_emails)} email addresses total</div>', unsafe_allow_html=True)
 
-            if not st.session_state.get("credentials"):
-                st.markdown(
-                    '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;'
-                    'padding:18px;text-align:center;color:#64748b;font-size:0.82rem;">'
-                    '🔒 Sign in with Google (sidebar) to send emails</div>',
-                    unsafe_allow_html=True,
-                )
-            elif all_emails:
+            if all_emails:
                 if st.button(f"📤  Send to {len(all_emails)} address(es)", type="primary", use_container_width=True):
                     subject = send_draft.get("headline", "Report from Convin Data Labs")[:80]
                     with st.spinner(f"Sending to {len(all_emails)} recipient(s)…"):
                         result = gmail_sender.send_report_email(
-                            st.session_state["credentials"],
+                            None,
                             all_emails,
                             subject,
                             build_email_html(send_draft, send_draft.get("template", 1)),
