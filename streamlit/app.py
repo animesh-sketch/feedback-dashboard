@@ -75,8 +75,8 @@ footer    { visibility: hidden; }
 header    { visibility: hidden; }
 
 /* ── App shell ── */
-.stApp { background: #f0f5ff; }
-.block-container { padding-top: 2rem !important; }
+.stApp { background: #f8fafc; }
+.block-container { padding-top: 1.8rem !important; }
 
 /* ── Sidebar ── */
 section[data-testid="stSidebar"] { background: #ffffff !important; }
@@ -101,63 +101,60 @@ section[data-testid="stSidebar"] hr { border-color: #e2e8f0 !important; }
 [data-testid="stTextInput"] input,
 [data-testid="stTextArea"] textarea {
     background: #ffffff !important;
-    border: 1px solid #dde8ff !important;
-    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
     color: #0f172a !important;
     font-size: 0.84rem !important;
 }
 [data-testid="stTextInput"] input:focus,
 [data-testid="stTextArea"] textarea:focus {
     border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.08) !important;
 }
 [data-testid="stSelectbox"] > div > div {
     background: #ffffff !important;
-    border: 1px solid #dde8ff !important;
-    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
     color: #0f172a !important;
 }
 [data-testid="stMultiSelect"] > div > div {
     background: #ffffff !important;
-    border: 1px solid #dde8ff !important;
-    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
     color: #0f172a !important;
 }
 
 /* ── Buttons ── */
 .stButton > button {
-    border-radius: 10px !important;
+    border-radius: 8px !important;
     font-size: 0.82rem !important;
     font-weight: 600 !important;
     letter-spacing: 0.01em !important;
-    transition: all 0.15s !important;
+    transition: background 0.12s, border-color 0.12s !important;
     border: none !important;
 }
 .stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+    background: #2563eb !important;
     color: #fff !important;
-    box-shadow: 0 2px 12px rgba(37,99,235,0.25) !important;
 }
 .stButton > button[kind="primary"]:hover {
-    transform: translateY(-2px) scale(1.02) !important;
-    box-shadow: 0 8px 28px rgba(37,99,235,0.4), 0 0 0 1px rgba(59,130,246,0.3) !important;
+    background: #1d4ed8 !important;
 }
 .stButton > button[kind="secondary"] {
     background: #ffffff !important;
-    border: 1px solid #dde8ff !important;
+    border: 1px solid #e2e8f0 !important;
     color: #2563eb !important;
 }
 .stButton > button[kind="secondary"]:hover {
-    background: #f0f5ff !important;
-    border-color: #93c5fd !important;
+    background: #f1f5f9 !important;
     color: #1d4ed8 !important;
 }
 
 /* ── Download button ── */
 [data-testid="stDownloadButton"] button {
     background: #ffffff !important;
-    border: 1px solid #dde8ff !important;
-    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
     color: #2563eb !important;
     font-size: 0.82rem !important;
 }
@@ -165,7 +162,7 @@ section[data-testid="stSidebar"] hr { border-color: #e2e8f0 !important; }
 /* ── Tabs ── */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
     background: transparent !important;
-    border-bottom: 1px solid #dde8ff !important;
+    border-bottom: 1px solid #e2e8f0 !important;
     gap: 0 !important;
     padding: 0 !important;
 }
@@ -188,8 +185,8 @@ section[data-testid="stSidebar"] hr { border-color: #e2e8f0 !important; }
 /* ── Expander ── */
 [data-testid="stExpander"] {
     background: #ffffff !important;
-    border: 1px solid #dde8ff !important;
-    border-radius: 12px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
 }
 [data-testid="stExpander"] summary {
     font-size: 0.84rem !important;
@@ -200,15 +197,15 @@ section[data-testid="stSidebar"] hr { border-color: #e2e8f0 !important; }
 /* ── Forms ── */
 [data-testid="stForm"] {
     background: #ffffff !important;
-    border: 1px solid #dde8ff !important;
-    border-radius: 14px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
 }
 
 /* ── Alerts ── */
 [data-testid="stAlert"] { border-radius: 10px !important; font-size: 0.84rem !important; }
 
 /* ── Divider ── */
-hr { border-color: #dde8ff !important; margin: 1.5rem 0 !important; }
+hr { border-color: #e2e8f0 !important; margin: 1.5rem 0 !important; }
 
 /* ── Caption / small text ── */
 [data-testid="stCaptionContainer"] p { color: #64748b !important; font-size: 0.77rem !important; }
@@ -226,48 +223,28 @@ label { color: #475569 !important; font-size: 0.8rem !important; }
 }
 .metric-card {
     background: #ffffff;
-    border: 1px solid #dde8ff;
-    border-radius: 16px;
-    padding: 1.2rem 1.35rem 1rem;
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.18s, box-shadow 0.18s;
-    box-shadow: 0 1px 8px rgba(37,99,235,0.06);
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.1rem 1.2rem 0.9rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
-.metric-card:hover {
-    transform: translateY(-4px) scale(1.01);
-    box-shadow: 0 14px 40px rgba(37,99,235,0.14), 0 0 0 1px rgba(59,130,246,0.15);
-    border-color: rgba(59,130,246,0.3);
-    transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
-}
-.metric-card::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    border-radius: 16px 16px 0 0;
-}
-.accent-blue::after   { background: linear-gradient(90deg, #1d4ed8, #60a5fa, #93c5fd); }
-.accent-green::after  { background: linear-gradient(90deg, #059669, #34d399, #6ee7b7); }
-.accent-amber::after  { background: linear-gradient(90deg, #d97706, #fbbf24, #fde68a); }
-.accent-red::after    { background: linear-gradient(90deg, #dc2626, #f87171, #fca5a5); }
 
 .metric-label {
     font-size: 0.62rem;
     font-weight: 700;
-    letter-spacing: 0.11em;
+    letter-spacing: 0.09em;
     text-transform: uppercase;
     color: #94a3b8;
-    margin-bottom: 0.65rem;
+    margin-bottom: 0.55rem;
 }
 .metric-value {
-    font-size: 1.8rem;
-    font-weight: 800;
+    font-size: 1.75rem;
+    font-weight: 700;
     color: #0f172a;
     -webkit-text-fill-color: #0f172a;
     letter-spacing: -0.03em;
     line-height: 1;
-    margin-bottom: 0.38rem;
+    margin-bottom: 0.3rem;
 }
 .metric-max { font-size: 1rem; color: #94a3b8; -webkit-text-fill-color: #94a3b8; font-weight: 500; letter-spacing: 0; }
 .metric-sub { font-size: 0.69rem; color: #64748b; }
@@ -277,27 +254,27 @@ label { color: #475569 !important; font-size: 0.8rem !important; }
 /* CSAT breakdown */
 .csat-section {
     background: #ffffff;
-    border: 1px solid #dde8ff;
-    border-radius: 16px;
-    padding: 1.4rem 1.8rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.2rem 1.5rem;
     display: grid;
-    grid-template-columns: 150px 1fr;
-    gap: 2.5rem;
+    grid-template-columns: 140px 1fr;
+    gap: 2rem;
     align-items: center;
-    box-shadow: 0 1px 8px rgba(37,99,235,0.05);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
-.csat-score-side { text-align: center; padding-right: 2rem; border-right: 1px solid #dde8ff; }
-.csat-number { font-size: 3rem; font-weight: 800; color: #1d4ed8; -webkit-text-fill-color: #1d4ed8; letter-spacing: -0.04em; line-height: 1; }
-.csat-stars { color: #f59e0b; font-size: 1.05rem; margin: 8px 0 5px; letter-spacing: 3px; }
+.csat-score-side { text-align: center; padding-right: 2rem; border-right: 1px solid #e2e8f0; }
+.csat-number { font-size: 2.8rem; font-weight: 700; color: #2563eb; -webkit-text-fill-color: #2563eb; letter-spacing: -0.04em; line-height: 1; }
+.csat-stars { color: #f59e0b; font-size: 1rem; margin: 8px 0 5px; letter-spacing: 2px; }
 .csat-count { font-size: 0.7rem; color: #94a3b8; }
-.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
 .bar-row:last-child { margin-bottom: 0; }
 .bar-star  { font-size: 0.67rem; color: #94a3b8; width: 18px; text-align: right; flex-shrink: 0; }
-.bar-track { flex: 1; height: 5px; background: #e8f0fe; border-radius: 99px; overflow: hidden; }
-.bar-fill  { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #1d4ed8, #3b82f6); }
+.bar-track { flex: 1; height: 4px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+.bar-fill  { height: 100%; border-radius: 99px; background: #2563eb; }
 .bar-pct   { font-size: 0.67rem; color: #64748b; width: 28px; text-align: right; flex-shrink: 0; }
 .bar-count { font-size: 0.64rem; color: #94a3b8; width: 14px; flex-shrink: 0; }
-.resp-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #e8f0fe; }
+.resp-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
 .resp-row:last-child { border-bottom: none; }
 .resp-name  { color: #0f172a; font-size: 0.78rem; font-weight: 600; min-width: 130px; }
 .resp-email { color: #64748b; font-size: 0.73rem; flex: 1; }
@@ -305,55 +282,21 @@ label { color: #475569 !important; font-size: 0.8rem !important; }
 .resp-stars { color: #f59e0b; font-size: 0.75rem; letter-spacing: 1px; min-width: 70px; text-align: right; }
 
 /* ──────────────────────────────────────────────────────
-   PAGE HERO / HEADER
+   PAGE HEADER
 ────────────────────────────────────────────────────── */
 
-.hero-banner {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 55%, #2563eb 100%);
-    border: none;
-    border-radius: 24px;
-    padding: 2rem 2.2rem;
-    margin-bottom: 1.8rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 8px 40px rgba(29,78,216,0.22);
+.page-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
 }
-.hero-banner::before {
-    content: '';
-    position: absolute;
-    top: -80px; right: -60px;
-    width: 320px; height: 320px;
-    background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
-    pointer-events: none;
+.page-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.02em;
 }
-.hero-banner::after {
-    content: '';
-    position: absolute;
-    bottom: -100px; left: 25%;
-    width: 250px; height: 250px;
-    background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 70%);
-    pointer-events: none;
-}
-.hero-title {
-    font-size: 1.45rem; font-weight: 800;
-    color: #ffffff;
-    -webkit-text-fill-color: #ffffff;
-    letter-spacing: -0.025em; margin-bottom: 0.3rem;
-    position: relative; z-index: 1;
-}
-.hero-sub   { font-size: 0.83rem; color: rgba(255,255,255,0.7); position: relative; z-index: 1; }
-.live-badge {
-    background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.3);
-    color: #ffffff;
-    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 6px 14px; border-radius: 99px; white-space: nowrap;
-    position: relative; z-index: 1;
-}
-.live-dot { display: inline-block; animation: pulse-dot 2s ease-in-out infinite; }
+.page-sub { font-size: 0.82rem; color: #64748b; margin-top: 0.2rem; }
 
 /* ──────────────────────────────────────────────────────
    CLIENT REPOSITORY
@@ -361,28 +304,21 @@ label { color: #475569 !important; font-size: 0.8rem !important; }
 
 .client-repo-card {
     background: #ffffff;
-    border: 1px solid #dde8ff;
-    border-radius: 18px;
-    padding: 18px 20px 14px;
-    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
-    height: 100%;
-    box-shadow: 0 1px 6px rgba(37,99,235,0.05);
-}
-.client-repo-card:hover {
-    border-color: rgba(59,130,246,0.4);
-    box-shadow: 0 10px 36px rgba(37,99,235,0.12);
-    transform: translateY(-2px);
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px 18px 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .tag-chip {
     display: inline-block;
-    background: #eff6ff;
-    color: #2563eb;
+    background: #f8fafc;
+    color: #475569;
     font-size: 0.61rem;
     font-weight: 600;
-    padding: 2px 9px;
-    border-radius: 99px;
+    padding: 2px 8px;
+    border-radius: 4px;
     margin: 2px 2px 0 0;
-    border: 1px solid #bfdbfe;
+    border: 1px solid #e2e8f0;
 }
 
 /* Stats grid */
@@ -394,128 +330,73 @@ label { color: #475569 !important; font-size: 0.8rem !important; }
 }
 .stat-card {
     background: #ffffff;
-    border: 1px solid #dde8ff;
-    border-radius: 14px;
-    padding: 1rem 1.2rem;
-    box-shadow: 0 1px 4px rgba(37,99,235,0.04);
-    transition: all 0.25s ease;
-}
-.stat-card:hover {
-    border-color: rgba(59,130,246,0.25) !important;
-    box-shadow: 0 6px 20px rgba(37,99,235,0.09) !important;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
 /* ──────────────────────────────────────────────────────
    EMAIL MAKER
 ────────────────────────────────────────────────────── */
 
-.em-header {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
-    border: none;
-    border-radius: 20px;
-    padding: 1.6rem 2rem;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    box-shadow: 0 6px 30px rgba(29,78,216,0.2);
-    position: relative;
-    overflow: hidden;
-}
-.em-header::before {
-    content: '';
-    position: absolute;
-    top: -50px; right: -30px;
-    width: 200px; height: 200px;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-    pointer-events: none;
-}
-.em-icon  { font-size: 1.6rem; line-height: 1; }
-.em-title { font-size: 1.2rem; font-weight: 700; color: #ffffff; -webkit-text-fill-color: #ffffff; letter-spacing: -0.02em; }
-.em-sub   { font-size: 0.8rem; color: rgba(255,255,255,0.7); -webkit-text-fill-color: rgba(255,255,255,0.7); margin-top: 0.15rem; }
 
 .draft-card {
     background: #ffffff;
-    border: 1px solid #dde8ff;
-    border-radius: 16px;
-    padding: 16px 18px;
-    margin-bottom: 12px;
-    box-shadow: 0 1px 6px rgba(37,99,235,0.05);
-    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
-.draft-card:hover { border-color: rgba(59,130,246,0.3) !important; box-shadow: 0 4px 20px rgba(37,99,235,0.09) !important; }
 .client-card {
     background: #ffffff;
-    border: 1px solid #dde8ff;
-    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
     padding: 14px 18px;
     margin-bottom: 8px;
-    transition: border-color 0.15s;
 }
-.client-card:hover { border-color: #93c5fd; }
 .client-name { color: #0f172a; font-weight: 600; font-size: 0.88rem; }
 .email-pill {
     display: inline-block;
-    background: #eff6ff;
+    background: #f0f7ff;
     color: #2563eb;
     font-size: 0.7rem;
-    padding: 3px 10px;
-    border-radius: 99px;
+    padding: 2px 9px;
+    border-radius: 4px;
     margin: 3px 3px 0 0;
     border: 1px solid #bfdbfe;
 }
 
-/* ── Keyframe animations ── */
-@keyframes pulse-dot {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50%       { opacity: 0.6; transform: scale(0.82); }
-}
-
-/* ── Section chips ── */
+/* ── Section labels ── */
 .section-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    color: #1d4ed8;
-    font-size: 0.61rem;
+    display: block;
+    font-size: 0.62rem;
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 4px 12px;
-    border-radius: 99px;
-    margin-bottom: 14px;
-}
-.section-chip::before {
-    content: '';
-    width: 5px; height: 5px;
-    background: #2563eb;
-    border-radius: 50%;
+    color: #94a3b8;
+    margin-bottom: 12px;
 }
 
 /* ── Client avatar ── */
 .client-avatar {
-    width: 42px; height: 42px;
-    border-radius: 12px;
+    width: 38px; height: 38px;
+    border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.85rem; font-weight: 800;
+    font-size: 0.8rem; font-weight: 700;
     flex-shrink: 0;
-    letter-spacing: -0.02em;
 }
 
 /* ── Template card ── */
 .tmpl-card {
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 10px 10px 8px;
     margin-bottom: 8px;
     cursor: pointer;
-    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease;
+    transition: opacity 0.12s;
 }
-.tmpl-card:hover {
-    transform: translateY(-3px) scale(1.04);
-    box-shadow: 0 8px 24px rgba(37,99,235,0.15);
-}
+.tmpl-card:hover { opacity: 0.85; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -524,17 +405,11 @@ label { color: #475569 !important; font-size: 0.8rem !important; }
 with st.sidebar:
     st.markdown("""
     <div style="padding:8px 4px 22px;">
-        <div style="display:flex;align-items:center;gap:11px;">
-            <div style="
-                width:36px;height:36px;border-radius:10px;flex-shrink:0;
-                background:linear-gradient(135deg,#1d4ed8,#3b82f6);
-                display:flex;align-items:center;justify-content:center;
-                font-size:0.72rem;font-weight:800;color:#fff;letter-spacing:-0.01em;
-                box-shadow:0 4px 14px rgba(59,130,246,0.5);
-            ">CDL</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:32px;height:32px;border-radius:8px;flex-shrink:0;background:#2563eb;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;">CDL</div>
             <div>
-                <div style="color:#0f172a;font-weight:700;font-size:0.93rem;letter-spacing:-0.015em;line-height:1.2;">Convin Data Labs</div>
-                <div style="color:#64748b;font-size:0.63rem;margin-top:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">Analytics</div>
+                <div style="color:#0f172a;font-weight:700;font-size:0.9rem;letter-spacing:-0.01em;line-height:1.2;">Convin Data Labs</div>
+                <div style="color:#94a3b8;font-size:0.63rem;margin-top:2px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;">Analytics</div>
             </div>
         </div>
     </div>
@@ -608,7 +483,7 @@ def _email_table_html(rows: list) -> str:
         </tr>"""
         for r in rows
     )
-    return f"""<div style="background:#ffffff;border:1px solid #dde8ff;border-radius:16px;overflow:hidden;">
+    return f"""<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
       <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
         <thead>{hrow}</thead><tbody>{brows}</tbody>
       </table></div></div>"""
@@ -727,12 +602,9 @@ def _render_period_content(period: str):
 # ─── Overview ─────────────────────────────────────────────────────────────────
 
 def render_overview():
-    st.markdown("""<div class="hero-banner">
-        <div>
-            <div class="hero-title">Good morning, Animesh 👋</div>
-            <div class="hero-sub">Convin Data Labs · Insights Report Feedback Dashboard</div>
-        </div>
-        <div class="live-badge"><span class="live-dot">●</span> Live</div>
+    st.markdown("""<div class="page-header">
+        <div class="page-title">Overview</div>
+        <div class="page-sub">Convin Data Labs · Insights Report Feedback Dashboard</div>
     </div>""", unsafe_allow_html=True)
 
     tab_d, tab_w, tab_m = st.tabs(["📅  Daily", "📅  Weekly", "📅  Monthly"])
@@ -762,7 +634,7 @@ def _render_ai_summary(period: str, csat_data: dict, respondents: list):
                 for item in items
             )
             return (
-                f'<div style="background:{bg};border:1px solid {border};border-radius:12px;'
+                f'<div style="background:{bg};border:1px solid {border};border-radius:8px;'
                 f'padding:14px 16px;margin-bottom:12px;">'
                 f'<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
                 f'text-transform:uppercase;color:{dot};margin-bottom:10px;">{title}</div>'
@@ -770,7 +642,7 @@ def _render_ai_summary(period: str, csat_data: dict, respondents: list):
             )
 
         sentiment_html = (
-            f'<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;'
+            f'<div style="background:#f0f7ff;border:1px solid #e2e8f0;border-radius:8px;'
             f'padding:14px 16px;margin-bottom:12px;">'
             f'<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
             f'text-transform:uppercase;color:#0284c7;margin-bottom:8px;">Overall Sentiment</div>'
@@ -932,8 +804,8 @@ def _render_client_card(c: dict):
             ec1, ec2 = st.columns([5, 1])
             with ec1:
                 st.markdown(
-                    f'<div style="background:#f0f5ff;border:1px solid #dde8ff;border-radius:8px;'
-                    f'padding:6px 10px;font-size:0.78rem;color:#1d4ed8;">{em}</div>',
+                    f'<div style="background:#f0f7ff;border:1px solid #e2e8f0;border-radius:6px;'
+                    f'padding:6px 10px;font-size:0.78rem;color:#2563eb;">{em}</div>',
                     unsafe_allow_html=True,
                 )
             with ec2:
@@ -999,12 +871,9 @@ def render_clients():
     all_clients = client_store.load()
 
     # ── Header ────────────────────────────────────────────────────────────────
-    st.markdown("""<div class="em-header">
-        <div class="em-icon">🏢</div>
-        <div>
-            <div class="em-title">Client Repository</div>
-            <div class="em-sub">Manage stakeholders, contacts, tags, and email addresses.</div>
-        </div>
+    st.markdown("""<div class="page-header">
+        <div class="page-title">Client Repository</div>
+        <div class="page-sub">Manage stakeholders, contacts, tags, and email addresses.</div>
     </div>""", unsafe_allow_html=True)
 
     # ── Stats bar ─────────────────────────────────────────────────────────────
@@ -1178,7 +1047,7 @@ def _template_picker(d: dict, key_suffix: str):
             tid    = ti + 1
             is_sel = d.get("template", 1) == tid
             tc     = _TMPL_TEXT_COLORS[ti]
-            border = "#2563eb" if is_sel else "#dde8ff"
+            border = "#2563eb" if is_sel else "#e2e8f0"
             with cols[j]:
                 st.markdown(
                     f'<div class="tmpl-card" style="background:{tswatch};border:2px solid {border};">'
@@ -1265,12 +1134,9 @@ def render_drafts_tab():
 # ─── Email Maker ──────────────────────────────────────────────────────────────
 
 def render_email_maker():
-    st.markdown("""<div class="em-header">
-        <div class="em-icon">📧</div>
-        <div>
-            <div class="em-title">Email Maker</div>
-            <div class="em-sub">Build insights report emails and send to stakeholders via Gmail.</div>
-        </div>
+    st.markdown("""<div class="page-header">
+        <div class="page-title">Email Maker</div>
+        <div class="page-sub">Build insights report emails and send to stakeholders via Gmail.</div>
     </div>""", unsafe_allow_html=True)
 
     tab_drafts, tab_editor, tab_recipients, tab_ai = st.tabs(
@@ -1346,7 +1212,7 @@ def render_email_maker():
 
         if not repo_clients:
             st.markdown(
-                '<div style="background:#ffffff;border:1px solid #dde8ff;border-radius:14px;padding:24px;'
+                '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:24px;'
                 'text-align:center;color:#64748b;font-size:0.84rem;">'
                 '🏢 No clients in repository yet.<br>'
                 '<span style="font-size:0.76rem;color:#94a3b8;">Go to <strong style="color:#64748b;">🏢 Clients</strong> in the sidebar to add clients first.</span>'
@@ -1379,7 +1245,7 @@ def render_email_maker():
 
             if not st.session_state.get("credentials"):
                 st.markdown(
-                    '<div style="background:#ffffff;border:1px solid #dde8ff;border-radius:14px;'
+                    '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;'
                     'padding:18px;text-align:center;color:#64748b;font-size:0.82rem;">'
                     '🔒 Sign in with Google (sidebar) to send emails</div>',
                     unsafe_allow_html=True,
@@ -1432,7 +1298,7 @@ def render_email_maker():
                 ai_text_parts.append(f"Body: {ai_d['body']}")
             ai_input = "\n\n".join(ai_text_parts) or ""
             st.markdown('<div style="color:#64748b;font-size:0.75rem;margin-bottom:6px;">Text from draft:</div>', unsafe_allow_html=True)
-            st.markdown(f'<div style="background:#f8faff;border:1px solid #dde8ff;border-radius:10px;padding:14px 16px;font-size:0.83rem;color:#475569;white-space:pre-wrap;min-height:60px;">{ai_input or "— draft is empty —"}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;font-size:0.83rem;color:#475569;white-space:pre-wrap;min-height:60px;">{ai_input or "— draft is empty —"}</div>', unsafe_allow_html=True)
         else:
             ai_input = st.text_area("Paste your text here:", height=160, key="ai_custom_text",
                                     placeholder="Type or paste your headline, body, or any email text…")
@@ -1474,11 +1340,11 @@ def render_email_maker():
                             _changes   = ""
 
                         st.markdown('<div style="color:#059669;font-size:0.8rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">Corrected Text</div>', unsafe_allow_html=True)
-                        st.markdown(f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;font-size:0.85rem;color:#14532d;white-space:pre-wrap;">{_corrected}</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;font-size:0.85rem;color:#14532d;white-space:pre-wrap;">{_corrected}</div>', unsafe_allow_html=True)
 
                         if _changes:
                             st.markdown('<div style="color:#2563eb;font-size:0.8rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin:14px 0 8px;">Changes Made</div>', unsafe_allow_html=True)
-                            st.markdown(f'<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;font-size:0.83rem;color:#1e3a5f;white-space:pre-wrap;">{_changes}</div>', unsafe_allow_html=True)
+                            st.markdown(f'<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;font-size:0.83rem;color:#1e3a5f;white-space:pre-wrap;">{_changes}</div>', unsafe_allow_html=True)
 
                         # Apply to draft option
                         if ai_source == "Pick a draft" and _corrected:
