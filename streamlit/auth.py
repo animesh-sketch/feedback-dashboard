@@ -17,9 +17,14 @@ def _hash(password: str) -> str:
 
 
 def check_credentials(email: str, password: str) -> bool:
-    users = st.secrets.get("users", {})
-    stored = users.get(email.strip().lower(), "")
-    return bool(stored and stored == _hash(password))
+    expected_email = st.secrets.get("USER_EMAIL", "")
+    expected_hash  = st.secrets.get("USER_HASH", "")
+    return (
+        bool(expected_email)
+        and email.strip().lower() == expected_email.strip().lower()
+        and bool(expected_hash)
+        and _hash(password) == expected_hash
+    )
 
 
 def render_login_sidebar() -> None:
