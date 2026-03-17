@@ -474,8 +474,8 @@ with st.sidebar:
             st.rerun()
     else:
         sb_email  = st.text_input("From Email", value=st.session_state.get("user_email",""), placeholder="you@yourcompany.com", key="sb_email", label_visibility="collapsed")
-        sb_apikey = st.text_input("Resend API Key", type="password", placeholder="re_xxxxxxxxxxxx", key="sb_resend_key", label_visibility="collapsed")
-        st.caption("[Get free API key → resend.com](https://resend.com)")
+        sb_apikey = st.text_input("Brevo API Key", type="password", placeholder="xkeysib-...", key="sb_resend_key", label_visibility="collapsed")
+        st.caption("[Get free API key → brevo.com](https://brevo.com)")
         if st.button("Connect", key="sb_resend_save", type="primary", use_container_width=True):
             if "@" in sb_email and sb_apikey.strip().startswith("re_"):
                 st.session_state["user_email"]    = sb_email.strip().lower()

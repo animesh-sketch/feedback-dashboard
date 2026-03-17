@@ -1,53 +1,64 @@
 """
-Sends report emails via Resend API.
-No App Password or SMTP needed.
+Sends report emails via Brevo (formerly Sendinblue) API.
+Free tier: 300 emails/day. No domain DNS setup needed —
+just verify your sender email by clicking a link in your inbox.
 
-Set RESEND_API_KEY in .streamlit/secrets.toml or enter it in the sidebar.
-Get a free API key at resend.com (3000 emails/month free).
+Get a free API key at brevo.com
 """
 
-import resend
+import json
+import urllib.request
 import streamlit as st
 
 
 def send_report_email(
-    credentials_dict,   # kept for API compatibility, unused
+    credentials_dict,
     to_emails: list,
     subject: str,
     html_body: str,
     from_email: str,
 ) -> dict:
-    """
-    Sends html_body to each address in to_emails via Resend API.
-    Returns {"sent": [...], "failed": [{"email": ..., "error": ...}]}.
-    """
-    api_key    = st.session_state.get("resend_api_key") or st.secrets.get("RESEND_API_KEY", "")
-    sender     = st.session_state.get("user_email") or from_email
+    api_key = st.session_state.get("resend_api_key") or st.secrets.get("RESEND_API_KEY", "")
+    sender  = st.session_state.get("user_email") or from_email
 
     if not api_key:
-        return {"sent": [], "failed": [{"email": "config", "error": "Resend API key not set. Add it in the sidebar."}]}
+        return {"sent": [], "failed": [{"email": "config", "error": "Brevo API key not set. Add it in the sidebar."}]}
 
-    resend.api_key = api_key
-    sent, failed   = [], []
+    sent, failed = [], []
 
     for addr in to_emails:
         try:
-            resend.Emails.send({
-                "from": "Convin Data Labs <onboarding@resend.dev>",
-                "to":   [addr],
-                "subject": subject,
-                "html": html_body,
-                "reply_to": sender,
-            })
+            payload = json.dumps({
+                "sender":      {"email": sender},
+                "to":          [{"email": addr}],
+                "subject":     subject,
+                "htmlContent": html_body,
+            }).encode()
+
+            req = urllib.request.Request(
+                "https://api.brevo.com/v3/smtp/email",
+                data=payload,
+                headers={
+                    "accept":       "application/json",
+                    "content-type": "application/json",
+                    "api-key":      api_key,
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                resp.read()
             sent.append(addr)
-        except Exception as exc:
-            msg = str(exc)
-            if "domain" in msg.lower() or "verify" in msg.lower() or "not allowed" in msg.lower():
-                err = f"Sender domain not verified in Resend. Go to resend.com/domains and add {sender.split('@')[-1]}."
-            elif "invalid_api_key" in msg.lower() or "unauthorized" in msg.lower():
-                err = "Invalid Resend API key. Check the key in the sidebar."
+
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode()
+            if "not verified" in body.lower() or "unauthorized sender" in body.lower():
+                err = f"Sender {sender} not verified. Go to brevo.com → Senders & Domains → Add & verify your email."
+            elif "invalid" in body.lower() and "key" in body.lower():
+                err = "Invalid Brevo API key."
             else:
-                err = msg
+                err = body
             failed.append({"email": addr, "error": err})
+        except Exception as exc:
+            failed.append({"email": addr, "error": str(exc)})
 
     return {"sent": sent, "failed": failed}
