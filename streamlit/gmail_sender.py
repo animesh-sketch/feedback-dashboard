@@ -40,7 +40,10 @@ def send_report_email(
         return msg
 
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as server:
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
             server.login(sender, app_password)
             for addr in to_emails:
                 try:
