@@ -455,29 +455,29 @@ with st.sidebar:
     st.markdown("---")
     auth.render_login_sidebar()
 
-    # ── Gmail sender settings ──────────────────────────────────────────────────
+    # ── Resend settings ────────────────────────────────────────────────────────
     st.markdown("---")
-    st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">Gmail Sender</div>', unsafe_allow_html=True)
-    if st.session_state.get("gmail_app_password"):
+    st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">Email Sender</div>', unsafe_allow_html=True)
+    if st.session_state.get("resend_api_key"):
         st.markdown(
             f'<div style="color:#16a34a;font-size:0.75rem;font-weight:600;margin-bottom:6px;">✓ {st.session_state.get("user_email","")}</div>',
             unsafe_allow_html=True,
         )
-        if st.button("Change", key="gmail_change_btn", use_container_width=True):
-            st.session_state.pop("gmail_app_password", None)
+        if st.button("Change", key="resend_change_btn", use_container_width=True):
+            st.session_state.pop("resend_api_key", None)
             st.rerun()
     else:
-        sb_gmail = st.text_input("Gmail", value=st.session_state.get("user_email",""), placeholder="you@gmail.com", key="sb_gmail", label_visibility="collapsed")
-        sb_apwd  = st.text_input("App Password", type="password", placeholder="App Password (16 chars)", key="sb_apwd", label_visibility="collapsed")
-        st.caption("[Get App Password ↗](https://myaccount.google.com/apppasswords)")
-        if st.button("Connect Gmail", key="sb_gmail_save", type="primary", use_container_width=True):
-            if "@" in sb_gmail and sb_apwd.strip():
-                st.session_state["user_email"]         = sb_gmail.strip().lower()
-                st.session_state["gmail_app_password"] = sb_apwd.strip()
-                st.toast("Gmail connected.", icon="✅")
+        sb_email  = st.text_input("From Email", value=st.session_state.get("user_email",""), placeholder="you@yourcompany.com", key="sb_email", label_visibility="collapsed")
+        sb_apikey = st.text_input("Resend API Key", type="password", placeholder="re_xxxxxxxxxxxx", key="sb_resend_key", label_visibility="collapsed")
+        st.caption("[Get free API key → resend.com](https://resend.com)")
+        if st.button("Connect", key="sb_resend_save", type="primary", use_container_width=True):
+            if "@" in sb_email and sb_apikey.strip().startswith("re_"):
+                st.session_state["user_email"]    = sb_email.strip().lower()
+                st.session_state["resend_api_key"] = sb_apikey.strip()
+                st.toast("Email sender connected.", icon="✅")
                 st.rerun()
             else:
-                st.error("Enter email and app password.")
+                st.error("Enter a valid email and Resend API key (starts with re_).")
 
     st.markdown("---")
     st.markdown('<div style="color:#94a3b8;font-size:0.68rem;font-weight:500;">Feb 2026 · v1.0</div>', unsafe_allow_html=True)
@@ -1286,9 +1286,9 @@ def render_email_maker():
             # ── Step 4: Send ───────────────────────────────────────────────
             st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;">④ Send</div>', unsafe_allow_html=True)
 
-            gmail_ready = bool(st.session_state.get("gmail_app_password"))
-            if not gmail_ready:
-                st.warning("Connect your Gmail in the sidebar first (Gmail Sender section).")
+            sender_ready = bool(st.session_state.get("resend_api_key"))
+            if not sender_ready:
+                st.warning("Connect your email sender in the sidebar first.")
             else:
                 st.markdown(
                     f'<div style="color:#16a34a;font-size:0.75rem;font-weight:600;margin-bottom:10px;">'
@@ -1300,7 +1300,7 @@ def render_email_maker():
                 if st.button(
                     f"📤  Send to {len(all_emails)} address{'es' if len(all_emails) != 1 else ''}",
                     type="primary", use_container_width=True,
-                    disabled=not gmail_ready,
+                    disabled=not sender_ready,
                 ):
                     subject = d.get("headline", "Report from Convin Data Labs")[:80]
                     with st.spinner(f"Sending to {len(all_emails)} recipient(s)…"):
@@ -1313,9 +1313,9 @@ def render_email_maker():
                         st.success(f"✓ Sent to: {', '.join(result['sent'])}")
                         st.session_state.drafts[ci]["status"] = "ready"
                     for fail in result["failed"]:
-                        if fail["email"] == "login":
-                            st.error(f"Gmail login failed: {fail['error']}")
-                            st.session_state.pop("gmail_app_password", None)
+                        if fail["email"] in ("login", "config"):
+                            st.error(fail["error"])
+                            st.session_state.pop("resend_api_key", None)
                         else:
                             st.error(f"✗ {fail['email']}: {fail['error']}")
 

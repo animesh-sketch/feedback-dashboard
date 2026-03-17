@@ -1,15 +1,12 @@
 """
-Sends report emails via Gmail SMTP (App Password).
+Sends report emails via Resend API.
+No App Password or SMTP needed.
 
-Set in .streamlit/secrets.toml:
-  GMAIL_SENDER       = "you@gmail.com"
-  GMAIL_APP_PASSWORD = "xxxx xxxx xxxx xxxx"   # Gmail → Security → App passwords
+Set RESEND_API_KEY in .streamlit/secrets.toml or enter it in the sidebar.
+Get a free API key at resend.com (3000 emails/month free).
 """
 
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-
+import resend
 import streamlit as st
 
 
@@ -21,42 +18,35 @@ def send_report_email(
     from_email: str,
 ) -> dict:
     """
-    Sends html_body to each address in to_emails via Gmail SMTP.
+    Sends html_body to each address in to_emails via Resend API.
     Returns {"sent": [...], "failed": [{"email": ..., "error": ...}]}.
     """
-    sender       = st.session_state.get("user_email") or st.secrets.get("GMAIL_SENDER", from_email)
-    app_password = st.session_state.get("gmail_app_password") or st.secrets.get("GMAIL_APP_PASSWORD", "")
+    api_key    = st.session_state.get("resend_api_key") or st.secrets.get("RESEND_API_KEY", "")
+    sender     = st.session_state.get("user_email") or from_email
 
-    sent, failed = [], []
+    if not api_key:
+        return {"sent": [], "failed": [{"email": "config", "error": "Resend API key not set. Add it in the sidebar."}]}
 
-    def _friendly(exc: Exception) -> str:
-        msg = str(exc)
-        if "534" in msg or "InvalidSecondFactor" in msg or "Application-specific" in msg:
-            return "Wrong password type — you need a Gmail App Password, not your regular password. Go to myaccount.google.com → Security → App passwords → Generate."
-        if "535" in msg or "BadCredentials" in msg:
-            return "Incorrect Gmail or App Password. Double-check and reconnect Gmail in the sidebar."
-        if "getaddrinfo" in msg or "timeout" in msg.lower():
-            return "Network error — check your internet connection."
-        return msg
+    resend.api_key = api_key
+    sent, failed   = [], []
 
-    try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(sender, app_password)
-            for addr in to_emails:
-                try:
-                    msg = MIMEMultipart("alternative")
-                    msg["To"]      = addr
-                    msg["From"]    = sender
-                    msg["Subject"] = subject
-                    msg.attach(MIMEText(html_body, "html", "utf-8"))
-                    server.sendmail(sender, addr, msg.as_string())
-                    sent.append(addr)
-                except Exception as exc:
-                    failed.append({"email": addr, "error": _friendly(exc)})
-    except Exception as exc:
-        return {"sent": [], "failed": [{"email": "login", "error": _friendly(exc)}]}
+    for addr in to_emails:
+        try:
+            resend.Emails.send({
+                "from": f"Convin Data Labs <{sender}>",
+                "to":   [addr],
+                "subject": subject,
+                "html": html_body,
+            })
+            sent.append(addr)
+        except Exception as exc:
+            msg = str(exc)
+            if "domain" in msg.lower() or "verify" in msg.lower() or "not allowed" in msg.lower():
+                err = f"Sender domain not verified in Resend. Go to resend.com/domains and add {sender.split('@')[-1]}."
+            elif "invalid_api_key" in msg.lower() or "unauthorized" in msg.lower():
+                err = "Invalid Resend API key. Check the key in the sidebar."
+            else:
+                err = msg
+            failed.append({"email": addr, "error": err})
 
     return {"sent": sent, "failed": failed}
