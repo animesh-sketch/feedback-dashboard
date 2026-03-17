@@ -33,10 +33,11 @@ def send_report_email(
     for addr in to_emails:
         try:
             resend.Emails.send({
-                "from": f"Convin Data Labs <{sender}>",
+                "from": "Convin Data Labs <onboarding@resend.dev>",
                 "to":   [addr],
                 "subject": subject,
                 "html": html_body,
+                "reply_to": sender,
             })
             sent.append(addr)
         except Exception as exc:
