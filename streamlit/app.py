@@ -45,6 +45,12 @@ def _blank_draft(idx: int) -> dict:
 if "drafts" not in st.session_state:
     st.session_state.drafts = [_blank_draft(i) for i in range(2)]
 
+# Auto-load secrets into session state
+if not st.session_state.get("resend_api_key"):
+    key = st.secrets.get("RESEND_API_KEY", "")
+    if key:
+        st.session_state["resend_api_key"] = key
+
 # ─── Global CSS ───────────────────────────────────────────────────────────────
 
 st.markdown("""
