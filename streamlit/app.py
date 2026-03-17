@@ -417,14 +417,15 @@ def _render_login_page():
 
     _, col, _ = st.columns([1, 1.4, 1])
     with col:
-        email = st.text_input("Email", placeholder="you@example.com", key="login_email")
+        email = st.text_input("Your Email", placeholder="you@gmail.com", key="login_email")
         if st.button("Sign in", type="primary", use_container_width=True, key="login_btn"):
-            if auth.check_credentials(email):
+            ok, err = auth.check_login(email)
+            if ok:
                 st.session_state["logged_in"]  = True
                 st.session_state["user_email"] = email.strip().lower()
                 st.rerun()
             else:
-                st.error("Invalid email address.")
+                st.error(err)
 
 if not st.session_state.get("logged_in"):
     _render_login_page()
@@ -453,6 +454,31 @@ with st.sidebar:
 
     st.markdown("---")
     auth.render_login_sidebar()
+
+    # ── Gmail sender settings ──────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">Gmail Sender</div>', unsafe_allow_html=True)
+    if st.session_state.get("gmail_app_password"):
+        st.markdown(
+            f'<div style="color:#16a34a;font-size:0.75rem;font-weight:600;margin-bottom:6px;">✓ {st.session_state.get("user_email","")}</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("Change", key="gmail_change_btn", use_container_width=True):
+            st.session_state.pop("gmail_app_password", None)
+            st.rerun()
+    else:
+        sb_gmail = st.text_input("Gmail", value=st.session_state.get("user_email",""), placeholder="you@gmail.com", key="sb_gmail", label_visibility="collapsed")
+        sb_apwd  = st.text_input("App Password", type="password", placeholder="App Password (16 chars)", key="sb_apwd", label_visibility="collapsed")
+        st.caption("[Get App Password ↗](https://myaccount.google.com/apppasswords)")
+        if st.button("Connect Gmail", key="sb_gmail_save", type="primary", use_container_width=True):
+            if "@" in sb_gmail and sb_apwd.strip():
+                st.session_state["user_email"]         = sb_gmail.strip().lower()
+                st.session_state["gmail_app_password"] = sb_apwd.strip()
+                st.toast("Gmail connected.", icon="✅")
+                st.rerun()
+            else:
+                st.error("Enter email and app password.")
+
     st.markdown("---")
     st.markdown('<div style="color:#94a3b8;font-size:0.68rem;font-weight:500;">Feb 2026 · v1.0</div>', unsafe_allow_html=True)
 
@@ -1166,139 +1192,132 @@ def render_drafts_tab():
 def render_email_maker():
     st.markdown("""<div class="page-header">
         <div class="page-title">Email Maker</div>
-        <div class="page-sub">Build insights report emails and send to stakeholders via Gmail.</div>
+        <div class="page-sub">Compose, preview, and send insights report emails.</div>
     </div>""", unsafe_allow_html=True)
 
-    tab_drafts, tab_editor, tab_recipients, tab_ai = st.tabs(
-        ["✏️  Drafts", "📝  Edit Body", "📤  Send", "🤖  AI Check"]
-    )
+    tab_compose, tab_ai = st.tabs(["📤  Compose & Send", "🤖  AI Check"])
 
-    # ── Drafts ────────────────────────────────────────────────────────────────
-    with tab_drafts:
-        render_drafts_tab()
+    # ── Compose & Send ────────────────────────────────────────────────────────
+    with tab_compose:
+        repo_clients = client_store.load()
 
-    # ── Edit Body ─────────────────────────────────────────────────────────────
-    with tab_editor:
-        st.markdown('<div style="color:#0f172a;font-size:1rem;font-weight:600;margin-bottom:4px;">Edit Email Body</div>', unsafe_allow_html=True)
-        st.caption("Select a draft and fill in the fields below.")
-
+        # ── Step 1: Draft selector ─────────────────────────────────────────
+        st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">① Select Draft</div>', unsafe_allow_html=True)
         draft_names = [d["name"] for d in st.session_state.drafts]
-        chosen = st.radio("Editing:", draft_names, horizontal=True, key="editor_draft_pick")
-        ei = draft_names.index(chosen)
-        d  = st.session_state.drafts[ei]
-        st.markdown("---")
+        sc1, sc2 = st.columns([3, 1])
+        with sc1:
+            chosen = st.selectbox("Draft", draft_names, key="compose_draft_pick", label_visibility="collapsed")
+        ci = draft_names.index(chosen)
+        d  = st.session_state.drafts[ci]
+        tpl_name = TEMPLATE_NAMES[d.get("template", 1) - 1][0]
+        st.markdown(f'<div style="color:#94a3b8;font-size:0.7rem;margin-bottom:4px;">Template: {tpl_name}</div>', unsafe_allow_html=True)
+        with sc2:
+            if st.button("Reset Draft", key=f"compose_reset_{ci}", use_container_width=True):
+                st.session_state.drafts[ci] = _blank_draft(ci)
+                st.rerun()
 
-        _template_picker(d, f"e{ei}")
+        # ── Step 2: Compose (collapsible) ─────────────────────────────────
+        st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
+        st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">② Compose Email</div>', unsafe_allow_html=True)
+
+        _template_picker(d, f"c{ci}")
         st.markdown("")
 
         cc1, cc2 = st.columns(2)
-        with cc1: d["name"]   = st.text_input("Draft Name", value=d["name"],   key=f"ed_name_{ei}")
-        with cc2: d["client"] = st.text_input("Client",     value=d["client"], key=f"ed_client_{ei}", placeholder="Acme Corp")
+        with cc1: d["client"]   = st.text_input("Client Name", value=d["client"],   key=f"cc_client_{ci}", placeholder="e.g. Acme Corp")
+        with cc2: d["report_link"] = st.text_input("Report URL", value=d["report_link"], key=f"cc_link_{ci}", placeholder="https://docs.google.com/…")
 
-        d["headline"] = st.text_area("Headline",   value=d["headline"], key=f"ed_head_{ei}", height=80,  placeholder="e.g. February showed strong growth with one risk area.")
-        d["body"]     = st.text_area("Email Body", value=d["body"],     key=f"ed_body_{ei}", height=160, placeholder="Write the main body of the email…")
+        d["headline"] = st.text_area("Subject / Headline", value=d["headline"], key=f"cc_head_{ci}", height=70, placeholder="e.g. February showed strong growth…")
+        d["body"]     = st.text_area("Email Body",         value=d["body"],     key=f"cc_body_{ci}", height=130, placeholder="Write the main body of the email…")
 
-        st.markdown("---")
-        _screenshot_input(d, f"e{ei}")
+        with st.expander("🖼  Images & Survey (optional)"):
+            _screenshot_input(d, f"c{ci}")
+            st.markdown("")
+            d["survey_question"] = st.text_input("Survey Question", value=d["survey_question"], key=f"cc_sq_{ci}")
 
-        st.markdown("---")
-        st.markdown('<div style="color:#64748b;font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Links & Survey</div>', unsafe_allow_html=True)
-        lc1, lc2 = st.columns(2)
-        with lc1: d["report_link"]     = st.text_input("Full Report URL", value=d["report_link"],     key=f"ed_link_{ei}", placeholder="https://docs.google.com/…")
-        with lc2: d["survey_question"] = st.text_input("Survey Question", value=d["survey_question"], key=f"ed_sq_{ei}")
-
-        st.markdown("---")
-        bc1, bc2, bc3 = st.columns(3)
-        with bc1:
-            if st.button("Save Draft", key=f"ed_save_{ei}", use_container_width=True):
-                st.session_state.drafts[ei]["status"] = "draft"
-                st.toast(f"{d['name']} saved.", icon="💾")
+        pc1, pc2, pc3 = st.columns(3)
+        with pc1:
+            if st.button("💾 Save Draft", key=f"cc_save_{ci}", use_container_width=True):
+                st.session_state.drafts[ci]["status"] = "draft"
+                st.toast("Draft saved.", icon="💾")
                 st.rerun()
-        with bc2:
-            if st.button("Mark Ready", key=f"ed_ready_{ei}", use_container_width=True, type="primary"):
-                st.session_state.drafts[ei]["status"] = "ready"
-                st.toast(f"{d['name']} is ready.", icon="✅")
+        with pc2:
+            if st.button("👁 Preview", key=f"cc_prev_{ci}", use_container_width=True):
+                st.session_state[f"cc_show_prev_{ci}"] = not st.session_state.get(f"cc_show_prev_{ci}", False)
                 st.rerun()
-        with bc3:
-            if st.button("👁 Preview Email", key=f"ed_prev_{ei}", use_container_width=True):
-                st.session_state[f"ed_show_preview_{ei}"] = not st.session_state.get(f"ed_show_preview_{ei}", False)
+        with pc3:
+            if st.button("✅ Mark Ready", key=f"cc_ready_{ci}", use_container_width=True, type="primary"):
+                st.session_state.drafts[ci]["status"] = "ready"
+                st.toast("Draft marked ready.", icon="✅")
                 st.rerun()
 
-        if st.session_state.get(f"ed_show_preview_{ei}", False):
-            tpl_name = TEMPLATE_NAMES[d.get("template", 1) - 1][0]
-            st.markdown(f'<div style="color:#0f172a;font-size:0.88rem;font-weight:600;margin:16px 0 8px;">Preview · {tpl_name}</div>', unsafe_allow_html=True)
+        if st.session_state.get(f"cc_show_prev_{ci}", False):
             try:
-                html_content = build_email_html(d, d.get("template", 1))
-                components.html(html_content, height=2200, scrolling=True)
+                components.html(build_email_html(d, d.get("template", 1)), height=2000, scrolling=True)
             except Exception as e:
                 st.error(f"Preview error: {e}")
 
-    # ── Send ──────────────────────────────────────────────────────────────────
-    with tab_recipients:
-        st.markdown('<div style="color:#0f172a;font-size:1rem;font-weight:600;margin-bottom:4px;">Send Report</div>', unsafe_allow_html=True)
-        st.caption("Select recipients from the Client Repository and send a draft.")
+        st.markdown("---")
 
-        repo_clients = client_store.load()
+        # ── Step 3: Recipients ─────────────────────────────────────────────
+        st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">③ Recipients</div>', unsafe_allow_html=True)
 
         if not repo_clients:
-            st.markdown(
-                '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:24px;'
-                'text-align:center;color:#64748b;font-size:0.84rem;">'
-                '🏢 No clients in repository yet.<br>'
-                '<span style="font-size:0.76rem;color:#94a3b8;">Go to <strong style="color:#64748b;">🏢 Clients</strong> in the sidebar to add clients first.</span>'
-                '</div>',
-                unsafe_allow_html=True,
-            )
+            st.info("No clients in repository yet. Go to **🏢 Clients** to add them first.")
         else:
-            # Draft selector
-            draft_names = [d["name"] for d in st.session_state.drafts]
-            send_draft_name = st.selectbox("Which draft to send?", draft_names, key="send_draft_pick")
-            send_draft = st.session_state.drafts[draft_names.index(send_draft_name)]
-            tpl_name = TEMPLATE_NAMES[send_draft.get("template",1)-1][0]
-            st.markdown(f'<div style="color:#94a3b8;font-size:0.7rem;margin-bottom:16px;">Template: <span style="color:#64748b;">{tpl_name}</span></div>', unsafe_allow_html=True)
-
-            # Recipient multiselect from repository
             options = [f"{c['company']}  ({', '.join(c['emails'][:2])}{'…' if len(c['emails'])>2 else ''})" for c in repo_clients]
-            selected_opts = st.multiselect("Select recipients", options, default=options, key="recipients_select",
-                                           placeholder="Choose clients to include…")
+            selected_opts = st.multiselect(
+                "Send to", options, default=options, key="compose_recipients",
+                placeholder="Choose clients…",
+                label_visibility="collapsed",
+            )
             selected_clients = [c for c, opt in zip(repo_clients, options) if opt in selected_opts]
             all_emails = [e for c in selected_clients for e in c.get("emails", [])]
 
-            if selected_clients:
-                # Preview recipient list
-                pills = " ".join(
-                    f'<span class="email-pill">{c["company"]}: {len(c["emails"])} addr</span>'
-                    for c in selected_clients
+            if all_emails:
+                st.markdown(
+                    f'<div style="color:#64748b;font-size:0.73rem;margin:6px 0 16px;">'
+                    f'{len(selected_clients)} clients · {len(all_emails)} addresses</div>',
+                    unsafe_allow_html=True,
                 )
-                st.markdown(f'<div style="margin:10px 0 16px;">{pills}</div>', unsafe_allow_html=True)
-                st.markdown(f'<div style="color:#64748b;font-size:0.73rem;margin-bottom:16px;">{len(selected_clients)} clients · {len(all_emails)} email addresses total</div>', unsafe_allow_html=True)
+
+            st.markdown("---")
+
+            # ── Step 4: Send ───────────────────────────────────────────────
+            st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;">④ Send</div>', unsafe_allow_html=True)
+
+            gmail_ready = bool(st.session_state.get("gmail_app_password"))
+            if not gmail_ready:
+                st.warning("Connect your Gmail in the sidebar first (Gmail Sender section).")
+            else:
+                st.markdown(
+                    f'<div style="color:#16a34a;font-size:0.75rem;font-weight:600;margin-bottom:10px;">'
+                    f'✓ Sending from: {st.session_state.get("user_email","")}</div>',
+                    unsafe_allow_html=True,
+                )
 
             if all_emails:
-                if st.button(f"📤  Send to {len(all_emails)} address(es)", type="primary", use_container_width=True):
-                    subject = send_draft.get("headline", "Report from Convin Data Labs")[:80]
+                if st.button(
+                    f"📤  Send to {len(all_emails)} address{'es' if len(all_emails) != 1 else ''}",
+                    type="primary", use_container_width=True,
+                    disabled=not gmail_ready,
+                ):
+                    subject = d.get("headline", "Report from Convin Data Labs")[:80]
                     with st.spinner(f"Sending to {len(all_emails)} recipient(s)…"):
                         result = gmail_sender.send_report_email(
-                            None,
-                            all_emails,
-                            subject,
-                            build_email_html(send_draft, send_draft.get("template", 1)),
+                            None, all_emails, subject,
+                            build_email_html(d, d.get("template", 1)),
                             st.session_state.get("user_email", ""),
                         )
                     if result["sent"]:
-                        st.success(f"✓ Sent to {len(result['sent'])} address(es): {', '.join(result['sent'])}")
-                    if result["failed"]:
-                        for fail in result["failed"]:
+                        st.success(f"✓ Sent to: {', '.join(result['sent'])}")
+                        st.session_state.drafts[ci]["status"] = "ready"
+                    for fail in result["failed"]:
+                        if fail["email"] == "login":
+                            st.error(f"Gmail login failed: {fail['error']}")
+                            st.session_state.pop("gmail_app_password", None)
+                        else:
                             st.error(f"✗ {fail['email']}: {fail['error']}")
-
-        # Export all repo clients as CSV
-        if repo_clients:
-            st.markdown("---")
-            rows = [{"Company": c.get("company",""), "Email": e, "Status": c.get("status","")}
-                    for c in repo_clients for e in c.get("emails",[])]
-            csv = pd.DataFrame(rows).to_csv(index=False)
-            st.download_button("⬇️  Export Recipients CSV", data=csv,
-                               file_name="convin_recipients.csv", mime="text/csv",
-                               use_container_width=True)
 
     # ── AI Grammar & Spell Check ───────────────────────────────────────────────
     with tab_ai:

@@ -1,30 +1,18 @@
 """
-Simple email + password authentication for the Streamlit app.
-
-Credentials are stored in .streamlit/secrets.toml under [users]:
-  [users]
-  "you@example.com" = "<sha256 of password>"
-
-Generate a hash:  python3 -c "import hashlib; print(hashlib.sha256(b'yourpassword').hexdigest())"
+Simple email-based authentication for the Streamlit app.
+Any valid email address can log in — no password required at login.
+Gmail credentials for sending are entered separately in the Send tab.
 """
 
-import hashlib
 import streamlit as st
 
 
-def _hash(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
-
-
-_DEFAULT_EMAIL = "convinlabs@convin.ai"
-
-
-def check_credentials(email: str) -> bool:
-    try:
-        expected_email = st.secrets.get("USER_EMAIL", _DEFAULT_EMAIL)
-    except Exception:
-        expected_email = _DEFAULT_EMAIL
-    return email.strip().lower() == expected_email.strip().lower()
+def check_login(email: str) -> tuple:
+    """Returns (True, "") if email looks valid, else (False, error)."""
+    email = email.strip().lower()
+    if not email or "@" not in email:
+        return False, "Enter a valid email address."
+    return True, ""
 
 
 def render_login_sidebar() -> None:
@@ -39,6 +27,7 @@ def render_login_sidebar() -> None:
         if st.button("Sign out", key="signout_btn", use_container_width=True):
             st.session_state.pop("logged_in", None)
             st.session_state.pop("user_email", None)
+            st.session_state.pop("gmail_app_password", None)
             st.rerun()
     else:
         st.caption("Not signed in")
