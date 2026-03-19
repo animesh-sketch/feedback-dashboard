@@ -444,12 +444,9 @@ def _render_login_page():
     _, col, _ = st.columns([1, 1.4, 1])
     with col:
         _preset_email = st.secrets.get("USER_EMAIL", "")
-        email    = st.text_input("Email", value=_preset_email, placeholder="you@example.com", key="login_email")
-        password = ""
-        if auth.needs_password():
-            password = st.text_input("Password", type="password", key="login_password")
+        email = st.text_input("Email", value=_preset_email, placeholder="you@example.com", key="login_email")
         if st.button("Sign in", type="primary", use_container_width=True, key="login_btn"):
-            ok, err = auth.check_login(email, password)
+            ok, err = auth.check_login(email)
             if ok:
                 st.session_state["logged_in"]  = True
                 st.session_state["user_email"] = email.strip().lower()

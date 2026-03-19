@@ -10,39 +10,24 @@ To generate a hash for a new password, run in Python:
 If neither key is set, any valid email can log in (open access).
 """
 
-import hashlib
 import streamlit as st
 
 
-def check_login(email: str, password: str = "") -> tuple[bool, str]:
+def check_login(email: str) -> tuple[bool, str]:
     """
-    Returns (True, "") on success, or (False, error_message) on failure.
-    Checks email against USER_EMAIL and password against USER_HASH from secrets.
+    Returns (True, "") if the email is valid (and matches USER_EMAIL if set).
+    No password required.
     """
     email = email.strip().lower()
     if not email or "@" not in email:
         return False, "Enter a valid email address."
 
-    # Restrict to the configured email address (if set)
+    # Restrict to the configured email address (if set in secrets)
     allowed_email = st.secrets.get("USER_EMAIL", "").strip().lower()
     if allowed_email and email != allowed_email:
         return False, "This email is not authorised to access this dashboard."
 
-    # Require password if USER_HASH is configured
-    user_hash = st.secrets.get("USER_HASH", "").strip()
-    if user_hash:
-        if not password:
-            return False, "Password is required."
-        pw_hash = hashlib.sha256(password.encode()).hexdigest()
-        if pw_hash != user_hash:
-            return False, "Incorrect password."
-
     return True, ""
-
-
-def needs_password() -> bool:
-    """True when a password hash is configured in secrets."""
-    return bool(st.secrets.get("USER_HASH", "").strip())
 
 
 def render_login_sidebar() -> None:
