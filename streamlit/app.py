@@ -489,8 +489,8 @@ with st.sidebar:
             st.rerun()
     else:
         sb_email = st.text_input(
-            "Gmail Address", value=st.session_state.get("user_email", ""),
-            placeholder="you@gmail.com", key="sb_gmail_email", label_visibility="collapsed",
+            "Google / Gmail Address", value=st.session_state.get("user_email", ""),
+            placeholder="you@gmail.com or you@yourworkspace.com", key="sb_gmail_email", label_visibility="collapsed",
         )
         sb_apppw = st.text_input(
             "App Password", type="password",
@@ -499,13 +499,13 @@ with st.sidebar:
         st.caption("Need an App Password? [Google Account → Security → App Passwords](https://myaccount.google.com/apppasswords)")
         if st.button("Connect Gmail", key="sb_gmail_save", type="primary", use_container_width=True):
             _pw = sb_apppw.replace(" ", "")
-            if "@gmail.com" in sb_email and len(_pw) >= 16:
+            if "@" in sb_email and len(_pw) >= 16:
                 st.session_state["user_email"]       = sb_email.strip().lower()
                 st.session_state["gmail_app_password"] = _pw
                 st.toast("Gmail connected.", icon="✅")
                 st.rerun()
             else:
-                st.error("Enter a @gmail.com address and the 16-character App Password.")
+                st.error("Enter your Google address and the 16-character App Password.")
 
     st.markdown("---")
     st.markdown('<div style="color:#94a3b8;font-size:0.68rem;font-weight:500;">Feb 2026 · v1.0</div>', unsafe_allow_html=True)
