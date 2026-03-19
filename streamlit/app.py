@@ -18,7 +18,7 @@ st.set_page_config(
     page_title="Convin Data Labs",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ─── Session state defaults ───────────────────────────────────────────────────
@@ -28,6 +28,7 @@ def _blank_draft(idx: int) -> dict:
         "name": f"Draft {idx + 1}",
         "status": "empty",
         "client": "",
+        "subject": "",
         "headline": "",
         "body": "",
         "screenshot_url": "",
@@ -43,13 +44,32 @@ def _blank_draft(idx: int) -> dict:
     }
 
 if "drafts" not in st.session_state:
-    st.session_state.drafts = [_blank_draft(i) for i in range(2)]
+    st.session_state.drafts = [_blank_draft(i) for i in range(3)]
+# Ensure at least 3 drafts always exist
+while len(st.session_state.drafts) < 3:
+    st.session_state.drafts.append(_blank_draft(len(st.session_state.drafts)))
 
-# Auto-load secrets into session state
-if not st.session_state.get("resend_api_key"):
-    key = st.secrets.get("RESEND_API_KEY", "")
-    if key:
-        st.session_state["resend_api_key"] = key
+if "send_log" not in st.session_state:
+    st.session_state.send_log = []
+
+if "current_page" not in st.session_state:
+    st.session_state["current_page"] = "Overview"
+
+if "show_sidebar" not in st.session_state:
+    st.session_state["show_sidebar"] = False
+
+# Auto-load Gmail credentials from secrets — only on the very first load,
+# NOT on every rerun (so the sidebar "Change" button actually works).
+if "gmail_secrets_loaded" not in st.session_state:
+    st.session_state["gmail_secrets_loaded"] = True
+    if not st.session_state.get("gmail_app_password"):
+        pw = st.secrets.get("GMAIL_APP_PASSWORD", "")
+        if pw:
+            st.session_state["gmail_app_password"] = pw
+    if not st.session_state.get("user_email"):
+        sender = st.secrets.get("GMAIL_SENDER", "")
+        if sender:
+            st.session_state["user_email"] = sender
 
 # ─── Global CSS ───────────────────────────────────────────────────────────────
 
@@ -423,9 +443,13 @@ def _render_login_page():
 
     _, col, _ = st.columns([1, 1.4, 1])
     with col:
-        email = st.text_input("Your Email", placeholder="you@gmail.com", key="login_email")
+        _preset_email = st.secrets.get("USER_EMAIL", "")
+        email    = st.text_input("Email", value=_preset_email, placeholder="you@example.com", key="login_email")
+        password = ""
+        if auth.needs_password():
+            password = st.text_input("Password", type="password", key="login_password")
         if st.button("Sign in", type="primary", use_container_width=True, key="login_btn"):
-            ok, err = auth.check_login(email)
+            ok, err = auth.check_login(email, password)
             if ok:
                 st.session_state["logged_in"]  = True
                 st.session_state["user_email"] = email.strip().lower()
@@ -441,49 +465,50 @@ if not st.session_state.get("logged_in"):
 
 with st.sidebar:
     st.markdown("""
-    <div style="padding:8px 4px 22px;">
+    <div style="padding:8px 4px 18px;">
         <div style="display:flex;align-items:center;gap:10px;">
             <div style="width:32px;height:32px;border-radius:8px;flex-shrink:0;background:#2563eb;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;">CDL</div>
             <div>
                 <div style="color:#0f172a;font-weight:700;font-size:0.9rem;letter-spacing:-0.01em;line-height:1.2;">Convin Data Labs</div>
-                <div style="color:#94a3b8;font-size:0.63rem;margin-top:2px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;">Analytics</div>
+                <div style="color:#94a3b8;font-size:0.63rem;margin-top:2px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;">Settings</div>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    page = st.radio(
-        "nav",
-        ["📊 Overview", "🏢 Clients", "📧 Email Maker"],
-        label_visibility="collapsed",
-    )
-
     st.markdown("---")
     auth.render_login_sidebar()
 
-    # ── Resend settings ────────────────────────────────────────────────────────
+    # ── Gmail settings ──────────────────────────────────────────────────────────
     st.markdown("---")
-    st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">Email Sender</div>', unsafe_allow_html=True)
-    if st.session_state.get("resend_api_key"):
+    st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">Gmail Sender</div>', unsafe_allow_html=True)
+    if st.session_state.get("gmail_app_password"):
         st.markdown(
             f'<div style="color:#16a34a;font-size:0.75rem;font-weight:600;margin-bottom:6px;">✓ {st.session_state.get("user_email","")}</div>',
             unsafe_allow_html=True,
         )
-        if st.button("Change", key="resend_change_btn", use_container_width=True):
-            st.session_state.pop("resend_api_key", None)
+        if st.button("Change", key="gmail_change_btn", use_container_width=True):
+            st.session_state.pop("gmail_app_password", None)
             st.rerun()
     else:
-        sb_email  = st.text_input("From Email", value=st.session_state.get("user_email",""), placeholder="you@yourcompany.com", key="sb_email", label_visibility="collapsed")
-        sb_apikey = st.text_input("Brevo API Key", type="password", placeholder="xkeysib-...", key="sb_resend_key", label_visibility="collapsed")
-        st.caption("[Get free API key → brevo.com](https://brevo.com)")
-        if st.button("Connect", key="sb_resend_save", type="primary", use_container_width=True):
-            if "@" in sb_email and sb_apikey.strip().startswith("re_"):
-                st.session_state["user_email"]    = sb_email.strip().lower()
-                st.session_state["resend_api_key"] = sb_apikey.strip()
-                st.toast("Email sender connected.", icon="✅")
+        sb_email = st.text_input(
+            "Gmail Address", value=st.session_state.get("user_email", ""),
+            placeholder="you@gmail.com", key="sb_gmail_email", label_visibility="collapsed",
+        )
+        sb_apppw = st.text_input(
+            "App Password", type="password",
+            placeholder="abcd efgh ijkl mnop", key="sb_gmail_pw", label_visibility="collapsed",
+        )
+        st.caption("Need an App Password? [Google Account → Security → App Passwords](https://myaccount.google.com/apppasswords)")
+        if st.button("Connect Gmail", key="sb_gmail_save", type="primary", use_container_width=True):
+            _pw = sb_apppw.replace(" ", "")
+            if "@gmail.com" in sb_email and len(_pw) >= 16:
+                st.session_state["user_email"]       = sb_email.strip().lower()
+                st.session_state["gmail_app_password"] = _pw
+                st.toast("Gmail connected.", icon="✅")
                 st.rerun()
             else:
-                st.error("Enter a valid email and Resend API key (starts with re_).")
+                st.error("Enter a @gmail.com address and the 16-character App Password.")
 
     st.markdown("---")
     st.markdown('<div style="color:#94a3b8;font-size:0.68rem;font-weight:500;">Feb 2026 · v1.0</div>', unsafe_allow_html=True)
@@ -1038,9 +1063,30 @@ def render_clients():
                  "Added": c.get("added_at","")}
                 for c in all_clients for e in c.get("emails",[])]
         csv = pd.DataFrame(rows).to_csv(index=False)
-        st.download_button("⬇️  Export Client CSV", data=csv,
-                           file_name="convin_clients.csv", mime="text/csv",
-                           use_container_width=False)
+        exp_col, bak_col, res_col = st.columns([2, 1, 2])
+        with exp_col:
+            st.download_button("⬇️  Export CSV", data=csv,
+                               file_name="convin_clients.csv", mime="text/csv")
+        with bak_col:
+            import json as _json
+            _bak = _json.dumps(all_clients, indent=2, ensure_ascii=False)
+            st.download_button("⬇️  Backup JSON", data=_bak,
+                               file_name="clients_backup.json", mime="application/json")
+        with res_col:
+            _uploaded = st.file_uploader("📥 Restore from JSON backup", type=["json"],
+                                         key="client_restore_upload",
+                                         label_visibility="collapsed")
+            if _uploaded:
+                try:
+                    _restored = _json.loads(_uploaded.read())
+                    if isinstance(_restored, list):
+                        client_store.save(_restored)
+                        st.toast(f"Restored {len(_restored)} clients.", icon="✅")
+                        st.rerun()
+                    else:
+                        st.error("Invalid backup file format.")
+                except Exception as _e:
+                    st.error(f"Restore failed: {_e}")
 
 
 # ─── Draft helpers ────────────────────────────────────────────────────────────
@@ -1230,20 +1276,26 @@ def render_email_maker():
         st.markdown("")
 
         cc1, cc2 = st.columns(2)
-        with cc1: d["client"]   = st.text_input("Client Name", value=d["client"],   key=f"cc_client_{ci}", placeholder="e.g. Acme Corp")
-        with cc2: d["report_link"] = st.text_input("Report URL", value=d["report_link"], key=f"cc_link_{ci}", placeholder="https://docs.google.com/…")
+        with cc1: d["client"]     = st.text_input("Client Name", value=d["client"],   key=f"cc_client_{ci}", placeholder="e.g. Acme Corp")
+        with cc2: d["report_link"] = st.text_input("Report URL",  value=d["report_link"], key=f"cc_link_{ci}", placeholder="https://docs.google.com/…")
 
-        d["headline"] = st.text_area("Subject / Headline", value=d["headline"], key=f"cc_head_{ci}", height=70, placeholder="e.g. February showed strong growth…")
-        d["body"]     = st.text_area("Email Body",         value=d["body"],     key=f"cc_body_{ci}", height=130, placeholder="Write the main body of the email…")
+        d["subject"]  = st.text_input(
+            "Email Subject Line",
+            value=d.get("subject", ""),
+            key=f"cc_subj_{ci}",
+            placeholder="e.g. Your February Analytics Report is Ready",
+        )
+        d["headline"] = st.text_area("Headline (shown inside email)", value=d["headline"], key=f"cc_head_{ci}", height=68, placeholder="e.g. February showed strong growth across all key metrics…")
+        d["body"]     = st.text_area("Email Body",                    value=d["body"],     key=f"cc_body_{ci}", height=120, placeholder="Write the main body of the email…")
 
         with st.expander("🖼  Images & Survey (optional)"):
             _screenshot_input(d, f"c{ci}")
             st.markdown("")
             d["survey_question"] = st.text_input("Survey Question", value=d["survey_question"], key=f"cc_sq_{ci}")
 
-        pc1, pc2, pc3 = st.columns(3)
+        pc1, pc2, pc3, pc4 = st.columns(4)
         with pc1:
-            if st.button("💾 Save Draft", key=f"cc_save_{ci}", use_container_width=True):
+            if st.button("💾 Save", key=f"cc_save_{ci}", use_container_width=True):
                 st.session_state.drafts[ci]["status"] = "draft"
                 st.toast("Draft saved.", icon="💾")
                 st.rerun()
@@ -1252,7 +1304,20 @@ def render_email_maker():
                 st.session_state[f"cc_show_prev_{ci}"] = not st.session_state.get(f"cc_show_prev_{ci}", False)
                 st.rerun()
         with pc3:
-            if st.button("✅ Mark Ready", key=f"cc_ready_{ci}", use_container_width=True, type="primary"):
+            try:
+                _dl_html = build_email_html(d, d.get("template", 1))
+                st.download_button(
+                    "⬇️ HTML",
+                    data=_dl_html,
+                    file_name=f"{d['name'].replace(' ', '_')}.html",
+                    mime="text/html",
+                    use_container_width=True,
+                    key=f"cc_dl_{ci}",
+                )
+            except Exception:
+                st.button("⬇️ HTML", disabled=True, use_container_width=True, key=f"cc_dl_dis_{ci}")
+        with pc4:
+            if st.button("✅ Ready", key=f"cc_ready_{ci}", use_container_width=True, type="primary"):
                 st.session_state.drafts[ci]["status"] = "ready"
                 st.toast("Draft marked ready.", icon="✅")
                 st.rerun()
@@ -1268,6 +1333,8 @@ def render_email_maker():
         # ── Step 3: Recipients ─────────────────────────────────────────────
         st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">③ Recipients</div>', unsafe_allow_html=True)
 
+        all_emails: list = []
+
         if not repo_clients:
             st.info("No clients in repository yet. Go to **🏢 Clients** to add them first.")
         else:
@@ -1280,50 +1347,115 @@ def render_email_maker():
             selected_clients = [c for c, opt in zip(repo_clients, options) if opt in selected_opts]
             all_emails = [e for c in selected_clients for e in c.get("emails", [])]
 
-            if all_emails:
+            if selected_clients:
                 st.markdown(
-                    f'<div style="color:#64748b;font-size:0.73rem;margin:6px 0 16px;">'
-                    f'{len(selected_clients)} clients · {len(all_emails)} addresses</div>',
+                    f'<div style="color:#64748b;font-size:0.73rem;margin:6px 0 8px;">'
+                    f'{len(selected_clients)} client{"s" if len(selected_clients) != 1 else ""} · {len(all_emails)} address{"es" if len(all_emails) != 1 else ""}</div>',
                     unsafe_allow_html=True,
                 )
 
-            st.markdown("---")
+        adhoc_raw = st.text_input(
+            "Additional recipients (comma-separated)",
+            key="compose_adhoc",
+            placeholder="extra@email.com, another@company.com",
+        )
+        adhoc_emails = [e.strip() for e in adhoc_raw.split(",") if e.strip() and "@" in e.strip()]
+        all_emails = all_emails + adhoc_emails
+        if adhoc_emails:
+            st.markdown(
+                f'<div style="color:#64748b;font-size:0.73rem;margin:2px 0 8px;">+ {len(adhoc_emails)} extra address{"es" if len(adhoc_emails) != 1 else ""}</div>',
+                unsafe_allow_html=True,
+            )
 
-            # ── Step 4: Send ───────────────────────────────────────────────
-            st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;">④ Send</div>', unsafe_allow_html=True)
+        st.markdown("---")
 
-            sender_ready = bool(st.session_state.get("resend_api_key"))
-            if not sender_ready:
-                st.warning("Connect your email sender in the sidebar first.")
-            else:
-                st.markdown(
-                    f'<div style="color:#16a34a;font-size:0.75rem;font-weight:600;margin-bottom:10px;">'
-                    f'✓ Sending from: {st.session_state.get("user_email","")}</div>',
-                    unsafe_allow_html=True,
-                )
+        # ── Step 4: Send ───────────────────────────────────────────────
+        st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;">④ Send</div>', unsafe_allow_html=True)
 
+        sender_ready = bool(st.session_state.get("gmail_app_password"))
+        if not sender_ready:
+            st.warning("Connect your email sender in the sidebar first.")
+        else:
+            st.markdown(
+                f'<div style="color:#16a34a;font-size:0.75rem;font-weight:600;margin-bottom:10px;">'
+                f'✓ Sending from: {st.session_state.get("user_email","")}</div>',
+                unsafe_allow_html=True,
+            )
+
+        send_col, test_col = st.columns([3, 1])
+        with test_col:
+            if st.button("🧪 Test to Me", key=f"test_send_{ci}", use_container_width=True,
+                         disabled=not sender_ready, help="Send a test copy to your own email"):
+                _test_addr = st.session_state.get("user_email", "")
+                if _test_addr:
+                    _subj = (d.get("subject") or d.get("headline") or "Test Email") + " [TEST]"
+                    with st.spinner("Sending test…"):
+                        _res = gmail_sender.send_report_email(
+                            None, [_test_addr], _subj[:80],
+                            build_email_html(d, d.get("template", 1)),
+                            _test_addr,
+                        )
+                    if _res["sent"]:
+                        st.success(f"Test sent to {_test_addr}")
+                    else:
+                        for _f in _res["failed"]:
+                            st.error(_f["error"])
+                            if _f["email"] == "config":
+                                st.session_state.pop("gmail_app_password", None)
+                else:
+                    st.warning("Sign in to use test send.")
+
+        with send_col:
             if all_emails:
                 if st.button(
                     f"📤  Send to {len(all_emails)} address{'es' if len(all_emails) != 1 else ''}",
                     type="primary", use_container_width=True,
                     disabled=not sender_ready,
                 ):
-                    subject = d.get("headline", "Report from Convin Data Labs")[:80]
+                    _subject = (d.get("subject") or d.get("headline") or "Report from Convin Data Labs")[:80]
                     with st.spinner(f"Sending to {len(all_emails)} recipient(s)…"):
                         result = gmail_sender.send_report_email(
-                            None, all_emails, subject,
+                            None, all_emails, _subject,
                             build_email_html(d, d.get("template", 1)),
                             st.session_state.get("user_email", ""),
                         )
+                    from datetime import datetime as _dt
+                    st.session_state.send_log.insert(0, {
+                        "time":   _dt.now().strftime("%H:%M"),
+                        "draft":  d["name"],
+                        "sent":   result["sent"],
+                        "failed": [f["email"] for f in result["failed"]],
+                    })
                     if result["sent"]:
                         st.success(f"✓ Sent to: {', '.join(result['sent'])}")
                         st.session_state.drafts[ci]["status"] = "ready"
                     for fail in result["failed"]:
                         if fail["email"] in ("login", "config"):
                             st.error(fail["error"])
-                            st.session_state.pop("resend_api_key", None)
+                            st.session_state.pop("gmail_app_password", None)
                         else:
                             st.error(f"✗ {fail['email']}: {fail['error']}")
+            else:
+                st.button("📤  Send", disabled=True, use_container_width=True, key="send_disabled",
+                          help="Add at least one recipient above.")
+
+        # ── Send Log ───────────────────────────────────────────────────
+        if st.session_state.get("send_log"):
+            st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+            with st.expander(f"📋 Send Log  ({len(st.session_state['send_log'])} this session)", expanded=False):
+                for _entry in st.session_state["send_log"][:20]:
+                    _ok   = f"✓ {len(_entry['sent'])} sent"   if _entry["sent"]   else ""
+                    _fail = f"✗ {len(_entry['failed'])} failed" if _entry["failed"] else ""
+                    _parts = " · ".join(filter(None, [_ok, _fail]))
+                    st.markdown(
+                        f'<div style="display:flex;justify-content:space-between;align-items:center;'
+                        f'padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:0.78rem;">'
+                        f'<span style="color:#0f172a;font-weight:600;">{_entry["draft"]}</span>'
+                        f'<span style="color:#64748b;">{_parts}</span>'
+                        f'<span style="color:#94a3b8;">{_entry["time"]}</span>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
 
     # ── AI Grammar & Spell Check ───────────────────────────────────────────────
     with tab_ai:
@@ -1413,11 +1545,66 @@ def render_email_maker():
                         st.error(f"AI check failed: {_e}")
 
 
+# ─── Sidebar CSS toggle (pure Python — no JS needed) ─────────────────────────
+
+if not st.session_state["show_sidebar"]:
+    st.markdown("""
+    <style>
+    section[data-testid="stSidebar"]       { display:none !important; }
+    [data-testid="collapsedControl"]        { display:none !important; }
+    [data-testid="stSidebarCollapseButton"] { display:none !important; }
+    </style>""", unsafe_allow_html=True)
+
+# ─── Top navigation bar ───────────────────────────────────────────────────────
+
+st.markdown("""
+<style>
+/* Hide default Streamlit top decoration */
+.stApp > header { display: none !important; }
+
+/* Nav bar styling */
+div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 6px 0 8px;
+    margin-bottom: 1.2rem;
+}
+</style>
+""", unsafe_allow_html=True)
+
+_n0, _n1, _n2, _n3, _n_spacer = st.columns([1.2, 2, 2, 2, 4])
+
+with _n0:
+    _sb_label = "✕ Close" if st.session_state["show_sidebar"] else "⚙️ Settings"
+    if st.button(_sb_label, key="nav_settings", use_container_width=True):
+        st.session_state["show_sidebar"] = not st.session_state["show_sidebar"]
+        st.rerun()
+
+_page_btns = {
+    "Overview":    ("📊 Overview",    _n1),
+    "Clients":     ("🏢 Clients",     _n2),
+    "Email Maker": ("📧 Email Maker", _n3),
+}
+for _key, (_label, _col) in _page_btns.items():
+    with _col:
+        _active = st.session_state["current_page"] == _key
+        if st.button(
+            _label,
+            key=f"nav_{_key}",
+            use_container_width=True,
+            type="primary" if _active else "secondary",
+        ):
+            st.session_state["current_page"] = _key
+            st.rerun()
+
+st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+
 # ─── Route pages ──────────────────────────────────────────────────────────────
 
-if page == "📊 Overview":
+_page = st.session_state["current_page"]
+if _page == "Overview":
     render_overview()
-elif page == "🏢 Clients":
+elif _page == "Clients":
     render_clients()
-elif page == "📧 Email Maker":
+elif _page == "Email Maker":
     render_email_maker()

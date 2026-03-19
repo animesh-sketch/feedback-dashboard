@@ -1,6 +1,8 @@
 """
-Persistent client repository backed by a local JSON file.
-Stored at: streamlit/clients.json  (gitignored — never commit real data)
+Persistent client repository using st.session_state as the primary store.
+Data survives Streamlit reruns within the same browser session.
+On first load, initialises from the local JSON file (if present) or sample data.
+Best-effort file save works locally; silently no-ops on read-only cloud deployments.
 """
 
 import json
@@ -8,7 +10,10 @@ import os
 import uuid
 from datetime import datetime, timezone
 
+import streamlit as st
+
 _FILE = os.path.join(os.path.dirname(__file__), "clients.json")
+_SS_KEY = "client_store_data"
 
 # Status options available throughout the app
 STATUSES = ["Active", "At Risk", "Inactive"]
@@ -68,21 +73,35 @@ SAMPLE_CLIENTS = [
 ]
 
 
+def _init() -> None:
+    """Populate session_state from file (or sample data) on first call."""
+    if _SS_KEY in st.session_state:
+        return
+    if os.path.exists(_FILE):
+        try:
+            with open(_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            st.session_state[_SS_KEY] = data if data else list(SAMPLE_CLIENTS)
+            return
+        except (json.JSONDecodeError, OSError):
+            pass
+    st.session_state[_SS_KEY] = list(SAMPLE_CLIENTS)
+
+
 def load() -> list:
-    """Return all clients from disk. Falls back to sample data if file missing."""
-    if not os.path.exists(_FILE):
-        return SAMPLE_CLIENTS
-    try:
-        with open(_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data if data else SAMPLE_CLIENTS
-    except (json.JSONDecodeError, OSError):
-        return SAMPLE_CLIENTS
+    """Return all clients from session_state (initialised from disk on first call)."""
+    _init()
+    return st.session_state[_SS_KEY]
 
 
 def save(clients: list) -> None:
-    with open(_FILE, "w", encoding="utf-8") as f:
-        json.dump(clients, f, indent=2, ensure_ascii=False)
+    """Persist clients to session_state and attempt a best-effort file write."""
+    st.session_state[_SS_KEY] = clients
+    try:
+        with open(_FILE, "w", encoding="utf-8") as f:
+            json.dump(clients, f, indent=2, ensure_ascii=False)
+    except OSError:
+        pass  # Read-only filesystem (Streamlit Cloud) — session_state keeps the data
 
 
 def add(company: str, contact: str, emails: list,
