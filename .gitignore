@@ -27,8 +27,6 @@ dist-ssr
 .streamlit/secrets.toml
 streamlit/.streamlit/secrets.toml
 
-# Client repository (contains real client data)
-streamlit/clients.json
 
 # Python cache
 __pycache__/
