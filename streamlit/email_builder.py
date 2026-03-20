@@ -71,12 +71,6 @@ body { background: #e8e3db; font-family: 'Inter', sans-serif; color: #1c1c1c; pa
         font-size: 24px; display: inline-flex; align-items: center; justify-content: center;
         cursor: pointer; margin: 0 3px; user-select: none; transition: color 0.15s, border-color 0.15s; }
 </style>"""
-    js = """
-<script>
-let sel=0;const stars=document.querySelectorAll('.star');
-function rate(el,v){sel=v;stars.forEach((s,i)=>{s.style.color=i<v?'#b8962e':'#1e3050';s.style.borderColor=i<v?'#b8962e':'#1e3050';});document.getElementById('sbtn').disabled=false;}
-function thanks(){document.getElementById('sbtn').parentNode.style.display='none';document.getElementById('ty').style.display='block';}
-</script>"""
     ss_html = _screenshot(ss, sc,
         wrap_css="padding:0 44px 32px;border-bottom:1px solid #ede8e0;",
         img_css="border:1px solid #ddd8d0;")
@@ -115,19 +109,16 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
       <div style="font-size:12px;color:#4a6a8a;">Takes 15 seconds · Helps us improve future reports.</div>
     </div>
     <div style="text-align:center;margin-bottom:10px;">
-      <span class="star" onclick="rate(this,1)">★</span><span class="star" onclick="rate(this,2)">★</span><span class="star" onclick="rate(this,3)">★</span><span class="star" onclick="rate(this,4)">★</span><span class="star" onclick="rate(this,5)">★</span>
+      <a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=1" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=2" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=3" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=4" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=5" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:24px;"><span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#2a4a6a;">Not useful</span><span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#2a4a6a;">Very useful</span></div>
-    <label style="display:block;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#4a6a8a;margin-bottom:8px;">Additional comments</label>
-    <textarea style="width:100%;padding:12px 14px;background:#080f18;border:1px solid #1e3050;color:#c8d8e8;font-family:'Inter',sans-serif;font-size:13px;resize:vertical;min-height:72px;outline:none;box-sizing:border-box;" placeholder="Share your thoughts…"></textarea>
-    <button id="sbtn" disabled onclick="thanks()" style="display:block;width:100%;margin-top:18px;padding:15px;background:#b8962e;color:#0d1b2a;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:none;cursor:pointer;">Submit Feedback</button>
-    <div id="ty" style="display:none;text-align:center;padding:20px;"><div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#b8962e;margin-bottom:10px;">Thank You</div><div style="font-family:serif;font-size:18px;color:#f0ede8;">Your feedback has been noted.</div></div>
+    <div style="text-align:center;font-size:11px;color:#4a6a8a;letter-spacing:0.5px;margin-top:6px;">Click a star above to rate — opens in your browser</div>
   </div>
   <div style="padding:22px 44px;background:#faf9f7;border-top:1px solid #ede8e0;text-align:center;">
     <div><a href="#" style="font-size:11px;color:#9c8e80;text-decoration:none;margin:0 10px;">Unsubscribe</a><a href="#" style="font-size:11px;color:#9c8e80;text-decoration:none;margin:0 10px;">Preferences</a><a href="#" style="font-size:11px;color:#9c8e80;text-decoration:none;margin:0 10px;">Privacy</a></div>
     <div style="font-size:11px;color:#c0b8ae;line-height:1.8;margin-top:8px;">Convin Data Labs · You are receiving this as a registered client.</div>
   </div>
-</div>{js}</body></html>"""
+</div></body></html>"""
 
 
 # ─── Template 2: Minimal ──────────────────────────────────────────────────────
@@ -141,12 +132,6 @@ body { background: #f1f5f9; font-family: 'Inter', sans-serif; color: #111827; pa
 .wrap { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 16px rgba(0,0,0,0.07); }
 .star { font-size: 28px; cursor: pointer; color: #d1d5db; margin: 0 4px; display: inline-block; transition: color 0.12s; user-select: none; }
 </style>"""
-    js = """
-<script>
-let sel=0;const stars=document.querySelectorAll('.star');
-function rate(el,v){sel=v;stars.forEach((s,i)=>{s.style.color=i<v?'#2563eb':'#d1d5db';});document.getElementById('sbtn').disabled=false;}
-function thanks(){document.getElementById('sbtn').parentNode.style.display='none';document.getElementById('ty').style.display='block';}
-</script>"""
     ss_html = _screenshot(ss, sc,
         wrap_css="padding:0 40px 32px;",
         img_css="border-radius:10px;border:1px solid #e5e7eb;")
@@ -185,18 +170,16 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
       <div style="font-size:12px;color:#9ca3af;">Takes 15 seconds · Helps us improve.</div>
     </div>
     <div style="text-align:center;margin-bottom:8px;">
-      <span class="star" onclick="rate(this,1)">★</span><span class="star" onclick="rate(this,2)">★</span><span class="star" onclick="rate(this,3)">★</span><span class="star" onclick="rate(this,4)">★</span><span class="star" onclick="rate(this,5)">★</span>
+      <a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=1" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=2" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=3" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=4" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=5" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:20px;padding:0 4px;"><span style="font-size:11px;color:#d1d5db;">Not useful</span><span style="font-size:11px;color:#d1d5db;">Very useful</span></div>
-    <textarea style="width:100%;padding:12px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;color:#374151;font-family:'Inter',sans-serif;font-size:13px;resize:vertical;min-height:68px;outline:none;box-sizing:border-box;" placeholder="Additional comments (optional)"></textarea>
-    <button id="sbtn" disabled onclick="thanks()" style="display:block;width:100%;margin-top:12px;padding:14px;background:#2563eb;color:#fff;font-size:12px;font-weight:600;letter-spacing:0.02em;border:none;border-radius:10px;cursor:pointer;">Submit Feedback</button>
-    <div id="ty" style="display:none;text-align:center;padding:20px;"><div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#2563eb;margin-bottom:8px;">Thank You</div><div style="font-size:17px;color:#374151;">Your feedback has been noted.</div></div>
+    <div style="text-align:center;font-size:11px;color:#9ca3af;margin-top:6px;">Click a star above to rate — opens in your browser</div>
   </div>
   <div style="padding:20px 40px;text-align:center;background:#f9fafb;">
     <div><a href="#" style="font-size:11px;color:#9ca3af;text-decoration:none;margin:0 10px;">Unsubscribe</a><a href="#" style="font-size:11px;color:#9ca3af;text-decoration:none;margin:0 10px;">Preferences</a><a href="#" style="font-size:11px;color:#9ca3af;text-decoration:none;margin:0 10px;">Privacy</a></div>
     <div style="font-size:11px;color:#d1d5db;margin-top:8px;">Convin Data Labs · Registered client communication.</div>
   </div>
-</div>{js}</body></html>"""
+</div></body></html>"""
 
 
 # ─── Template 3: Bold Blue ────────────────────────────────────────────────────
@@ -210,12 +193,6 @@ body { background: #1e3a8a; font-family: 'Inter', sans-serif; color: #0f172a; pa
 .wrap { max-width: 600px; margin: 0 auto; background: #fff; box-shadow: 0 20px 80px rgba(0,0,0,0.45); }
 .star { font-size: 30px; cursor: pointer; color: rgba(255,255,255,0.2); margin: 0 4px; display: inline-block; transition: color 0.12s; user-select: none; }
 </style>"""
-    js = """
-<script>
-let sel=0;const stars=document.querySelectorAll('.star');
-function rate(el,v){sel=v;stars.forEach((s,i)=>{s.style.color=i<v?'#fbbf24':'rgba(255,255,255,0.2)';});document.getElementById('sbtn').disabled=false;}
-function thanks(){document.getElementById('sbtn').parentNode.style.display='none';document.getElementById('ty').style.display='block';}
-</script>"""
     ss_html = _screenshot(ss, sc,
         wrap_css="padding:0 44px 36px;",
         img_css="border:2px solid #dbeafe;")
@@ -253,18 +230,16 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
       <div style="font-size:12px;color:rgba(255,255,255,0.4);">Takes 15 seconds · Helps us improve.</div>
     </div>
     <div style="text-align:center;margin-bottom:8px;">
-      <span class="star" onclick="rate(this,1)">★</span><span class="star" onclick="rate(this,2)">★</span><span class="star" onclick="rate(this,3)">★</span><span class="star" onclick="rate(this,4)">★</span><span class="star" onclick="rate(this,5)">★</span>
+      <a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=1" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=2" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=3" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=4" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=5" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:20px;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.2);">Not useful</span><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.2);">Very useful</span></div>
-    <textarea style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.15);color:#fff;font-family:'Inter',sans-serif;font-size:13px;resize:vertical;min-height:68px;outline:none;box-sizing:border-box;border-radius:4px;" placeholder="Additional comments (optional)"></textarea>
-    <button id="sbtn" disabled onclick="thanks()" style="display:block;width:100%;margin-top:14px;padding:15px;background:#fff;color:#1d4ed8;font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;border:none;cursor:pointer;">Submit Feedback</button>
-    <div id="ty" style="display:none;text-align:center;padding:20px;"><div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#93c5fd;margin-bottom:8px;">Thank You</div><div style="font-size:18px;color:#fff;">Your feedback has been noted.</div></div>
+    <div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.35);margin-top:6px;">Click a star above to rate — opens in your browser</div>
   </div>
   <div style="padding:22px 44px;background:#eff6ff;text-align:center;border-top:2px solid #dbeafe;">
     <div><a href="#" style="font-size:11px;color:#3b82f6;text-decoration:none;margin:0 10px;">Unsubscribe</a><a href="#" style="font-size:11px;color:#3b82f6;text-decoration:none;margin:0 10px;">Preferences</a><a href="#" style="font-size:11px;color:#3b82f6;text-decoration:none;margin:0 10px;">Privacy</a></div>
     <div style="font-size:11px;color:#93c5fd;margin-top:8px;">Convin Data Labs · Registered client communication.</div>
   </div>
-</div>{js}</body></html>"""
+</div></body></html>"""
 
 
 # ─── Template 4: Modern ───────────────────────────────────────────────────────
@@ -278,12 +253,6 @@ body { background: #0d0d1a; font-family: 'Inter', sans-serif; padding: 32px 16px
 .wrap { max-width: 600px; margin: 0 auto; background: #111827; border-radius: 24px; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.6); border: 1px solid #1e293b; }
 .star { font-size: 28px; cursor: pointer; color: #1e293b; margin: 0 4px; display: inline-block; transition: color 0.12s; user-select: none; }
 </style>"""
-    js = """
-<script>
-let sel=0;const stars=document.querySelectorAll('.star');
-function rate(el,v){sel=v;stars.forEach((s,i)=>{s.style.color=i<v?'#a78bfa':'#1e293b';});document.getElementById('sbtn').disabled=false;}
-function thanks(){document.getElementById('sbtn').parentNode.style.display='none';document.getElementById('ty').style.display='block';}
-</script>"""
     ss_html = _screenshot(ss, sc,
         wrap_css="padding:0 40px 32px;",
         img_css="border-radius:12px;border:1px solid #1e293b;")
@@ -320,18 +289,16 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
       <div style="font-size:12px;color:#334155;">Takes 15 seconds · Helps us improve.</div>
     </div>
     <div style="text-align:center;margin-bottom:8px;">
-      <span class="star" onclick="rate(this,1)">★</span><span class="star" onclick="rate(this,2)">★</span><span class="star" onclick="rate(this,3)">★</span><span class="star" onclick="rate(this,4)">★</span><span class="star" onclick="rate(this,5)">★</span>
+      <a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=1" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=2" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=3" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=4" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=5" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:20px;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#1e293b;">Not useful</span><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#1e293b;">Very useful</span></div>
-    <textarea style="width:100%;padding:12px 14px;background:#111827;border:1px solid #1e293b;color:#94a3b8;font-family:'Inter',sans-serif;font-size:13px;resize:vertical;min-height:68px;outline:none;box-sizing:border-box;border-radius:8px;" placeholder="Additional comments (optional)"></textarea>
-    <button id="sbtn" disabled onclick="thanks()" style="display:block;width:100%;margin-top:14px;padding:14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:none;border-radius:8px;cursor:pointer;">Submit Feedback</button>
-    <div id="ty" style="display:none;text-align:center;padding:20px;"><div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#a78bfa;margin-bottom:8px;">Thank You</div><div style="font-size:18px;color:#e2e8f0;">Your feedback has been noted.</div></div>
+    <div style="text-align:center;font-size:11px;color:#475569;margin-top:6px;">Click a star above to rate — opens in your browser</div>
   </div>
   <div style="padding:20px 40px;background:#0d0d1a;text-align:center;border-top:1px solid #1e293b;">
     <div><a href="#" style="font-size:11px;color:#334155;text-decoration:none;margin:0 10px;">Unsubscribe</a><a href="#" style="font-size:11px;color:#334155;text-decoration:none;margin:0 10px;">Preferences</a><a href="#" style="font-size:11px;color:#334155;text-decoration:none;margin:0 10px;">Privacy</a></div>
     <div style="font-size:11px;color:#1e293b;margin-top:6px;">Convin Data Labs · Registered client communication.</div>
   </div>
-</div>{js}</body></html>"""
+</div></body></html>"""
 
 
 # ─── Template 5: Classic ──────────────────────────────────────────────────────
@@ -346,12 +313,6 @@ body { background: #f0e6d3; font-family: 'Lora', Georgia, serif; color: #1a0a00;
 .star { font-size: 28px; cursor: pointer; color: #d5c4a8; margin: 0 4px; display: inline-block; transition: color 0.12s; user-select: none; }
 .orn { color: #c9a96e; text-align: center; letter-spacing: 8px; font-size: 14px; }
 </style>"""
-    js = """
-<script>
-let sel=0;const stars=document.querySelectorAll('.star');
-function rate(el,v){sel=v;stars.forEach((s,i)=>{s.style.color=i<v?'#c9a96e':'#d5c4a8';});document.getElementById('sbtn').disabled=false;}
-function thanks(){document.getElementById('sbtn').parentNode.style.display='none';document.getElementById('ty').style.display='block';}
-</script>"""
     ss_html = _screenshot(ss, sc,
         wrap_css="padding:0 48px 36px;",
         img_css="border:1px solid #d5c4a8;",
@@ -391,19 +352,17 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
       <div style="font-size:12px;color:#8b7355;">Takes 15 seconds · Helps us improve.</div>
     </div>
     <div style="text-align:center;margin-bottom:8px;">
-      <span class="star" onclick="rate(this,1)">★</span><span class="star" onclick="rate(this,2)">★</span><span class="star" onclick="rate(this,3)">★</span><span class="star" onclick="rate(this,4)">★</span><span class="star" onclick="rate(this,5)">★</span>
+      <a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=1" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=2" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=3" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=4" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=5" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:20px;"><span style="font-size:11px;color:#d5c4a8;font-style:italic;">Not useful</span><span style="font-size:11px;color:#d5c4a8;font-style:italic;">Very useful</span></div>
-    <textarea style="width:100%;padding:12px 14px;background:#faf5ed;border:1px solid #d5c4a8;color:#3d2b1f;font-family:'Lora',Georgia,serif;font-size:13px;resize:vertical;min-height:68px;outline:none;box-sizing:border-box;" placeholder="Additional comments (optional)"></textarea>
-    <button id="sbtn" disabled onclick="thanks()" style="display:block;width:100%;margin-top:14px;padding:13px;background:#2c1a0e;color:#c9a96e;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;border:none;cursor:pointer;font-family:'Lora',serif;">Submit Feedback</button>
-    <div id="ty" style="display:none;text-align:center;padding:20px;"><div class="orn" style="font-size:16px;margin-bottom:8px;">◆</div><div style="font-family:'Playfair Display',serif;font-size:18px;color:#1a0a00;font-style:italic;">Your feedback has been noted.</div></div>
+    <div style="text-align:center;font-size:11px;color:#9c8e80;font-style:italic;font-family:'Lora',serif;margin-top:6px;">Click a star above to rate — opens in your browser</div>
   </div>
   <div style="padding:20px 48px;background:#faf5ed;text-align:center;">
     <div class="orn" style="font-size:12px;margin-bottom:10px;">· · ·</div>
     <div><a href="#" style="font-size:11px;color:#8b7355;text-decoration:none;margin:0 10px;">Unsubscribe</a><a href="#" style="font-size:11px;color:#8b7355;text-decoration:none;margin:0 10px;">Preferences</a><a href="#" style="font-size:11px;color:#8b7355;text-decoration:none;margin:0 10px;">Privacy</a></div>
     <div style="font-size:11px;color:#c9a96e;margin-top:8px;">Convin Data Labs · Registered client communication.</div>
   </div>
-</div>{js}</body></html>"""
+</div></body></html>"""
 
 
 # ─── Template 6: Neon ─────────────────────────────────────────────────────────
@@ -417,12 +376,6 @@ body { background: #020a12; font-family: 'Inter', sans-serif; padding: 32px 16px
 .wrap { max-width: 600px; margin: 0 auto; background: #040d18; border: 1px solid #0c2a3a; border-radius: 16px; overflow: hidden; box-shadow: 0 0 60px rgba(6,182,212,0.08), 0 24px 80px rgba(0,0,0,0.7); }
 .star { font-size: 28px; cursor: pointer; color: #0c2a3a; margin: 0 4px; display: inline-block; transition: color 0.12s, text-shadow 0.12s; user-select: none; }
 </style>"""
-    js = """
-<script>
-let sel=0;const stars=document.querySelectorAll('.star');
-function rate(el,v){sel=v;stars.forEach((s,i)=>{s.style.color=i<v?'#06b6d4':'#0c2a3a';s.style.textShadow=i<v?'0 0 8px rgba(6,182,212,0.7)':'none';});document.getElementById('sbtn').disabled=false;}
-function thanks(){document.getElementById('sbtn').parentNode.style.display='none';document.getElementById('ty').style.display='block';}
-</script>"""
     ss_html = _screenshot(ss, sc,
         wrap_css="padding:0 40px 32px;",
         img_css="border-radius:10px;border:1px solid #0c2a3a;")
@@ -460,18 +413,16 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
       <div style="font-size:12px;color:#164e63;">Takes 15 seconds · Helps us improve.</div>
     </div>
     <div style="text-align:center;margin-bottom:8px;">
-      <span class="star" onclick="rate(this,1)">★</span><span class="star" onclick="rate(this,2)">★</span><span class="star" onclick="rate(this,3)">★</span><span class="star" onclick="rate(this,4)">★</span><span class="star" onclick="rate(this,5)">★</span>
+      <a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=1" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=2" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=3" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=4" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=5" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:20px;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#0c2a3a;">Not useful</span><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#0c2a3a;">Very useful</span></div>
-    <textarea style="width:100%;padding:12px 14px;background:#040d18;border:1px solid #0c2a3a;color:#94a3b8;font-family:'Inter',sans-serif;font-size:13px;resize:vertical;min-height:68px;outline:none;box-sizing:border-box;border-radius:8px;" placeholder="Additional comments (optional)"></textarea>
-    <button id="sbtn" disabled onclick="thanks()" style="display:block;width:100%;margin-top:14px;padding:14px;background:#06b6d4;color:#020a12;font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;border:none;border-radius:8px;cursor:pointer;box-shadow:0 0 20px rgba(6,182,212,0.3);">Submit Feedback</button>
-    <div id="ty" style="display:none;text-align:center;padding:20px;"><div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#06b6d4;margin-bottom:8px;">Thank You</div><div style="font-size:18px;color:#e0f7fa;">Your feedback has been noted.</div></div>
+    <div style="text-align:center;font-size:11px;color:rgba(6,182,212,0.4);letter-spacing:0.5px;margin-top:6px;">Click a star above to rate — opens in your browser</div>
   </div>
   <div style="padding:18px 40px;background:#020a12;text-align:center;border-top:1px solid #0c2a3a;">
     <div><a href="#" style="font-size:11px;color:#164e63;text-decoration:none;margin:0 10px;">Unsubscribe</a><a href="#" style="font-size:11px;color:#164e63;text-decoration:none;margin:0 10px;">Preferences</a><a href="#" style="font-size:11px;color:#164e63;text-decoration:none;margin:0 10px;">Privacy</a></div>
     <div style="font-size:11px;color:#0c2a3a;margin-top:6px;">Convin Data Labs · Registered client communication.</div>
   </div>
-</div>{js}</body></html>"""
+</div></body></html>"""
 
 
 # ─── Template 7: Sunrise ──────────────────────────────────────────────────────
@@ -485,12 +436,6 @@ body { background: #fde8d0; font-family: 'Inter', sans-serif; padding: 32px 16px
 .wrap { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 40px rgba(234,88,12,0.12); }
 .star { font-size: 28px; cursor: pointer; color: #fde8d0; margin: 0 4px; display: inline-block; transition: color 0.12s; user-select: none; }
 </style>"""
-    js = """
-<script>
-let sel=0;const stars=document.querySelectorAll('.star');
-function rate(el,v){sel=v;stars.forEach((s,i)=>{s.style.color=i<v?'#fb923c':'#fde8d0';});document.getElementById('sbtn').disabled=false;}
-function thanks(){document.getElementById('sbtn').parentNode.style.display='none';document.getElementById('ty').style.display='block';}
-</script>"""
     ss_html = _screenshot(ss, sc,
         wrap_css="padding:0 44px 32px;",
         img_css="border-radius:12px;border:1px solid #fed7aa;")
@@ -531,18 +476,16 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
       <div style="font-size:12px;color:rgba(255,255,255,0.5);">Takes 15 seconds · Helps us improve.</div>
     </div>
     <div style="text-align:center;margin-bottom:8px;">
-      <span class="star" onclick="rate(this,1)">★</span><span class="star" onclick="rate(this,2)">★</span><span class="star" onclick="rate(this,3)">★</span><span class="star" onclick="rate(this,4)">★</span><span class="star" onclick="rate(this,5)">★</span>
+      <a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=1" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=2" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=3" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=4" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=5" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:20px;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.3);">Not useful</span><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.3);">Very useful</span></div>
-    <textarea style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.15);border:1px solid rgba(255,255,255,0.2);color:#fff;font-family:'Inter',sans-serif;font-size:13px;resize:vertical;min-height:68px;outline:none;box-sizing:border-box;border-radius:10px;" placeholder="Additional comments (optional)"></textarea>
-    <button id="sbtn" disabled onclick="thanks()" style="display:block;width:100%;margin-top:14px;padding:14px;background:#fff;color:#ea580c;font-size:12px;font-weight:700;letter-spacing:0.04em;border:none;border-radius:10px;cursor:pointer;">Submit Feedback</button>
-    <div id="ty" style="display:none;text-align:center;padding:20px;"><div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.7);margin-bottom:8px;">Thank You</div><div style="font-size:18px;color:#fff;">Your feedback has been noted.</div></div>
+    <div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;">Click a star above to rate — opens in your browser</div>
   </div>
   <div style="padding:18px 44px;background:#fff8f3;text-align:center;border-top:1px solid #fde8d0;">
     <div><a href="#" style="font-size:11px;color:#c2410c;text-decoration:none;margin:0 10px;">Unsubscribe</a><a href="#" style="font-size:11px;color:#c2410c;text-decoration:none;margin:0 10px;">Preferences</a><a href="#" style="font-size:11px;color:#c2410c;text-decoration:none;margin:0 10px;">Privacy</a></div>
     <div style="font-size:11px;color:#fed7aa;margin-top:8px;">Convin Data Labs · Registered client communication.</div>
   </div>
-</div>{js}</body></html>"""
+</div></body></html>"""
 
 
 # ─── Template 8: Forest ───────────────────────────────────────────────────────
@@ -556,12 +499,6 @@ body { background: #071a0e; font-family: 'Inter', sans-serif; padding: 32px 16px
 .wrap { max-width: 600px; margin: 0 auto; background: #0b1f14; border: 1px solid #132e1c; border-radius: 18px; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.6); }
 .star { font-size: 28px; cursor: pointer; color: #132e1c; margin: 0 4px; display: inline-block; transition: color 0.12s; user-select: none; }
 </style>"""
-    js = """
-<script>
-let sel=0;const stars=document.querySelectorAll('.star');
-function rate(el,v){sel=v;stars.forEach((s,i)=>{s.style.color=i<v?'#10b981':'#132e1c';});document.getElementById('sbtn').disabled=false;}
-function thanks(){document.getElementById('sbtn').parentNode.style.display='none';document.getElementById('ty').style.display='block';}
-</script>"""
     ss_html = _screenshot(ss, sc,
         wrap_css="padding:0 44px 32px;",
         img_css="border-radius:10px;border:1px solid #132e1c;")
@@ -599,18 +536,16 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
       <div style="font-size:12px;color:#1a3a24;">Takes 15 seconds · Helps us improve.</div>
     </div>
     <div style="text-align:center;margin-bottom:8px;">
-      <span class="star" onclick="rate(this,1)">★</span><span class="star" onclick="rate(this,2)">★</span><span class="star" onclick="rate(this,3)">★</span><span class="star" onclick="rate(this,4)">★</span><span class="star" onclick="rate(this,5)">★</span>
+      <a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=1" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=2" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=3" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=4" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=5" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:20px;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#132e1c;">Not useful</span><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#132e1c;">Very useful</span></div>
-    <textarea style="width:100%;padding:12px 14px;background:#0b1f14;border:1px solid #132e1c;color:#6ee7b7;font-family:'Inter',sans-serif;font-size:13px;resize:vertical;min-height:68px;outline:none;box-sizing:border-box;border-radius:8px;" placeholder="Additional comments (optional)"></textarea>
-    <button id="sbtn" disabled onclick="thanks()" style="display:block;width:100%;margin-top:14px;padding:14px;background:#10b981;color:#022c16;font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;border:none;border-radius:8px;cursor:pointer;">Submit Feedback</button>
-    <div id="ty" style="display:none;text-align:center;padding:20px;"><div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#10b981;margin-bottom:8px;">Thank You</div><div style="font-size:18px;color:#d1fae5;">Your feedback has been noted.</div></div>
+    <div style="text-align:center;font-size:11px;color:rgba(16,185,129,0.4);margin-top:6px;">Click a star above to rate — opens in your browser</div>
   </div>
   <div style="padding:18px 44px;background:#040f08;text-align:center;border-top:1px solid #132e1c;">
     <div><a href="#" style="font-size:11px;color:#166534;text-decoration:none;margin:0 10px;">Unsubscribe</a><a href="#" style="font-size:11px;color:#166534;text-decoration:none;margin:0 10px;">Preferences</a><a href="#" style="font-size:11px;color:#166534;text-decoration:none;margin:0 10px;">Privacy</a></div>
     <div style="font-size:11px;color:#132e1c;margin-top:6px;">Convin Data Labs · Registered client communication.</div>
   </div>
-</div>{js}</body></html>"""
+</div></body></html>"""
 
 
 # ─── Template 9: Carbon ───────────────────────────────────────────────────────
@@ -624,12 +559,6 @@ body { background: #111; font-family: 'Inter', sans-serif; padding: 32px 16px 48
 .wrap { max-width: 600px; margin: 0 auto; background: #1a1a1a; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.7); }
 .star { font-size: 28px; cursor: pointer; color: #333; margin: 0 4px; display: inline-block; transition: color 0.12s; user-select: none; }
 </style>"""
-    js = """
-<script>
-let sel=0;const stars=document.querySelectorAll('.star');
-function rate(el,v){sel=v;stars.forEach((s,i)=>{s.style.color=i<v?'#f97316':'#333';});document.getElementById('sbtn').disabled=false;}
-function thanks(){document.getElementById('sbtn').parentNode.style.display='none';document.getElementById('ty').style.display='block';}
-</script>"""
     ss_html = _screenshot(ss, sc,
         wrap_css="padding:0 44px 32px;",
         img_css="border:2px solid #2a2a2a;")
@@ -673,15 +602,13 @@ function thanks(){document.getElementById('sbtn').parentNode.style.display='none
       <div style="font-size:12px;color:#333;">Takes 15 seconds · Helps us improve.</div>
     </div>
     <div style="text-align:center;margin-bottom:8px;">
-      <span class="star" onclick="rate(this,1)">★</span><span class="star" onclick="rate(this,2)">★</span><span class="star" onclick="rate(this,3)">★</span><span class="star" onclick="rate(this,4)">★</span><span class="star" onclick="rate(this,5)">★</span>
+      <a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=1" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=2" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=3" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=4" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=5" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:20px;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#2a2a2a;">Not useful</span><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#2a2a2a;">Very useful</span></div>
-    <textarea style="width:100%;padding:12px 14px;background:#1a1a1a;border:1px solid #2a2a2a;color:#aaa;font-family:'Inter',sans-serif;font-size:13px;resize:vertical;min-height:68px;outline:none;box-sizing:border-box;" placeholder="Additional comments (optional)"></textarea>
-    <button id="sbtn" disabled onclick="thanks()" style="display:block;width:100%;margin-top:14px;padding:15px;background:#f97316;color:#fff;font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;border:none;cursor:pointer;">Submit Feedback</button>
-    <div id="ty" style="display:none;text-align:center;padding:20px;"><div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#f97316;margin-bottom:8px;">Thank You</div><div style="font-size:18px;color:#fff;">Your feedback has been noted.</div></div>
+    <div style="text-align:center;font-size:11px;color:#555;margin-top:6px;">Click a star above to rate — opens in your browser</div>
   </div>
   <div style="padding:18px 44px;background:#141414;text-align:center;border-top:1px solid #222;">
     <div><a href="#" style="font-size:11px;color:#444;text-decoration:none;margin:0 10px;">Unsubscribe</a><a href="#" style="font-size:11px;color:#444;text-decoration:none;margin:0 10px;">Preferences</a><a href="#" style="font-size:11px;color:#444;text-decoration:none;margin:0 10px;">Privacy</a></div>
     <div style="font-size:11px;color:#2a2a2a;margin-top:6px;">Convin Data Labs · Registered client communication.</div>
   </div>
-</div>{js}</body></html>"""
+</div></body></html>"""

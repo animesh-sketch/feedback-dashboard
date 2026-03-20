@@ -71,6 +71,40 @@ if "gmail_secrets_loaded" not in st.session_state:
         if sender:
             st.session_state["user_email"] = sender
 
+# ─── Feedback landing page (from email star links) ────────────────────────────
+
+_rating_param = st.query_params.get("rating")
+if _rating_param:
+    try:
+        _r = max(1, min(5, int(_rating_param)))
+    except (ValueError, TypeError):
+        _r = 0
+    if _r:
+        _stars_filled = "★" * _r + "☆" * (5 - _r)
+        st.markdown(f"""
+<style>
+html, body, [class*="css"] {{ font-family: 'Inter', -apple-system, sans-serif; }}
+#MainMenu {{ visibility: hidden; }} footer {{ visibility: hidden; }} header {{ visibility: hidden; }}
+.stApp {{ background: #f4f4f5 !important; }}
+</style>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 16px;">
+  <div style="background:#fff;border-radius:20px;padding:56px 48px;max-width:460px;width:100%;
+              text-align:center;box-shadow:0 4px 32px rgba(0,0,0,0.08);border:1px solid #e4e4e7;">
+    <div style="font-size:52px;margin-bottom:20px;">✅</div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
+                color:#2563eb;margin-bottom:12px;">Feedback received</div>
+    <div style="font-size:26px;font-weight:700;color:#18181b;margin-bottom:10px;">Thank you!</div>
+    <div style="font-size:15px;color:#71717a;line-height:1.65;margin-bottom:28px;">
+      You rated this report <strong style="color:#18181b;">{_r} out of 5 stars</strong>.<br>
+      Your feedback helps us improve future reports.
+    </div>
+    <div style="font-size:36px;color:#f59e0b;letter-spacing:5px;margin-bottom:28px;">{_stars_filled}</div>
+    <div style="font-size:13px;color:#a1a1aa;">You can close this tab.</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+        st.stop()
+
 # ─── Global CSS ───────────────────────────────────────────────────────────────
 
 st.markdown("""
