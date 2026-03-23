@@ -1200,11 +1200,16 @@ def _single_image_slot(d: dict, url_key: str, cap_key: str, label: str, key_suff
                 st.rerun()
         else:
             uploaded = st.file_uploader(
-                "Upload", type=["png", "jpg", "jpeg", "gif", "webp"],
+                "Upload", type=["png", "jpg", "jpeg", "gif", "webp", "pdf"],
                 key=f"up_{url_key}_{key_suffix}", label_visibility="collapsed",
             )
             if uploaded:
-                img = Image.open(uploaded)
+                if uploaded.type == "application/pdf":
+                    import pypdfium2 as pdfium
+                    pdf = pdfium.PdfDocument(uploaded.read())
+                    img = pdf[0].render(scale=2).to_pil()
+                else:
+                    img = Image.open(uploaded)
                 img.thumbnail((1200, 1200), Image.LANCZOS)
                 buf = io.BytesIO()
                 if uploaded.type == "image/png":
