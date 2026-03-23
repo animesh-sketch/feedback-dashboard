@@ -1185,52 +1185,56 @@ _TMPL_BG_COLORS   = ["#0d1b2a", "#f1f5f9", "#1e3a8a", "#13111f", "#f4ede0",
 
 
 def _single_image_slot(d: dict, url_key: str, cap_key: str, label: str, key_suffix: str):
-    """Renders one image upload/paste slot inside an expander."""
-    has_img = bool(d.get(url_key, ""))
-    with st.expander(f"🖼 {label}{'  ✓' if has_img else '  (optional)'}", expanded=has_img):
-        current_url = d.get(url_key, "")
-        if current_url.startswith("data:") or (current_url.startswith("http") and current_url):
-            st.markdown(
-                f'<img src="{current_url}" style="max-width:220px;display:block;border-radius:4px;margin-bottom:6px;" />',
-                unsafe_allow_html=True,
-            )
-            if st.button("✕ Remove", key=f"rm_{url_key}_{key_suffix}", use_container_width=False):
-                d[url_key] = ""
-                d[cap_key] = ""
-                st.rerun()
-        else:
-            uploaded = st.file_uploader(
-                "Upload", type=["png", "jpg", "jpeg", "gif", "webp", "pdf"],
-                key=f"up_{url_key}_{key_suffix}", label_visibility="collapsed",
-            )
-            if uploaded:
-                if uploaded.type == "application/pdf":
-                    import pypdfium2 as pdfium
-                    pdf = pdfium.PdfDocument(uploaded.read())
-                    img = pdf[0].render(scale=2).to_pil()
-                else:
-                    img = Image.open(uploaded)
-                img.thumbnail((1200, 1200), Image.LANCZOS)
-                buf = io.BytesIO()
-                if uploaded.type == "image/png":
-                    img.save(buf, format="PNG", optimize=True)
-                    mime = "image/png"
-                else:
-                    img = img.convert("RGB")
-                    img.save(buf, format="JPEG", quality=82, optimize=True)
-                    mime = "image/jpeg"
-                b64 = base64.b64encode(buf.getvalue()).decode()
-                d[url_key] = f"data:{mime};base64,{b64}"
-                st.rerun()
-            d[url_key] = st.text_input(
-                "Or paste URL", value=current_url,
-                key=f"url_{url_key}_{key_suffix}", placeholder="https://…",
-                label_visibility="visible",
-            )
-        d[cap_key] = st.text_input(
-            "Caption", value=d.get(cap_key, ""),
-            key=f"cap_{url_key}_{key_suffix}", placeholder="Optional caption",
+    """Renders one image upload/paste slot — always visible, drag-and-drop enabled."""
+    st.markdown(
+        f'<div style="color:#475569;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;'
+        f'text-transform:uppercase;margin:10px 0 4px;">🖼 {label}</div>',
+        unsafe_allow_html=True,
+    )
+    current_url = d.get(url_key, "")
+    if current_url.startswith("data:") or (current_url.startswith("http") and current_url):
+        st.markdown(
+            f'<img src="{current_url}" style="max-width:100%;display:block;border-radius:6px;'
+            f'margin-bottom:6px;border:1px solid #e2e8f0;" />',
+            unsafe_allow_html=True,
         )
+        if st.button("✕ Remove image", key=f"rm_{url_key}_{key_suffix}", use_container_width=False):
+            d[url_key] = ""
+            d[cap_key] = ""
+            st.rerun()
+    else:
+        uploaded = st.file_uploader(
+            f"Drag & drop or click to upload — PNG, JPG, PDF",
+            type=["png", "jpg", "jpeg", "gif", "webp", "pdf"],
+            key=f"up_{url_key}_{key_suffix}",
+        )
+        if uploaded:
+            if uploaded.type == "application/pdf":
+                import pypdfium2 as pdfium
+                pdf = pdfium.PdfDocument(uploaded.read())
+                img = pdf[0].render(scale=2).to_pil()
+            else:
+                img = Image.open(uploaded)
+            img.thumbnail((1200, 1200), Image.LANCZOS)
+            buf = io.BytesIO()
+            if uploaded.type == "image/png":
+                img.save(buf, format="PNG", optimize=True)
+                mime = "image/png"
+            else:
+                img = img.convert("RGB")
+                img.save(buf, format="JPEG", quality=82, optimize=True)
+                mime = "image/jpeg"
+            b64 = base64.b64encode(buf.getvalue()).decode()
+            d[url_key] = f"data:{mime};base64,{b64}"
+            st.rerun()
+        d[url_key] = st.text_input(
+            "Or paste image/PDF URL", value=current_url,
+            key=f"url_{url_key}_{key_suffix}", placeholder="https://…",
+        )
+    d[cap_key] = st.text_input(
+        "Caption (optional)", value=d.get(cap_key, ""),
+        key=f"cap_{url_key}_{key_suffix}", placeholder="e.g. Monthly revenue chart",
+    )
 
 
 def _screenshot_input(d: dict, key_suffix: str):
