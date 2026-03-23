@@ -1190,7 +1190,10 @@ def _single_image_slot(d: dict, url_key: str, cap_key: str, label: str, key_suff
     with st.expander(f"🖼 {label}{'  ✓' if has_img else '  (optional)'}", expanded=has_img):
         current_url = d.get(url_key, "")
         if current_url.startswith("data:") or (current_url.startswith("http") and current_url):
-            st.image(current_url, width=220)
+            st.markdown(
+                f'<img src="{current_url}" style="max-width:220px;display:block;border-radius:4px;margin-bottom:6px;" />',
+                unsafe_allow_html=True,
+            )
             if st.button("✕ Remove", key=f"rm_{url_key}_{key_suffix}", use_container_width=False):
                 d[url_key] = ""
                 d[cap_key] = ""
