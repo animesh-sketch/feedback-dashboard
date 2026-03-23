@@ -6,7 +6,9 @@ import streamlit as st
 import pandas as pd
 import streamlit.components.v1 as components
 import base64
-from data import ANALYTICS_BY_PERIOD, EMAIL_ANALYTICS, CSAT_RESPONDENTS, DAILY_DATES, WEEKLY_DATES
+import io
+from PIL import Image
+from data import ANALYTICS_BY_PERIOD, EMAIL_ANALYTICS, CSAT_RESPONDENTS, DAILY_DATES, WEEKLY_DATES, CAMPAIGNS, ACTION_QUEUE, HEALTH_KPIS, delta_is_positive, format_kpi, format_delta
 from email_builder import build_email_html, TEMPLATE_NAMES
 import client_store
 import auth
@@ -1199,8 +1201,18 @@ def _single_image_slot(d: dict, url_key: str, cap_key: str, label: str, key_suff
                 key=f"up_{url_key}_{key_suffix}", label_visibility="collapsed",
             )
             if uploaded:
-                b64 = base64.b64encode(uploaded.read()).decode()
-                d[url_key] = f"data:{uploaded.type};base64,{b64}"
+                img = Image.open(uploaded)
+                img.thumbnail((1200, 1200), Image.LANCZOS)
+                buf = io.BytesIO()
+                if uploaded.type == "image/png":
+                    img.save(buf, format="PNG", optimize=True)
+                    mime = "image/png"
+                else:
+                    img = img.convert("RGB")
+                    img.save(buf, format="JPEG", quality=82, optimize=True)
+                    mime = "image/jpeg"
+                b64 = base64.b64encode(buf.getvalue()).decode()
+                d[url_key] = f"data:{mime};base64,{b64}"
                 st.rerun()
             d[url_key] = st.text_input(
                 "Or paste URL", value=current_url,
@@ -1626,6 +1638,143 @@ def render_email_maker():
 
 # ─── Sidebar CSS toggle (pure Python — no JS needed) ─────────────────────────
 
+# ─── Quality Engine — Red Flag Scanner ───────────────────────────────────────
+
+def render_quality_engine():
+    st.markdown("""<div class="page-header">
+        <div class="page-title">🚨 Red Flag Scanner</div>
+        <div class="page-sub">Quality Engine · Automated issue detection across reports, feedback, and SLA compliance.</div>
+    </div>""", unsafe_allow_html=True)
+
+    sla_breached   = [i for i in ACTION_QUEUE if i.get("sla_breached")]
+    critical_rpts  = [c for c in CAMPAIGNS if "Critical" in c["status"]]
+    needs_action   = [c for c in CAMPAIGNS if "Needs Action" in c["status"]]
+    low_csat       = [r for r in CSAT_RESPONDENTS if r["rating"] <= 2]
+    declining_kpis = [m for m in HEALTH_KPIS if not delta_is_positive(m)]
+
+    n_critical = len(sla_breached) + len(critical_rpts)
+    n_high     = len(low_csat) + len(needs_action)
+    n_medium   = len(declining_kpis)
+    n_total    = n_critical + n_high + n_medium
+
+    # ── Summary bar ──────────────────────────────────────────────────────────
+    sc1, sc2, sc3, sc4 = st.columns(4)
+    with sc1:
+        st.markdown(f"""<div class="metric-card accent-red">
+            <div class="metric-label">Critical Flags</div>
+            <div class="metric-value">{n_critical}</div>
+            <div class="metric-sub">SLA breaches &amp; critical reports</div>
+        </div>""", unsafe_allow_html=True)
+    with sc2:
+        st.markdown(f"""<div class="metric-card accent-amber">
+            <div class="metric-label">High Flags</div>
+            <div class="metric-value">{n_high}</div>
+            <div class="metric-sub">Low CSAT &amp; reports needing action</div>
+        </div>""", unsafe_allow_html=True)
+    with sc3:
+        st.markdown(f"""<div class="metric-card accent-blue">
+            <div class="metric-label">Medium Flags</div>
+            <div class="metric-value">{n_medium}</div>
+            <div class="metric-sub">Declining KPI trends</div>
+        </div>""", unsafe_allow_html=True)
+    with sc4:
+        clear_cls = "accent-green" if n_total == 0 else ""
+        st.markdown(f"""<div class="metric-card {clear_cls}">
+            <div class="metric-label">Total Open Flags</div>
+            <div class="metric-value">{n_total}</div>
+            <div class="metric-sub">Across all categories</div>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
+
+    # ── SLA Breaches ─────────────────────────────────────────────────────────
+    if sla_breached:
+        st.markdown('<span class="section-chip">🔴 SLA Breaches</span>', unsafe_allow_html=True)
+        for item in sla_breached:
+            overdue_h = item["hours_open"] - item["sla_hours"]
+            tags_html = "".join(f'<span class="tag-chip">{t}</span>' for t in item.get("tags", []))
+            stars = "⭐" * item["score"]
+            st.markdown(f"""
+            <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:12px;padding:16px 20px;margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                    <span style="font-size:0.85rem;font-weight:700;color:#dc2626;">{item['priority']}</span>
+                    <span style="font-size:0.85rem;font-weight:600;color:#18181b;">{item['name']}</span>
+                    <span style="font-size:0.75rem;color:#71717a;">{item['email']}</span>
+                    <span style="margin-left:auto;font-size:0.72rem;background:#fecaca;color:#dc2626;font-weight:700;padding:3px 10px;border-radius:6px;">+{overdue_h}h overdue</span>
+                </div>
+                <div style="font-size:0.78rem;color:#52525b;margin-bottom:8px;">"{item['comment']}"</div>
+                <div style="font-size:0.71rem;color:#71717a;">Campaign: {item['campaign']} &nbsp;·&nbsp; Score: {stars} {item['score']}/5 &nbsp;·&nbsp; {tags_html}</div>
+            </div>""", unsafe_allow_html=True)
+
+    # ── Critical Reports ──────────────────────────────────────────────────────
+    if critical_rpts:
+        st.markdown('<span class="section-chip">🔴 Critical Reports</span>', unsafe_allow_html=True)
+        for c in critical_rpts:
+            resp_rate = round(c["responses"] / c["sent"] * 100, 1) if c["sent"] else 0
+            st.markdown(f"""
+            <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:12px;padding:16px 20px;margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <span style="font-size:0.85rem;font-weight:700;color:#dc2626;">{c['status']}</span>
+                    <span style="font-size:0.85rem;font-weight:600;color:#18181b;">{c['name']}</span>
+                </div>
+                <div style="font-size:0.75rem;color:#71717a;">{c['type']} &nbsp;·&nbsp; Score: <strong>{c['score']}</strong> &nbsp;·&nbsp; Audience: {c['audience']} &nbsp;·&nbsp; {c['responses']}/{c['sent']} responses ({resp_rate}%) &nbsp;·&nbsp; Sent {c['sent_at']}</div>
+            </div>""", unsafe_allow_html=True)
+
+    # ── Negative Feedback ─────────────────────────────────────────────────────
+    if low_csat:
+        st.markdown('<span class="section-chip">🟠 Negative Feedback (≤ 2 stars)</span>', unsafe_allow_html=True)
+        for r in low_csat:
+            filled = "★" * r["rating"]
+            empty  = "☆" * (5 - r["rating"])
+            st.markdown(f"""
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 20px;margin-bottom:10px;display:flex;align-items:center;gap:14px;">
+                <span style="font-size:1.1rem;color:#f59e0b;letter-spacing:2px;">{filled}{empty}</span>
+                <div style="flex:1;">
+                    <div style="font-size:0.82rem;font-weight:600;color:#18181b;">{r['name']}</div>
+                    <div style="font-size:0.72rem;color:#71717a;">{r['email']} &nbsp;·&nbsp; {r['date']}</div>
+                </div>
+                <span style="font-size:0.72rem;background:#fef9c3;color:#d97706;font-weight:700;padding:3px 10px;border-radius:6px;">{r['rating']}/5</span>
+            </div>""", unsafe_allow_html=True)
+
+    # ── Reports Needing Action ────────────────────────────────────────────────
+    if needs_action:
+        st.markdown('<span class="section-chip">🟠 Reports Needing Action</span>', unsafe_allow_html=True)
+        for c in needs_action:
+            resp_rate = round(c["responses"] / c["sent"] * 100, 1) if c["sent"] else 0
+            st.markdown(f"""
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px 20px;margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <span style="font-size:0.85rem;font-weight:700;color:#d97706;">{c['status']}</span>
+                    <span style="font-size:0.85rem;font-weight:600;color:#18181b;">{c['name']}</span>
+                </div>
+                <div style="font-size:0.75rem;color:#71717a;">{c['type']} &nbsp;·&nbsp; Score: <strong>{c['score']}</strong> &nbsp;·&nbsp; Audience: {c['audience']} &nbsp;·&nbsp; {c['responses']}/{c['sent']} responses ({resp_rate}%) &nbsp;·&nbsp; Sent {c['sent_at']}</div>
+            </div>""", unsafe_allow_html=True)
+
+    # ── Declining KPIs ────────────────────────────────────────────────────────
+    if declining_kpis:
+        st.markdown('<span class="section-chip">🟡 Declining KPIs</span>', unsafe_allow_html=True)
+        for m in declining_kpis:
+            st.markdown(f"""
+            <div style="background:#fefce8;border:1px solid #fef08a;border-radius:12px;padding:14px 20px;margin-bottom:10px;display:flex;align-items:center;gap:14px;">
+                <div style="flex:1;">
+                    <div style="font-size:0.82rem;font-weight:600;color:#18181b;">{m.label}</div>
+                    <div style="font-size:0.72rem;color:#71717a;">{m.description}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:1.2rem;font-weight:800;color:#18181b;">{format_kpi(m)}</div>
+                    <div style="font-size:0.72rem;color:#dc2626;font-weight:700;">{format_delta(m)} vs prev</div>
+                </div>
+            </div>""", unsafe_allow_html=True)
+
+    if n_total == 0:
+        st.markdown("""
+        <div style="text-align:center;padding:4rem 2rem;">
+            <div style="font-size:2.5rem;">✅</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#059669;margin-top:1rem;">All Clear</div>
+            <div style="font-size:0.85rem;color:#71717a;margin-top:0.5rem;">No red flags detected across reports, feedback, and delivery.</div>
+        </div>""", unsafe_allow_html=True)
+
+
 if not st.session_state["show_sidebar"]:
     st.markdown("""
     <style>
@@ -1682,7 +1831,7 @@ div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind
 </style>
 """, unsafe_allow_html=True)
 
-_n0, _n1, _n2, _n3, _n_spacer = st.columns([1.2, 2, 2, 2, 4])
+_n0, _n1, _n2, _n3, _n4, _n_spacer = st.columns([1.2, 2, 2, 2, 2, 2])
 
 with _n0:
     _sb_label = "✕ Close" if st.session_state["show_sidebar"] else "⚙️ Settings"
@@ -1691,9 +1840,10 @@ with _n0:
         st.rerun()
 
 _page_btns = {
-    "Overview":    ("📊 Overview",    _n1),
-    "Clients":     ("🏢 Clients",     _n2),
-    "Email Maker": ("📧 Email Maker", _n3),
+    "Overview":       ("📊 Overview",    _n1),
+    "Clients":        ("🏢 Clients",     _n2),
+    "Email Maker":    ("📧 Email Maker", _n3),
+    "Quality Engine": ("🚨 Red Flag",    _n4),
 }
 for _key, (_label, _col) in _page_btns.items():
     with _col:
