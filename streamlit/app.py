@@ -1193,11 +1193,11 @@ def _single_image_slot(d: dict, url_key: str, cap_key: str, label: str, key_suff
     )
     current_url = d.get(url_key, "")
     if current_url.startswith("data:") or (current_url.startswith("http") and current_url):
-        st.markdown(
-            f'<img src="{current_url}" style="max-width:100%;display:block;border-radius:6px;'
-            f'margin-bottom:6px;border:1px solid #e2e8f0;" />',
-            unsafe_allow_html=True,
-        )
+        if current_url.startswith("data:"):
+            _, b64_part = current_url.split(",", 1)
+            st.image(base64.b64decode(b64_part), width=300)
+        else:
+            st.image(current_url, width=300)
         if st.button("✕ Remove image", key=f"rm_{url_key}_{key_suffix}", use_container_width=False):
             d[url_key] = ""
             d[cap_key] = ""
@@ -1391,7 +1391,7 @@ def render_email_maker():
         d["headline"] = st.text_area("Headline (shown inside email)", value=d["headline"], key=f"cc_head_{ci}", height=68, placeholder="e.g. February showed strong growth across all key metrics…")
         d["body"]     = st.text_area("Email Body",                    value=d["body"],     key=f"cc_body_{ci}", height=120, placeholder="Write the main body of the email…")
 
-        with st.expander("🖼  Images & Survey (optional)"):
+        with st.expander("🖼  Images & Survey (optional)", expanded=True):
             _screenshot_input(d, f"c{ci}")
             st.markdown("")
             d["survey_question"] = st.text_input("Survey Question", value=d["survey_question"], key=f"cc_sq_{ci}")
