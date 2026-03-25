@@ -1,10 +1,18 @@
 """
-Persistent client repository using st.session_state as the primary store.
-Data survives Streamlit reruns within the same browser session.
-On first load, initialises from the local JSON file (if present) or sample data.
-Best-effort file save works locally; silently no-ops on read-only cloud deployments.
+Persistent client repository.
+
+Storage priority:
+  1. st.session_state — fast intra-session access (no API calls)
+  2. GitHub API       — cross-deploy persistence on Streamlit Cloud
+  3. Local file       — fallback / local dev
+  4. Sample data      — absolute last resort
+
+To enable GitHub persistence, add to .streamlit/secrets.toml:
+    GITHUB_TOKEN = "ghp_xxxxxxxxxxxx"   # PAT with repo write access
+    GITHUB_REPO  = "animesh-sketch/feedback-dashboard"  # optional override
 """
 
+import base64 as _b64
 import json
 import os
 import uuid
@@ -12,12 +20,12 @@ from datetime import datetime, timezone
 
 import streamlit as st
 
-_FILE = os.path.join(os.path.dirname(__file__), "clients.json")
-_SS_KEY = "client_store_data"
+_FILE    = os.path.join(os.path.dirname(__file__), "clients.json")
+_SS_KEY  = "client_store_data"
+_DEFAULT_REPO = "animesh-sketch/feedback-dashboard"
+_GH_PATH = "streamlit/clients.json"
 
-# Status options available throughout the app
 STATUSES = ["Active", "At Risk", "Inactive"]
-
 
 SAMPLE_CLIENTS = [
     {
@@ -50,58 +58,113 @@ SAMPLE_CLIENTS = [
         "notes": "Renewal due in April — needs check-in call.",
         "added_at": "Feb 01, 2026",
     },
-    {
-        "id": "demo0004",
-        "company": "Bridgewater Finance",
-        "contact": "Michael Torres",
-        "emails": ["m.torres@bridgewaterfinance.com"],
-        "status": "Active",
-        "tags": ["Finance", "Enterprise"],
-        "notes": "Prefers executive summary format.",
-        "added_at": "Feb 10, 2026",
-    },
-    {
-        "id": "demo0005",
-        "company": "Greenleaf Solutions",
-        "contact": "Priya Mehta",
-        "emails": ["priya@greenleaf.co", "ops@greenleaf.co"],
-        "status": "Inactive",
-        "tags": ["SMB"],
-        "notes": "On hold since Feb — follow up in Q2.",
-        "added_at": "Feb 14, 2026",
-    },
 ]
 
 
+# ── GitHub API helpers ────────────────────────────────────────────────────────
+
+def _gh_headers():
+    token = st.secrets.get("GITHUB_TOKEN", "")
+    if not token:
+        return None
+    return {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+
+def _gh_load():
+    """Read clients.json from GitHub repo. Returns list or None."""
+    try:
+        import requests as _req
+        hdrs = _gh_headers()
+        if not hdrs:
+            return None
+        repo = st.secrets.get("GITHUB_REPO", _DEFAULT_REPO)
+        url  = f"https://api.github.com/repos/{repo}/contents/{_GH_PATH}"
+        r = _req.get(url, headers=hdrs, timeout=8)
+        if r.status_code == 200:
+            raw = _b64.b64decode(r.json()["content"]).decode("utf-8")
+            return json.loads(raw)
+    except Exception:
+        pass
+    return None
+
+
+def _gh_save(clients: list) -> bool:
+    """Write clients.json back to GitHub repo. Returns True on success."""
+    try:
+        import requests as _req
+        hdrs = _gh_headers()
+        if not hdrs:
+            return False
+        repo = st.secrets.get("GITHUB_REPO", _DEFAULT_REPO)
+        url  = f"https://api.github.com/repos/{repo}/contents/{_GH_PATH}"
+        # Get current SHA (required to update an existing file)
+        sha = None
+        r = _req.get(url, headers=hdrs, timeout=5)
+        if r.status_code == 200:
+            sha = r.json().get("sha")
+        content = _b64.b64encode(
+            json.dumps(clients, indent=2, ensure_ascii=False).encode()
+        ).decode()
+        payload = {
+            "message": "chore: update client repository",
+            "content": content,
+        }
+        if sha:
+            payload["sha"] = sha
+        resp = _req.put(url, headers=hdrs, json=payload, timeout=10)
+        return resp.status_code in (200, 201)
+    except Exception:
+        return False
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
+
 def _init() -> None:
-    """Populate session_state from file (or sample data) on first call."""
+    """Load clients into session_state on first call this session."""
     if _SS_KEY in st.session_state:
         return
+
+    # 1. Try GitHub API (persistent across all deploys)
+    data = _gh_load()
+    if data is not None:
+        st.session_state[_SS_KEY] = data
+        return
+
+    # 2. Try local file (works locally + first-boot on Cloud)
     if os.path.exists(_FILE):
         try:
             with open(_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            st.session_state[_SS_KEY] = data if data else list(SAMPLE_CLIENTS)
-            return
+            if data:
+                st.session_state[_SS_KEY] = data
+                return
         except (json.JSONDecodeError, OSError):
             pass
+
+    # 3. Absolute fallback
     st.session_state[_SS_KEY] = list(SAMPLE_CLIENTS)
 
 
 def load() -> list:
-    """Return all clients from session_state (initialised from disk on first call)."""
     _init()
     return st.session_state[_SS_KEY]
 
 
 def save(clients: list) -> None:
-    """Persist clients to session_state and attempt a best-effort file write."""
+    """Persist clients to session_state, GitHub, and local file."""
     st.session_state[_SS_KEY] = clients
+    # Write to GitHub (survives container restarts and redeploys)
+    _gh_save(clients)
+    # Best-effort local file write (local dev / first-boot baseline)
     try:
         with open(_FILE, "w", encoding="utf-8") as f:
             json.dump(clients, f, indent=2, ensure_ascii=False)
     except OSError:
-        pass  # Read-only filesystem (Streamlit Cloud) — session_state keeps the data
+        pass
 
 
 def add(company: str, contact: str, emails: list,

@@ -115,7 +115,7 @@ html, body, [class*="css"] {{ font-family: 'Inter', -apple-system, sans-serif; }
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
     --brand-primary:   #1a62f2;
@@ -128,18 +128,13 @@ st.markdown("""
     --neutral-black:   #151515;
     --neutral-body:    #1e1e1e;
     --neutral-secondary: #667085;
-    --neutral-muted:   #7a7a7a;
     --neutral-outline: #e1e1e1;
     --neutral-smoke:   #f2f2f2;
-    --bg-page:         #f9f9f9;
-    --bg-blue-hero:    #f6f9fe;
-    --bg-blue-lg:      #f4f7fe;
+    --bg-page:         #f0f5ff;
     --bg-blue-xl:      #f1f6fe;
-    --bg-blue-card:    #f6f9ff;
     --bg-blue-shade:   #c3e4fd;
-    --gradient-brand:  linear-gradient(108deg, #d22c84, #fb6069 52%, #2d84f1);
-    --gradient-brand-h: linear-gradient(90deg, #d22c84 3.83%, #fb6069 42.9%, #2d84f1 84.57%);
     --gradient-blue:   linear-gradient(90deg, #1a5ee8, #1d57cb 52%, #305fe7);
+    --gradient-brand:  linear-gradient(90deg, #d22c84 3.83%, #fb6069 42.9%, #2d84f1 84.57%);
 }
 
 html, body, [class*="css"] {
@@ -153,7 +148,7 @@ header    { visibility: hidden; }
 
 /* ── App shell ── */
 .stApp { background: var(--bg-page) !important; }
-.block-container { padding-top: 0 !important; max-width: 1240px !important; }
+.block-container { padding-top: 0 !important; max-width: 1260px !important; }
 
 /* ── Sidebar ── */
 section[data-testid="stSidebar"] { background: #ffffff !important; border-right: 1px solid var(--neutral-outline) !important; }
@@ -318,16 +313,16 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
 }
 .metric-card {
     background: #ffffff;
-    border: 1px solid #e4e4e7;
+    border: 1px solid #dde6ff;
     border-radius: 14px;
     padding: 1.2rem 1.4rem 1rem;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.02);
+    box-shadow: 0 2px 8px rgba(26,94,232,0.06);
     position: relative;
     overflow: hidden;
     transition: box-shadow 0.2s, transform 0.2s;
 }
 .metric-card:hover {
-    box-shadow: 0 6px 24px rgba(0,0,0,0.09);
+    box-shadow: 0 8px 24px rgba(26,94,232,0.12);
     transform: translateY(-2px);
 }
 .metric-card::before {
@@ -336,7 +331,7 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
     top: 0; left: 0; right: 0;
     height: 3px;
     border-radius: 14px 14px 0 0;
-    background: #e4e4e7;
+    background: #dde6ff;
 }
 .metric-card.accent-blue::before   { background: var(--gradient-blue); }
 .metric-card.accent-green::before  { background: linear-gradient(90deg, #0ebc6e, #42ba78); }
@@ -344,26 +339,26 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
 .metric-card.accent-amber::before  { background: linear-gradient(90deg, #d97706, #fbbf24); }
 
 .metric-label {
-    font-size: 0.6rem;
+    font-size: 0.59rem;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #a1a1aa;
+    color: #8a9cc8;
     margin-bottom: 0.6rem;
 }
 .metric-value {
-    font-size: 1.85rem;
+    font-size: 1.9rem;
     font-weight: 800;
-    color: #18181b;
-    -webkit-text-fill-color: #18181b;
+    color: #1a62f2;
+    -webkit-text-fill-color: #1a62f2;
     letter-spacing: -0.04em;
     line-height: 1;
     margin-bottom: 0.35rem;
 }
 .metric-max { font-size: 1rem; color: #a1a1aa; -webkit-text-fill-color: #a1a1aa; font-weight: 500; letter-spacing: 0; }
-.metric-sub { font-size: 0.69rem; color: #71717a; }
-.ch-up   { color: #059669; font-weight: 700; }
-.ch-down { color: #dc2626; font-weight: 700; }
+.metric-sub { font-size: 0.69rem; color: #667085; }
+.ch-up   { color: #0ebc6e; font-weight: 700; }
+.ch-down { color: #e72b3b; font-weight: 700; }
 
 /* CSAT breakdown */
 .csat-section {
@@ -1931,10 +1926,8 @@ st.markdown("""
 
 /* Nav bar */
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) {
-    background: rgba(255,255,255,0.97) !important;
+    background: linear-gradient(#1a62f2 3px, rgba(255,255,255,0.97) 3px) !important;
     border-bottom: 1px solid #e1e1e1 !important;
-    border-top: 3px solid transparent !important;
-    border-image: linear-gradient(90deg, #1a62f2, #2d84f1) 1 !important;
     padding: 6px 0 8px !important;
     margin-bottom: 1.5rem !important;
     position: sticky !important;
