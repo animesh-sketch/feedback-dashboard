@@ -24,7 +24,7 @@ TEMPLATE_NAMES = [
 def build_email_html(draft: dict, template_id: int = 1) -> str:
     c  = draft.get("client")              or "—"
     h  = draft.get("headline")            or "—"
-    b  = draft.get("body") or draft.get("intro") or ""
+    b  = (draft.get("body") or draft.get("intro") or "").replace("\n", "<br>")
     ss = draft.get("screenshot_url")      or ""
     sc = draft.get("screenshot_caption")  or ""
     rl = draft.get("report_link")         or "#"
@@ -87,8 +87,6 @@ body { background: #08080f; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   <div style="padding:44px 44px 36px;border-bottom:1px solid #1e1e1e;">
     <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#4d65ff;margin-bottom:14px;">Executive Summary</div>
-    <h1 style="font-size:26px;font-weight:700;line-height:1.3;color:#ffffff;margin-bottom:18px;letter-spacing:-0.02em;">{h}</h1>
-    <div style="width:44px;height:2px;background:#4d65ff;margin:0 0 20px;border-radius:2px;"></div>
     <p style="font-size:14px;line-height:1.85;color:#c8c8c8;">{b}</p>
   </div>
   {ss_html}{extra_imgs_html}
@@ -148,8 +146,6 @@ body { background: #eef0ff; font-family: 'Inter', sans-serif; color: #151515; pa
     <span style="font-size:11px;color:#888;">Prepared for <strong style="color:#151515;">{c}</strong></span>
   </div>
   <div style="padding:48px 40px 40px;border-bottom:1px solid #f0f1ff;">
-    <div style="width:36px;height:3px;background:#4d65ff;border-radius:2px;margin-bottom:20px;"></div>
-    <h1 style="font-size:28px;font-weight:700;color:#151515;line-height:1.3;margin-bottom:20px;letter-spacing:-0.02em;">{h}</h1>
     <p style="font-size:14px;line-height:1.85;color:#444;">{b}</p>
   </div>
   {ss_html}{extra_imgs_html}
@@ -205,8 +201,6 @@ body { background: #4d65ff; font-family: 'Inter', sans-serif; color: #151515; pa
   </div>
   <div style="padding:52px 44px 44px;border-bottom:1px solid #f0f1ff;">
     <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#4d65ff;margin-bottom:16px;">Executive Summary</div>
-    <h1 style="font-size:32px;font-weight:800;color:#151515;line-height:1.2;margin-bottom:20px;letter-spacing:-0.025em;">{h}</h1>
-    <div style="width:60px;height:4px;background:#4d65ff;border-radius:2px;margin-bottom:24px;"></div>
     <p style="font-size:15px;line-height:1.8;color:#444;">{b}</p>
   </div>
   {ss_html}{extra_imgs_html}
@@ -263,8 +257,6 @@ body { background: #05050f; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   <div style="padding:44px 40px 36px;border-bottom:1px solid #1a1a30;background:#0e0e1e;">
     <div style="display:inline-block;font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#4d65ff;background:rgba(77,101,255,0.08);border:1px solid rgba(77,101,255,0.2);padding:4px 12px;border-radius:99px;margin-bottom:20px;">Executive Summary</div>
-    <h1 style="font-size:28px;font-weight:700;color:#ffffff;line-height:1.3;margin-bottom:20px;letter-spacing:-0.02em;">{h}</h1>
-    <div style="width:40px;height:2px;background:linear-gradient(90deg,#4d65ff,#8fa0ff);border-radius:2px;margin-bottom:20px;"></div>
     <p style="font-size:14px;line-height:1.85;color:#888;">{b}</p>
   </div>
   {ss_html}{extra_imgs_html}
@@ -324,8 +316,6 @@ body { background: #f0e6d3; font-family: 'Lora', Georgia, serif; color: #1a0a00;
   </div>
   <div style="padding:48px 48px 40px;border-bottom:1px solid #d5c4a8;">
     <div style="font-size:11px;color:#c9a96e;font-style:italic;letter-spacing:0.05em;margin-bottom:14px;text-align:center;">Executive Summary</div>
-    <h1 style="font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:#1a0a00;line-height:1.4;text-align:center;margin-bottom:18px;">{h}</h1>
-    <div style="text-align:center;margin-bottom:24px;"><div style="display:inline-block;width:80px;height:1px;background:#c9a96e;"></div><span style="color:#c9a96e;font-size:14px;padding:0 10px;">◆</span><div style="display:inline-block;width:80px;height:1px;background:#c9a96e;"></div></div>
     <p style="font-size:14px;line-height:1.95;color:#3d2b1f;text-align:justify;">{b}</p>
   </div>
   {ss_html}{extra_imgs_html}
@@ -385,8 +375,6 @@ body { background: #020a12; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   <div style="padding:44px 40px 36px;border-bottom:1px solid #0c2a3a;">
     <div style="display:inline-block;font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#06b6d4;background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.2);padding:4px 12px;border-radius:99px;margin-bottom:20px;">Executive Summary</div>
-    <h1 style="font-size:28px;font-weight:800;color:#e0f7fa;line-height:1.3;margin-bottom:16px;letter-spacing:-0.02em;">{h}</h1>
-    <div style="width:50px;height:2px;background:linear-gradient(90deg,#06b6d4,transparent);margin-bottom:20px;box-shadow:0 0 8px rgba(6,182,212,0.6);"></div>
     <p style="font-size:14px;line-height:1.85;color:#475569;">{b}</p>
   </div>
   {ss_html}{extra_imgs_html}
@@ -448,7 +436,6 @@ body { background: #fde8d0; font-family: 'Inter', sans-serif; padding: 32px 16px
       <div style="width:4px;height:32px;background:linear-gradient(180deg,#f97316,#fb923c);border-radius:4px;"></div>
       <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#c2410c;">Executive Summary</div>
     </div>
-    <h1 style="font-family:'Poppins',sans-serif;font-size:26px;font-weight:700;color:#1c0a00;line-height:1.3;margin-bottom:20px;letter-spacing:-0.01em;">{h}</h1>
     <p style="font-size:14px;line-height:1.85;color:#57534e;">{b}</p>
   </div>
   {ss_html}{extra_imgs_html}
@@ -506,8 +493,6 @@ body { background: #071a0e; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   <div style="padding:44px 44px 36px;border-bottom:1px solid #132e1c;">
     <div style="display:inline-block;font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#10b981;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.18);padding:4px 12px;border-radius:99px;margin-bottom:20px;">Executive Summary</div>
-    <h1 style="font-size:28px;font-weight:700;color:#ecfdf5;line-height:1.3;margin-bottom:16px;letter-spacing:-0.02em;">{h}</h1>
-    <div style="width:48px;height:2px;background:linear-gradient(90deg,#10b981,transparent);margin-bottom:20px;border-radius:2px;"></div>
     <p style="font-size:14px;line-height:1.85;color:#4b7a5e;">{b}</p>
   </div>
   {ss_html}{extra_imgs_html}
@@ -571,8 +556,6 @@ body { background: #111; font-family: 'Inter', sans-serif; padding: 32px 16px 48
   </div>
   <div style="padding:48px 44px 40px;border-bottom:1px solid #222;">
     <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#f97316;margin-bottom:16px;">Executive Summary</div>
-    <h1 style="font-size:30px;font-weight:800;color:#fff;line-height:1.25;margin-bottom:18px;letter-spacing:-0.03em;">{h}</h1>
-    <div style="width:56px;height:3px;background:#f97316;margin-bottom:22px;"></div>
     <p style="font-size:14px;line-height:1.85;color:#888;">{b}</p>
   </div>
   {ss_html}{extra_imgs_html}
@@ -627,8 +610,6 @@ body { background: #f9f9f9; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   <div style="padding:48px 44px 40px;border-bottom:1px solid #f5f0fc;">
     <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:14px;background:linear-gradient(90deg,#d22c84,#fb6069 52%,#2d84f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Executive Summary</div>
-    <h1 style="font-size:28px;font-weight:700;color:#151515;line-height:1.3;margin-bottom:18px;letter-spacing:-0.02em;">{h}</h1>
-    <div style="width:44px;height:3px;background:linear-gradient(90deg,#d22c84,#2d84f1);border-radius:2px;margin-bottom:20px;"></div>
     <p style="font-size:14px;line-height:1.85;color:#444;">{b}</p>
   </div>
   {ss_html}{extra_imgs_html}
@@ -687,8 +668,6 @@ body { background: #e8ecf0; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   <div style="padding:48px 44px 40px;border-bottom:1px solid #e2e8f0;">
     <div style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#1a62f2;background:#f1f6fe;padding:4px 12px;border-radius:4px;margin-bottom:18px;">Executive Summary</div>
-    <h1 style="font-size:27px;font-weight:700;color:#0f172a;line-height:1.3;margin-bottom:18px;letter-spacing:-0.02em;">{h}</h1>
-    <div style="width:40px;height:3px;background:#1a62f2;border-radius:2px;margin-bottom:20px;"></div>
     <p style="font-size:14px;line-height:1.85;color:#475569;">{b}</p>
   </div>
   {ss_html}{extra_imgs_html}
@@ -743,8 +722,6 @@ body { background: #f1f6fe; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   <div style="padding:48px 44px 40px;border-bottom:1px solid #f0f1ff;">
     <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#1a62f2;margin-bottom:14px;">Executive Summary</div>
-    <h1 style="font-size:28px;font-weight:700;color:#151515;line-height:1.3;margin-bottom:18px;letter-spacing:-0.02em;">{h}</h1>
-    <div style="width:44px;height:3px;border-radius:2px;background:linear-gradient(90deg,#d22c84,#fb6069 52%,#2d84f1);margin-bottom:20px;"></div>
     <p style="font-size:14px;line-height:1.85;color:#4a5568;">{b}</p>
   </div>
   {ss_html}{extra_imgs_html}
