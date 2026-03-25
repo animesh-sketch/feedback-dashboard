@@ -148,7 +148,12 @@ header    { visibility: hidden; }
 
 /* ── App shell ── */
 .stApp { background: var(--bg-page) !important; }
-.block-container { padding-top: 0 !important; max-width: 1260px !important; }
+.block-container {
+    padding-top: 0 !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    max-width: 1300px !important;
+}
 
 /* ── Sidebar ── */
 section[data-testid="stSidebar"] { background: #ffffff !important; border-right: 1px solid var(--neutral-outline) !important; }
@@ -1919,50 +1924,95 @@ if not st.session_state["show_sidebar"]:
 
 # ─── Top navigation bar ───────────────────────────────────────────────────────
 
+# Full-width branded header — rendered as HTML above the button row
+_current_page = st.session_state["current_page"]
+st.markdown(f"""
+<div style="
+    background: linear-gradient(135deg, #0d1b6e 0%, #1a62f2 60%, #2d84f1 100%);
+    padding: 0 28px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: -1rem -1rem 0 -1rem;
+    box-shadow: 0 4px 20px rgba(26,94,232,0.25);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+">
+    <!-- Logo + brand -->
+    <div style="display:flex;align-items:center;gap:12px;">
+        <div style="
+            width:34px;height:34px;border-radius:9px;
+            background:rgba(255,255,255,0.18);
+            border:1px solid rgba(255,255,255,0.35);
+            display:flex;align-items:center;justify-content:center;
+            font-size:0.62rem;font-weight:900;color:#fff;letter-spacing:0.05em;
+        ">CDL</div>
+        <div>
+            <div style="color:#fff;font-weight:800;font-size:0.93rem;letter-spacing:-0.01em;line-height:1.1;">Convin Data Labs</div>
+            <div style="color:rgba(255,255,255,0.6);font-size:0.58rem;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;">Insights Dashboard</div>
+        </div>
+    </div>
+    <!-- Nav links -->
+    <div style="display:flex;align-items:center;gap:4px;">
+        {"".join(
+            f'<div style="padding:6px 14px;border-radius:7px;font-size:0.78rem;font-weight:{"700" if page == _current_page else "500"};color:{"#fff" if page == _current_page else "rgba(255,255,255,0.7)"};background:{"rgba(255,255,255,0.2)" if page == _current_page else "transparent"};border:{"1px solid rgba(255,255,255,0.3)" if page == _current_page else "1px solid transparent"};">{icon} {page}</div>'
+            for icon, page in [("📊","Overview"),("🏢","Clients"),("📧","Email Maker")]
+        )}
+    </div>
+    <!-- User pill -->
+    <div style="
+        background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);
+        border-radius:99px;padding:5px 14px 5px 8px;
+        display:flex;align-items:center;gap:8px;
+    ">
+        <div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:#fff;">
+            {(st.session_state.get("user_email","?")[0]).upper()}
+        </div>
+        <div style="color:rgba(255,255,255,0.85);font-size:0.72rem;font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            {st.session_state.get("user_email","—")}
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
 st.markdown("""
 <style>
-/* Hide default Streamlit top decoration */
+/* Hide default Streamlit header bar */
 .stApp > header { display: none !important; }
-
-/* Nav bar */
+/* Compact utility nav strip (⚙️ Settings + page buttons) */
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) {
-    background: linear-gradient(#1a62f2 3px, rgba(255,255,255,0.97) 3px) !important;
-    border-bottom: 1px solid #e1e1e1 !important;
-    padding: 6px 0 8px !important;
-    margin-bottom: 1.5rem !important;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 999 !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    box-shadow: 0 2px 16px rgba(26,94,232,0.08) !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid #e8edf8 !important;
+    padding: 4px 0 6px !important;
+    margin-bottom: 1.4rem !important;
+    box-shadow: 0 1px 6px rgba(26,94,232,0.06) !important;
 }
 /* Active nav button */
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="primary"] {
-    background: #f1f6fe !important;
-    color: #1a62f2 !important;
+    background: #1a62f2 !important;
+    color: #ffffff !important;
     border: none !important;
-    box-shadow: none !important;
+    box-shadow: 0 2px 8px rgba(26,98,242,0.3) !important;
     font-weight: 700 !important;
-    border-bottom: 2px solid #1a62f2 !important;
-    border-radius: 6px !important;
+    border-radius: 7px !important;
 }
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="primary"]:hover {
-    background: #e8f0fe !important;
-    transform: none !important;
-    box-shadow: none !important;
+    background: #1a5ee8 !important;
+    transform: translateY(-1px) !important;
 }
 /* Inactive nav button */
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="secondary"] {
     background: transparent !important;
-    border: none !important;
-    color: #667085 !important;
-    border-radius: 6px !important;
+    border: 1.5px solid #e1e1e1 !important;
+    color: #52525b !important;
+    border-radius: 7px !important;
 }
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="secondary"]:hover {
-    background: #f6f9fe !important;
-    color: #151515 !important;
-    border: none !important;
+    background: #f1f6fe !important;
+    border-color: #c3e4fd !important;
+    color: #1a62f2 !important;
     transform: none !important;
 }
 </style>
