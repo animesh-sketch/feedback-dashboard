@@ -31,7 +31,6 @@ def _blank_draft(idx: int) -> dict:
         "status": "empty",
         "client": "",
         "subject": "",
-        "headline": "",
         "body": "",
         "screenshot_url": "",
         "screenshot_caption": "",
@@ -1301,7 +1300,6 @@ def render_drafts_tab():
                 st.markdown("")
                 d["name"]     = st.text_input("Draft Name", value=d["name"],     key=f"dname_{i}")
                 d["client"]   = st.text_input("Client",     value=d["client"],   key=f"dclient_{i}", placeholder="e.g. Acme Corp")
-                d["headline"] = st.text_area("Headline",    value=d["headline"], key=f"dhead_{i}",   height=80,  placeholder="e.g. February showed strong growth…")
                 d["body"]     = st.text_area("Email Body",  value=d["body"],     key=f"dbody_{i}",   height=120, placeholder="Write the main body of the email…")
 
                 _screenshot_input(d, f"d{i}")
@@ -1388,7 +1386,6 @@ def render_email_maker():
             key=f"cc_subj_{ci}",
             placeholder="e.g. Your February Analytics Report is Ready",
         )
-        d["headline"] = st.text_area("Headline (shown inside email)", value=d["headline"], key=f"cc_head_{ci}", height=68, placeholder="e.g. February showed strong growth across all key metrics…")
         d["body"]     = st.text_area("Email Body",                    value=d["body"],     key=f"cc_body_{ci}", height=120, placeholder="Write the main body of the email…")
 
         with st.expander("🖼  Images & Survey (optional)", expanded=True):
@@ -1491,7 +1488,7 @@ def render_email_maker():
                          disabled=not sender_ready, help="Send a test copy to your own email"):
                 _test_addr = st.session_state.get("user_email", "")
                 if _test_addr:
-                    _subj = (d.get("subject") or d.get("headline") or "Test Email") + " [TEST]"
+                    _subj = (d.get("subject") or "Test Email") + " [TEST]"
                     with st.spinner("Sending test…"):
                         _res = gmail_sender.send_report_email(
                             None, [_test_addr], _subj[:80],
@@ -1515,7 +1512,7 @@ def render_email_maker():
                     type="primary", use_container_width=True,
                     disabled=not sender_ready,
                 ):
-                    _subject = (d.get("subject") or d.get("headline") or "Report from Convin Data Labs")[:80]
+                    _subject = (d.get("subject") or "Report from Convin Data Labs")[:80]
                     with st.spinner(f"Sending to {len(all_emails)} recipient(s)…"):
                         result = gmail_sender.send_report_email(
                             None, all_emails, _subject,
@@ -1575,8 +1572,6 @@ def render_email_maker():
             ai_idx = draft_names.index(ai_draft_name)
             ai_d = st.session_state.drafts[ai_idx]
             ai_text_parts = []
-            if ai_d.get("headline"):
-                ai_text_parts.append(f"Headline: {ai_d['headline']}")
             if ai_d.get("body"):
                 ai_text_parts.append(f"Body: {ai_d['body']}")
             ai_input = "\n\n".join(ai_text_parts) or ""
@@ -1641,15 +1636,7 @@ def render_email_maker():
                         if ai_source == "Pick a draft" and _corrected:
                             st.markdown("")
                             if st.button("Apply corrected text to draft", key="ai_apply_btn"):
-                                if ai_d.get("headline") and "Headline:" in ai_input:
-                                    _lines = _corrected.split("\n\n")
-                                    for _l in _lines:
-                                        if _l.startswith("Headline:"):
-                                            st.session_state.drafts[ai_idx]["headline"] = _l.replace("Headline:", "").strip()
-                                        elif _l.startswith("Body:"):
-                                            st.session_state.drafts[ai_idx]["body"] = _l.replace("Body:", "").strip()
-                                else:
-                                    st.session_state.drafts[ai_idx]["body"] = _corrected
+                                st.session_state.drafts[ai_idx]["body"] = _corrected
                                 st.toast("Draft updated with corrected text.", icon="✅")
                                 st.rerun()
                     except Exception as _e:
@@ -1657,8 +1644,6 @@ def render_email_maker():
 
 
 # ─── Sidebar CSS toggle (pure Python — no JS needed) ─────────────────────────
-
-# ─── Quality Engine — Red Flag Scanner ───────────────────────────────────────
 
 def render_quality_engine():
     st.markdown("""<div class="page-header">
@@ -1851,7 +1836,7 @@ div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind
 </style>
 """, unsafe_allow_html=True)
 
-_n0, _n1, _n2, _n3, _n4, _n_spacer = st.columns([1.2, 2, 2, 2, 2, 2])
+_n0, _n1, _n2, _n3, _n_spacer = st.columns([1.2, 2, 2, 2, 4])
 
 with _n0:
     _sb_label = "✕ Close" if st.session_state["show_sidebar"] else "⚙️ Settings"
@@ -1860,10 +1845,9 @@ with _n0:
         st.rerun()
 
 _page_btns = {
-    "Overview":       ("📊 Overview",    _n1),
-    "Clients":        ("🏢 Clients",     _n2),
-    "Email Maker":    ("📧 Email Maker", _n3),
-    "Quality Engine": ("🚨 Red Flag",    _n4),
+    "Overview":    ("📊 Overview",    _n1),
+    "Clients":     ("🏢 Clients",     _n2),
+    "Email Maker": ("📧 Email Maker", _n3),
 }
 for _key, (_label, _col) in _page_btns.items():
     with _col:
