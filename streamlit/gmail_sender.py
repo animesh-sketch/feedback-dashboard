@@ -14,6 +14,7 @@ import base64 as _b64
 import re
 import smtplib
 import ssl
+from email.mime.application import MIMEApplication
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -47,6 +48,9 @@ def send_report_email(
     subject: str,
     html_body: str,
     from_email: str,
+    attachment_name: str = None,
+    attachment_data: bytes = None,
+    attachment_mime: str = None,
 ) -> dict:
     gmail_user   = st.session_state.get("user_email") or from_email
     app_password = st.session_state.get("gmail_app_password", "").replace(" ", "")
@@ -80,23 +84,37 @@ def send_report_email(
         try:
             modified_html, inline_images = _extract_inline_images(html_body)
 
-            # "related" wraps html + inline images so cid: references resolve
-            msg            = MIMEMultipart("related")
-            msg["Subject"] = subject
-            msg["From"]    = gmail_user
-            msg["To"]      = addr
+            # Outer container: "mixed" when file attachment present, else "related"
+            if attachment_data:
+                outer          = MIMEMultipart("mixed")
+                outer["Subject"] = subject
+                outer["From"]    = gmail_user
+                outer["To"]      = addr
+                related        = MIMEMultipart("related")
+                outer.attach(related)
+            else:
+                outer = related = MIMEMultipart("related")
+                outer["Subject"] = subject
+                outer["From"]    = gmail_user
+                outer["To"]      = addr
 
             alt = MIMEMultipart("alternative")
             alt.attach(MIMEText(modified_html, "html"))
-            msg.attach(alt)
+            related.attach(alt)
 
             for cid, subtype, img_bytes in inline_images:
                 part = MIMEImage(img_bytes, _subtype=subtype)
                 part.add_header("Content-ID", f"<{cid}>")
                 part.add_header("Content-Disposition", "inline")
-                msg.attach(part)
+                related.attach(part)
 
-            server.sendmail(gmail_user, addr, msg.as_string())
+            if attachment_data and attachment_name:
+                ext = attachment_name.rsplit(".", 1)[-1].lower() if "." in attachment_name else "bin"
+                app_part = MIMEApplication(attachment_data, Name=attachment_name)
+                app_part.add_header("Content-Disposition", "attachment", filename=attachment_name)
+                outer.attach(app_part)
+
+            server.sendmail(gmail_user, addr, outer.as_string())
             sent.append(addr)
         except Exception as exc:
             failed.append({"email": addr, "error": str(exc)})

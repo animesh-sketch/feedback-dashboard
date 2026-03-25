@@ -44,6 +44,34 @@ def build_email_html(draft: dict, template_id: int = 1) -> str:
                 f'style="width:100%;display:block;border-radius:8px;"/>'
                 f'{cap_html}</div>'
             )
+
+    # Build attachment block — shown when a URL or uploaded file name is present
+    att_url  = draft.get("attachment_url")  or ""
+    att_name = draft.get("attachment_name") or "Attachment"
+    att_data = draft.get("attachment_data") or ""   # base64 — file was uploaded
+    if att_url or att_data:
+        dl_btn = (
+            f'<a href="{att_url}" style="background:#1a62f2;color:#fff;text-decoration:none;'
+            f'font-size:11px;font-weight:700;padding:8px 16px;border-radius:6px;white-space:nowrap;'
+            f'letter-spacing:0.03em;">Download ↓</a>'
+            if att_url else
+            f'<span style="background:#e1e1e1;color:#667085;font-size:11px;font-weight:600;'
+            f'padding:8px 14px;border-radius:6px;white-space:nowrap;">File attached</span>'
+        )
+        extra_parts.append(
+            f'<div style="padding:0 44px 24px;">'
+            f'<div style="border:1px solid #e1e1e1;border-radius:10px;padding:14px 18px;'
+            f'background:#ffffff;display:flex;align-items:center;gap:14px;">'
+            f'<div style="width:38px;height:38px;background:#f1f6fe;border-radius:8px;border:1px solid #c3e4fd;'
+            f'display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📎</div>'
+            f'<div style="flex:1;min-width:0;">'
+            f'<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;'
+            f'color:#667085;margin-bottom:3px;">Attachment</div>'
+            f'<div style="font-size:13px;font-weight:600;color:#151515;white-space:nowrap;'
+            f'overflow:hidden;text-overflow:ellipsis;">{att_name}</div>'
+            f'</div>{dl_btn}</div></div>'
+        )
+
     extra_imgs_html = "".join(extra_parts)
 
     builders = {1: _tpl_executive, 2: _tpl_minimal,

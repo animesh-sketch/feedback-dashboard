@@ -43,6 +43,10 @@ def _blank_draft(idx: int) -> dict:
         "survey_question": "How would you rate this insights report?",
         "show_preview": False,
         "template": 1,
+        "attachment_name": "",
+        "attachment_data": "",   # base64-encoded bytes for MIME attachment
+        "attachment_mime": "",
+        "attachment_url": "",    # URL alternative (shown as Download button in email)
     }
 
 if "drafts" not in st.session_state:
@@ -1305,6 +1309,61 @@ def _screenshot_input(d: dict, key_suffix: str):
     _single_image_slot(d, "img3_url",        "img3_caption",        "Image 3",                   key_suffix)
 
 
+def _attachment_slot(d: dict, key_suffix: str):
+    """File attachment or URL — shown as 📎 block in the email + MIME attachment when sending."""
+    st.markdown(
+        '<div style="color:#64748b;font-size:0.75rem;font-weight:700;letter-spacing:0.06em;'
+        'text-transform:uppercase;margin:14px 0 6px;">📎 Attachment</div>',
+        unsafe_allow_html=True,
+    )
+
+    has_file = bool(d.get("attachment_data"))
+    has_url  = bool(d.get("attachment_url"))
+
+    if has_file:
+        st.markdown(
+            f'<div style="background:#f1f6fe;border:1px solid #c3e4fd;border-radius:8px;'
+            f'padding:8px 12px;font-size:0.8rem;color:#1a62f2;font-weight:600;margin-bottom:6px;">'
+            f'📎 {d["attachment_name"]}</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("✕ Remove attachment", key=f"rm_att_{key_suffix}"):
+            d["attachment_data"] = ""
+            d["attachment_name"] = ""
+            d["attachment_mime"] = ""
+            st.rerun()
+    else:
+        uploaded = st.file_uploader(
+            "Upload file (PDF, Excel, Word, CSV, PPT…)",
+            type=["pdf", "xlsx", "xls", "docx", "doc", "csv", "pptx", "ppt", "zip", "txt"],
+            key=f"att_up_{key_suffix}",
+        )
+        if uploaded:
+            d["attachment_data"] = base64.b64encode(uploaded.read()).decode()
+            d["attachment_name"] = uploaded.name
+            d["attachment_mime"] = uploaded.type or "application/octet-stream"
+            d["attachment_url"]  = ""   # clear URL if file chosen
+            st.rerun()
+
+    st.markdown(
+        '<div style="font-size:0.72rem;color:#94a3b8;margin:4px 0 4px;">— or paste a download URL —</div>',
+        unsafe_allow_html=True,
+    )
+    d["attachment_url"] = st.text_input(
+        "Attachment URL",
+        value=d.get("attachment_url", ""),
+        key=f"att_url_{key_suffix}",
+        placeholder="https://docs.google.com/… or any download link",
+        label_visibility="collapsed",
+    )
+    if d.get("attachment_url"):
+        # Use the last path segment as the display name if no file upload
+        if not d.get("attachment_name"):
+            seg = d["attachment_url"].rstrip("/").split("/")[-1]
+            d["attachment_name"] = seg or "Attachment"
+        d["attachment_data"] = ""  # URL takes precedence over file
+
+
 def _template_picker(d: dict, key_suffix: str):
     st.markdown('<div style="color:#64748b;font-size:0.75rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">Email Template</div>', unsafe_allow_html=True)
     for row_start in range(0, len(TEMPLATE_NAMES), 5):
@@ -1361,6 +1420,7 @@ def render_drafts_tab():
                 d["body"]     = st.text_area("Email Body",  value=d["body"],     key=f"dbody_{i}",   height=120, placeholder="Write the main body of the email…")
 
                 _screenshot_input(d, f"d{i}")
+                _attachment_slot(d, f"d{i}")
 
                 st.markdown('<div style="color:#64748b;font-size:0.75rem;font-weight:600;margin:10px 0 4px;">Links</div>', unsafe_allow_html=True)
                 d["report_link"]     = st.text_input("Full Report URL",  value=d["report_link"],     key=f"dlink_{i}", placeholder="https://docs.google.com/…")
@@ -1449,8 +1509,10 @@ def render_email_maker():
         )
         d["body"]     = st.text_area("Email Body",                    value=d["body"],     key=f"cc_body_{ci}", height=120, placeholder="Write the main body of the email…")
 
-        with st.expander("🖼  Images & Survey (optional)", expanded=True):
+        with st.expander("🖼  Images, Attachment & Survey (optional)", expanded=True):
             _screenshot_input(d, f"c{ci}")
+            st.markdown("")
+            _attachment_slot(d, f"c{ci}")
             st.markdown("")
             d["survey_question"] = st.text_input("Survey Question", value=d["survey_question"], key=f"cc_sq_{ci}")
 
@@ -1543,6 +1605,11 @@ def render_email_maker():
                 unsafe_allow_html=True,
             )
 
+        # Decode attachment bytes for sending (if file was uploaded)
+        _att_bytes = base64.b64decode(d["attachment_data"]) if d.get("attachment_data") else None
+        _att_name  = d.get("attachment_name") or None
+        _att_mime  = d.get("attachment_mime") or None
+
         send_col, test_col = st.columns([3, 1])
         with test_col:
             if st.button("🧪 Test to Me", key=f"test_send_{ci}", use_container_width=True,
@@ -1555,6 +1622,9 @@ def render_email_maker():
                             None, [_test_addr], _subj[:80],
                             build_email_html(d, d.get("template", 1)),
                             _test_addr,
+                            attachment_name=_att_name,
+                            attachment_data=_att_bytes,
+                            attachment_mime=_att_mime,
                         )
                     if _res["sent"]:
                         st.success(f"Test sent to {_test_addr}")
@@ -1579,6 +1649,9 @@ def render_email_maker():
                             None, all_emails, _subject,
                             build_email_html(d, d.get("template", 1)),
                             st.session_state.get("user_email", ""),
+                            attachment_name=_att_name,
+                            attachment_data=_att_bytes,
+                            attachment_mime=_att_mime,
                         )
                     from datetime import datetime as _dt
                     st.session_state.send_log.insert(0, {
