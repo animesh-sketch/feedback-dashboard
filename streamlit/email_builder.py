@@ -99,7 +99,6 @@ body { background: #e8e3db; font-family: 'Inter', sans-serif; color: #1c1c1c; pa
   <div style="padding:30px 44px 26px;background:#faf9f7;border-top:1px solid #ede8e0;border-bottom:1px solid #ede8e0;">
     <p style="font-size:14px;line-height:1.8;color:#6a5c4e;font-style:italic;margin-bottom:10px;">Warm regards,</p>
     <p style="font-family:'Playfair Display',serif;font-size:17px;font-weight:600;color:#0d1b2a;margin-bottom:3px;">Convin Data Labs</p>
-    <p style="font-size:12px;color:#b8962e;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;">Convin Data Labs</p>
     <div style="width:40px;height:1px;background:#b8962e;margin-top:14px;"></div>
   </div>
   <div style="background:#0d1b2a;padding:40px 44px 44px;">
@@ -161,7 +160,6 @@ body { background: #f1f5f9; font-family: 'Inter', sans-serif; color: #111827; pa
   <div style="padding:28px 40px 24px;border-bottom:1px solid #f3f4f6;">
     <p style="font-size:13px;color:#9ca3af;margin-bottom:8px;">Best regards,</p>
     <p style="font-size:16px;font-weight:700;color:#111827;letter-spacing:-0.01em;margin-bottom:3px;">Convin Data Labs</p>
-    <p style="font-size:12px;color:#2563eb;font-weight:600;">Convin Data Labs</p>
   </div>
   <div style="padding:36px 40px;border-bottom:1px solid #f3f4f6;">
     <div style="text-align:center;margin-bottom:20px;">
@@ -221,7 +219,6 @@ body { background: #1e3a8a; font-family: 'Inter', sans-serif; color: #0f172a; pa
   <div style="padding:28px 44px 24px;background:#f8faff;border-bottom:2px solid #dbeafe;">
     <p style="font-size:13px;color:#6b7280;margin-bottom:8px;">Best regards,</p>
     <p style="font-size:17px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;margin-bottom:3px;">Convin Data Labs</p>
-    <p style="font-size:12px;color:#1d4ed8;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Convin Data Labs</p>
   </div>
   <div style="background:#1d4ed8;padding:40px 44px 44px;">
     <div style="text-align:center;padding-bottom:24px;border-bottom:1px solid rgba(255,255,255,0.12);margin-bottom:28px;">
@@ -280,7 +277,6 @@ body { background: #0d0d1a; font-family: 'Inter', sans-serif; padding: 32px 16px
   <div style="padding:28px 40px 24px;background:#0f172a;border-top:1px solid #1e293b;border-bottom:1px solid #1e293b;">
     <p style="font-size:13px;color:#475569;margin-bottom:8px;">Warm regards,</p>
     <p style="font-size:16px;font-weight:700;color:#f8fafc;letter-spacing:-0.01em;margin-bottom:3px;">Convin Data Labs</p>
-    <p style="font-size:12px;color:#a78bfa;font-weight:500;letter-spacing:0.05em;">Convin Data Labs</p>
   </div>
   <div style="background:#0d0d1a;padding:40px 40px 44px;border-top:1px solid #1e293b;">
     <div style="text-align:center;padding-bottom:24px;border-bottom:1px solid #1e293b;margin-bottom:28px;">
@@ -342,7 +338,6 @@ body { background: #f0e6d3; font-family: 'Lora', Georgia, serif; color: #1a0a00;
   <div style="padding:32px 48px 28px;border-bottom:1px solid #d5c4a8;">
     <p style="font-size:14px;color:#8b7355;font-style:italic;margin-bottom:10px;">Warm regards,</p>
     <p style="font-family:'Playfair Display',serif;font-size:18px;color:#2c1a0e;margin-bottom:4px;">Convin Data Labs</p>
-    <p style="font-size:12px;color:#c9a96e;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;">Convin Data Labs</p>
     <div style="width:48px;height:1px;background:#c9a96e;margin-top:16px;"></div>
   </div>
   <div style="padding:36px 48px;border-bottom:1px solid #d5c4a8;">
@@ -404,7 +399,6 @@ body { background: #020a12; font-family: 'Inter', sans-serif; padding: 32px 16px
   <div style="padding:26px 40px 22px;background:#030b14;border-bottom:1px solid #0c2a3a;">
     <p style="font-size:13px;color:#164e63;margin-bottom:8px;">Best regards,</p>
     <p style="font-size:16px;font-weight:700;color:#e0f7fa;letter-spacing:-0.01em;margin-bottom:3px;">Convin Data Labs</p>
-    <p style="font-size:12px;color:#06b6d4;font-weight:600;text-shadow:0 0 10px rgba(6,182,212,0.4);">Convin Data Labs</p>
   </div>
   <div style="background:#020a12;padding:38px 40px 42px;border-top:1px solid #0c2a3a;">
     <div style="text-align:center;padding-bottom:22px;border-bottom:1px solid #0c2a3a;margin-bottom:26px;">
@@ -467,7 +461,6 @@ body { background: #fde8d0; font-family: 'Inter', sans-serif; padding: 32px 16px
   <div style="padding:28px 44px 24px;border-bottom:1px solid #fde8d0;">
     <p style="font-size:13px;color:#a8a29e;margin-bottom:8px;">Warm regards,</p>
     <p style="font-family:'Poppins',sans-serif;font-size:17px;font-weight:700;color:#1c0a00;margin-bottom:3px;">Convin Data Labs</p>
-    <p style="font-size:12px;color:#f97316;font-weight:600;">Convin Data Labs</p>
   </div>
   <div style="background:linear-gradient(135deg,#ea580c 0%,#f97316 100%);padding:38px 44px 42px;">
     <div style="text-align:center;padding-bottom:22px;border-bottom:1px solid rgba(255,255,255,0.15);margin-bottom:26px;">
@@ -527,7 +520,6 @@ body { background: #071a0e; font-family: 'Inter', sans-serif; padding: 32px 16px
   <div style="padding:26px 44px 22px;background:#071a0e;border-bottom:1px solid #132e1c;">
     <p style="font-size:13px;color:#166534;margin-bottom:8px;">Warm regards,</p>
     <p style="font-size:16px;font-weight:700;color:#ecfdf5;letter-spacing:-0.01em;margin-bottom:3px;">Convin Data Labs</p>
-    <p style="font-size:12px;color:#10b981;font-weight:600;">Convin Data Labs</p>
   </div>
   <div style="background:#040f08;padding:38px 44px 42px;border-top:1px solid #132e1c;">
     <div style="text-align:center;padding-bottom:22px;border-bottom:1px solid #132e1c;margin-bottom:26px;">
@@ -593,7 +585,6 @@ body { background: #111; font-family: 'Inter', sans-serif; padding: 32px 16px 48
   <div style="padding:28px 44px 24px;background:#141414;border-bottom:1px solid #222;">
     <p style="font-size:13px;color:#444;margin-bottom:8px;">Best regards,</p>
     <p style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.02em;margin-bottom:3px;">Convin Data Labs</p>
-    <p style="font-size:12px;color:#f97316;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Convin Data Labs</p>
   </div>
   <div style="background:#111;padding:38px 44px 42px;border-top:1px solid #222;">
     <div style="text-align:center;padding-bottom:22px;border-bottom:1px solid #222;margin-bottom:26px;">
