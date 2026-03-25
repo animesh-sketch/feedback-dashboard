@@ -12,6 +12,7 @@ from PIL import Image
 from data import ANALYTICS_BY_PERIOD, EMAIL_ANALYTICS, CSAT_RESPONDENTS, DAILY_DATES, WEEKLY_DATES, CAMPAIGNS, ACTION_QUEUE, HEALTH_KPIS, delta_is_positive, format_kpi, format_delta
 from email_builder import build_email_html, TEMPLATE_NAMES
 import client_store
+import sent_store
 import auth
 import gmail_sender
 
@@ -1628,6 +1629,16 @@ def render_email_maker():
                         )
                     if _res["sent"]:
                         st.success(f"Test sent to {_test_addr}")
+                        sent_store.log_send(
+                            draft_name=d["name"] + " [TEST]",
+                            subject=(d.get("subject") or "Test Email") + " [TEST]",
+                            template_num=d.get("template", 1),
+                            template_name=TEMPLATE_NAMES[d.get("template", 1) - 1][0],
+                            client=d.get("client", ""),
+                            sent_to=_res["sent"],
+                            failed=[f["email"] for f in _res["failed"]],
+                            body_preview=d.get("body", ""),
+                        )
                     else:
                         for _f in _res["failed"]:
                             st.error(_f["error"])
@@ -1663,6 +1674,16 @@ def render_email_maker():
                     if result["sent"]:
                         st.success(f"✓ Sent to: {', '.join(result['sent'])}")
                         st.session_state.drafts[ci]["status"] = "ready"
+                        sent_store.log_send(
+                            draft_name=d["name"],
+                            subject=_subject,
+                            template_num=d.get("template", 1),
+                            template_name=TEMPLATE_NAMES[d.get("template", 1) - 1][0],
+                            client=d.get("client", ""),
+                            sent_to=result["sent"],
+                            failed=[f["email"] for f in result["failed"]],
+                            body_preview=d.get("body", ""),
+                        )
                     for fail in result["failed"]:
                         if fail["email"] in ("login", "config"):
                             st.error(fail["error"])
@@ -1775,6 +1796,178 @@ def render_email_maker():
                                 st.rerun()
                     except Exception as _e:
                         st.error(f"AI check failed: {_e}")
+
+
+# ─── Sent Emails ──────────────────────────────────────────────────────────────
+
+def render_sent():
+    records = sent_store.load()
+
+    st.markdown("""<div class="page-header">
+        <div class="page-header-icon">📤</div>
+        <div class="page-header-text">
+            <div class="page-title">Sent Emails</div>
+            <div class="page-sub">Full history of every email sent from this dashboard.</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+    # ── Summary stats ────────────────────────────────────────────────────────
+    total_sent    = sum(len(r.get("sent_to", [])) for r in records)
+    total_failed  = sum(len(r.get("failed",  [])) for r in records)
+    unique_emails = len({e for r in records for e in r.get("sent_to", [])})
+
+    st.markdown(f"""<div class="stats-grid">
+        <div class="stat-card">
+            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Sends</div>
+            <div style="color:#1a62f2;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(records)}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid #1a62f2;">
+            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Emails Delivered</div>
+            <div style="color:#0ebc6e;font-size:1.8rem;font-weight:800;">{total_sent}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid #e72b3b;">
+            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Failed</div>
+            <div style="color:#e72b3b;font-size:1.8rem;font-weight:800;">{total_failed}</div>
+        </div>
+        <div class="stat-card">
+            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Unique Recipients</div>
+            <div style="color:#1a62f2;font-size:1.8rem;font-weight:800;">{unique_emails}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+    if not records:
+        st.markdown("""
+        <div style="text-align:center;padding:5rem 2rem;">
+            <div style="font-size:2.8rem;margin-bottom:1rem;">📭</div>
+            <div style="font-size:1rem;font-weight:700;color:#64748b;">No emails sent yet</div>
+            <div style="font-size:0.82rem;color:#94a3b8;margin-top:6px;">
+                Go to <strong>Email Maker</strong> to compose and send your first email.
+            </div>
+        </div>""", unsafe_allow_html=True)
+        return
+
+    # ── Filters ──────────────────────────────────────────────────────────────
+    fc1, fc2, fc3 = st.columns([3, 2, 1])
+    with fc1:
+        search = st.text_input("Search", placeholder="Subject, recipient, client…",
+                               key="sent_search", label_visibility="collapsed")
+    with fc2:
+        all_drafts = sorted({r["draft_name"] for r in records})
+        draft_filter = st.selectbox("Filter by draft", ["All Drafts"] + all_drafts,
+                                    key="sent_draft_filter", label_visibility="collapsed")
+    with fc3:
+        status_filter = st.selectbox("Status", ["All", "Sent", "Has Failures"],
+                                     key="sent_status_filter", label_visibility="collapsed")
+
+    filtered = records
+    if search:
+        q = search.lower()
+        filtered = [r for r in filtered if
+                    q in r.get("subject","").lower() or
+                    q in r.get("client","").lower() or
+                    q in r.get("draft_name","").lower() or
+                    any(q in e.lower() for e in r.get("sent_to",[]))]
+    if draft_filter != "All Drafts":
+        filtered = [r for r in filtered if r.get("draft_name") == draft_filter]
+    if status_filter == "Sent":
+        filtered = [r for r in filtered if r.get("sent_to")]
+    elif status_filter == "Has Failures":
+        filtered = [r for r in filtered if r.get("failed")]
+
+    st.markdown(
+        f'<div style="color:#64748b;font-size:0.75rem;font-weight:600;margin-bottom:12px;">'
+        f'{len(filtered)} record{"s" if len(filtered) != 1 else ""}</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Records ──────────────────────────────────────────────────────────────
+    for rec in filtered:
+        _sent  = rec.get("sent_to", [])
+        _fail  = rec.get("failed",  [])
+        _has_f = bool(_fail)
+        border_color = "#fecaca" if _has_f else "#dde6ff"
+        top_color    = "#e72b3b" if _has_f else "#1a62f2"
+        status_bg    = "#fff1f2" if _has_f else "#f1f6fe"
+        status_fg    = "#e72b3b" if _has_f else "#1a62f2"
+        status_lbl   = f"⚠ {len(_fail)} failed" if _has_f else f"✓ {len(_sent)} sent"
+
+        sent_pills = " ".join(
+            f'<span class="email-pill">{e}</span>' for e in _sent[:6]
+        ) + (f'<span class="email-pill">+{len(_sent)-6} more</span>' if len(_sent) > 6 else "")
+        fail_pills = " ".join(
+            f'<span style="display:inline-block;background:#fff1f2;color:#e72b3b;'
+            f'font-size:0.7rem;font-weight:500;padding:3px 10px;border-radius:6px;'
+            f'margin:3px 3px 0 0;border:1px solid #fecaca;">{e}</span>'
+            for e in _fail
+        ) if _fail else ""
+
+        preview_html = (
+            f'<div style="color:#94a3b8;font-size:0.72rem;line-height:1.5;'
+            f'margin:6px 0 0;font-style:italic;">'
+            f'"{rec["body_preview"]}{"…" if len(rec["body_preview"]) >= 120 else ""}"</div>'
+        ) if rec.get("body_preview") else ""
+
+        st.markdown(f"""
+        <div style="background:#fff;border:1px solid {border_color};border-top:3px solid {top_color};
+                    border-radius:14px;padding:18px 20px;margin-bottom:12px;
+                    box-shadow:0 2px 8px rgba(26,94,232,0.05);">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:0.9rem;font-weight:700;color:#0f172a;
+                                white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        {rec.get("subject","(no subject)")}
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap;">
+                        <span style="font-size:0.72rem;color:#64748b;font-weight:500;">
+                            📋 {rec.get("draft_name","")}
+                        </span>
+                        <span style="font-size:0.72rem;color:#94a3b8;">·</span>
+                        <span style="font-size:0.72rem;color:#64748b;">
+                            🎨 {rec.get("template_name","")}
+                        </span>
+                        {f'<span style="font-size:0.72rem;color:#94a3b8;">·</span><span style="font-size:0.72rem;color:#64748b;">🏢 {rec["client"]}</span>' if rec.get("client") else ""}
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+                    <span style="background:{status_bg};color:{status_fg};font-size:0.62rem;
+                                 font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+                                 padding:4px 11px;border-radius:99px;white-space:nowrap;">
+                        {status_lbl}
+                    </span>
+                    <span style="font-size:0.7rem;color:#94a3b8;white-space:nowrap;">
+                        {rec.get("date","")} · {rec.get("time","")}
+                    </span>
+                </div>
+            </div>
+            <div style="margin-bottom:6px;">{sent_pills}</div>
+            {f'<div style="margin-top:4px;">{fail_pills}</div>' if fail_pills else ""}
+            {preview_html}
+        </div>""", unsafe_allow_html=True)
+
+    # ── Export & Clear ────────────────────────────────────────────────────────
+    st.markdown("---")
+    ex_col, cl_col, _ = st.columns([2, 2, 3])
+    with ex_col:
+        rows = [
+            {
+                "Date": r.get("date",""), "Time": r.get("time",""),
+                "Draft": r.get("draft_name",""), "Subject": r.get("subject",""),
+                "Template": r.get("template_name",""), "Client": r.get("client",""),
+                "Sent To": ", ".join(r.get("sent_to",[])),
+                "Failed":  ", ".join(r.get("failed",[])),
+                "Body Preview": r.get("body_preview",""),
+            }
+            for r in records
+        ]
+        csv = pd.DataFrame(rows).to_csv(index=False)
+        st.download_button("⬇️  Export CSV", data=csv,
+                           file_name="sent_emails.csv", mime="text/csv",
+                           use_container_width=True)
+    with cl_col:
+        if st.button("🗑  Clear All History", use_container_width=True):
+            sent_store.clear()
+            st.toast("Send history cleared.", icon="🗑")
+            st.rerun()
 
 
 # ─── Sidebar CSS toggle (pure Python — no JS needed) ─────────────────────────
@@ -1958,7 +2151,7 @@ st.markdown(f"""
     <div style="display:flex;align-items:center;gap:4px;">
         {"".join(
             f'<div style="padding:6px 14px;border-radius:7px;font-size:0.78rem;font-weight:{"700" if page == _current_page else "500"};color:{"#fff" if page == _current_page else "rgba(255,255,255,0.7)"};background:{"rgba(255,255,255,0.2)" if page == _current_page else "transparent"};border:{"1px solid rgba(255,255,255,0.3)" if page == _current_page else "1px solid transparent"};">{icon} {page}</div>'
-            for icon, page in [("📊","Overview"),("🏢","Clients"),("📧","Email Maker")]
+            for icon, page in [("📊","Overview"),("🏢","Clients"),("📧","Email Maker"),("📤","Sent")]
         )}
     </div>
     <!-- User pill -->
@@ -2018,7 +2211,7 @@ div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind
 </style>
 """, unsafe_allow_html=True)
 
-_n0, _n1, _n2, _n3, _n_spacer = st.columns([1.2, 2, 2, 2, 4])
+_n0, _n1, _n2, _n3, _n4, _n_spacer = st.columns([1.2, 2, 2, 2, 2, 2])
 
 with _n0:
     _sb_label = "✕ Close" if st.session_state["show_sidebar"] else "⚙️ Settings"
@@ -2026,10 +2219,12 @@ with _n0:
         st.session_state["show_sidebar"] = not st.session_state["show_sidebar"]
         st.rerun()
 
+_sent_count = len(sent_store.load())
 _page_btns = {
     "Overview":    ("📊 Overview",    _n1),
     "Clients":     ("🏢 Clients",     _n2),
     "Email Maker": ("📧 Email Maker", _n3),
+    "Sent":        (f"📤 Sent  {_sent_count}" if _sent_count else "📤 Sent", _n4),
 }
 for _key, (_label, _col) in _page_btns.items():
     with _col:
@@ -2054,3 +2249,5 @@ elif _page == "Clients":
     render_clients()
 elif _page == "Email Maker":
     render_email_maker()
+elif _page == "Sent":
+    render_sent()
