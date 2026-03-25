@@ -1178,9 +1178,11 @@ STATUS_META = {
 }
 
 _TMPL_TEXT_COLORS = ["#c9a96e", "#2563eb", "#ffffff", "#a78bfa", "#8b5e3c",
-                     "#06b6d4", "#ea580c", "#10b981", "#f97316"]
+                     "#06b6d4", "#ea580c", "#10b981", "#f97316",
+                     "#ffffff", "#ffffff", "#1a62f2"]
 _TMPL_BG_COLORS   = ["#0d1b2a", "#f1f5f9", "#1e3a8a", "#13111f", "#f4ede0",
-                     "#040d18", "#fff3e8", "#0b1f14", "#1a1a1a"]
+                     "#040d18", "#fff3e8", "#0b1f14", "#1a1a1a",
+                     "#d22c84", "#2d3748", "#1a62f2"]
 
 
 def _single_image_slot(d: dict, url_key: str, cap_key: str, label: str, key_suffix: str):
