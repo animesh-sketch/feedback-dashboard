@@ -1563,7 +1563,7 @@ def render_email_maker():
     # ── AI Grammar & Spell Check ───────────────────────────────────────────────
     with tab_ai:
         st.markdown('<div style="color:#0f172a;font-size:1rem;font-weight:600;margin-bottom:4px;">AI Writing Assistant</div>', unsafe_allow_html=True)
-        st.caption("Fix spelling mistakes and grammar errors in your email drafts using AI.")
+        st.caption("Polish your email body — fix formatting, spacing, and structure for a professional, client-friendly tone.")
         st.markdown("")
 
         # Source selector
@@ -1587,7 +1587,7 @@ def render_email_maker():
                                     placeholder="Type or paste your headline, body, or any email text…")
 
         st.markdown("")
-        if st.button("✨ Check & Fix Grammar", type="primary", use_container_width=False, key="ai_check_btn"):
+        if st.button("✨ Polish Email Body", type="primary", use_container_width=False, key="ai_check_btn"):
             if not ai_input.strip():
                 st.warning("Please enter some text to check.")
             else:
@@ -1598,31 +1598,39 @@ def render_email_maker():
                     try:
                         import anthropic as _anthropic
                         _client = _anthropic.Anthropic(api_key=api_key)
-                        with st.spinner("Checking grammar and spelling…"):
+                        with st.spinner("Polishing email body…"):
                             _msg = _client.messages.create(
                                 model="claude-haiku-4-5-20251001",
                                 max_tokens=1024,
                                 messages=[{
                                     "role": "user",
                                     "content": (
-                                        "You are a professional editor. Fix ALL spelling mistakes and grammar errors "
-                                        "in the following text. Keep the meaning, tone, and structure exactly the same. "
+                                        "You are an expert in professional business communication.\n\n"
+                                        "I will provide you with an email body that may have formatting and spacing issues. "
+                                        "Your task is to:\n"
+                                        "1. Fix formatting, spacing, and alignment issues\n"
+                                        "2. Improve readability with proper paragraph breaks\n"
+                                        "3. Keep the tone professional, polished, and client-friendly\n"
+                                        "4. Do NOT change the meaning or content\n"
+                                        "5. Do NOT add extra information\n"
+                                        "6. Keep it concise and clean\n"
+                                        "7. Structure it in a way that looks good in email (proper line breaks, sections)\n\n"
                                         "Reply in two clearly labelled sections:\n\n"
-                                        "CORRECTED TEXT:\n<the fixed version>\n\n"
-                                        "CHANGES MADE:\n<bullet list of what was fixed, or 'No errors found.' if perfect>\n\n"
-                                        f"Text to check:\n{ai_input}"
+                                        "POLISHED TEXT:\n<the improved version>\n\n"
+                                        "CHANGES MADE:\n<bullet list of what was improved, or 'No changes needed.' if already clean>\n\n"
+                                        f"Email text:\n{ai_input}"
                                     ),
                                 }],
                             )
                         _reply = _msg.content[0].text
-                        if "CORRECTED TEXT:" in _reply and "CHANGES MADE:" in _reply:
-                            _corrected = _reply.split("CORRECTED TEXT:")[1].split("CHANGES MADE:")[0].strip()
+                        if "POLISHED TEXT:" in _reply and "CHANGES MADE:" in _reply:
+                            _corrected = _reply.split("POLISHED TEXT:")[1].split("CHANGES MADE:")[0].strip()
                             _changes   = _reply.split("CHANGES MADE:")[1].strip()
                         else:
                             _corrected = _reply
                             _changes   = ""
 
-                        st.markdown('<div style="color:#059669;font-size:0.8rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">Corrected Text</div>', unsafe_allow_html=True)
+                        st.markdown('<div style="color:#059669;font-size:0.8rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">Polished Text</div>', unsafe_allow_html=True)
                         st.markdown(f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;font-size:0.85rem;color:#14532d;white-space:pre-wrap;">{_corrected}</div>', unsafe_allow_html=True)
 
                         if _changes:
