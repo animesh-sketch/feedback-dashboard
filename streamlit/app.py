@@ -112,6 +112,31 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap');
 
+:root {
+    --brand-primary:   #1a62f2;
+    --brand-dark:      #1a5ee8;
+    --brand-deep:      #1d57cb;
+    --brand-navy:      #092e78;
+    --brand-bright:    #2d84f1;
+    --brand-pink:      #d22c84;
+    --brand-coral:     #fb6069;
+    --neutral-black:   #151515;
+    --neutral-body:    #1e1e1e;
+    --neutral-secondary: #667085;
+    --neutral-muted:   #7a7a7a;
+    --neutral-outline: #e1e1e1;
+    --neutral-smoke:   #f2f2f2;
+    --bg-page:         #f9f9f9;
+    --bg-blue-hero:    #f6f9fe;
+    --bg-blue-lg:      #f4f7fe;
+    --bg-blue-xl:      #f1f6fe;
+    --bg-blue-card:    #f6f9ff;
+    --bg-blue-shade:   #c3e4fd;
+    --gradient-brand:  linear-gradient(108deg, #d22c84, #fb6069 52%, #2d84f1);
+    --gradient-brand-h: linear-gradient(90deg, #d22c84 3.83%, #fb6069 42.9%, #2d84f1 84.57%);
+    --gradient-blue:   linear-gradient(90deg, #1a5ee8, #1d57cb 52%, #305fe7);
+}
+
 html, body, [class*="css"] {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -122,11 +147,11 @@ footer    { visibility: hidden; }
 header    { visibility: hidden; }
 
 /* ── App shell ── */
-.stApp { background: #f9f9f9 !important; }
+.stApp { background: var(--bg-page) !important; }
 .block-container { padding-top: 0 !important; max-width: 1240px !important; }
 
 /* ── Sidebar ── */
-section[data-testid="stSidebar"] { background: #ffffff !important; border-right: 1px solid #e4e4e7 !important; }
+section[data-testid="stSidebar"] { background: #ffffff !important; border-right: 1px solid var(--neutral-outline) !important; }
 section[data-testid="stSidebar"] > div { background: #ffffff !important; }
 section[data-testid="stSidebar"] label { color: #3f3f46 !important; font-size: 0.86rem !important; font-weight: 500 !important; }
 section[data-testid="stSidebar"] p { color: #3f3f46 !important; }
@@ -138,91 +163,91 @@ section[data-testid="stSidebar"] .stRadio label {
     transition: background 0.15s !important;
 }
 section[data-testid="stSidebar"] .stRadio label:has(input:checked) {
-    background: #f1f6fe !important;
-    color: #1a62f2 !important;
-    border-left: 3px solid #1a62f2 !important;
+    background: var(--bg-blue-xl) !important;
+    color: var(--brand-primary) !important;
+    border-left: 3px solid var(--brand-primary) !important;
 }
-section[data-testid="stSidebar"] hr { border-color: #e2e8f0 !important; }
+section[data-testid="stSidebar"] hr { border-color: var(--neutral-outline) !important; }
 
 /* ── Inputs & textareas ── */
 [data-testid="stTextInput"] input,
 [data-testid="stTextArea"] textarea {
     background: #ffffff !important;
-    border: 1.5px solid #e4e4e7 !important;
+    border: 1.5px solid var(--neutral-outline) !important;
     border-radius: 10px !important;
-    color: #18181b !important;
+    color: var(--neutral-black) !important;
     font-size: 0.84rem !important;
     transition: border-color 0.15s, box-shadow 0.15s !important;
 }
 [data-testid="stTextInput"] input:focus,
 [data-testid="stTextArea"] textarea:focus {
-    border-color: #1a62f2 !important;
+    border-color: var(--brand-primary) !important;
     box-shadow: 0 0 0 3px rgba(26,98,242,0.1) !important;
     outline: none !important;
 }
 [data-testid="stSelectbox"] > div > div {
     background: #ffffff !important;
-    border: 1.5px solid #e4e4e7 !important;
+    border: 1.5px solid var(--neutral-outline) !important;
     border-radius: 10px !important;
-    color: #18181b !important;
+    color: var(--neutral-black) !important;
 }
 [data-testid="stMultiSelect"] > div > div {
     background: #ffffff !important;
-    border: 1.5px solid #e4e4e7 !important;
+    border: 1.5px solid var(--neutral-outline) !important;
     border-radius: 10px !important;
-    color: #18181b !important;
+    color: var(--neutral-black) !important;
 }
 
 /* ── Buttons ── */
 .stButton > button {
-    border-radius: 10px !important;
+    border-radius: 8px !important;
     font-size: 0.82rem !important;
     font-weight: 600 !important;
     letter-spacing: 0.01em !important;
-    transition: all 0.15s ease !important;
+    transition: all 0.2s ease !important;
     border: none !important;
 }
 .stButton > button[kind="primary"] {
-    background: #1a62f2 !important;
+    background: var(--brand-primary) !important;
     color: #fff !important;
     box-shadow: 0 1px 3px rgba(26,98,242,0.25) !important;
 }
 .stButton > button[kind="primary"]:hover {
-    background: #1a5ee8 !important;
-    box-shadow: 0 4px 14px rgba(26,98,242,0.32) !important;
+    background: var(--brand-dark) !important;
+    box-shadow: 0 4px 14px rgba(26,94,232,0.3) !important;
     transform: translateY(-1px) !important;
 }
 .stButton > button[kind="secondary"] {
     background: #ffffff !important;
-    border: 1.5px solid #e4e4e7 !important;
+    border: 1.5px solid var(--neutral-outline) !important;
     color: #52525b !important;
 }
 .stButton > button[kind="secondary"]:hover {
-    background: #f4f4f5 !important;
-    border-color: #c3e4fd !important;
-    color: #1a62f2 !important;
+    background: var(--bg-blue-xl) !important;
+    border-color: var(--bg-blue-shade) !important;
+    color: var(--brand-primary) !important;
     transform: translateY(-1px) !important;
 }
 
 /* ── Download button ── */
 [data-testid="stDownloadButton"] button {
     background: #ffffff !important;
-    border: 1.5px solid #e4e4e7 !important;
-    border-radius: 10px !important;
-    color: #1a62f2 !important;
+    border: 1.5px solid var(--neutral-outline) !important;
+    border-radius: 8px !important;
+    color: var(--brand-primary) !important;
     font-size: 0.82rem !important;
     font-weight: 600 !important;
-    transition: all 0.15s ease !important;
+    transition: all 0.2s ease !important;
 }
 [data-testid="stDownloadButton"] button:hover {
-    border-color: #c3e4fd !important;
+    border-color: var(--bg-blue-shade) !important;
     transform: translateY(-1px) !important;
 }
 
 /* ── Tabs ── */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
     background: transparent !important;
-    border-bottom: 2px solid #e4e4e7 !important;
+    border-bottom: 2px solid var(--neutral-outline) !important;
     gap: 0 !important;
     padding: 0 !important;
 }
@@ -230,15 +255,15 @@ section[data-testid="stSidebar"] hr { border-color: #e2e8f0 !important; }
     background: transparent !important;
     font-size: 0.83rem !important;
     font-weight: 500 !important;
-    color: #71717a !important;
+    color: var(--neutral-secondary) !important;
     padding: 10px 24px !important;
     border-bottom: 2px solid transparent !important;
     margin-bottom: -2px !important;
     transition: color 0.15s !important;
 }
 [aria-selected="true"][data-baseweb="tab"] {
-    color: #1a62f2 !important;
-    border-bottom: 2px solid #1a62f2 !important;
+    color: var(--brand-primary) !important;
+    border-bottom: 2px solid var(--brand-primary) !important;
     font-weight: 600 !important;
 }
 [data-testid="stTabs"] [data-baseweb="tab-panel"] {
@@ -308,9 +333,9 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
     border-radius: 14px 14px 0 0;
     background: #e4e4e7;
 }
-.metric-card.accent-blue::before   { background: linear-gradient(90deg, #1a62f2, #2d84f1); }
-.metric-card.accent-green::before  { background: linear-gradient(90deg, #059669, #34d399); }
-.metric-card.accent-red::before    { background: linear-gradient(90deg, #dc2626, #f87171); }
+.metric-card.accent-blue::before   { background: var(--gradient-blue); }
+.metric-card.accent-green::before  { background: linear-gradient(90deg, #0ebc6e, #42ba78); }
+.metric-card.accent-red::before    { background: linear-gradient(90deg, #e72b3b, #fb6069); }
 .metric-card.accent-amber::before  { background: linear-gradient(90deg, #d97706, #fbbf24); }
 
 .metric-label {
@@ -348,14 +373,14 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
     box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 .csat-score-side { text-align: center; padding-right: 2rem; border-right: 1px solid #e4e4e7; }
-.csat-number { font-size: 3rem; font-weight: 800; color: #1a62f2; -webkit-text-fill-color: #1a62f2; letter-spacing: -0.05em; line-height: 1; }
+.csat-number { font-size: 3rem; font-weight: 800; color: var(--brand-primary); -webkit-text-fill-color: var(--brand-primary); letter-spacing: -0.05em; line-height: 1; }
 .csat-stars { color: #f59e0b; font-size: 1.1rem; margin: 10px 0 6px; letter-spacing: 3px; }
 .csat-count { font-size: 0.7rem; color: #a1a1aa; }
 .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 9px; }
 .bar-row:last-child { margin-bottom: 0; }
 .bar-star  { font-size: 0.67rem; color: #a1a1aa; width: 18px; text-align: right; flex-shrink: 0; }
-.bar-track { flex: 1; height: 5px; background: #f4f4f5; border-radius: 99px; overflow: hidden; }
-.bar-fill  { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #1a62f2, #2d84f1); }
+.bar-track { flex: 1; height: 5px; background: var(--neutral-smoke); border-radius: 99px; overflow: hidden; }
+.bar-fill  { height: 100%; border-radius: 99px; background: var(--gradient-blue); }
 .bar-pct   { font-size: 0.67rem; color: #71717a; width: 30px; text-align: right; flex-shrink: 0; }
 .bar-count { font-size: 0.64rem; color: #a1a1aa; width: 14px; flex-shrink: 0; }
 .resp-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #f4f4f5; }
@@ -371,16 +396,30 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
 
 .page-header {
     margin-bottom: 1.8rem;
-    padding-bottom: 1.2rem;
-    border-bottom: 1px solid #e4e4e7;
+    padding: 1.2rem 0 1.2rem;
+    border-bottom: 1px solid var(--neutral-outline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
+.page-header-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: var(--bg-blue-xl);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    border: 1px solid var(--bg-blue-shade);
+}
+.page-header-text { flex: 1; }
 .page-title {
-    font-size: 1.35rem;
+    font-size: 1.3rem;
     font-weight: 800;
-    color: #18181b;
+    color: var(--neutral-black);
     letter-spacing: -0.03em;
+    line-height: 1.2;
 }
-.page-sub { font-size: 0.83rem; color: #71717a; margin-top: 0.3rem; font-weight: 400; }
+.page-sub { font-size: 0.82rem; color: var(--neutral-secondary); margin-top: 0.2rem; font-weight: 400; }
 
 /* ──────────────────────────────────────────────────────
    CLIENT REPOSITORY
@@ -397,14 +436,14 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
 .client-repo-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
 .tag-chip {
     display: inline-block;
-    background: #f4f4f5;
-    color: #52525b;
+    background: var(--bg-blue-xl);
+    color: var(--brand-primary);
     font-size: 0.61rem;
     font-weight: 600;
     padding: 3px 9px;
     border-radius: 6px;
     margin: 2px 2px 0 0;
-    border: 1px solid #e4e4e7;
+    border: 1px solid var(--bg-blue-shade);
 }
 
 /* Stats grid */
@@ -447,24 +486,30 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
 .client-name { color: #18181b; font-weight: 600; font-size: 0.9rem; }
 .email-pill {
     display: inline-block;
-    background: #f1f6fe;
-    color: #1a62f2;
+    background: var(--bg-blue-xl);
+    color: var(--brand-primary);
     font-size: 0.7rem;
     font-weight: 500;
     padding: 3px 10px;
     border-radius: 6px;
     margin: 3px 3px 0 0;
-    border: 1px solid #c3e4fd;
+    border: 1px solid var(--bg-blue-shade);
 }
 
 /* ── Section labels ── */
 .section-chip {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 0.6rem;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #a1a1aa;
+    color: var(--brand-primary);
+    background: var(--bg-blue-xl);
+    border: 1px solid var(--bg-blue-shade);
+    border-radius: 6px;
+    padding: 3px 10px;
     margin-bottom: 14px;
 }
 
@@ -505,22 +550,26 @@ def _render_login_page():
         text-align: center;
     }
     .login-logo {
-        width: 54px; height: 54px;
-        background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+        width: 58px; height: 58px;
+        background: linear-gradient(135deg, #1a62f2 0%, #1a5ee8 100%);
         border-radius: 16px;
         display: inline-flex; align-items: center; justify-content: center;
-        font-size: 0.82rem; font-weight: 800; color: #fff;
+        font-size: 0.78rem; font-weight: 800; color: #fff;
         margin-bottom: 1.4rem;
-        box-shadow: 0 6px 20px rgba(37,99,235,0.3);
-        letter-spacing: 0.02em;
+        box-shadow: 0 6px 27px rgba(26,94,232,0.3);
+        letter-spacing: 0.06em;
     }
-    .login-title { font-size: 1.35rem; font-weight: 800; color: #18181b; margin-bottom: 0.3rem; letter-spacing: -0.03em; }
-    .login-sub   { font-size: 0.83rem; color: #a1a1aa; margin-bottom: 2rem; }
+    .login-brand { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #1a62f2; margin-bottom: 6px; }
+    .login-title { font-size: 1.45rem; font-weight: 800; color: #151515; margin-bottom: 0.3rem; letter-spacing: -0.03em; line-height: 1.2; }
+    .login-divider { width: 40px; height: 3px; background: linear-gradient(90deg, #1a5ee8, #2d84f1); border-radius: 2px; margin: 12px auto 20px; }
+    .login-sub { font-size: 0.83rem; color: #667085; margin-bottom: 2rem; }
     </style>
     <div class="login-wrap">
         <div class="login-logo">CDL</div>
-        <div class="login-title">Convin Data Labs</div>
-        <div class="login-sub">Sign in to continue</div>
+        <div class="login-brand">Convin Data Labs</div>
+        <div class="login-title">Insights Dashboard</div>
+        <div class="login-divider"></div>
+        <div class="login-sub">Sign in to access your analytics</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -547,10 +596,10 @@ with st.sidebar:
     st.markdown("""
     <div style="padding:8px 4px 18px;">
         <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,#2563eb 0%,#60a5fa 100%);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;color:#fff;letter-spacing:0.02em;box-shadow:0 3px 10px rgba(37,99,235,0.3);">CDL</div>
+            <div style="width:36px;height:36px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,#1a62f2,#1a5ee8);display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;color:#fff;letter-spacing:0.06em;box-shadow:0 4px 12px rgba(26,94,232,0.3);">CDL</div>
             <div>
-                <div style="color:#18181b;font-weight:700;font-size:0.9rem;letter-spacing:-0.01em;line-height:1.2;">Convin Data Labs</div>
-                <div style="color:#a1a1aa;font-size:0.63rem;margin-top:2px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;">Settings</div>
+                <div style="color:#151515;font-weight:700;font-size:0.9rem;letter-spacing:-0.01em;line-height:1.2;">Convin Data Labs</div>
+                <div style="color:#1a62f2;font-size:0.6rem;margin-top:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">Settings</div>
             </div>
         </div>
     </div>
@@ -626,15 +675,15 @@ def _email_table_html(rows: list) -> str:
     def dbadge(v):
         return '<span style="color:#22c55e;font-weight:700;">✓</span>' if v else '<span style="color:#f87171;font-weight:700;">✗</span>'
     def sbadge(v):
-        return '<span style="color:#3b82f6;font-weight:600;">✓</span>' if v else '<span style="color:#94a3b8;">—</span>'
+        return '<span style="color:#1a62f2;font-weight:600;">✓</span>' if v else '<span style="color:#94a3b8;">—</span>'
     def scbadge(s):
         if s is None:
             return '<span style="color:#94a3b8;">—</span>'
         c = {1:"#f87171",2:"#fb923c",3:"#fbbf24",4:"#34d399",5:"#22c55e"}
         return f'<span style="color:{c[s]};font-weight:700;">{s}★</span>'
 
-    th = 'style="color:#64748b;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:10px 12px;text-align:left;white-space:nowrap;background:#f8faff;"'
-    tc = 'style="font-size:0.73rem;padding:9px 12px;border-bottom:1px solid #e8f0fe;text-align:center;"'
+    th = 'style="color:#667085;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:10px 12px;text-align:left;white-space:nowrap;background:#f4f7fe;"'
+    tc = 'style="font-size:0.73rem;padding:9px 12px;border-bottom:1px solid #f1f6fe;text-align:center;"'
     headers = ["Email", "DL Report Name", "Del", "Open", "Click", "Resp", "Score", "Date"]
     hrow = f'<tr>{"".join(f"<th {th}>{h}</th>" for h in headers)}</tr>'
     brows = "".join(
@@ -650,7 +699,7 @@ def _email_table_html(rows: list) -> str:
         </tr>"""
         for r in rows
     )
-    return f"""<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+    return f"""<div style="background:#ffffff;border:1px solid #e1e1e1;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
       <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
         <thead>{hrow}</thead><tbody>{brows}</tbody>
       </table></div></div>"""
@@ -701,7 +750,7 @@ def _render_period_content(period: str):
         items = "".join(
             f'<div style="display:flex;align-items:center;gap:10px;padding:7px 0;'
             f'border-bottom:1px solid #f1f5f9;">'
-            f'<div style="width:8px;height:8px;border-radius:50%;background:#2563eb;flex-shrink:0;"></div>'
+            f'<div style="width:8px;height:8px;border-radius:50%;background:#1a62f2;flex-shrink:0;"></div>'
             f'<div style="flex:1;min-width:0;">'
             f'<div style="font-size:0.79rem;font-weight:600;color:#0f172a;white-space:nowrap;'
             f'overflow:hidden;text-overflow:ellipsis;">{r["email"]}</div>'
@@ -770,8 +819,11 @@ def _render_period_content(period: str):
 
 def render_overview():
     st.markdown("""<div class="page-header">
-        <div class="page-title">Overview</div>
-        <div class="page-sub">Convin Data Labs · Insights Report Feedback Dashboard</div>
+        <div class="page-header-icon">📊</div>
+        <div class="page-header-text">
+            <div class="page-title">Overview</div>
+            <div class="page-sub">Convin Data Labs · Insights Report Feedback Dashboard</div>
+        </div>
     </div>""", unsafe_allow_html=True)
 
     tab_d, tab_w, tab_m = st.tabs(["📅  Daily", "📅  Weekly", "📅  Monthly"])
@@ -818,7 +870,7 @@ def _render_ai_summary(period: str, csat_data: dict, respondents: list):
         )
         themes_html  = _card("Key Themes",           s.get("themes", []),  "#f0fdf4", "#bbf7d0", "#166534", "#16a34a")
         issues_html  = _card("Top Issues",           s.get("issues", []),  "#fff7ed", "#fed7aa", "#9a3412", "#ea580c")
-        actions_html = _card("Recommended Actions",  s.get("actions", []), "#eff6ff", "#bfdbfe", "#1e3a5f", "#2563eb")
+        actions_html = _card("Recommended Actions",  s.get("actions", []), "#f1f6fe", "#c3e4fd", "#092e78", "#1a62f2")
 
         st.markdown(sentiment_html + themes_html + issues_html + actions_html, unsafe_allow_html=True)
 
@@ -894,7 +946,7 @@ _STATUS_CFG = {
 }
 
 _AVATAR_GRADS = [
-    ("linear-gradient(135deg,#1d4ed8,#3b82f6)", "#fff"),
+    ("linear-gradient(135deg,#1a62f2,#2d84f1)", "#fff"),
     ("linear-gradient(135deg,#059669,#34d399)", "#fff"),
     ("linear-gradient(135deg,#7c3aed,#a78bfa)", "#fff"),
     ("linear-gradient(135deg,#d97706,#fbbf24)", "#fff"),
@@ -972,7 +1024,7 @@ def _render_client_card(c: dict):
             with ec1:
                 st.markdown(
                     f'<div style="background:#f0f7ff;border:1px solid #e2e8f0;border-radius:6px;'
-                    f'padding:6px 10px;font-size:0.78rem;color:#2563eb;">{em}</div>',
+                    f'padding:6px 10px;font-size:0.78rem;color:#1a62f2;">{em}</div>',
                     unsafe_allow_html=True,
                 )
             with ec2:
@@ -1039,8 +1091,11 @@ def render_clients():
 
     # ── Header ────────────────────────────────────────────────────────────────
     st.markdown("""<div class="page-header">
-        <div class="page-title">Client Repository</div>
-        <div class="page-sub">Manage stakeholders, contacts, tags, and email addresses.</div>
+        <div class="page-header-icon">🏢</div>
+        <div class="page-header-text">
+            <div class="page-title">Client Repository</div>
+            <div class="page-sub">Manage stakeholders, contacts, tags, and email addresses.</div>
+        </div>
     </div>""", unsafe_allow_html=True)
 
     # ── Stats bar ─────────────────────────────────────────────────────────────
@@ -1174,10 +1229,10 @@ def render_clients():
 STATUS_META = {
     "empty": ("#f1f5f9", "#94a3b8", "Empty"),
     "draft": ("#dcfce7", "#16a34a", "In Progress"),
-    "ready": ("#eff6ff", "#2563eb", "Ready"),
+    "ready": ("#f1f6fe", "#1a62f2", "Ready"),
 }
 
-_TMPL_TEXT_COLORS = ["#c9a96e", "#2563eb", "#ffffff", "#a78bfa", "#8b5e3c",
+_TMPL_TEXT_COLORS = ["#c9a96e", "#1a62f2", "#ffffff", "#a78bfa", "#8b5e3c",
                      "#06b6d4", "#ea580c", "#10b981", "#f97316",
                      "#ffffff", "#ffffff", "#1a62f2"]
 _TMPL_BG_COLORS   = ["#0d1b2a", "#f1f5f9", "#1e3a8a", "#13111f", "#f4ede0",
@@ -1259,7 +1314,7 @@ def _template_picker(d: dict, key_suffix: str):
             tid    = ti + 1
             is_sel = d.get("template", 1) == tid
             tc     = _TMPL_TEXT_COLORS[ti]
-            border = "#2563eb" if is_sel else "#e2e8f0"
+            border = "#1a62f2" if is_sel else "#e1e1e1"
             with cols[j]:
                 st.markdown(
                     f'<div class="tmpl-card" style="background:{tswatch};border:2px solid {border};">'
@@ -1346,8 +1401,11 @@ def render_drafts_tab():
 
 def render_email_maker():
     st.markdown("""<div class="page-header">
-        <div class="page-title">Email Maker</div>
-        <div class="page-sub">Compose, preview, and send insights report emails.</div>
+        <div class="page-header-icon">📧</div>
+        <div class="page-header-text">
+            <div class="page-title">Email Maker</div>
+            <div class="page-sub">Compose, preview, and send insights report emails.</div>
+        </div>
     </div>""", unsafe_allow_html=True)
 
     tab_compose, tab_ai = st.tabs(["📤  Compose & Send", "🤖  AI Check"])
@@ -1631,8 +1689,8 @@ def render_email_maker():
                         st.markdown(f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;font-size:0.85rem;color:#14532d;white-space:pre-wrap;">{_corrected}</div>', unsafe_allow_html=True)
 
                         if _changes:
-                            st.markdown('<div style="color:#2563eb;font-size:0.8rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin:14px 0 8px;">Changes Made</div>', unsafe_allow_html=True)
-                            st.markdown(f'<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;font-size:0.83rem;color:#1e3a5f;white-space:pre-wrap;">{_changes}</div>', unsafe_allow_html=True)
+                            st.markdown('<div style="color:#1a62f2;font-size:0.8rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin:14px 0 8px;">Changes Made</div>', unsafe_allow_html=True)
+                            st.markdown(f'<div style="background:#f1f6fe;border:1px solid #c3e4fd;border-radius:8px;padding:14px 16px;font-size:0.83rem;color:#092e78;white-space:pre-wrap;">{_changes}</div>', unsafe_allow_html=True)
 
                         # Apply to draft option
                         if ai_source == "Pick a draft" and _corrected:
@@ -1799,16 +1857,18 @@ st.markdown("""
 
 /* Nav bar */
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) {
-    background: rgba(255,255,255,0.95) !important;
-    border-bottom: 1px solid #e4e4e7 !important;
+    background: rgba(255,255,255,0.97) !important;
+    border-bottom: 1px solid #e1e1e1 !important;
+    border-top: 3px solid transparent !important;
+    border-image: linear-gradient(90deg, #1a62f2, #2d84f1) 1 !important;
     padding: 6px 0 8px !important;
     margin-bottom: 1.5rem !important;
     position: sticky !important;
     top: 0 !important;
     z-index: 999 !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    box-shadow: 0 1px 12px rgba(0,0,0,0.05) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    box-shadow: 0 2px 16px rgba(26,94,232,0.08) !important;
 }
 /* Active nav button */
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="primary"] {
@@ -1817,9 +1877,11 @@ div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind
     border: none !important;
     box-shadow: none !important;
     font-weight: 700 !important;
+    border-bottom: 2px solid #1a62f2 !important;
+    border-radius: 6px !important;
 }
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="primary"]:hover {
-    background: #dbeafe !important;
+    background: #e8f0fe !important;
     transform: none !important;
     box-shadow: none !important;
 }
@@ -1827,11 +1889,12 @@ div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="secondary"] {
     background: transparent !important;
     border: none !important;
-    color: #71717a !important;
+    color: #667085 !important;
+    border-radius: 6px !important;
 }
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="secondary"]:hover {
-    background: #f4f4f5 !important;
-    color: #18181b !important;
+    background: #f6f9fe !important;
+    color: #151515 !important;
     border: none !important;
     transform: none !important;
 }
