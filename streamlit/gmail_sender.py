@@ -10,12 +10,35 @@ Setup (one-time):
 5. Paste it in the sidebar "Gmail App Password" field
 """
 
+import base64 as _b64
+import re
 import smtplib
 import ssl
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import streamlit as st
+
+
+def _extract_inline_images(html: str):
+    """
+    Finds base64 data-URL images in HTML, replaces each with a cid: reference,
+    and returns (modified_html, [(cid, subtype, bytes), ...]).
+    Email clients block data: URLs — CID attachments are the correct approach.
+    """
+    images = []
+
+    def _replace(match):
+        data_url = match.group(1)          # data:image/jpeg;base64,<data>
+        cid = f"img_{len(images)}"
+        header, b64data = data_url.split(",", 1)
+        subtype = header.split(":")[1].split(";")[0].split("/")[1]  # jpeg / png / gif
+        images.append((cid, subtype, _b64.b64decode(b64data)))
+        return f'src="cid:{cid}"'
+
+    modified = re.sub(r'src="(data:image/[^"]+)"', _replace, html)
+    return modified, images
 
 
 def send_report_email(
@@ -55,11 +78,24 @@ def send_report_email(
 
     for addr in to_emails:
         try:
-            msg             = MIMEMultipart("alternative")
-            msg["Subject"]  = subject
-            msg["From"]     = gmail_user
-            msg["To"]       = addr
-            msg.attach(MIMEText(html_body, "html"))
+            modified_html, inline_images = _extract_inline_images(html_body)
+
+            # "related" wraps html + inline images so cid: references resolve
+            msg            = MIMEMultipart("related")
+            msg["Subject"] = subject
+            msg["From"]    = gmail_user
+            msg["To"]      = addr
+
+            alt = MIMEMultipart("alternative")
+            alt.attach(MIMEText(modified_html, "html"))
+            msg.attach(alt)
+
+            for cid, subtype, img_bytes in inline_images:
+                part = MIMEImage(img_bytes, _subtype=subtype)
+                part.add_header("Content-ID", f"<{cid}>")
+                part.add_header("Content-Disposition", "inline")
+                msg.attach(part)
+
             server.sendmail(gmail_user, addr, msg.as_string())
             sent.append(addr)
         except Exception as exc:
