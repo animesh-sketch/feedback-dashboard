@@ -1,7 +1,7 @@
 """
-9 email template designs for Convin Data Labs report emails.
+12 email template designs for Convin Data Labs report emails.
 Fields used: client, headline, body, screenshot_url, screenshot_caption,
-             report_link, survey_question, template (1-9)
+             report_link, survey_question, template (1-12)
 """
 
 # Template registry: (name, description, swatch_bg)
@@ -15,6 +15,9 @@ TEMPLATE_NAMES = [
     ("Sunrise",      "Warm orange · Light airy",    "#fff3e8"),
     ("Forest",       "Deep green · Mint fresh",     "#0b1f14"),
     ("Carbon",       "Charcoal · Bold orange",      "#1a1a1a"),
+    ("Convin Signature", "Pink·Coral·Blue brand gradient", "#d22c84"),
+    ("Convin Slate",     "Slate grey · Blue accent clean",  "#3d4f6b"),
+    ("Convin Premium",  "White · Gradient border premium",  "#1a62f2"),
 ]
 
 
@@ -45,7 +48,8 @@ def build_email_html(draft: dict, template_id: int = 1) -> str:
 
     builders = {1: _tpl_executive, 2: _tpl_minimal,
                 3: _tpl_bold_blue, 4: _tpl_modern, 5: _tpl_classic,
-                6: _tpl_neon, 7: _tpl_sunrise, 8: _tpl_forest, 9: _tpl_carbon}
+                6: _tpl_neon, 7: _tpl_sunrise, 8: _tpl_forest, 9: _tpl_carbon,
+                10: _tpl_signature, 11: _tpl_slate, 12: _tpl_premium}
     return builders.get(template_id, _tpl_executive)(c, h, b, ss, sc, rl, sq, extra_imgs_html)
 
 
@@ -595,5 +599,178 @@ body { background: #111; font-family: 'Inter', sans-serif; padding: 32px 16px 48
   <div style="padding:18px 44px;background:#141414;text-align:center;border-top:1px solid #222;">
     <div><a href="#" style="font-size:11px;color:#444;text-decoration:none;margin:0 10px;">Unsubscribe</a><a href="#" style="font-size:11px;color:#444;text-decoration:none;margin:0 10px;">Preferences</a><a href="#" style="font-size:11px;color:#444;text-decoration:none;margin:0 10px;">Privacy</a></div>
     <div style="font-size:11px;color:#2a2a2a;margin-top:6px;">Convin Data Labs · Registered client communication.</div>
+  </div>
+</div></body></html>"""
+
+
+# ── Template 10 · Convin Signature ──────────────────────────────────────────
+def _tpl_signature(c, h, b, ss, sc, rl, sq, extra_imgs_html=""):
+    css = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #f9f9f9; font-family: 'Inter', sans-serif; padding: 32px 16px 48px; }
+.wrap { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 32px rgba(210,44,132,0.1); border: 1px solid #f0e8f8; }
+</style>"""
+    ss_html = _screenshot(ss, sc,
+        wrap_css="padding:0 44px 32px;",
+        img_css="border-radius:8px;border:1px solid #f0e8f8;")
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>{css}</head><body>
+<div class="wrap">
+  <div style="background:linear-gradient(108deg,#d22c84,#fb6069 52%,#2d84f1);padding:28px 44px;">
+    <div style="font-size:16px;font-weight:700;color:#fff;letter-spacing:-0.01em;margin-bottom:3px;">Convin Data Labs</div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.65);font-weight:400;">Analytics · Report Delivery</div>
+  </div>
+  <div style="background:#fdf8ff;padding:10px 44px;border-bottom:1px solid #f0e8f8;">
+    <span style="font-size:11px;color:#888;">Prepared for <strong style="color:#151515;">{c}</strong></span>
+  </div>
+  <div style="padding:48px 44px 40px;border-bottom:1px solid #f5f0fc;">
+    <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:14px;background:linear-gradient(90deg,#d22c84,#fb6069 52%,#2d84f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Executive Summary</div>
+    <h1 style="font-size:28px;font-weight:700;color:#151515;line-height:1.3;margin-bottom:18px;letter-spacing:-0.02em;">{h}</h1>
+    <div style="width:44px;height:3px;background:linear-gradient(90deg,#d22c84,#2d84f1);border-radius:2px;margin-bottom:20px;"></div>
+    <p style="font-size:14px;line-height:1.85;color:#444;">{b}</p>
+  </div>
+  {ss_html}{extra_imgs_html}
+  <div style="padding:36px 44px;background:#fdf8ff;border-bottom:1px solid #f0e8f8;text-align:center;">
+    <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#aaa;margin-bottom:12px;">Full Report</div>
+    <a href="{rl}" style="display:inline-block;background:linear-gradient(108deg,#d22c84,#fb6069 52%,#2d84f1);color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:14px 44px;border-radius:8px;letter-spacing:0.03em;">Open Full Report →</a>
+  </div>
+  <div style="padding:28px 44px 24px;border-bottom:1px solid #f5f0fc;">
+    <p style="font-size:13px;color:#aaa;margin-bottom:8px;">Warm regards,</p>
+    <p style="font-size:16px;font-weight:700;color:#151515;margin-bottom:3px;">Convin Data Labs</p>
+    <div style="width:36px;height:2px;background:linear-gradient(90deg,#d22c84,#2d84f1);margin-top:12px;border-radius:2px;"></div>
+  </div>
+  <div style="background:#fdf8ff;padding:36px 44px 40px;">
+    <div style="text-align:center;padding-bottom:22px;border-bottom:1px solid #f0e8f8;margin-bottom:26px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:10px;background:linear-gradient(90deg,#d22c84,#2d84f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Quick Feedback</div>
+      <div style="font-size:19px;font-weight:600;color:#151515;margin-bottom:6px;">{sq}</div>
+      <div style="font-size:12px;color:#aaa;">Takes 15 seconds · Helps us improve.</div>
+    </div>
+    <div style="text-align:center;margin-bottom:8px;">
+      <a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=1" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=2" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=3" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=4" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=5" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:20px;padding:0 4px;"><span style="font-size:11px;color:#ddd;">Not useful</span><span style="font-size:11px;color:#ddd;">Very useful</span></div>
+    <div style="text-align:center;font-size:11px;color:#aaa;margin-top:6px;">Click a star above to rate — opens in your browser</div>
+  </div>
+  <div style="padding:18px 44px;background:#fff;border-top:1px solid #f0e8f8;text-align:center;">
+    <div><a href="#" style="font-size:11px;color:#ccc;text-decoration:none;margin:0 10px;">Unsubscribe</a><a href="#" style="font-size:11px;color:#ccc;text-decoration:none;margin:0 10px;">Preferences</a><a href="#" style="font-size:11px;color:#ccc;text-decoration:none;margin:0 10px;">Privacy</a></div>
+    <div style="font-size:11px;color:#ddd;margin-top:8px;">Convin Data Labs · Registered client communication.</div>
+  </div>
+</div></body></html>"""
+
+
+# ── Template 11 · Convin Slate ───────────────────────────────────────────────
+def _tpl_slate(c, h, b, ss, sc, rl, sq, extra_imgs_html=""):
+    css = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #e8ecf0; font-family: 'Inter', sans-serif; padding: 32px 16px 48px; }
+.wrap { max-width: 600px; margin: 0 auto; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,0.12); }
+</style>"""
+    ss_html = _screenshot(ss, sc,
+        wrap_css="padding:0 44px 32px;",
+        img_css="border-radius:6px;border:1px solid #e2e8f0;")
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>{css}</head><body>
+<div class="wrap">
+  <div style="background:#2d3748;padding:24px 44px;display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="font-size:15px;font-weight:700;color:#fff;letter-spacing:-0.01em;">Convin Data Labs</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Analytics Intelligence</div>
+    </div>
+    <div style="width:8px;height:32px;background:#1a62f2;border-radius:4px;"></div>
+  </div>
+  <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 44px;">
+    <span style="font-size:11px;color:#64748b;">For <strong style="color:#1e293b;">{c}</strong></span>
+  </div>
+  <div style="padding:48px 44px 40px;border-bottom:1px solid #e2e8f0;">
+    <div style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#1a62f2;background:#f1f6fe;padding:4px 12px;border-radius:4px;margin-bottom:18px;">Executive Summary</div>
+    <h1 style="font-size:27px;font-weight:700;color:#0f172a;line-height:1.3;margin-bottom:18px;letter-spacing:-0.02em;">{h}</h1>
+    <div style="width:40px;height:3px;background:#1a62f2;border-radius:2px;margin-bottom:20px;"></div>
+    <p style="font-size:14px;line-height:1.85;color:#475569;">{b}</p>
+  </div>
+  {ss_html}{extra_imgs_html}
+  <div style="padding:36px 44px;background:#f8fafc;border-bottom:1px solid #e2e8f0;text-align:center;">
+    <a href="{rl}" style="display:inline-block;background:#2d3748;color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:14px 44px;border-radius:6px;letter-spacing:0.04em;text-transform:uppercase;">Open Full Report →</a>
+  </div>
+  <div style="padding:28px 44px 24px;border-bottom:1px solid #e2e8f0;">
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:8px;">Best regards,</p>
+    <p style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:3px;">Convin Data Labs</p>
+    <div style="width:36px;height:2px;background:#1a62f2;margin-top:12px;border-radius:2px;"></div>
+  </div>
+  <div style="background:#f8fafc;padding:36px 44px 40px;">
+    <div style="text-align:center;padding-bottom:22px;border-bottom:1px solid #e2e8f0;margin-bottom:26px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#1a62f2;margin-bottom:10px;">Quick Feedback</div>
+      <div style="font-size:19px;font-weight:600;color:#0f172a;margin-bottom:6px;">{sq}</div>
+      <div style="font-size:12px;color:#94a3b8;">Takes 15 seconds · Helps us improve.</div>
+    </div>
+    <div style="text-align:center;margin-bottom:8px;">
+      <a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=1" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=2" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=3" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=4" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=5" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:20px;padding:0 4px;"><span style="font-size:11px;color:#cbd5e1;">Not useful</span><span style="font-size:11px;color:#cbd5e1;">Very useful</span></div>
+    <div style="text-align:center;font-size:11px;color:#94a3b8;margin-top:6px;">Click a star above to rate — opens in your browser</div>
+  </div>
+  <div style="padding:18px 44px;background:#2d3748;text-align:center;">
+    <div><a href="#" style="font-size:11px;color:#64748b;text-decoration:none;margin:0 10px;">Unsubscribe</a><a href="#" style="font-size:11px;color:#64748b;text-decoration:none;margin:0 10px;">Preferences</a><a href="#" style="font-size:11px;color:#64748b;text-decoration:none;margin:0 10px;">Privacy</a></div>
+    <div style="font-size:11px;color:#475569;margin-top:8px;">Convin Data Labs · Registered client communication.</div>
+  </div>
+</div></body></html>"""
+
+
+# ── Template 12 · Convin Premium ────────────────────────────────────────────
+def _tpl_premium(c, h, b, ss, sc, rl, sq, extra_imgs_html=""):
+    css = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #f1f6fe; font-family: 'Inter', sans-serif; padding: 32px 16px 48px; }
+.wrap { max-width: 600px; margin: 0 auto; background: #fff; border-top: 3px solid transparent; border-image: linear-gradient(90deg,#d22c84,#fb6069 52%,#2d84f1) 1; box-shadow: 0 4px 40px rgba(26,98,242,0.08); }
+</style>"""
+    ss_html = _screenshot(ss, sc,
+        wrap_css="padding:0 44px 32px;",
+        img_css="border-radius:8px;border:1px solid #e8effe;")
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>{css}</head><body>
+<div class="wrap">
+  <div style="padding:24px 44px;border-bottom:1px solid #f0f1ff;display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-size:15px;font-weight:700;color:#151515;letter-spacing:-0.01em;">Convin Data Labs</div>
+    <div style="font-size:11px;font-weight:600;color:#1a62f2;letter-spacing:0.05em;text-transform:uppercase;">Report</div>
+  </div>
+  <div style="background:#f7f8ff;border-bottom:1px solid #eef0ff;padding:9px 44px;">
+    <span style="font-size:11px;color:#888;">Prepared for <strong style="color:#151515;">{c}</strong></span>
+  </div>
+  <div style="padding:48px 44px 40px;border-bottom:1px solid #f0f1ff;">
+    <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#1a62f2;margin-bottom:14px;">Executive Summary</div>
+    <h1 style="font-size:28px;font-weight:700;color:#151515;line-height:1.3;margin-bottom:18px;letter-spacing:-0.02em;">{h}</h1>
+    <div style="width:44px;height:3px;border-radius:2px;background:linear-gradient(90deg,#d22c84,#fb6069 52%,#2d84f1);margin-bottom:20px;"></div>
+    <p style="font-size:14px;line-height:1.85;color:#4a5568;">{b}</p>
+  </div>
+  {ss_html}{extra_imgs_html}
+  <div style="padding:36px 44px;background:#f7f8ff;border-bottom:1px solid #eef0ff;text-align:center;">
+    <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#aaa;margin-bottom:12px;">Full Report</div>
+    <a href="{rl}" style="display:inline-block;background:#1a62f2;color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:14px 44px;border-radius:8px;letter-spacing:0.04em;">Open Full Report →</a>
+  </div>
+  <div style="padding:28px 44px 24px;border-bottom:1px solid #f0f1ff;">
+    <p style="font-size:13px;color:#aaa;margin-bottom:8px;">Warm regards,</p>
+    <p style="font-size:16px;font-weight:700;color:#151515;margin-bottom:3px;">Convin Data Labs</p>
+    <div style="width:36px;height:2px;background:linear-gradient(90deg,#d22c84,#2d84f1);margin-top:12px;border-radius:2px;"></div>
+  </div>
+  <div style="padding:36px 44px 40px;background:#f7f8ff;">
+    <div style="text-align:center;padding-bottom:22px;border-bottom:1px solid #eef0ff;margin-bottom:26px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#1a62f2;margin-bottom:10px;">Quick Feedback</div>
+      <div style="font-size:19px;font-weight:600;color:#151515;margin-bottom:6px;">{sq}</div>
+      <div style="font-size:12px;color:#aaa;">Takes 15 seconds · Helps us improve.</div>
+    </div>
+    <div style="text-align:center;margin-bottom:8px;">
+      <a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=1" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=2" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=3" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=4" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a><a href="https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app/?rating=5" target="_blank" rel="noopener" style="font-size:28px;text-decoration:none;color:#f59e0b;margin:0 5px;display:inline-block;line-height:1;font-style:normal;">★</a>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:20px;padding:0 4px;"><span style="font-size:11px;color:#dde0ff;">Not useful</span><span style="font-size:11px;color:#dde0ff;">Very useful</span></div>
+    <div style="text-align:center;font-size:11px;color:#aaa;margin-top:6px;">Click a star above to rate — opens in your browser</div>
+  </div>
+  <div style="padding:18px 44px;background:#fff;border-top:1px solid #f0f1ff;text-align:center;">
+    <div><a href="#" style="font-size:11px;color:#ccc;text-decoration:none;margin:0 10px;">Unsubscribe</a><a href="#" style="font-size:11px;color:#ccc;text-decoration:none;margin:0 10px;">Preferences</a><a href="#" style="font-size:11px;color:#ccc;text-decoration:none;margin:0 10px;">Privacy</a></div>
+    <div style="font-size:11px;color:#ddd;margin-top:8px;">Convin Data Labs · Registered client communication.</div>
   </div>
 </div></body></html>"""
