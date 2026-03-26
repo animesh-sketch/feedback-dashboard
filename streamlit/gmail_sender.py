@@ -51,6 +51,7 @@ def send_report_email(
     attachment_name: str = None,
     attachment_data: bytes = None,
     attachment_mime: str = None,
+    html_builder=None,
 ) -> dict:
     gmail_user   = st.session_state.get("user_email") or from_email
     app_password = st.session_state.get("gmail_app_password", "").replace(" ", "")
@@ -82,7 +83,8 @@ def send_report_email(
 
     for addr in to_emails:
         try:
-            modified_html, inline_images = _extract_inline_images(html_body)
+            body_html = html_builder(addr) if html_builder else html_body
+            modified_html, inline_images = _extract_inline_images(body_html)
 
             # Outer container: "mixed" when file attachment present, else "related"
             if attachment_data:

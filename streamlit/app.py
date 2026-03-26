@@ -2,6 +2,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(__file__))
 # v2026.03.25
+from datetime import datetime, timezone
 
 import streamlit as st
 import pandas as pd
@@ -15,6 +16,7 @@ import client_store
 import sent_store
 import auth
 import gmail_sender
+import tracking_store
 
 # ─── Page config ──────────────────────────────────────────────────────────────
 
@@ -87,6 +89,17 @@ if _rating_param:
     except (ValueError, TypeError):
         _r = 0
     if _r:
+        # Log rating event if tracking params present
+        _rating_id = st.query_params.get("id", "")
+        _rating_em = st.query_params.get("em", "")
+        if _rating_id and _rating_em:
+            try:
+                import base64 as _b64r
+                _rating_email = _b64r.b64decode(_rating_em.encode()).decode("utf-8", errors="replace")
+                tracking_store.log_rating(_rating_id, _rating_email, _r)
+                tracking_store.log_event(_rating_id, _rating_email, "open")
+            except Exception:
+                pass
         _stars_filled = "★" * _r + "☆" * (5 - _r)
         st.markdown(f"""
 <style>
@@ -111,6 +124,32 @@ html, body, [class*="css"] {{ font-family: 'Inter', -apple-system, sans-serif; }
 </div>
 """, unsafe_allow_html=True)
         st.stop()
+
+# ─── Click tracking (from email links) ────────────────────────────────────────
+_track_param = st.query_params.get("track")
+if _track_param in ("click", "open"):
+    _track_id  = st.query_params.get("id", "")
+    _track_em  = st.query_params.get("em", "")
+    _track_url = st.query_params.get("url", "")
+    if _track_id and _track_em:
+        try:
+            import base64 as _b64d
+            import urllib.parse as _up2
+            _decoded_email = _b64d.b64decode(_track_em.encode()).decode("utf-8", errors="replace")
+            tracking_store.log_event(_track_id, _decoded_email, _track_param)
+            # Also log as open when click is detected
+            if _track_param == "click":
+                tracking_store.log_event(_track_id, _decoded_email, "open")
+        except Exception:
+            pass
+    if _track_url:
+        try:
+            import urllib.parse as _up3
+            _dest = _up3.unquote(_track_url)
+            st.markdown(f'<meta http-equiv="refresh" content="0;url={_dest}" />', unsafe_allow_html=True)
+            st.stop()
+        except Exception:
+            pass
 
 # ─── Global CSS ───────────────────────────────────────────────────────────────
 
@@ -717,21 +756,106 @@ def _email_table_html(rows: list) -> str:
 # ─── Period content renderer ──────────────────────────────────────────────────
 
 def _render_period_content(period: str):
-    data  = ANALYTICS_BY_PERIOD[period]
+    # ── Real data from sent_store + tracking_store ─────────────────────────────
+    hours_map  = {"Daily": 24, "Weekly": 168, "Monthly": 720}
+    _hours     = hours_map.get(period)
+    _ts        = tracking_store.get_stats_for_period(_hours)
+    _sent_recs = sent_store.load()
+
+    # Filter sent records to the time window
+    if _hours is not None:
+        from datetime import timedelta, timezone as _tz
+        _cutoff    = datetime.now(timezone.utc) - timedelta(hours=_hours)
+        _sent_recs = [
+            r for r in _sent_recs
+            if datetime.fromisoformat(r["timestamp"]) >= _cutoff
+        ]
+
+    _total_delivered = sum(len(r.get("sent_to", [])) for r in _sent_recs)
+    _total_opens     = len(_ts["opens"]) + len(_ts["clicks"])   # clicks imply open
+    _total_clicks    = len(_ts["clicks"])
+    _total_ratings   = _ts["total_ratings"]
+
+    _open_rate_pct   = round(_total_opens  / _total_delivered * 100, 1) if _total_delivered else 0
+    _click_rate_pct  = round(_total_clicks / _total_delivered * 100, 1) if _total_delivered else 0
+    _cto_pct         = round(_total_clicks / _total_opens * 100, 1) if _total_opens else 0
+
+    _period_labels   = {"Daily": "Today", "Weekly": "This Week", "Monthly": "All Time"}
+    _real_data = {
+        "label":   _period_labels.get(period, period),
+        "updated": "Live",
+        "metrics": [
+            {"label": "Total Sent",     "value": str(_total_delivered),                      "sub": None,                                "change": None, "up_good": True},
+            {"label": "Open Rate",      "value": f"{_open_rate_pct}%",                       "sub": f"{_total_opens} opens",             "change": None, "up_good": True},
+            {"label": "Click to Open",  "value": f"{_cto_pct}%",                             "sub": f"{_total_clicks} clicks",           "change": None, "up_good": True},
+            {"label": "Delivered Rate", "value": "100%",                                     "sub": f"{_total_delivered} emails",        "change": None, "up_good": True},
+            {"label": "Bounce Rate",    "value": "0.0%",                                     "sub": None,                                "change": None, "up_good": False},
+            {"label": "Response Rate",  "value": f"{round(_total_ratings / _total_delivered * 100, 1) if _total_delivered else 0}%",
+                                                                                              "sub": f"{_total_ratings} ratings",        "change": None, "up_good": True},
+            {"label": "Avg Rating",     "value": f"{_ts['avg_rating']:.1f}" if _total_ratings else "—",
+                                                                                              "sub": "out of 5",                         "change": None, "up_good": True},
+        ],
+        "csat": {
+            "score":     _ts["avg_rating"],
+            "responses": _total_ratings,
+            "dist":      _ts["dist"],
+        },
+    }
+
+    # Build real email rows from sent records + tracking events
+    _engagement_by_email = {}
+    for e in _ts["opens"] + _ts["clicks"] + _ts["ratings"]:
+        em = e["email"]
+        if em not in _engagement_by_email:
+            _engagement_by_email[em] = {"opened": False, "clicked": False, "responded": False, "score": None, "date": e["date"]}
+        if e["type"] in ("open", "click"):
+            _engagement_by_email[em]["opened"] = True
+        if e["type"] == "click":
+            _engagement_by_email[em]["clicked"] = True
+        if e["type"] == "rating":
+            _engagement_by_email[em]["responded"] = True
+            _engagement_by_email[em]["score"] = e.get("rating")
+
+    _real_email_rows = []
+    seen_emails = set()
+    for rec in _sent_recs:
+        for em in rec.get("sent_to", []):
+            if em in seen_emails:
+                continue
+            seen_emails.add(em)
+            eng = _engagement_by_email.get(em, {})
+            _real_email_rows.append({
+                "email":     em,
+                "campaign":  rec.get("subject", "—"),
+                "delivered": True,
+                "opened":    eng.get("opened", False),
+                "clicked":   eng.get("clicked", False),
+                "responded": eng.get("responded", False),
+                "score":     eng.get("score"),
+                "date":      rec.get("date", "—"),
+            })
+
+    _real_opened_rows  = [{"email": e["email"], "campaign": "—", "date": e["date"]} for e in _ts["opens"] + _ts["clicks"]]
+    _real_clicked_rows = [{"email": e["email"], "campaign": "—", "date": e["date"]} for e in _ts["clicks"]]
+
+    # Use real data if any sends exist, otherwise fall back to static demo data
+    _has_real_data = _total_delivered > 0
+
+    data  = _real_data if _has_real_data else ANALYTICS_BY_PERIOD[period]
     csat  = data["csat"]
     score = csat["score"]
     stars = "★" * int(score) + "☆" * (5 - int(score))
 
     # Pre-filter email rows for drill-down panels
     if period == "Daily":
-        email_rows = [r for r in EMAIL_ANALYTICS if r["date"] in DAILY_DATES]
+        email_rows = _real_email_rows if _has_real_data else [r for r in EMAIL_ANALYTICS if r["date"] in DAILY_DATES]
     elif period == "Weekly":
-        email_rows = [r for r in EMAIL_ANALYTICS if r["date"] in WEEKLY_DATES]
+        email_rows = _real_email_rows if _has_real_data else [r for r in EMAIL_ANALYTICS if r["date"] in WEEKLY_DATES]
     else:
-        email_rows = EMAIL_ANALYTICS
+        email_rows = _real_email_rows if _has_real_data else EMAIL_ANALYTICS
 
-    opened_rows  = [r for r in email_rows if r["opened"]]
-    clicked_rows = [r for r in email_rows if r["clicked"]]
+    opened_rows  = _real_opened_rows if _has_real_data else [r for r in email_rows if r.get("opened")]
+    clicked_rows = _real_clicked_rows if _has_real_data else [r for r in email_rows if r.get("clicked")]
 
     st.markdown(f"""
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
@@ -802,7 +926,7 @@ def _render_period_content(period: str):
     </div>""", unsafe_allow_html=True)
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-    respondents = CSAT_RESPONDENTS[:csat["responses"]]
+    respondents = _ts["respondents"] if _has_real_data and _ts["respondents"] else CSAT_RESPONDENTS[:csat["responses"]]
     with st.expander(f"👥  View Report Ratings  ({csat['responses']})", expanded=False):
         rows_html = "".join(
             f'<div class="resp-row"><div class="resp-name">{r["name"]}</div>'
@@ -1621,6 +1745,10 @@ def render_email_maker():
                 _test_addr = st.session_state.get("user_email", "")
                 if _test_addr:
                     _subj = (d.get("subject") or "Test Email") + " [TEST]"
+                    import uuid as _uuid
+                    _send_id = str(_uuid.uuid4())[:8]
+                    def _html_builder_test(addr):
+                        return build_email_html(d, d.get("template", 1), send_id=_send_id, recipient_email=addr)
                     with st.spinner("Sending test…"):
                         _res = gmail_sender.send_report_email(
                             None, [_test_addr], _subj[:80],
@@ -1629,6 +1757,7 @@ def render_email_maker():
                             attachment_name=_att_name,
                             attachment_data=_att_bytes,
                             attachment_mime=_att_mime,
+                            html_builder=_html_builder_test,
                         )
                     if _res["sent"]:
                         st.success(f"Test sent to {_test_addr}")
@@ -1641,6 +1770,7 @@ def render_email_maker():
                             sent_to=_res["sent"],
                             failed=[f["email"] for f in _res["failed"]],
                             body_preview=d.get("body", ""),
+                            record_id=_send_id,
                         )
                     else:
                         for _f in _res["failed"]:
@@ -1658,6 +1788,10 @@ def render_email_maker():
                     disabled=not sender_ready,
                 ):
                     _subject = (d.get("subject") or "Report from Convin Data Labs")[:80]
+                    import uuid as _uuid
+                    _send_id = str(_uuid.uuid4())[:8]
+                    def _html_builder_prod(addr):
+                        return build_email_html(d, d.get("template", 1), send_id=_send_id, recipient_email=addr)
                     with st.spinner(f"Sending to {len(all_emails)} recipient(s)…"):
                         result = gmail_sender.send_report_email(
                             None, all_emails, _subject,
@@ -1666,6 +1800,7 @@ def render_email_maker():
                             attachment_name=_att_name,
                             attachment_data=_att_bytes,
                             attachment_mime=_att_mime,
+                            html_builder=_html_builder_prod,
                         )
                     from datetime import datetime as _dt
                     st.session_state.send_log.insert(0, {
@@ -1686,6 +1821,7 @@ def render_email_maker():
                             sent_to=result["sent"],
                             failed=[f["email"] for f in result["failed"]],
                             body_preview=d.get("body", ""),
+                            record_id=_send_id,
                         )
                     for fail in result["failed"]:
                         if fail["email"] in ("login", "config"):

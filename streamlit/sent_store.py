@@ -124,11 +124,12 @@ def log_send(
     sent_to: list,
     failed: list,
     body_preview: str = "",
+    record_id: str = None,
 ) -> dict:
     """Prepend a new send record and persist."""
     now = datetime.now(timezone.utc)
     record = {
-        "id":            str(uuid.uuid4())[:8],
+        "id":            record_id or str(uuid.uuid4())[:8],
         "timestamp":     now.isoformat(),
         "date":          now.strftime("%b %d, %Y"),
         "time":          now.strftime("%H:%M"),
