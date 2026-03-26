@@ -99,7 +99,7 @@ html, body, [class*="css"] {{ font-family: 'Inter', -apple-system, sans-serif; }
               text-align:center;box-shadow:0 4px 32px rgba(0,0,0,0.08);border:1px solid #e4e4e7;">
     <div style="font-size:52px;margin-bottom:20px;">✅</div>
     <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
-                color:#1a62f2;margin-bottom:12px;">Feedback received</div>
+                background:linear-gradient(108deg,#d22c84,#fb6069 52%,#2d84f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;">Feedback received</div>
     <div style="font-size:26px;font-weight:700;color:#18181b;margin-bottom:10px;">Thank you!</div>
     <div style="font-size:15px;color:#71717a;line-height:1.65;margin-bottom:28px;">
       You rated this report <strong style="color:#18181b;">{_r} out of 5 stars</strong>.<br>
@@ -119,23 +119,23 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-    --brand-primary:   #1a62f2;
-    --brand-dark:      #1a5ee8;
-    --brand-deep:      #1d57cb;
-    --brand-navy:      #092e78;
+    --brand-primary:   #d22c84;
+    --brand-dark:      #c4267a;
+    --brand-deep:      #b5206f;
+    --brand-navy:      #8a1855;
     --brand-bright:    #2d84f1;
     --brand-pink:      #d22c84;
     --brand-coral:     #fb6069;
     --neutral-black:   #151515;
     --neutral-body:    #1e1e1e;
     --neutral-secondary: #667085;
-    --neutral-outline: #e1e1e1;
-    --neutral-smoke:   #f2f2f2;
-    --bg-page:         #f0f5ff;
-    --bg-blue-xl:      #f1f6fe;
-    --bg-blue-shade:   #c3e4fd;
-    --gradient-blue:   linear-gradient(90deg, #1a5ee8, #1d57cb 52%, #305fe7);
-    --gradient-brand:  linear-gradient(90deg, #d22c84 3.83%, #fb6069 42.9%, #2d84f1 84.57%);
+    --neutral-outline: #f0e8f8;
+    --neutral-smoke:   #f9f2fc;
+    --bg-page:         #f9f9f9;
+    --bg-blue-xl:      #fdf8ff;
+    --bg-blue-shade:   #f0e8f8;
+    --gradient-blue:   linear-gradient(108deg, #d22c84, #fb6069 52%, #2d84f1);
+    --gradient-brand:  linear-gradient(108deg, #d22c84, #fb6069 52%, #2d84f1);
 }
 
 html, body, [class*="css"] {
@@ -188,7 +188,7 @@ section[data-testid="stSidebar"] hr { border-color: var(--neutral-outline) !impo
 [data-testid="stTextInput"] input:focus,
 [data-testid="stTextArea"] textarea:focus {
     border-color: var(--brand-primary) !important;
-    box-shadow: 0 0 0 3px rgba(26,98,242,0.1) !important;
+    box-shadow: 0 0 0 3px rgba(210,44,132,0.1) !important;
     outline: none !important;
 }
 [data-testid="stSelectbox"] > div > div {
@@ -214,13 +214,14 @@ section[data-testid="stSidebar"] hr { border-color: var(--neutral-outline) !impo
     border: none !important;
 }
 .stButton > button[kind="primary"] {
-    background: var(--brand-primary) !important;
+    background: var(--gradient-brand) !important;
     color: #fff !important;
-    box-shadow: 0 1px 3px rgba(26,98,242,0.25) !important;
+    box-shadow: 0 1px 3px rgba(210,44,132,0.25) !important;
 }
 .stButton > button[kind="primary"]:hover {
-    background: var(--brand-dark) !important;
-    box-shadow: 0 4px 14px rgba(26,94,232,0.3) !important;
+    background: var(--gradient-brand) !important;
+    filter: brightness(1.08) !important;
+    box-shadow: 0 4px 14px rgba(210,44,132,0.35) !important;
     transform: translateY(-1px) !important;
 }
 .stButton > button[kind="secondary"] {
@@ -319,16 +320,16 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
 }
 .metric-card {
     background: #ffffff;
-    border: 1px solid #dde6ff;
+    border: 1px solid #f0e8f8;
     border-radius: 14px;
     padding: 1.2rem 1.4rem 1rem;
-    box-shadow: 0 2px 8px rgba(26,94,232,0.06);
+    box-shadow: 0 2px 8px rgba(210,44,132,0.06);
     position: relative;
     overflow: hidden;
     transition: box-shadow 0.2s, transform 0.2s;
 }
 .metric-card:hover {
-    box-shadow: 0 8px 24px rgba(26,94,232,0.12);
+    box-shadow: 0 8px 24px rgba(210,44,132,0.12);
     transform: translateY(-2px);
 }
 .metric-card::before {
@@ -337,7 +338,7 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
     top: 0; left: 0; right: 0;
     height: 3px;
     border-radius: 14px 14px 0 0;
-    background: #dde6ff;
+    background: #f5d9ee;
 }
 .metric-card.accent-blue::before   { background: var(--gradient-blue); }
 .metric-card.accent-green::before  { background: linear-gradient(90deg, #0ebc6e, #42ba78); }
@@ -349,14 +350,16 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #8a9cc8;
+    color: #c07aa8;
     margin-bottom: 0.6rem;
 }
 .metric-value {
     font-size: 1.9rem;
     font-weight: 800;
-    color: #1a62f2;
-    -webkit-text-fill-color: #1a62f2;
+    background: var(--gradient-brand);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     letter-spacing: -0.04em;
     line-height: 1;
     margin-bottom: 0.35rem;
@@ -379,7 +382,7 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
     box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 .csat-score-side { text-align: center; padding-right: 2rem; border-right: 1px solid #e4e4e7; }
-.csat-number { font-size: 3rem; font-weight: 800; color: var(--brand-primary); -webkit-text-fill-color: var(--brand-primary); letter-spacing: -0.05em; line-height: 1; }
+.csat-number { font-size: 3rem; font-weight: 800; background: var(--gradient-brand); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.05em; line-height: 1; }
 .csat-stars { color: #f59e0b; font-size: 1.1rem; margin: 10px 0 6px; letter-spacing: 3px; }
 .csat-count { font-size: 0.7rem; color: #a1a1aa; }
 .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 9px; }
@@ -557,17 +560,17 @@ def _render_login_page():
     }
     .login-logo {
         width: 58px; height: 58px;
-        background: linear-gradient(135deg, #1a62f2 0%, #1a5ee8 100%);
+        background: linear-gradient(135deg, #d22c84 0%, #fb6069 52%, #2d84f1 100%);
         border-radius: 16px;
         display: inline-flex; align-items: center; justify-content: center;
         font-size: 0.78rem; font-weight: 800; color: #fff;
         margin-bottom: 1.4rem;
-        box-shadow: 0 6px 27px rgba(26,94,232,0.3);
+        box-shadow: 0 6px 27px rgba(210,44,132,0.3);
         letter-spacing: 0.06em;
     }
-    .login-brand { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #1a62f2; margin-bottom: 6px; }
+    .login-brand { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #d22c84; margin-bottom: 6px; }
     .login-title { font-size: 1.45rem; font-weight: 800; color: #151515; margin-bottom: 0.3rem; letter-spacing: -0.03em; line-height: 1.2; }
-    .login-divider { width: 40px; height: 3px; background: linear-gradient(90deg, #1a5ee8, #2d84f1); border-radius: 2px; margin: 12px auto 20px; }
+    .login-divider { width: 40px; height: 3px; background: linear-gradient(90deg, #d22c84, #fb6069 52%, #2d84f1); border-radius: 2px; margin: 12px auto 20px; }
     .login-sub { font-size: 0.83rem; color: #667085; margin-bottom: 2rem; }
     </style>
     <div class="login-wrap">
@@ -602,10 +605,10 @@ with st.sidebar:
     st.markdown("""
     <div style="padding:8px 4px 18px;">
         <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,#1a62f2,#1a5ee8);display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;color:#fff;letter-spacing:0.06em;box-shadow:0 4px 12px rgba(26,94,232,0.3);">CDL</div>
+            <div style="width:36px;height:36px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,#d22c84,#fb6069 52%,#2d84f1);display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;color:#fff;letter-spacing:0.06em;box-shadow:0 4px 12px rgba(210,44,132,0.3);">CDL</div>
             <div>
                 <div style="color:#151515;font-weight:700;font-size:0.9rem;letter-spacing:-0.01em;line-height:1.2;">Convin Data Labs</div>
-                <div style="color:#1a62f2;font-size:0.6rem;margin-top:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">Settings</div>
+                <div style="color:#d22c84;font-size:0.6rem;margin-top:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">Settings</div>
             </div>
         </div>
     </div>
@@ -681,7 +684,7 @@ def _email_table_html(rows: list) -> str:
     def dbadge(v):
         return '<span style="color:#22c55e;font-weight:700;">✓</span>' if v else '<span style="color:#f87171;font-weight:700;">✗</span>'
     def sbadge(v):
-        return '<span style="color:#1a62f2;font-weight:600;">✓</span>' if v else '<span style="color:#94a3b8;">—</span>'
+        return '<span style="color:#d22c84;font-weight:600;">✓</span>' if v else '<span style="color:#94a3b8;">—</span>'
     def scbadge(s):
         if s is None:
             return '<span style="color:#94a3b8;">—</span>'
@@ -689,7 +692,7 @@ def _email_table_html(rows: list) -> str:
         return f'<span style="color:{c[s]};font-weight:700;">{s}★</span>'
 
     th = 'style="color:#667085;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:10px 12px;text-align:left;white-space:nowrap;background:#f4f7fe;"'
-    tc = 'style="font-size:0.73rem;padding:9px 12px;border-bottom:1px solid #f1f6fe;text-align:center;"'
+    tc = 'style="font-size:0.73rem;padding:9px 12px;border-bottom:1px solid #fdf2fa;text-align:center;"'
     headers = ["Email", "DL Report Name", "Del", "Open", "Click", "Resp", "Score", "Date"]
     hrow = f'<tr>{"".join(f"<th {th}>{h}</th>" for h in headers)}</tr>'
     brows = "".join(
@@ -756,7 +759,7 @@ def _render_period_content(period: str):
         items = "".join(
             f'<div style="display:flex;align-items:center;gap:10px;padding:7px 0;'
             f'border-bottom:1px solid #f1f5f9;">'
-            f'<div style="width:8px;height:8px;border-radius:50%;background:#1a62f2;flex-shrink:0;"></div>'
+            f'<div style="width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#d22c84,#2d84f1);flex-shrink:0;"></div>'
             f'<div style="flex:1;min-width:0;">'
             f'<div style="font-size:0.79rem;font-weight:600;color:#0f172a;white-space:nowrap;'
             f'overflow:hidden;text-overflow:ellipsis;">{r["email"]}</div>'
@@ -876,7 +879,7 @@ def _render_ai_summary(period: str, csat_data: dict, respondents: list):
         )
         themes_html  = _card("Key Themes",           s.get("themes", []),  "#f0fdf4", "#bbf7d0", "#166534", "#16a34a")
         issues_html  = _card("Top Issues",           s.get("issues", []),  "#fff7ed", "#fed7aa", "#9a3412", "#ea580c")
-        actions_html = _card("Recommended Actions",  s.get("actions", []), "#f1f6fe", "#c3e4fd", "#092e78", "#1a62f2")
+        actions_html = _card("Recommended Actions",  s.get("actions", []), "#fdf8ff", "#f0e8f8", "#7a1558", "#d22c84")
 
         st.markdown(sentiment_html + themes_html + issues_html + actions_html, unsafe_allow_html=True)
 
@@ -952,7 +955,7 @@ _STATUS_CFG = {
 }
 
 _AVATAR_GRADS = [
-    ("linear-gradient(135deg,#1a62f2,#2d84f1)", "#fff"),
+    ("linear-gradient(135deg,#d22c84,#fb6069 52%,#2d84f1)", "#fff"),
     ("linear-gradient(135deg,#059669,#34d399)", "#fff"),
     ("linear-gradient(135deg,#7c3aed,#a78bfa)", "#fff"),
     ("linear-gradient(135deg,#d97706,#fbbf24)", "#fff"),
@@ -1029,8 +1032,8 @@ def _render_client_card(c: dict):
             ec1, ec2 = st.columns([5, 1])
             with ec1:
                 st.markdown(
-                    f'<div style="background:#f0f7ff;border:1px solid #e2e8f0;border-radius:6px;'
-                    f'padding:6px 10px;font-size:0.78rem;color:#1a62f2;">{em}</div>',
+                    f'<div style="background:#fdf8ff;border:1px solid #f0e8f8;border-radius:6px;'
+                    f'padding:6px 10px;font-size:0.78rem;color:#d22c84;">{em}</div>',
                     unsafe_allow_html=True,
                 )
             with ec2:
@@ -1235,15 +1238,15 @@ def render_clients():
 STATUS_META = {
     "empty": ("#f1f5f9", "#94a3b8", "Empty"),
     "draft": ("#dcfce7", "#16a34a", "In Progress"),
-    "ready": ("#f1f6fe", "#1a62f2", "Ready"),
+    "ready": ("#fdf8ff", "#d22c84", "Ready"),
 }
 
-_TMPL_TEXT_COLORS = ["#c9a96e", "#1a62f2", "#ffffff", "#a78bfa", "#8b5e3c",
+_TMPL_TEXT_COLORS = ["#c9a96e", "#d22c84", "#ffffff", "#a78bfa", "#8b5e3c",
                      "#06b6d4", "#ea580c", "#10b981", "#f97316",
-                     "#ffffff", "#ffffff", "#1a62f2"]
-_TMPL_BG_COLORS   = ["#0d1b2a", "#f1f5f9", "#1e3a8a", "#13111f", "#f4ede0",
+                     "#ffffff", "#ffffff", "#d22c84"]
+_TMPL_BG_COLORS   = ["#0d1b2a", "#fdf8ff", "#1e3a8a", "#13111f", "#f4ede0",
                      "#040d18", "#fff3e8", "#0b1f14", "#1a1a1a",
-                     "#d22c84", "#2d3748", "#1a62f2"]
+                     "#d22c84", "#2d3748", "#d22c84"]
 
 
 def _single_image_slot(d: dict, url_key: str, cap_key: str, label: str, key_suffix: str):
@@ -1323,8 +1326,8 @@ def _attachment_slot(d: dict, key_suffix: str):
 
     if has_file:
         st.markdown(
-            f'<div style="background:#f1f6fe;border:1px solid #c3e4fd;border-radius:8px;'
-            f'padding:8px 12px;font-size:0.8rem;color:#1a62f2;font-weight:600;margin-bottom:6px;">'
+            f'<div style="background:#fdf8ff;border:1px solid #f0e8f8;border-radius:8px;'
+            f'padding:8px 12px;font-size:0.8rem;color:#d22c84;font-weight:600;margin-bottom:6px;">'
             f'📎 {d["attachment_name"]}</div>',
             unsafe_allow_html=True,
         )
@@ -1375,7 +1378,7 @@ def _template_picker(d: dict, key_suffix: str):
             tid    = ti + 1
             is_sel = d.get("template", 1) == tid
             tc     = _TMPL_TEXT_COLORS[ti]
-            border = "#1a62f2" if is_sel else "#e1e1e1"
+            border = "#d22c84" if is_sel else "#f0e8f8"
             with cols[j]:
                 st.markdown(
                     f'<div class="tmpl-card" style="background:{tswatch};border:2px solid {border};">'
@@ -1784,8 +1787,8 @@ def render_email_maker():
                         st.markdown(f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;font-size:0.85rem;color:#14532d;white-space:pre-wrap;">{_corrected}</div>', unsafe_allow_html=True)
 
                         if _changes:
-                            st.markdown('<div style="color:#1a62f2;font-size:0.8rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin:14px 0 8px;">Changes Made</div>', unsafe_allow_html=True)
-                            st.markdown(f'<div style="background:#f1f6fe;border:1px solid #c3e4fd;border-radius:8px;padding:14px 16px;font-size:0.83rem;color:#092e78;white-space:pre-wrap;">{_changes}</div>', unsafe_allow_html=True)
+                            st.markdown('<div style="color:#d22c84;font-size:0.8rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin:14px 0 8px;">Changes Made</div>', unsafe_allow_html=True)
+                            st.markdown(f'<div style="background:#fdf8ff;border:1px solid #f0e8f8;border-radius:8px;padding:14px 16px;font-size:0.83rem;color:#7a1558;white-space:pre-wrap;">{_changes}</div>', unsafe_allow_html=True)
 
                         # Apply to draft option
                         if ai_source == "Pick a draft" and _corrected:
@@ -1819,9 +1822,9 @@ def render_sent():
     st.markdown(f"""<div class="stats-grid">
         <div class="stat-card">
             <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Sends</div>
-            <div style="color:#1a62f2;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(records)}</div>
+            <div style="background:linear-gradient(108deg,#d22c84,#fb6069 52%,#2d84f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(records)}</div>
         </div>
-        <div class="stat-card" style="border-top:2px solid #1a62f2;">
+        <div class="stat-card" style="border-top:2px solid #d22c84;">
             <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Emails Delivered</div>
             <div style="color:#0ebc6e;font-size:1.8rem;font-weight:800;">{total_sent}</div>
         </div>
@@ -1831,7 +1834,7 @@ def render_sent():
         </div>
         <div class="stat-card">
             <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Unique Recipients</div>
-            <div style="color:#1a62f2;font-size:1.8rem;font-weight:800;">{unique_emails}</div>
+            <div style="background:linear-gradient(108deg,#d22c84,#fb6069 52%,#2d84f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;">{unique_emails}</div>
         </div>
     </div>""", unsafe_allow_html=True)
 
@@ -1885,10 +1888,10 @@ def render_sent():
         _sent  = rec.get("sent_to", [])
         _fail  = rec.get("failed",  [])
         _has_f = bool(_fail)
-        border_color = "#fecaca" if _has_f else "#dde6ff"
-        top_color    = "#e72b3b" if _has_f else "#1a62f2"
-        status_bg    = "#fff1f2" if _has_f else "#f1f6fe"
-        status_fg    = "#e72b3b" if _has_f else "#1a62f2"
+        border_color = "#fecaca" if _has_f else "#f0e8f8"
+        top_color    = "#e72b3b" if _has_f else "#d22c84"
+        status_bg    = "#fff1f2" if _has_f else "#fdf8ff"
+        status_fg    = "#e72b3b" if _has_f else "#d22c84"
         status_lbl   = f"⚠ {len(_fail)} failed" if _has_f else f"✓ {len(_sent)} sent"
 
         sent_pills = " ".join(
@@ -1910,7 +1913,7 @@ def render_sent():
         st.markdown(f"""
         <div style="background:#fff;border:1px solid {border_color};border-top:3px solid {top_color};
                     border-radius:14px;padding:18px 20px;margin-bottom:12px;
-                    box-shadow:0 2px 8px rgba(26,94,232,0.05);">
+                    box-shadow:0 2px 8px rgba(210,44,132,0.05);">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;">
                 <div style="flex:1;min-width:0;">
                     <div style="font-size:0.9rem;font-weight:700;color:#0f172a;
@@ -2121,14 +2124,14 @@ if not st.session_state["show_sidebar"]:
 _current_page = st.session_state["current_page"]
 st.markdown(f"""
 <div style="
-    background: linear-gradient(135deg, #0d1b6e 0%, #1a62f2 60%, #2d84f1 100%);
+    background: linear-gradient(108deg, #d22c84, #fb6069 52%, #2d84f1);
     padding: 0 28px;
     height: 58px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin: -1rem -1rem 0 -1rem;
-    box-shadow: 0 4px 20px rgba(26,94,232,0.25);
+    box-shadow: 0 4px 20px rgba(210,44,132,0.3);
     position: sticky;
     top: 0;
     z-index: 1000;
@@ -2180,32 +2183,32 @@ div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) {
     border-bottom: 1px solid #e8edf8 !important;
     padding: 4px 0 6px !important;
     margin-bottom: 1.4rem !important;
-    box-shadow: 0 1px 6px rgba(26,94,232,0.06) !important;
+    box-shadow: 0 1px 6px rgba(210,44,132,0.06) !important;
 }
 /* Active nav button */
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="primary"] {
-    background: #1a62f2 !important;
+    background: linear-gradient(108deg, #d22c84, #fb6069 52%, #2d84f1) !important;
     color: #ffffff !important;
     border: none !important;
-    box-shadow: 0 2px 8px rgba(26,98,242,0.3) !important;
+    box-shadow: 0 2px 8px rgba(210,44,132,0.3) !important;
     font-weight: 700 !important;
     border-radius: 7px !important;
 }
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="primary"]:hover {
-    background: #1a5ee8 !important;
+    filter: brightness(1.08) !important;
     transform: translateY(-1px) !important;
 }
 /* Inactive nav button */
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="secondary"] {
     background: transparent !important;
-    border: 1.5px solid #e1e1e1 !important;
+    border: 1.5px solid #f0e8f8 !important;
     color: #52525b !important;
     border-radius: 7px !important;
 }
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="secondary"]:hover {
-    background: #f1f6fe !important;
-    border-color: #c3e4fd !important;
-    color: #1a62f2 !important;
+    background: #fdf8ff !important;
+    border-color: #f0e8f8 !important;
+    color: #d22c84 !important;
     transform: none !important;
 }
 </style>
