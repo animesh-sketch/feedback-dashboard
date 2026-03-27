@@ -123,43 +123,41 @@ def _gh_save(clients: list) -> bool:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def _init() -> None:
-    """Load clients into session_state on first call this session."""
-    if _SS_KEY in st.session_state:
-        return
+@st.cache_data(ttl=30, show_spinner=False)
+def _load_from_github() -> list | None:
+    """Shared cache (all users) — refreshed from GitHub every 30 s."""
+    return _gh_load()
 
-    # 1. Try GitHub API (persistent across all deploys)
-    data = _gh_load()
+
+def load() -> list:
+    """Return the current client list, shared across all users.
+
+    Priority:
+      1. GitHub (via shared st.cache_data cache, TTL 30 s)
+      2. Local file  (local dev fallback)
+      3. Sample data (absolute last resort — never on Cloud with GitHub set)
+    """
+    data = _load_from_github()
     if data is not None:
-        st.session_state[_SS_KEY] = data
-        return
+        return data
 
-    # 2. Try local file (works locally + first-boot on Cloud)
     if os.path.exists(_FILE):
         try:
             with open(_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            if data:
-                st.session_state[_SS_KEY] = data
-                return
+            if isinstance(data, list) and data:
+                return data
         except (json.JSONDecodeError, OSError):
             pass
 
-    # 3. Absolute fallback
-    st.session_state[_SS_KEY] = list(SAMPLE_CLIENTS)
-
-
-def load() -> list:
-    _init()
-    return st.session_state[_SS_KEY]
+    return list(SAMPLE_CLIENTS)
 
 
 def save(clients: list) -> None:
-    """Persist clients to session_state, GitHub, and local file."""
-    st.session_state[_SS_KEY] = clients
-    # Write to GitHub (survives container restarts and redeploys)
+    """Persist clients to GitHub and local file, then clear the shared cache
+    so every user sees the update on their next interaction."""
     _gh_save(clients)
-    # Best-effort local file write (local dev / first-boot baseline)
+    _load_from_github.clear()   # invalidate shared cache immediately
     try:
         with open(_FILE, "w", encoding="utf-8") as f:
             json.dump(clients, f, indent=2, ensure_ascii=False)
