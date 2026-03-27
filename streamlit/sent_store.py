@@ -125,22 +125,40 @@ def log_send(
     failed: list,
     body_preview: str = "",
     record_id: str = None,
+    sender: str = "",
+    attachment_name: str = "",
+    is_test: bool = False,
 ) -> dict:
-    """Prepend a new send record and persist."""
+    """Prepend a new send record and persist.
+
+    ``failed`` may be either a list of email strings (legacy) or a list of
+    dicts with ``{"email": ..., "error": ...}`` (preferred — preserves the
+    error reason for each failed address).
+    """
     now = datetime.now(timezone.utc)
+    # Normalise failed to list-of-dicts so the UI can show error reasons.
+    normalised_failed = []
+    for item in failed:
+        if isinstance(item, dict):
+            normalised_failed.append({"email": item.get("email", ""), "error": item.get("error", "")})
+        else:
+            normalised_failed.append({"email": str(item), "error": ""})
     record = {
-        "id":            record_id or str(uuid.uuid4())[:8],
-        "timestamp":     now.isoformat(),
-        "date":          now.strftime("%b %d, %Y"),
-        "time":          now.strftime("%H:%M"),
-        "draft_name":    draft_name,
-        "subject":       subject,
-        "template_num":  template_num,
-        "template_name": template_name,
-        "client":        client,
-        "sent_to":       sent_to,
-        "failed":        failed,
-        "body_preview":  body_preview[:120],
+        "id":              record_id or str(uuid.uuid4())[:8],
+        "timestamp":       now.isoformat(),
+        "date":            now.strftime("%b %d, %Y"),
+        "time":            now.strftime("%H:%M UTC"),
+        "draft_name":      draft_name,
+        "subject":         subject,
+        "template_num":    template_num,
+        "template_name":   template_name,
+        "client":          client,
+        "sender":          sender,
+        "sent_to":         sent_to,
+        "failed":          normalised_failed,
+        "body_preview":    body_preview[:300],
+        "attachment_name": attachment_name or "",
+        "is_test":         is_test,
     }
     records = load()
     records.insert(0, record)          # newest first

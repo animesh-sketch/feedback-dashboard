@@ -23,7 +23,20 @@ TEMPLATE_NAMES = [
 import base64 as _b64e
 import urllib.parse as _up
 
-_BASE_URL = "https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app"
+_BASE_URL  = "https://feedback-dashboard-4mqlwnnzntsjdhjhy9a6br.streamlit.app"
+_LOGO_URL  = "https://static-asset.inc42.com/logo/convin.png"
+
+
+def _logo(dark: bool = True, h: int = 28) -> str:
+    """Convin brand logo img tag for email headers.
+    dark=True wraps in a white pill (for dark/coloured backgrounds).
+    """
+    img = (f'<img src="{_LOGO_URL}" alt="Convin" height="{h}" '
+           f'style="height:{h}px;width:auto;display:block;border:0;"/>')
+    if dark:
+        return (f'<div style="background:rgba(255,255,255,0.92);border-radius:6px;'
+                f'padding:4px 10px;display:inline-block;line-height:0;">{img}</div>')
+    return img
 
 
 def _track_click_url(send_id, em_b64, original_url):
@@ -138,7 +151,7 @@ body { background: #08080f; font-family: 'Inter', sans-serif; padding: 32px 16px
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>{css}</head><body>
 <div class="wrap">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151515;border-top:3px solid #4d65ff;"><tr><td style="padding:24px 44px;font-size:16px;font-weight:700;color:#ffffff;letter-spacing:-0.01em;font-family:Arial,Helvetica,sans-serif;">Convin Data Labs</td><td align="right" style="padding:24px 44px;font-size:11px;color:#4d65ff;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">Report</td></tr></table>
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151515;border-top:3px solid #4d65ff;"><tr><td style="padding:24px 44px;font-size:16px;font-weight:700;color:#ffffff;letter-spacing:-0.01em;font-family:Arial,Helvetica,sans-serif;">Convin Data Labs</td><td align="right" style="padding:18px 44px;">{_logo(dark=True)}</td></tr></table>
   <div style="background:#0e0e0e;border-bottom:1px solid #1e1e1e;padding:10px 44px;">
     <span style="font-size:11px;color:#666;">Prepared for <strong style="color:#d2d2d2;">{c}</strong></span>
   </div>
@@ -198,7 +211,7 @@ body { background: #eef0ff; font-family: 'Inter', sans-serif; color: #151515; pa
       <td style="width:4px;background:#4d65ff;border-radius:4px;padding:14px 0;">&nbsp;</td>
       <td style="padding-left:10px;font-size:15px;font-weight:700;color:#151515;letter-spacing:-0.01em;font-family:Arial,Helvetica,sans-serif;">Convin Data Labs</td>
     </tr></table>
-  </td><td align="right" style="padding:20px 40px;font-size:11px;color:#4d65ff;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">Report</td></tr></table>
+  </td><td align="right" style="padding:16px 40px;">{_logo(dark=False)}</td></tr></table>
   <div style="padding:8px 40px;background:#f7f8ff;border-bottom:1px solid #eef0ff;">
     <span style="font-size:11px;color:#888;">Prepared for <strong style="color:#151515;">{c}</strong></span>
   </div>
@@ -250,9 +263,14 @@ body { background: #4d65ff; font-family: 'Inter', sans-serif; color: #151515; pa
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>{css}</head><body>
 <div class="wrap">
-  <div style="background:#4d65ff;padding:28px 44px;">
-    <div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.01em;margin-bottom:3px;">Convin Data Labs</div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.55);font-weight:500;">Analytics · Report Delivery</div>
+  <div style="background:#4d65ff;padding:20px 44px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td valign="middle">
+        <div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.01em;margin-bottom:3px;">Convin Data Labs</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.55);font-weight:500;">Analytics · Report Delivery</div>
+      </td>
+      <td align="right" valign="middle" style="padding-left:16px;">{_logo(dark=True)}</td>
+    </tr></table>
   </div>
   <div style="background:#f7f8ff;padding:10px 44px;border-bottom:2px solid #dde0ff;">
     <span style="font-size:11px;color:#4d65ff;font-weight:600;">FOR: <span style="color:#151515;">{c}</span></span>
@@ -307,9 +325,14 @@ body { background: #05050f; font-family: 'Inter', sans-serif; padding: 32px 16px
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>{css}</head><body>
 <div class="wrap">
-  <div style="background:linear-gradient(135deg,#151528 0%,#1a1a3a 60%,#1e1e48 100%);padding:32px 40px 28px;border-bottom:2px solid #4d65ff;">
-    <div style="font-size:13px;font-weight:700;color:#4d65ff;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:4px;">Convin Data Labs</div>
-    <div style="font-size:11px;color:rgba(77,101,255,0.4);font-weight:400;">Analytics Intelligence · Report</div>
+  <div style="background:linear-gradient(135deg,#151528 0%,#1a1a3a 60%,#1e1e48 100%);padding:24px 40px;border-bottom:2px solid #4d65ff;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td valign="middle">
+        <div style="font-size:13px;font-weight:700;color:#4d65ff;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:4px;">Convin Data Labs</div>
+        <div style="font-size:11px;color:rgba(77,101,255,0.4);font-weight:400;">Analytics Intelligence · Report</div>
+      </td>
+      <td align="right" valign="middle" style="padding-left:16px;">{_logo(dark=True)}</td>
+    </tr></table>
   </div>
   <div style="padding:10px 40px;background:#0a0a18;border-bottom:1px solid #1a1a30;">
     <span style="font-size:11px;color:#444;">For <span style="color:#4d65ff;font-weight:600;">{c}</span></span>
@@ -366,10 +389,16 @@ body { background: #f0e6d3; font-family: 'Lora', Georgia, serif; color: #1a0a00;
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>{css}</head><body>
 <div class="wrap">
-  <div style="background:#2c1a0e;padding:22px 48px;text-align:center;">
-    <div style="font-family:'Playfair Display',serif;font-size:13px;color:#c9a96e;letter-spacing:5px;text-transform:uppercase;margin-bottom:5px;">Convin Data Labs</div>
-    <div class="orn">· · ·</div>
-    <div style="font-size:10px;color:rgba(201,169,110,0.5);letter-spacing:3px;text-transform:uppercase;margin-top:5px;">Analytics &amp; Reports</div>
+  <div style="background:#2c1a0e;padding:18px 48px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td width="1">&nbsp;</td>
+      <td valign="middle" style="text-align:center;">
+        <div style="font-family:'Playfair Display',serif;font-size:13px;color:#c9a96e;letter-spacing:5px;text-transform:uppercase;margin-bottom:4px;">Convin Data Labs</div>
+        <div class="orn">· · ·</div>
+        <div style="font-size:10px;color:rgba(201,169,110,0.5);letter-spacing:3px;text-transform:uppercase;margin-top:4px;">Analytics &amp; Reports</div>
+      </td>
+      <td align="right" valign="middle" width="80" style="padding-left:16px;">{_logo(dark=True)}</td>
+    </tr></table>
   </div>
   <div style="background:#faf5ed;border-bottom:1px solid #d5c4a8;padding:10px 48px;text-align:center;">
     <span style="font-size:11px;color:#8b7355;font-style:italic;">Prepared for <strong style="color:#2c1a0e;font-style:normal;">{c}</strong></span>
@@ -428,6 +457,7 @@ body { background: #020a12; font-family: 'Inter', sans-serif; padding: 32px 16px
 <div class="wrap">
   <div style="background:linear-gradient(135deg,#040d18 0%,#061a28 100%);padding:28px 40px;border-bottom:1px solid #06b6d4;position:relative;overflow:hidden;">
     <div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(6,182,212,0.12) 0%,transparent 70%);pointer-events:none;"></div>
+    <div style="position:absolute;top:20px;right:24px;z-index:2;">{_logo(dark=True, h=24)}</div>
     <div style="font-size:15px;font-weight:800;color:#06b6d4;letter-spacing:3px;text-transform:uppercase;text-shadow:0 0 20px rgba(6,182,212,0.5);margin-bottom:3px;">Convin Data Labs</div>
     <div style="font-size:11px;color:rgba(6,182,212,0.35);font-weight:400;letter-spacing:1.5px;text-transform:uppercase;">Analytics · Report Delivery</div>
   </div>
@@ -487,6 +517,7 @@ body { background: #fde8d0; font-family: 'Inter', sans-serif; padding: 32px 16px
   <div style="background:linear-gradient(135deg,#ea580c 0%,#f97316 50%,#fb923c 100%);padding:30px 44px;position:relative;overflow:hidden;">
     <div style="position:absolute;top:-30px;right:-30px;width:160px;height:160px;background:rgba(255,255,255,0.1);border-radius:50%;pointer-events:none;"></div>
     <div style="position:absolute;bottom:-50px;left:-20px;width:200px;height:200px;background:rgba(255,255,255,0.06);border-radius:50%;pointer-events:none;"></div>
+    <div style="position:absolute;top:20px;right:24px;z-index:2;">{_logo(dark=True, h=24)}</div>
     <div style="font-family:'Poppins',sans-serif;font-size:16px;font-weight:800;color:#fff;letter-spacing:1px;margin-bottom:3px;position:relative;">Convin Data Labs</div>
     <div style="font-size:11px;color:rgba(255,255,255,0.65);position:relative;">Analytics · Report Delivery</div>
   </div>
@@ -548,6 +579,7 @@ body { background: #071a0e; font-family: 'Inter', sans-serif; padding: 32px 16px
 <div class="wrap">
   <div style="background:linear-gradient(135deg,#052e16 0%,#064e23 60%,#065f2c 100%);padding:28px 44px;border-bottom:1px solid #10b981;position:relative;overflow:hidden;">
     <div style="position:absolute;top:-40px;right:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(16,185,129,0.1) 0%,transparent 70%);pointer-events:none;"></div>
+    <div style="position:absolute;top:20px;right:24px;z-index:2;">{_logo(dark=True, h=24)}</div>
     <div style="font-size:15px;font-weight:800;color:#6ee7b7;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Convin Data Labs</div>
     <div style="font-size:11px;color:rgba(110,231,183,0.35);letter-spacing:1px;text-transform:uppercase;">Analytics · Report</div>
   </div>
@@ -607,9 +639,7 @@ body { background: #111; font-family: 'Inter', sans-serif; padding: 32px 16px 48
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#111;border-bottom:3px solid #f97316;"><tr><td style="padding:24px 44px;">
     <div style="font-size:16px;font-weight:800;color:#fff;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px;font-family:Arial,Helvetica,sans-serif;">Convin Data Labs</div>
     <div style="font-size:10px;color:#444;letter-spacing:2px;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">Analytics · Report</div>
-  </td><td align="right" style="padding:24px 44px;">
-    <table cellpadding="0" cellspacing="0"><tr><td style="width:36px;height:36px;background:#f97316;border-radius:6px;text-align:center;vertical-align:middle;font-size:14px;font-weight:800;color:#fff;font-family:Arial,Helvetica,sans-serif;">C</td></tr></table>
-  </td></tr></table>
+  </td><td align="right" style="padding:18px 44px;">{_logo(dark=True)}</td></tr></table>
   <div style="padding:8px 44px;background:#141414;border-bottom:1px solid #222;">
     <span style="font-size:11px;color:#555;">Prepared for <span style="color:#f97316;font-weight:600;">{c}</span></span>
   </div>
@@ -661,9 +691,14 @@ body { background: #f9f9f9; font-family: 'Inter', sans-serif; padding: 32px 16px
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>{css}</head><body>
 <div class="wrap">
-  <div style="background:linear-gradient(108deg,#d22c84,#fb6069 52%,#2d84f1);padding:28px 44px;">
-    <div style="font-size:16px;font-weight:700;color:#fff;letter-spacing:-0.01em;margin-bottom:3px;">Convin Data Labs</div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.65);font-weight:400;">Analytics · Report Delivery</div>
+  <div style="background:linear-gradient(108deg,#d22c84,#fb6069 52%,#2d84f1);padding:20px 44px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td valign="middle">
+        <div style="font-size:16px;font-weight:700;color:#fff;letter-spacing:-0.01em;margin-bottom:3px;">Convin Data Labs</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.65);font-weight:400;">Analytics · Report Delivery</div>
+      </td>
+      <td align="right" valign="middle" style="padding-left:16px;">{_logo(dark=True)}</td>
+    </tr></table>
   </div>
   <div style="background:#fdf8ff;padding:10px 44px;border-bottom:1px solid #f0e8f8;">
     <span style="font-size:11px;color:#888;">Prepared for <strong style="color:#151515;">{c}</strong></span>
@@ -720,9 +755,7 @@ body { background: #e8ecf0; font-family: 'Inter', sans-serif; padding: 32px 16px
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#2d3748;"><tr><td style="padding:24px 44px;">
     <div style="font-size:15px;font-weight:700;color:#fff;letter-spacing:-0.01em;font-family:Arial,Helvetica,sans-serif;">Convin Data Labs</div>
     <div style="font-size:11px;color:#94a3b8;margin-top:2px;font-family:Arial,Helvetica,sans-serif;">Analytics Intelligence</div>
-  </td><td align="right" style="padding:24px 44px;">
-    <table cellpadding="0" cellspacing="0"><tr><td style="width:8px;height:32px;background:#1a62f2;border-radius:4px;">&nbsp;</td></tr></table>
-  </td></tr></table>
+  </td><td align="right" style="padding:18px 44px;">{_logo(dark=True)}</td></tr></table>
   <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 44px;">
     <span style="font-size:11px;color:#64748b;">For <strong style="color:#1e293b;">{c}</strong></span>
   </div>
@@ -774,7 +807,7 @@ body { background: #f1f6fe; font-family: 'Inter', sans-serif; padding: 32px 16px
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>{css}</head><body>
 <div class="wrap">
-  <table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:1px solid #f0f1ff;"><tr><td style="padding:24px 44px;font-size:15px;font-weight:700;color:#151515;letter-spacing:-0.01em;font-family:Arial,Helvetica,sans-serif;">Convin Data Labs</td><td align="right" style="padding:24px 44px;font-size:11px;font-weight:600;color:#1a62f2;letter-spacing:0.05em;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">Report</td></tr></table>
+  <table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:1px solid #f0f1ff;"><tr><td style="padding:24px 44px;font-size:15px;font-weight:700;color:#151515;letter-spacing:-0.01em;font-family:Arial,Helvetica,sans-serif;">Convin Data Labs</td><td align="right" style="padding:18px 44px;">{_logo(dark=False)}</td></tr></table>
   <div style="background:#f7f8ff;border-bottom:1px solid #eef0ff;padding:9px 44px;">
     <span style="font-size:11px;color:#888;">Prepared for <strong style="color:#151515;">{c}</strong></span>
   </div>

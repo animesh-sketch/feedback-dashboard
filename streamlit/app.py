@@ -1768,9 +1768,12 @@ def render_email_maker():
                             template_name=TEMPLATE_NAMES[d.get("template", 1) - 1][0],
                             client=d.get("client", ""),
                             sent_to=_res["sent"],
-                            failed=[f["email"] for f in _res["failed"]],
+                            failed=_res["failed"],
                             body_preview=d.get("body", ""),
                             record_id=_send_id,
+                            sender=st.session_state.get("user_email", ""),
+                            attachment_name=_att_name or "",
+                            is_test=True,
                         )
                     else:
                         for _f in _res["failed"]:
@@ -1807,7 +1810,7 @@ def render_email_maker():
                         "time":   _dt.now().strftime("%H:%M"),
                         "draft":  d["name"],
                         "sent":   result["sent"],
-                        "failed": [f["email"] for f in result["failed"]],
+                        "failed": result["failed"],
                     })
                     if result["sent"]:
                         st.success(f"✓ Sent to: {', '.join(result['sent'])}")
@@ -1819,9 +1822,12 @@ def render_email_maker():
                             template_name=TEMPLATE_NAMES[d.get("template", 1) - 1][0],
                             client=d.get("client", ""),
                             sent_to=result["sent"],
-                            failed=[f["email"] for f in result["failed"]],
+                            failed=result["failed"],
                             body_preview=d.get("body", ""),
                             record_id=_send_id,
+                            sender=st.session_state.get("user_email", ""),
+                            attachment_name=_att_name or "",
+                            is_test=False,
                         )
                     for fail in result["failed"]:
                         if fail["email"] in ("login", "config"):
@@ -2001,11 +2007,16 @@ def render_sent():
     filtered = records
     if search:
         q = search.lower()
+        def _fail_addr_list(r):
+            return [f["email"] if isinstance(f, dict) else f for f in r.get("failed", [])]
         filtered = [r for r in filtered if
                     q in r.get("subject","").lower() or
                     q in r.get("client","").lower() or
                     q in r.get("draft_name","").lower() or
-                    any(q in e.lower() for e in r.get("sent_to",[]))]
+                    q in r.get("sender","").lower() or
+                    q in r.get("attachment_name","").lower() or
+                    any(q in e.lower() for e in r.get("sent_to",[])) or
+                    any(q in e.lower() for e in _fail_addr_list(r))]
     if draft_filter != "All Drafts":
         filtered = [r for r in filtered if r.get("draft_name") == draft_filter]
     if status_filter == "Sent":
@@ -2022,7 +2033,9 @@ def render_sent():
     # ── Records ──────────────────────────────────────────────────────────────
     for rec in filtered:
         _sent  = rec.get("sent_to", [])
-        _fail  = rec.get("failed",  [])
+        # failed may be list-of-dicts (new) or list-of-strings (legacy)
+        _fail_raw = rec.get("failed", [])
+        _fail  = [f if isinstance(f, dict) else {"email": f, "error": ""} for f in _fail_raw]
         _has_f = bool(_fail)
         border_color = "#fecaca" if _has_f else "#f0e8f8"
         top_color    = "#e72b3b" if _has_f else "#d22c84"
@@ -2033,18 +2046,52 @@ def render_sent():
         sent_pills = " ".join(
             f'<span class="email-pill">{e}</span>' for e in _sent[:6]
         ) + (f'<span class="email-pill">+{len(_sent)-6} more</span>' if len(_sent) > 6 else "")
-        fail_pills = " ".join(
-            f'<span style="display:inline-block;background:#fff1f2;color:#e72b3b;'
-            f'font-size:0.7rem;font-weight:500;padding:3px 10px;border-radius:6px;'
-            f'margin:3px 3px 0 0;border:1px solid #fecaca;">{e}</span>'
-            for e in _fail
-        ) if _fail else ""
 
+        fail_pills_html = ""
+        if _fail:
+            parts = []
+            for f in _fail:
+                addr = f["email"]
+                err  = f.get("error", "")
+                title = f' title="{err}"' if err else ""
+                icon  = " ⓘ" if err else ""
+                parts.append(
+                    f'<span style="display:inline-block;background:#fff1f2;color:#e72b3b;'
+                    f'font-size:0.7rem;font-weight:500;padding:3px 10px;border-radius:6px;'
+                    f'margin:3px 3px 0 0;border:1px solid #fecaca;cursor:default;"{title}>'
+                    f'{addr}{icon}</span>'
+                )
+                if err:
+                    parts.append(
+                        f'<div style="color:#e72b3b;font-size:0.67rem;margin:2px 0 4px 4px;'
+                        f'opacity:0.8;">{err}</div>'
+                    )
+            fail_pills_html = "".join(parts)
+
+        _preview = rec.get("body_preview", "")
         preview_html = (
             f'<div style="color:#94a3b8;font-size:0.72rem;line-height:1.5;'
-            f'margin:6px 0 0;font-style:italic;">'
-            f'"{rec["body_preview"]}{"…" if len(rec["body_preview"]) >= 120 else ""}"</div>'
-        ) if rec.get("body_preview") else ""
+            f'margin:8px 0 0;font-style:italic;word-break:break-word;">'
+            f'"{_preview}{"…" if len(_preview) >= 300 else ""}"</div>'
+        ) if _preview else ""
+
+        _sender = rec.get("sender", "")
+        sender_html = (
+            f'<span style="font-size:0.72rem;color:#64748b;">✉ {_sender}</span>'
+            f'<span style="font-size:0.72rem;color:#94a3b8;">·</span>'
+        ) if _sender else ""
+
+        _att = rec.get("attachment_name", "")
+        att_html = (
+            f'<span style="font-size:0.72rem;color:#64748b;">📎 {_att}</span>'
+            f'<span style="font-size:0.72rem;color:#94a3b8;">·</span>'
+        ) if _att else ""
+
+        test_badge = (
+            '<span style="background:#fef3c7;color:#b45309;font-size:0.6rem;font-weight:700;'
+            'letter-spacing:0.06em;text-transform:uppercase;padding:2px 8px;border-radius:99px;'
+            'border:1px solid #fde68a;margin-left:6px;">TEST</span>'
+        ) if rec.get("is_test") else ""
 
         st.markdown(f"""
         <div style="background:#fff;border:1px solid {border_color};border-top:3px solid {top_color};
@@ -2054,9 +2101,10 @@ def render_sent():
                 <div style="flex:1;min-width:0;">
                     <div style="font-size:0.9rem;font-weight:700;color:#0f172a;
                                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                        {rec.get("subject","(no subject)")}
+                        {rec.get("subject","(no subject)")}{test_badge}
                     </div>
                     <div style="display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap;">
+                        {sender_html}
                         <span style="font-size:0.72rem;color:#64748b;font-weight:500;">
                             📋 {rec.get("draft_name","")}
                         </span>
@@ -2065,6 +2113,7 @@ def render_sent():
                             🎨 {rec.get("template_name","")}
                         </span>
                         {f'<span style="font-size:0.72rem;color:#94a3b8;">·</span><span style="font-size:0.72rem;color:#64748b;">🏢 {rec["client"]}</span>' if rec.get("client") else ""}
+                        {f'<span style="font-size:0.72rem;color:#94a3b8;">·</span>{att_html}' if _att else ""}
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
@@ -2079,7 +2128,7 @@ def render_sent():
                 </div>
             </div>
             <div style="margin-bottom:6px;">{sent_pills}</div>
-            {f'<div style="margin-top:4px;">{fail_pills}</div>' if fail_pills else ""}
+            {f'<div style="margin-top:4px;">{fail_pills_html}</div>' if fail_pills_html else ""}
             {preview_html}
         </div>""", unsafe_allow_html=True)
 
@@ -2087,13 +2136,26 @@ def render_sent():
     st.markdown("---")
     ex_col, cl_col, _ = st.columns([2, 2, 3])
     with ex_col:
+        def _fail_emails(r):
+            raw = r.get("failed", [])
+            return ", ".join(f["email"] if isinstance(f, dict) else f for f in raw)
+        def _fail_errors(r):
+            raw = r.get("failed", [])
+            parts = [f.get("error","") for f in raw if isinstance(f, dict) and f.get("error")]
+            return " | ".join(parts)
         rows = [
             {
+                "ID": r.get("id",""),
                 "Date": r.get("date",""), "Time": r.get("time",""),
+                "Sender": r.get("sender",""),
                 "Draft": r.get("draft_name",""), "Subject": r.get("subject",""),
                 "Template": r.get("template_name",""), "Client": r.get("client",""),
+                "Attachment": r.get("attachment_name",""),
+                "Is Test": "Yes" if r.get("is_test") else "No",
                 "Sent To": ", ".join(r.get("sent_to",[])),
-                "Failed":  ", ".join(r.get("failed",[])),
+                "Sent Count": len(r.get("sent_to",[])),
+                "Failed Emails": _fail_emails(r),
+                "Failed Errors": _fail_errors(r),
                 "Body Preview": r.get("body_preview",""),
             }
             for r in records
