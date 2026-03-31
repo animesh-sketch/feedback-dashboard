@@ -10,7 +10,7 @@ import streamlit.components.v1 as components
 import base64
 import io
 from PIL import Image
-from data import ANALYTICS_BY_PERIOD, EMAIL_ANALYTICS, CSAT_RESPONDENTS, DAILY_DATES, WEEKLY_DATES, CAMPAIGNS, ACTION_QUEUE, HEALTH_KPIS, delta_is_positive, format_kpi, format_delta
+from data import format_kpi, format_delta, delta_is_positive, CAMPAIGNS, ACTION_QUEUE, HEALTH_KPIS, CSAT_RESPONDENTS
 from email_builder import build_email_html, TEMPLATE_NAMES
 import client_store
 import sent_store
@@ -838,24 +838,14 @@ def _render_period_content(period: str):
     _real_opened_rows  = [{"email": e["email"], "campaign": "—", "date": e["date"]} for e in _ts["opens"] + _ts["clicks"]]
     _real_clicked_rows = [{"email": e["email"], "campaign": "—", "date": e["date"]} for e in _ts["clicks"]]
 
-    # Use real data if any sends exist, otherwise fall back to static demo data
-    _has_real_data = _total_delivered > 0
-
-    data  = _real_data if _has_real_data else ANALYTICS_BY_PERIOD[period]
+    data  = _real_data
     csat  = data["csat"]
     score = csat["score"]
     stars = "★" * int(score) + "☆" * (5 - int(score))
 
-    # Pre-filter email rows for drill-down panels
-    if period == "Daily":
-        email_rows = _real_email_rows if _has_real_data else [r for r in EMAIL_ANALYTICS if r["date"] in DAILY_DATES]
-    elif period == "Weekly":
-        email_rows = _real_email_rows if _has_real_data else [r for r in EMAIL_ANALYTICS if r["date"] in WEEKLY_DATES]
-    else:
-        email_rows = _real_email_rows if _has_real_data else EMAIL_ANALYTICS
-
-    opened_rows  = _real_opened_rows if _has_real_data else [r for r in email_rows if r.get("opened")]
-    clicked_rows = _real_clicked_rows if _has_real_data else [r for r in email_rows if r.get("clicked")]
+    email_rows   = _real_email_rows
+    opened_rows  = _real_opened_rows
+    clicked_rows = _real_clicked_rows
 
     st.markdown(f"""
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
@@ -926,7 +916,7 @@ def _render_period_content(period: str):
     </div>""", unsafe_allow_html=True)
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-    respondents = _ts["respondents"] if _has_real_data and _ts["respondents"] else CSAT_RESPONDENTS[:csat["responses"]]
+    respondents = _ts["respondents"]
     with st.expander(f"👥  View Report Ratings  ({csat['responses']})", expanded=False):
         rows_html = "".join(
             f'<div class="resp-row"><div class="resp-name">{r["name"]}</div>'
@@ -1029,11 +1019,10 @@ def _render_ai_summary(period: str, csat_data: dict, respondents: list):
             total = csat_data.get("responses", 0)
             dist_text = "  ".join(f'{r["star"]}★: {r["count"]} ({r["pct"]}%)' for r in dist)
 
-            from data import ACTION_QUEUE
             comments_text = "\n".join(
-                f'- [{item["priority"].split()[0]}] {item["name"]}: "{item["comment"]}"'
-                for item in ACTION_QUEUE if item.get("comment")
-            ) or "No detailed comments available."
+                f'- {r["name"]} ({r["email"]}): rated {r["rating"]}/5 on {r["date"]}'
+                for r in respondents
+            ) or "No detailed feedback available."
 
             prompt = (
                 f"You are an expert data analytics insights analyst. Stakeholders have rated and reviewed data reports sent by the analytics team. Analyze their feedback and return a JSON object.\n\n"
