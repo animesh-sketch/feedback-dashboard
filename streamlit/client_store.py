@@ -129,35 +129,44 @@ def _load_from_github() -> list | None:
     return _gh_load()
 
 
-def load() -> list:
-    """Return the current client list, shared across all users.
-
-    Priority:
-      1. GitHub (via shared st.cache_data cache, TTL 30 s)
-      2. Local file  (local dev fallback)
-      3. Sample data (absolute last resort — never on Cloud with GitHub set)
-    """
+def _init() -> None:
+    """Load clients into session_state on first access this session."""
+    if _SS_KEY in st.session_state:
+        return
     data = _load_from_github()
     if data is not None:
-        return data
-
+        st.session_state[_SS_KEY] = data
+        return
     if os.path.exists(_FILE):
         try:
             with open(_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            if isinstance(data, list) and data:
-                return data
+            if isinstance(data, list):
+                st.session_state[_SS_KEY] = data
+                return
         except (json.JSONDecodeError, OSError):
             pass
+    st.session_state[_SS_KEY] = []
 
-    return list(SAMPLE_CLIENTS)
+
+def load() -> list:
+    """Return the current client list.
+
+    Priority:
+      1. st.session_state — fast intra-session access (prevents race conditions)
+      2. GitHub (via shared st.cache_data cache, TTL 30 s)
+      3. Local file  (local dev fallback)
+      4. Empty list  (no demo data shown)
+    """
+    _init()
+    return st.session_state[_SS_KEY]
 
 
 def save(clients: list) -> None:
-    """Persist clients to GitHub and local file, then clear the shared cache
-    so every user sees the update on their next interaction."""
+    """Persist clients: update session_state immediately, then GitHub + local file."""
+    st.session_state[_SS_KEY] = clients   # immediate update — no race condition
     _gh_save(clients)
-    _load_from_github.clear()   # invalidate shared cache immediately
+    _load_from_github.clear()             # invalidate shared cache for other users
     try:
         with open(_FILE, "w", encoding="utf-8") as f:
             json.dump(clients, f, indent=2, ensure_ascii=False)
