@@ -475,23 +475,27 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
 
 .client-repo-card {
     background: #ffffff;
-    border: 1px solid #e4e4e7;
-    border-radius: 14px;
-    padding: 18px 20px 14px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-    transition: box-shadow 0.2s;
+    border: 1px solid #e8eaf0;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05), 0 0 1px rgba(0,0,0,0.06);
+    transition: box-shadow 0.2s, transform 0.15s;
 }
-.client-repo-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+.client-repo-card:hover {
+    box-shadow: 0 8px 28px rgba(0,0,0,0.10), 0 0 1px rgba(0,0,0,0.06);
+    transform: translateY(-2px);
+}
 .tag-chip {
     display: inline-block;
-    background: var(--bg-blue-xl);
-    color: var(--brand-primary);
+    background: linear-gradient(135deg,#fdf8ff,#f0e8f8);
+    color: #d22c84;
     font-size: 0.61rem;
-    font-weight: 600;
-    padding: 3px 9px;
-    border-radius: 6px;
-    margin: 2px 2px 0 0;
-    border: 1px solid var(--bg-blue-shade);
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 99px;
+    margin: 2px 3px 0 0;
+    border: 1px solid #f0d9ed;
+    letter-spacing: 0.02em;
 }
 
 /* Stats grid */
@@ -563,11 +567,12 @@ label { color: #52525b !important; font-size: 0.8rem !important; font-weight: 50
 
 /* ── Client avatar ── */
 .client-avatar {
-    width: 40px; height: 40px;
-    border-radius: 10px;
+    width: 46px; height: 46px;
+    border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.78rem; font-weight: 800;
+    font-size: 0.82rem; font-weight: 800;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 /* ── Template card ── */
@@ -1095,27 +1100,51 @@ def _render_client_card(c: dict):
     status = c.get("status", "Active")
     sbg, sfg, sline = _STATUS_CFG.get(status, _STATUS_CFG["Active"])
 
-    email_pills = " ".join(f'<span class="email-pill">{e}</span>' for e in c.get("emails", []))
-    tag_chips   = " ".join(f'<span class="tag-chip">{t}</span>'   for t in c.get("tags",   []))
-    notes_raw   = c.get("notes", "")
-    notes_html  = f'<div style="color:#94a3b8;font-size:0.7rem;line-height:1.5;margin-bottom:8px;">{notes_raw[:80]}{"…" if len(notes_raw)>80 else ""}</div>' if notes_raw else ""
-    contact_html = f'<div style="color:#64748b;font-size:0.75rem;margin-bottom:8px;">👤 {c["contact"]}</div>' if c.get("contact") else ""
-    tags_html    = f'<div style="margin-bottom:8px;">{tag_chips}</div>' if tag_chips else ""
+    emails   = c.get("emails", [])
+    tags     = c.get("tags", [])
+    notes    = c.get("notes", "")
+    confirm_key = f"confirm_del_{cid}"
+    is_confirming = st.session_state.get(confirm_key, False)
 
+    email_rows = "".join(
+        f'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;'
+        f'border-bottom:1px solid #f1f5f9;last-child:border-bottom:none;">'
+        f'<span style="color:#94a3b8;font-size:0.7rem;flex-shrink:0;">✉</span>'
+        f'<span style="color:#334155;font-size:0.78rem;font-weight:500;word-break:break-all;">{e}</span>'
+        f'</div>'
+        for e in emails
+    ) if emails else '<div style="color:#94a3b8;font-size:0.75rem;">No emails added</div>'
+
+    tag_chips = " ".join(f'<span class="tag-chip">{t}</span>' for t in tags)
     avatar_html = _avatar(c.get("company", ""))
+
     st.markdown(
-        f'<div class="client-repo-card" style="border-top:2px solid {sline};">'
-        f'<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">'
+        f'<div class="client-repo-card" style="border-top:3px solid {sline};">'
+        # ── Header
+        f'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:14px;">'
+        f'<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">'
         f'{avatar_html}'
         f'<div style="flex:1;min-width:0;">'
-        f'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
-        f'<div style="color:#0f172a;font-weight:700;font-size:0.95rem;line-height:1.3;">{c.get("company","")}</div>'
-        f'<span style="background:{sbg};color:{sfg};font-size:0.58rem;font-weight:700;letter-spacing:0.1em;'
-        f'text-transform:uppercase;padding:3px 9px;border-radius:99px;white-space:nowrap;">{status}</span>'
-        f'</div></div></div>{contact_html}'
-        f'<div style="margin-bottom:8px;">{email_pills}</div>'
-        f'{tags_html}{notes_html}'
-        f'<div style="color:#94a3b8;font-size:0.61rem;margin-top:4px;">Added {c.get("added_at","—")}</div>'
+        f'<div style="font-size:1rem;font-weight:800;color:#0f172a;line-height:1.2;'
+        f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{c.get("company","")}</div>'
+        + (f'<div style="color:#64748b;font-size:0.74rem;margin-top:3px;">👤 {c["contact"]}</div>' if c.get("contact") else '') +
+        f'</div></div>'
+        f'<span style="background:{sbg};color:{sfg};font-size:0.58rem;font-weight:700;'
+        f'letter-spacing:0.1em;text-transform:uppercase;padding:4px 10px;'
+        f'border-radius:99px;white-space:nowrap;flex-shrink:0;">{status}</span>'
+        f'</div>'
+        # ── Email box
+        f'<div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;'
+        f'padding:10px 12px;margin-bottom:12px;">'
+        f'{email_rows}'
+        f'</div>'
+        # ── Tags
+        + (f'<div style="margin-bottom:10px;">{tag_chips}</div>' if tag_chips else '') +
+        # ── Notes
+        + (f'<div style="color:#94a3b8;font-size:0.71rem;line-height:1.5;margin-bottom:10px;'
+           f'padding:8px 10px;background:#fffbf0;border-radius:8px;border:1px solid #fef3c7;">'
+           f'{notes[:90]}{"…" if len(notes) > 90 else ""}</div>' if notes else '') +
+        f'<div style="color:#cbd5e1;font-size:0.62rem;margin-top:2px;">Added {c.get("added_at","—")}</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -1125,13 +1154,26 @@ def _render_client_card(c: dict):
         lbl = "✕ Close" if st.session_state.get(f"editing_{cid}") else "✏️ Edit"
         if st.button(lbl, key=f"edit_c_{cid}", use_container_width=True):
             st.session_state[f"editing_{cid}"] = not st.session_state.get(f"editing_{cid}", False)
+            st.session_state.pop(confirm_key, None)
             st.rerun()
     with bc2:
-        if st.button("🗑 Remove", key=f"del_c_{cid}", use_container_width=True):
-            client_store.delete(cid)
-            st.session_state.pop(f"editing_{cid}", None)
-            st.toast(f"Removed {c.get('company','client')}", icon="🗑")
-            st.rerun()
+        if not is_confirming:
+            if st.button("🗑 Remove", key=f"del_c_{cid}", use_container_width=True):
+                st.session_state[confirm_key] = True
+                st.rerun()
+        else:
+            cc1, cc2 = st.columns(2)
+            with cc1:
+                if st.button("⚠️ Confirm", key=f"conf_del_{cid}", use_container_width=True, type="primary"):
+                    client_store.delete(cid)
+                    st.session_state.pop(f"editing_{cid}", None)
+                    st.session_state.pop(confirm_key, None)
+                    st.toast(f"Removed {c.get('company','client')}", icon="🗑")
+                    st.rerun()
+            with cc2:
+                if st.button("Cancel", key=f"cancel_del_{cid}", use_container_width=True):
+                    st.session_state.pop(confirm_key, None)
+                    st.rerun()
 
     if st.session_state.get(f"editing_{cid}"):
         # ── Email address management (outside form so delete/add buttons work) ──
@@ -1229,19 +1271,19 @@ def render_clients():
     st.markdown(f"""<div class="stats-grid">
         <div class="stat-card">
             <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Clients</div>
-            <div style="color:#0f172a;font-size:1.8rem;font-weight:700;letter-spacing:-0.03em;">{len(all_clients)}</div>
+            <div style="background:linear-gradient(108deg,#d22c84,#fb6069 52%,#2d84f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(all_clients)}</div>
         </div>
         <div class="stat-card" style="border-top:2px solid #059669;">
             <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Active</div>
-            <div style="color:#34d399;font-size:1.8rem;font-weight:700;">{active_n}</div>
+            <div style="color:#10b981;font-size:1.8rem;font-weight:800;">{active_n}</div>
         </div>
-        <div class="stat-card" style="border-top:2px solid #d97706;">
+        <div class="stat-card" style="border-top:2px solid #f59e0b;">
             <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">At Risk</div>
-            <div style="color:#fbbf24;font-size:1.8rem;font-weight:700;">{at_risk_n}</div>
+            <div style="color:#f59e0b;font-size:1.8rem;font-weight:800;">{at_risk_n}</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" style="border-top:2px solid #d22c84;">
             <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Email Addresses</div>
-            <div style="color:#0f172a;font-size:1.8rem;font-weight:700;">{total_em}</div>
+            <div style="color:#d22c84;font-size:1.8rem;font-weight:800;">{total_em}</div>
         </div>
     </div>""", unsafe_allow_html=True)
 
@@ -1255,15 +1297,15 @@ def render_clients():
 
             tags_raw = st.text_input("Tags", placeholder="Enterprise, Q1, High Priority (comma-separated)")
 
-            st.markdown('<div style="color:#64748b;font-size:0.75rem;font-weight:600;margin:10px 0 6px;">Email Addresses (up to 5)</div>', unsafe_allow_html=True)
-            ec1, ec2 = st.columns(2)
+            st.markdown('<div style="color:#64748b;font-size:0.75rem;font-weight:600;margin:10px 0 6px;">Email Addresses</div>', unsafe_allow_html=True)
+            ec1, ec2, ec3 = st.columns(3)
             with ec1:
-                e1 = st.text_input("Email 1 *", placeholder="primary@company.com")
-                e2 = st.text_input("Email 2",   placeholder="manager@company.com")
-                e3 = st.text_input("Email 3",   placeholder="cfo@company.com")
+                e1 = st.text_input("Primary Email *", placeholder="primary@company.com", label_visibility="visible")
             with ec2:
-                e4 = st.text_input("Email 4",   placeholder="analyst@company.com")
-                e5 = st.text_input("Email 5",   placeholder="optional@company.com")
+                e2 = st.text_input("Email 2", placeholder="cc@company.com", label_visibility="visible")
+            with ec3:
+                e3 = st.text_input("Email 3", placeholder="optional@company.com", label_visibility="visible")
+            e4, e5 = "", ""
 
             notes = st.text_area("Notes", placeholder="Client context, renewal dates, preferences…", height=72)
 
@@ -1306,9 +1348,9 @@ def render_clients():
 
     st.markdown(f'<div style="color:#64748b;font-size:0.75rem;font-weight:600;margin-bottom:14px;">{len(filtered)} client{"s" if len(filtered)!=1 else ""}</div>', unsafe_allow_html=True)
 
-    for i in range(0, len(filtered), 3):
-        cols = st.columns(3)
-        for j, c in enumerate(filtered[i:i+3]):
+    for i in range(0, len(filtered), 2):
+        cols = st.columns(2)
+        for j, c in enumerate(filtered[i:i+2]):
             with cols[j]:
                 _render_client_card(c)
 
