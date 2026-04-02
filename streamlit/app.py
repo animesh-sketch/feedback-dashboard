@@ -1680,7 +1680,7 @@ def render_email_maker():
         else:
             options = [f"{c['company']}  ({', '.join(c['emails'][:2])}{'…' if len(c['emails'])>2 else ''})" for c in repo_clients]
             selected_opts = st.multiselect(
-                "Send to", options, default=options, key="compose_recipients",
+                "Send to", options, default=[], key="compose_recipients",
                 placeholder="Choose clients…",
                 label_visibility="collapsed",
             )
@@ -1947,6 +1947,20 @@ def render_sent():
         </div>
     </div>""", unsafe_allow_html=True)
 
+    # ── Client filter at the top ──────────────────────────────────────────────
+    repo_clients = client_store.load()
+    client_names = [c["company"] for c in repo_clients]
+    if client_names:
+        selected_clients_filter = st.multiselect(
+            "Filter by client", client_names,
+            default=[],
+            placeholder="All clients (select to filter)…",
+            key="sent_client_filter",
+            label_visibility="collapsed",
+        )
+    else:
+        selected_clients_filter = []
+
     # ── Last 30 days filter (always applied, with option to see all) ──────────
     _cutoff_30 = _dt.now(_tz.utc) - timedelta(days=30)
 
@@ -1963,6 +1977,17 @@ def render_sent():
         records = [
             r for r in all_records
             if _dt.fromisoformat(r["timestamp"]) >= _cutoff_30
+        ]
+
+    if selected_clients_filter:
+        client_emails = {
+            e for c in repo_clients
+            if c["company"] in selected_clients_filter
+            for e in c.get("emails", [])
+        }
+        records = [
+            r for r in records
+            if any(e in client_emails for e in r.get("sent_to", []))
         ]
 
     # ── Summary stats (scoped to visible period) ──────────────────────────────
