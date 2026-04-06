@@ -1857,7 +1857,7 @@ def render_email_maker():
                 label_visibility="collapsed",
             )
             selected_clients = [c for c, opt in zip(repo_clients, options) if opt in selected_opts]
-            all_emails = [c["emails"][0] for c in selected_clients if c.get("emails")]
+            all_emails = [e for c in selected_clients for e in c.get("emails", [])]
 
             if selected_clients:
                 st.markdown(
