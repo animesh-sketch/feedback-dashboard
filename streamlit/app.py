@@ -1,8 +1,22 @@
 import sys
 import os
+import base64 as _b64_logo
 sys.path.insert(0, os.path.dirname(__file__))
 # v2026.03.25
 from datetime import datetime, timezone
+
+# ─── Brand logo (base64 PNG) ──────────────────────────────────────────────────
+def _logo_img(size: int = 34, br: int = 8) -> str:
+    """Return an <img> tag for the Convin logo at the given size."""
+    _logo_path = os.path.join(os.path.dirname(__file__), "convin_logo.png")
+    try:
+        with open(_logo_path, "rb") as _f:
+            _b64 = _b64_logo.b64encode(_f.read()).decode()
+        return (f'<img src="data:image/png;base64,{_b64}" '
+                f'width="{size}" height="{size}" '
+                f'style="border-radius:{br}px;display:block;flex-shrink:0;" />')
+    except Exception:
+        return f'<div style="width:{size}px;height:{size}px;border-radius:{br}px;background:linear-gradient(135deg,#e0368e,#3d8ef5);display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:900;color:#fff;">CDL</div>'
 
 import streamlit as st
 import pandas as pd
@@ -683,45 +697,37 @@ h1, h2, h3 { color: #e8f0fc !important; }
 # ─── Login gate ───────────────────────────────────────────────────────────────
 
 def _render_login_page():
-    st.markdown("""
+    _logo_html = _logo_img(72, 20)
+    st.markdown(f"""
     <style>
-    @keyframes loginGlow {
-        0%, 100% { box-shadow: 0 0 40px rgba(224,54,142,0.3), 0 0 80px rgba(61,142,245,0.1); }
-        50%       { box-shadow: 0 0 60px rgba(61,130,245,0.55), 0 0 100px rgba(61,142,245,0.2); }
-    }
-    @keyframes logoSpin {
-        0%, 100% { background-position: 0% 50%; }
-        50%       { background-position: 100% 50%; }
-    }
-    .login-wrap {
+    @keyframes loginGlow {{
+        0%, 100% {{ box-shadow: 0 0 40px rgba(61,130,245,0.25), 0 0 80px rgba(224,54,142,0.1); }}
+        50%       {{ box-shadow: 0 0 60px rgba(61,130,245,0.5), 0 0 100px rgba(224,54,142,0.15); }}
+    }}
+    .login-wrap {{
         max-width: 390px;
         margin: 8vh auto 0;
         background: #071428;
-        border: 1px solid rgba(224,54,142,0.2);
+        border: 1px solid rgba(61,130,245,0.22);
         border-radius: 24px;
         padding: 3rem 2.5rem 2.5rem;
         animation: loginGlow 4s ease-in-out infinite;
         text-align: center;
-    }
-    .login-logo {
-        width: 64px; height: 64px;
-        background: linear-gradient(135deg, #e0368e 0%, #ff6b78 40%, #3d8ef5 100%);
-        background-size: 200% 200%;
-        animation: logoSpin 4s ease infinite;
-        border-radius: 18px;
-        display: inline-flex; align-items: center; justify-content: center;
-        font-size: 0.78rem; font-weight: 900; color: #fff;
+    }}
+    .login-logo-wrap {{
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         margin-bottom: 1.6rem;
-        box-shadow: 0 8px 32px rgba(61,130,245,0.55), inset 0 1px 0 rgba(255,255,255,0.2);
-        letter-spacing: 0.06em;
-    }
-    .login-brand { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #e0368e; margin-bottom: 6px; }
-    .login-title { font-size: 1.5rem; font-weight: 800; color: #e8f0fc; margin-bottom: 0.3rem; letter-spacing: -0.03em; line-height: 1.2; }
-    .login-divider { width: 40px; height: 3px; background: linear-gradient(90deg, #e0368e, #ff6b78 52%, #3d8ef5); border-radius: 2px; margin: 12px auto 20px; box-shadow: 0 0 10px rgba(61,130,245,0.55); }
-    .login-sub { font-size: 0.83rem; color: #5588bb; margin-bottom: 2rem; }
+        filter: drop-shadow(0 8px 24px rgba(61,130,245,0.5));
+    }}
+    .login-brand {{ font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #e0368e; margin-bottom: 6px; }}
+    .login-title {{ font-size: 1.5rem; font-weight: 800; color: #e8f0fc; margin-bottom: 0.3rem; letter-spacing: -0.03em; line-height: 1.2; }}
+    .login-divider {{ width: 40px; height: 3px; background: linear-gradient(90deg, #e0368e, #ff6b78 52%, #3d8ef5); border-radius: 2px; margin: 12px auto 20px; box-shadow: 0 0 10px rgba(61,130,245,0.5); }}
+    .login-sub {{ font-size: 0.83rem; color: #5588bb; margin-bottom: 2rem; }}
     </style>
     <div class="login-wrap">
-        <div class="login-logo">CDL</div>
+        <div class="login-logo-wrap">{_logo_html}</div>
         <div class="login-brand">Convin Data Labs</div>
         <div class="login-title">Insights Dashboard</div>
         <div class="login-divider"></div>
@@ -752,7 +758,7 @@ with st.sidebar:
     st.markdown("""
     <div style="padding:8px 4px 18px;">
         <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,#e0368e,#ff6b78 52%,#3d8ef5);display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;color:#fff;letter-spacing:0.06em;box-shadow:0 4px 16px rgba(61,130,245,0.55);">CDL</div>
+            """ + _logo_img(36, 10) + """
             <div>
                 <div style="color:#e0ecf8;font-weight:700;font-size:0.9rem;letter-spacing:-0.01em;line-height:1.2;">Convin Data Labs</div>
                 <div style="color:#e0368e;font-size:0.6rem;margin-top:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">Settings</div>
@@ -2439,14 +2445,7 @@ st.markdown(f"""
 <div class="cdl-navbar">
     <!-- Logo + brand -->
     <div style="display:flex;align-items:center;gap:12px;">
-        <div style="
-            width:38px;height:38px;border-radius:10px;
-            background:rgba(0,0,0,0.25);
-            border:1px solid rgba(255,255,255,0.3);
-            display:flex;align-items:center;justify-content:center;
-            font-size:0.65rem;font-weight:900;color:#fff;letter-spacing:0.05em;
-            box-shadow:0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
-        ">CDL</div>
+        <div style="filter:drop-shadow(0 2px 8px rgba(0,0,0,0.4));flex-shrink:0;">{_logo_img(38, 10)}</div>
         <div>
             <div style="color:#fff;font-weight:800;font-size:0.96rem;letter-spacing:-0.01em;line-height:1.1;text-shadow:0 1px 8px rgba(0,0,0,0.3);">Convin Data Labs</div>
             <div style="color:rgba(255,255,255,0.55);font-size:0.58rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;">Insights Dashboard</div>
