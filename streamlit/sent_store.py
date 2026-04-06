@@ -1,7 +1,10 @@
 """
-Sent email log — GitHub CSV storage.
+Sent email log — GitHub CSV storage with shared cache.
 
-Reads and writes data/sent_items.csv in the GitHub repo via the GitHub Contents API.
+All users share a single @st.cache_data cache (TTL 15 s).
+When any user sends an email, the shared cache is cleared so every
+other user sees the new record on their next interaction.
+
 Requires st.secrets: GITHUB_TOKEN, GITHUB_REPO.
 """
 
@@ -16,7 +19,6 @@ import streamlit as st
 
 _DEFAULT_REPO = "animesh-sketch/feedback-dashboard"
 _GH_PATH      = "data/sent_items.csv"
-_SS_KEY       = "sent_store_data"
 
 _FIELDS = [
     "id", "timestamp", "date", "time", "sender",
@@ -42,13 +44,11 @@ def _repo():
     return st.secrets.get("GITHUB_REPO", _DEFAULT_REPO)
 
 
-# ── CSV conversion ────────────────────────────────────────────────────────────
+# ── CSV ↔ dict conversion ─────────────────────────────────────────────────────
 
-def _to_dict(row: dict) -> dict:
-    """CSV row → record dict."""
-    failed_raw = row.get("failed", "[]")
+def _row_to_record(row: dict) -> dict:
     try:
-        failed = json.loads(failed_raw) if failed_raw else []
+        failed = json.loads(row.get("failed", "[]") or "[]")
     except Exception:
         failed = []
     return {
@@ -69,8 +69,7 @@ def _to_dict(row: dict) -> dict:
         "body_preview":    row.get("body_preview", ""),
     }
 
-def _to_csv(records: list) -> str:
-    """Record dicts → CSV string."""
+def _records_to_csv(records: list) -> str:
     buf = io.StringIO()
     w = csv.DictWriter(buf, fieldnames=_FIELDS, lineterminator="\n")
     w.writeheader()
@@ -98,7 +97,6 @@ def _to_csv(records: list) -> str:
 # ── GitHub read / write ───────────────────────────────────────────────────────
 
 def _gh_load() -> list | None:
-    """Fetch data/sent_items.csv from GitHub. Returns list or None on error."""
     try:
         import requests as _req
         hdrs = _headers()
@@ -110,17 +108,15 @@ def _gh_load() -> list | None:
         )
         if r.status_code == 200:
             raw = _b64.b64decode(r.json()["content"]).decode("utf-8")
-            reader = csv.DictReader(io.StringIO(raw))
-            return [_to_dict(row) for row in reader]
+            return [_row_to_record(row) for row in csv.DictReader(io.StringIO(raw))]
         if r.status_code == 404:
-            return []          # file doesn't exist yet
+            return []
     except Exception:
         pass
     return None
 
 
 def _gh_save(records: list) -> bool:
-    """Write data/sent_items.csv back to GitHub. Returns True on success."""
     try:
         import requests as _req
         hdrs = _headers()
@@ -133,33 +129,34 @@ def _gh_save(records: list) -> bool:
             sha = r.json().get("sha")
         payload = {
             "message": "chore: update sent items",
-            "content": _b64.b64encode(_to_csv(records).encode()).decode(),
+            "content": _b64.b64encode(_records_to_csv(records).encode()).decode(),
         }
         if sha:
             payload["sha"] = sha
-        resp = _req.put(url, headers=hdrs, json=payload, timeout=15)
-        return resp.status_code in (200, 201)
+        return _req.put(url, headers=hdrs, json=payload, timeout=15).status_code in (200, 201)
     except Exception:
         return False
 
 
+# ── Shared cache (all users, all sessions) ────────────────────────────────────
+
+@st.cache_data(ttl=15, show_spinner=False)
+def _cached_load() -> list:
+    """Fetches from GitHub. Shared across all users — TTL 15 s."""
+    data = _gh_load()
+    return data if data is not None else []
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def _init() -> None:
-    if _SS_KEY in st.session_state:
-        return
-    data = _gh_load()
-    st.session_state[_SS_KEY] = data if data is not None else []
-
-
 def load() -> list:
-    _init()
-    return st.session_state[_SS_KEY]
+    """Return current sent records (shared cache, max 15 s stale)."""
+    return list(_cached_load())
 
 
 def _persist(records: list) -> None:
-    st.session_state[_SS_KEY] = records
     _gh_save(records)
+    _cached_load.clear()                 # all users see update on next interaction
 
 
 def log_send(
@@ -177,12 +174,11 @@ def log_send(
     is_test: bool = False,
 ) -> dict:
     now = datetime.now(timezone.utc)
-    normalised_failed = []
-    for item in failed:
-        if isinstance(item, dict):
-            normalised_failed.append({"email": item.get("email", ""), "error": item.get("error", "")})
-        else:
-            normalised_failed.append({"email": str(item), "error": ""})
+    normalised_failed = [
+        {"email": f.get("email", ""), "error": f.get("error", "")}
+        if isinstance(f, dict) else {"email": str(f), "error": ""}
+        for f in failed
+    ]
     record = {
         "id":              record_id or str(uuid.uuid4())[:8],
         "timestamp":       now.isoformat(),

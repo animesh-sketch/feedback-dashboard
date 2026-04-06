@@ -1,9 +1,11 @@
 """
-Client repository — GitHub CSV storage.
+Client repository — GitHub CSV storage with shared cache.
 
-Reads and writes data/clients.csv in the GitHub repo via the GitHub Contents API.
+All users share a single @st.cache_data cache (TTL 15 s).
+When any user writes, the shared cache is cleared so every other
+user sees the update on their next interaction.
+
 Requires st.secrets: GITHUB_TOKEN, GITHUB_REPO.
-Falls back to empty list when token is missing or the file doesn't exist yet.
 """
 
 import base64 as _b64
@@ -16,7 +18,6 @@ import streamlit as st
 
 _DEFAULT_REPO = "animesh-sketch/feedback-dashboard"
 _GH_PATH      = "data/clients.csv"
-_SS_KEY       = "client_store_data"
 
 STATUSES = ["Active", "At Risk", "Inactive"]
 
@@ -39,10 +40,9 @@ def _repo():
     return st.secrets.get("GITHUB_REPO", _DEFAULT_REPO)
 
 
-# ── CSV conversion ────────────────────────────────────────────────────────────
+# ── CSV ↔ dict conversion ─────────────────────────────────────────────────────
 
-def _to_dict(row: dict) -> dict:
-    """CSV row → client dict."""
+def _row_to_client(row: dict) -> dict:
     return {
         "id":       row.get("id", ""),
         "company":  row.get("company", ""),
@@ -54,8 +54,7 @@ def _to_dict(row: dict) -> dict:
         "added_at": row.get("added_at", ""),
     }
 
-def _to_csv(clients: list) -> str:
-    """Client dicts → CSV string."""
+def _clients_to_csv(clients: list) -> str:
     buf = io.StringIO()
     w = csv.DictWriter(buf, fieldnames=_FIELDS, lineterminator="\n")
     w.writeheader()
@@ -76,7 +75,6 @@ def _to_csv(clients: list) -> str:
 # ── GitHub read / write ───────────────────────────────────────────────────────
 
 def _gh_load() -> list | None:
-    """Fetch data/clients.csv from GitHub. Returns list or None on error."""
     try:
         import requests as _req
         hdrs = _headers()
@@ -88,17 +86,15 @@ def _gh_load() -> list | None:
         )
         if r.status_code == 200:
             raw = _b64.b64decode(r.json()["content"]).decode("utf-8")
-            reader = csv.DictReader(io.StringIO(raw))
-            return [_to_dict(row) for row in reader]
+            return [_row_to_client(row) for row in csv.DictReader(io.StringIO(raw))]
         if r.status_code == 404:
-            return []          # file doesn't exist yet — start empty
+            return []
     except Exception:
         pass
     return None
 
 
 def _gh_save(clients: list) -> bool:
-    """Write data/clients.csv back to GitHub. Returns True on success."""
     try:
         import requests as _req
         hdrs = _headers()
@@ -111,41 +107,35 @@ def _gh_save(clients: list) -> bool:
             sha = r.json().get("sha")
         payload = {
             "message": "chore: update clients",
-            "content": _b64.b64encode(_to_csv(clients).encode()).decode(),
+            "content": _b64.b64encode(_clients_to_csv(clients).encode()).decode(),
         }
         if sha:
             payload["sha"] = sha
-        resp = _req.put(url, headers=hdrs, json=payload, timeout=15)
-        return resp.status_code in (200, 201)
+        return _req.put(url, headers=hdrs, json=payload, timeout=15).status_code in (200, 201)
     except Exception:
         return False
 
 
-# ── Cached loader (shared across reruns, TTL 30 s) ────────────────────────────
+# ── Shared cache (all users, all sessions) ────────────────────────────────────
 
-@st.cache_data(ttl=30, show_spinner=False)
-def _cached_load() -> list | None:
-    return _gh_load()
+@st.cache_data(ttl=15, show_spinner=False)
+def _cached_load() -> list:
+    """Fetches from GitHub. Shared across all users — TTL 15 s."""
+    data = _gh_load()
+    return data if data is not None else []
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def _init() -> None:
-    if _SS_KEY in st.session_state:
-        return
-    data = _cached_load()
-    st.session_state[_SS_KEY] = data if data is not None else []
-
-
 def load() -> list:
-    _init()
-    return st.session_state[_SS_KEY]
+    """Return current client list (shared cache, max 15 s stale)."""
+    return list(_cached_load())          # copy so callers can't mutate the cache
 
 
 def save(clients: list) -> None:
-    st.session_state[_SS_KEY] = clients
+    """Write to GitHub and immediately invalidate shared cache for all users."""
     _gh_save(clients)
-    _cached_load.clear()
+    _cached_load.clear()                 # all users get fresh data on next call
 
 
 def add(company: str, contact: str, emails: list,
