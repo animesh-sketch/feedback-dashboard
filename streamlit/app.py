@@ -1139,7 +1139,7 @@ def _render_client_card(c: dict):
         f'{email_rows}'
         f'</div>'
         # ── Tags
-        + (f'<div style="margin-bottom:10px;">{tag_chips}</div>' if tag_chips else '') +
+        + (f'<div style="margin-bottom:10px;">{tag_chips}</div>' if tag_chips else '')
         # ── Notes
         + (f'<div style="color:#94a3b8;font-size:0.71rem;line-height:1.5;margin-bottom:10px;'
            f'padding:8px 10px;background:#fffbf0;border-radius:8px;border:1px solid #fef3c7;">'
