@@ -1102,7 +1102,7 @@ def _render_client_card(c: dict):
 
     emails   = c.get("emails", [])
     tags     = c.get("tags", [])
-    notes    = c.get("notes", "")
+    notes    = str(c.get("notes") or "")
     confirm_key = f"confirm_del_{cid}"
     is_confirming = st.session_state.get(confirm_key, False)
 
