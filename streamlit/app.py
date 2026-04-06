@@ -1178,9 +1178,9 @@ def _render_ai_summary(period: str, csat_data: dict, respondents: list):
 # ─── Clients ──────────────────────────────────────────────────────────────────
 
 _STATUS_CFG = {
-    "Active":   ("#dcfce7", "#16a34a", "#059669"),
-    "At Risk":  ("#fef9c3", "#d97706", "#f59e0b"),
-    "Inactive": ("#f1f5f9", "#64748b", "#94a3b8"),
+    "Active":   ("rgba(14,188,110,0.12)", "#22e885", "#0ebc6e"),
+    "At Risk":  ("rgba(251,191,36,0.12)",  "#fbbf24", "#f59e0b"),
+    "Inactive": ("rgba(100,116,139,0.12)", "#7788aa", "#556688"),
 }
 
 _AVATAR_GRADS = [
@@ -1218,13 +1218,13 @@ def _render_client_card(c: dict):
     is_confirming = st.session_state.get(confirm_key, False)
 
     email_rows = "".join(
-        f'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;'
-        f'border-bottom:1px solid #f1f5f9;last-child:border-bottom:none;">'
-        f'<span style="color:#94a3b8;font-size:0.7rem;flex-shrink:0;">✉</span>'
-        f'<span style="color:#334155;font-size:0.78rem;font-weight:500;word-break:break-all;">{e}</span>'
+        f'<div style="display:flex;align-items:center;gap:8px;padding:5px 0;'
+        f'border-bottom:1px solid rgba(61,130,245,0.08);">'
+        f'<span style="color:#3d8ef5;font-size:0.7rem;flex-shrink:0;">✉</span>'
+        f'<span style="color:#a0c0e0;font-size:0.78rem;font-weight:500;word-break:break-all;">{e}</span>'
         f'</div>'
         for e in emails
-    ) if emails else '<div style="color:#94a3b8;font-size:0.75rem;">No emails added</div>'
+    ) if emails else '<div style="color:#446688;font-size:0.75rem;">No emails added</div>'
 
     tag_chips = " ".join(f'<span class="tag-chip">{t}</span>' for t in tags)
     avatar_html = _avatar(c.get("company", ""))
@@ -1236,26 +1236,26 @@ def _render_client_card(c: dict):
         f'<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">'
         f'{avatar_html}'
         f'<div style="flex:1;min-width:0;">'
-        f'<div style="font-size:1rem;font-weight:800;color:#0f172a;line-height:1.2;'
+        f'<div style="font-size:1rem;font-weight:800;color:#e0ecf8;line-height:1.2;'
         f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{c.get("company","")}</div>'
-        + (f'<div style="color:#64748b;font-size:0.74rem;margin-top:3px;">👤 {c["contact"]}</div>' if c.get("contact") else '') +
+        + (f'<div style="color:#6699cc;font-size:0.74rem;margin-top:3px;">👤 {c["contact"]}</div>' if c.get("contact") else '') +
         f'</div></div>'
         f'<span style="background:{sbg};color:{sfg};font-size:0.58rem;font-weight:700;'
         f'letter-spacing:0.1em;text-transform:uppercase;padding:4px 10px;'
-        f'border-radius:99px;white-space:nowrap;flex-shrink:0;">{status}</span>'
+        f'border-radius:99px;white-space:nowrap;flex-shrink:0;border:1px solid {sfg}33;">{status}</span>'
         f'</div>'
         # ── Email box
-        f'<div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;'
+        f'<div style="background:rgba(61,130,245,0.06);border:1px solid rgba(61,130,245,0.12);border-radius:10px;'
         f'padding:10px 12px;margin-bottom:12px;">'
         f'{email_rows}'
         f'</div>'
         # ── Tags
         + (f'<div style="margin-bottom:10px;">{tag_chips}</div>' if tag_chips else '')
         # ── Notes
-        + (f'<div style="color:#94a3b8;font-size:0.71rem;line-height:1.5;margin-bottom:10px;'
-           f'padding:8px 10px;background:#fffbf0;border-radius:8px;border:1px solid #fef3c7;">'
+        + (f'<div style="color:#7799bb;font-size:0.71rem;line-height:1.5;margin-bottom:10px;'
+           f'padding:8px 10px;background:rgba(61,130,245,0.05);border-radius:8px;border:1px solid rgba(61,130,245,0.12);">'
            f'{notes[:90]}{"…" if len(notes) > 90 else ""}</div>' if notes else '') +
-        f'<div style="color:#cbd5e1;font-size:0.62rem;margin-top:2px;">Added {c.get("added_at","—")}</div>'
+        f'<div style="color:#334466;font-size:0.62rem;margin-top:2px;">Added {c.get("added_at","—")}</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -1289,7 +1289,7 @@ def _render_client_card(c: dict):
     if st.session_state.get(f"editing_{cid}"):
         # ── Email address management (outside form so delete/add buttons work) ──
         st.markdown(
-            '<div style="color:#64748b;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;'
+            '<div style="color:#6699cc;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;'
             'text-transform:uppercase;margin:6px 0 6px;">Email Addresses</div>',
             unsafe_allow_html=True,
         )
@@ -1298,8 +1298,8 @@ def _render_client_card(c: dict):
             ec1, ec2 = st.columns([5, 1])
             with ec1:
                 st.markdown(
-                    f'<div style="background:#fdf8ff;border:1px solid #f0e8f8;border-radius:6px;'
-                    f'padding:6px 10px;font-size:0.78rem;color:#d22c84;">{em}</div>',
+                    f'<div style="background:rgba(61,130,245,0.08);border:1px solid rgba(61,130,245,0.2);border-radius:6px;'
+                    f'padding:6px 10px;font-size:0.78rem;color:#6699cc;">{em}</div>',
                     unsafe_allow_html=True,
                 )
             with ec2:
@@ -1400,20 +1400,20 @@ def render_clients():
 
     st.markdown(f"""<div class="stats-grid">
         <div class="stat-card">
-            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Clients</div>
-            <div style="background:linear-gradient(108deg,#d22c84,#fb6069 52%,#2d84f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(all_clients)}</div>
+            <div style="color:#446688;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Clients</div>
+            <div style="background:var(--gradient-brand);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(all_clients)}</div>
         </div>
-        <div class="stat-card" style="border-top:2px solid #059669;">
-            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Active</div>
-            <div style="color:#10b981;font-size:1.8rem;font-weight:800;">{active_n}</div>
+        <div class="stat-card" style="border-top:2px solid #0ebc6e;">
+            <div style="color:#446688;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Active</div>
+            <div style="color:#22e885;font-size:1.8rem;font-weight:800;">{active_n}</div>
         </div>
         <div class="stat-card" style="border-top:2px solid #f59e0b;">
-            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">At Risk</div>
-            <div style="color:#f59e0b;font-size:1.8rem;font-weight:800;">{at_risk_n}</div>
+            <div style="color:#446688;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">At Risk</div>
+            <div style="color:#fbbf24;font-size:1.8rem;font-weight:800;">{at_risk_n}</div>
         </div>
-        <div class="stat-card" style="border-top:2px solid #d22c84;">
-            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Email Addresses</div>
-            <div style="color:#d22c84;font-size:1.8rem;font-weight:800;">{total_em}</div>
+        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div style="color:#446688;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Email Addresses</div>
+            <div style="color:#6699cc;font-size:1.8rem;font-weight:800;">{total_em}</div>
         </div>
     </div>""", unsafe_allow_html=True)
 
@@ -1476,7 +1476,7 @@ def render_clients():
         st.markdown('<div style="text-align:center;padding:60px 20px;color:#94a3b8;font-size:0.84rem;">No clients found. Add one above.</div>', unsafe_allow_html=True)
         return
 
-    st.markdown(f'<div style="color:#64748b;font-size:0.75rem;font-weight:600;margin-bottom:14px;">{len(filtered)} client{"s" if len(filtered)!=1 else ""}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="color:#446688;font-size:0.75rem;font-weight:600;margin-bottom:14px;">{len(filtered)} client{"s" if len(filtered)!=1 else ""}</div>', unsafe_allow_html=True)
 
     for i in range(0, len(filtered), 2):
         cols = st.columns(2)
