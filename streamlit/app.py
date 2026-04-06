@@ -2223,14 +2223,23 @@ def render_sent():
             'border:1px solid rgba(245,158,11,0.3);margin-left:6px;">TEST</span>'
         ) if rec.get("is_test") else ""
 
-        sent_pills = " ".join(f'<span class="email-pill">{e}</span>' for e in _sent)
+        # Build sent pills — show count label if more than 1
+        sent_pills = " ".join(f'<span class="email-pill">✉ {e}</span>' for e in _sent)
+        sent_count_label = (
+            f'<span style="color:#446688;font-size:0.68rem;font-weight:600;margin-right:6px;">'
+            f'{len(_sent)} address{"es" if len(_sent)!=1 else ""} delivered:</span>'
+        ) if _sent else ""
 
         fail_pills = " ".join(
             f'<span style="display:inline-block;background:rgba(231,43,59,0.12);color:#ff6b78;'
             f'font-size:0.7rem;font-weight:500;padding:3px 10px;border-radius:6px;'
-            f'margin:2px 3px 0 0;border:1px solid rgba(231,43,59,0.25);">{f["email"]}</span>'
+            f'margin:2px 3px 0 0;border:1px solid rgba(231,43,59,0.25);">✕ {f["email"]}</span>'
             for f in _fail
         )
+        fail_count_label = (
+            f'<span style="color:#ff6b78;font-size:0.68rem;font-weight:600;margin-right:6px;">'
+            f'{len(_fail)} failed:</span>'
+        ) if _fail else ""
 
         # ── Tracking stats for this send ──
         _tracking = tracking_store.get_stats_for_send(_rid) if _rid else {}
@@ -2281,7 +2290,15 @@ def render_sent():
         ) if preview else ""
 
         # ── Failed row ──
-        fail_html = f'<div style="margin-top:8px;">{fail_pills}</div>' if fail_pills else ""
+        fail_html = (
+            f'<div style="margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;">'
+            f'{fail_count_label}{fail_pills}</div>'
+        ) if _fail else ""
+
+        sent_html = (
+            f'<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;">'
+            f'{sent_count_label}{sent_pills}</div>'
+        ) if _sent else ""
 
         st.markdown(f"""
         <div style="background:#071428;border:1px solid rgba(61,130,245,0.16);
@@ -2289,15 +2306,14 @@ def render_sent():
                     padding:16px 20px;margin-bottom:12px;
                     box-shadow:0 4px 20px rgba(0,0,0,0.4);">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;">
-                <div style="font-size:0.92rem;font-weight:700;color:#e0ecf8;
-                            overflow:hidden;text-overflow:ellipsis;flex:1;">
+                <div style="font-size:0.92rem;font-weight:700;color:#e0ecf8;flex:1;">
                     {rec.get("subject","(no subject)")}{test_badge}
                 </div>
                 <span style="font-size:0.7rem;color:#334466;white-space:nowrap;flex-shrink:0;">
                     {rec.get("date","")} · {rec.get("time","")}
                 </span>
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:4px;">{sent_pills}</div>
+            {sent_html}
             {fail_html}
             {meta_html}
             {preview_html}
