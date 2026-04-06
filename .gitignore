@@ -31,3 +31,7 @@ streamlit/.streamlit/secrets.toml
 # Python cache
 __pycache__/
 *.pyc
+
+# Live data files — managed via GitHub API, never commit directly
+data/clients.csv
+data/sent_items.csv
