@@ -1,69 +1,31 @@
 """
-Persistent client repository.
+Client repository — GitHub CSV storage.
 
-Storage priority:
-  1. st.session_state — fast intra-session access (no API calls)
-  2. GitHub API       — cross-deploy persistence on Streamlit Cloud
-  3. Local file       — fallback / local dev
-  4. Sample data      — absolute last resort
-
-To enable GitHub persistence, add to .streamlit/secrets.toml:
-    GITHUB_TOKEN = "ghp_xxxxxxxxxxxx"   # PAT with repo write access
-    GITHUB_REPO  = "animesh-sketch/feedback-dashboard"  # optional override
+Reads and writes data/clients.csv in the GitHub repo via the GitHub Contents API.
+Requires st.secrets: GITHUB_TOKEN, GITHUB_REPO.
+Falls back to empty list when token is missing or the file doesn't exist yet.
 """
 
 import base64 as _b64
-import json
-import os
+import csv
+import io
 import uuid
 from datetime import datetime, timezone
 
 import streamlit as st
 
-_FILE    = os.path.join(os.path.dirname(__file__), "clients.json")
-_SS_KEY  = "client_store_data"
 _DEFAULT_REPO = "animesh-sketch/feedback-dashboard"
-_GH_PATH = "streamlit/clients.json"
+_GH_PATH      = "data/clients.csv"
+_SS_KEY       = "client_store_data"
 
 STATUSES = ["Active", "At Risk", "Inactive"]
 
-SAMPLE_CLIENTS = [
-    {
-        "id": "demo0001",
-        "company": "Acme Corp",
-        "contact": "Sarah Johnson",
-        "emails": ["sarah@acmecorp.com", "reports@acmecorp.com"],
-        "status": "Active",
-        "tags": ["Enterprise", "Q1"],
-        "notes": "Quarterly review scheduled for March.",
-        "added_at": "Jan 10, 2026",
-    },
-    {
-        "id": "demo0002",
-        "company": "Stellar Dynamics",
-        "contact": "Raj Patel",
-        "emails": ["raj.patel@stellardyn.com"],
-        "status": "Active",
-        "tags": ["SaaS", "High Priority"],
-        "notes": "Interested in expanding to 3 more teams.",
-        "added_at": "Jan 22, 2026",
-    },
-    {
-        "id": "demo0003",
-        "company": "Nova Retail",
-        "contact": "Emma Clarke",
-        "emails": ["emma@novaretail.io", "analytics@novaretail.io"],
-        "status": "At Risk",
-        "tags": ["Retail", "Renewal Due"],
-        "notes": "Renewal due in April — needs check-in call.",
-        "added_at": "Feb 01, 2026",
-    },
-]
+_FIELDS = ["id", "company", "contact", "emails", "status", "tags", "notes", "added_at"]
 
 
-# ── GitHub API helpers ────────────────────────────────────────────────────────
+# ── GitHub helpers ────────────────────────────────────────────────────────────
 
-def _gh_headers():
+def _headers():
     token = st.secrets.get("GITHUB_TOKEN", "")
     if not token:
         return None
@@ -73,105 +35,117 @@ def _gh_headers():
         "X-GitHub-Api-Version": "2022-11-28",
     }
 
+def _repo():
+    return st.secrets.get("GITHUB_REPO", _DEFAULT_REPO)
 
-def _gh_load():
-    """Read clients.json from GitHub repo. Returns list or None."""
+
+# ── CSV conversion ────────────────────────────────────────────────────────────
+
+def _to_dict(row: dict) -> dict:
+    """CSV row → client dict."""
+    return {
+        "id":       row.get("id", ""),
+        "company":  row.get("company", ""),
+        "contact":  row.get("contact", ""),
+        "emails":   [e for e in row.get("emails", "").split("|") if e.strip()],
+        "status":   row.get("status", "Active"),
+        "tags":     [t for t in row.get("tags", "").split("|") if t.strip()],
+        "notes":    row.get("notes", ""),
+        "added_at": row.get("added_at", ""),
+    }
+
+def _to_csv(clients: list) -> str:
+    """Client dicts → CSV string."""
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=_FIELDS, lineterminator="\n")
+    w.writeheader()
+    for c in clients:
+        w.writerow({
+            "id":       c.get("id", ""),
+            "company":  c.get("company", ""),
+            "contact":  c.get("contact", ""),
+            "emails":   "|".join(c.get("emails", [])),
+            "status":   c.get("status", "Active"),
+            "tags":     "|".join(c.get("tags", [])),
+            "notes":    c.get("notes", "").replace("\n", " "),
+            "added_at": c.get("added_at", ""),
+        })
+    return buf.getvalue()
+
+
+# ── GitHub read / write ───────────────────────────────────────────────────────
+
+def _gh_load() -> list | None:
+    """Fetch data/clients.csv from GitHub. Returns list or None on error."""
     try:
         import requests as _req
-        hdrs = _gh_headers()
+        hdrs = _headers()
         if not hdrs:
             return None
-        repo = st.secrets.get("GITHUB_REPO", _DEFAULT_REPO)
-        url  = f"https://api.github.com/repos/{repo}/contents/{_GH_PATH}"
-        r = _req.get(url, headers=hdrs, timeout=8)
+        r = _req.get(
+            f"https://api.github.com/repos/{_repo()}/contents/{_GH_PATH}",
+            headers=hdrs, timeout=8,
+        )
         if r.status_code == 200:
             raw = _b64.b64decode(r.json()["content"]).decode("utf-8")
-            return json.loads(raw)
+            reader = csv.DictReader(io.StringIO(raw))
+            return [_to_dict(row) for row in reader]
+        if r.status_code == 404:
+            return []          # file doesn't exist yet — start empty
     except Exception:
         pass
     return None
 
 
 def _gh_save(clients: list) -> bool:
-    """Write clients.json back to GitHub repo. Returns True on success."""
+    """Write data/clients.csv back to GitHub. Returns True on success."""
     try:
         import requests as _req
-        hdrs = _gh_headers()
+        hdrs = _headers()
         if not hdrs:
             return False
-        repo = st.secrets.get("GITHUB_REPO", _DEFAULT_REPO)
-        url  = f"https://api.github.com/repos/{repo}/contents/{_GH_PATH}"
-        # Get current SHA (required to update an existing file)
+        url = f"https://api.github.com/repos/{_repo()}/contents/{_GH_PATH}"
         sha = None
         r = _req.get(url, headers=hdrs, timeout=5)
         if r.status_code == 200:
             sha = r.json().get("sha")
-        content = _b64.b64encode(
-            json.dumps(clients, indent=2, ensure_ascii=False).encode()
-        ).decode()
         payload = {
-            "message": "chore: update client repository",
-            "content": content,
+            "message": "chore: update clients",
+            "content": _b64.b64encode(_to_csv(clients).encode()).decode(),
         }
         if sha:
             payload["sha"] = sha
-        resp = _req.put(url, headers=hdrs, json=payload, timeout=10)
+        resp = _req.put(url, headers=hdrs, json=payload, timeout=15)
         return resp.status_code in (200, 201)
     except Exception:
         return False
 
 
-# ── Public API ────────────────────────────────────────────────────────────────
+# ── Cached loader (shared across reruns, TTL 30 s) ────────────────────────────
 
 @st.cache_data(ttl=30, show_spinner=False)
-def _load_from_github() -> list | None:
-    """Shared cache (all users) — refreshed from GitHub every 30 s."""
+def _cached_load() -> list | None:
     return _gh_load()
 
 
+# ── Public API ────────────────────────────────────────────────────────────────
+
 def _init() -> None:
-    """Load clients into session_state on first access this session."""
     if _SS_KEY in st.session_state:
         return
-    data = _load_from_github()
-    if data is not None:
-        st.session_state[_SS_KEY] = data
-        return
-    if os.path.exists(_FILE):
-        try:
-            with open(_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            if isinstance(data, list):
-                st.session_state[_SS_KEY] = data
-                return
-        except (json.JSONDecodeError, OSError):
-            pass
-    st.session_state[_SS_KEY] = []
+    data = _cached_load()
+    st.session_state[_SS_KEY] = data if data is not None else []
 
 
 def load() -> list:
-    """Return the current client list.
-
-    Priority:
-      1. st.session_state — fast intra-session access (prevents race conditions)
-      2. GitHub (via shared st.cache_data cache, TTL 30 s)
-      3. Local file  (local dev fallback)
-      4. Empty list  (no demo data shown)
-    """
     _init()
     return st.session_state[_SS_KEY]
 
 
 def save(clients: list) -> None:
-    """Persist clients: update session_state immediately, then GitHub + local file."""
-    st.session_state[_SS_KEY] = clients   # immediate update — no race condition
+    st.session_state[_SS_KEY] = clients
     _gh_save(clients)
-    _load_from_github.clear()             # invalidate shared cache for other users
-    try:
-        with open(_FILE, "w", encoding="utf-8") as f:
-            json.dump(clients, f, indent=2, ensure_ascii=False)
-    except OSError:
-        pass
+    _cached_load.clear()
 
 
 def add(company: str, contact: str, emails: list,
