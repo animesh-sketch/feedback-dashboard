@@ -1,141 +1,76 @@
 """
-Client repository — GitHub CSV storage with shared cache.
+Client repository — Supabase PostgreSQL storage.
 
-All users share a single @st.cache_data cache (TTL 15 s).
-When any user writes, the shared cache is cleared so every other
-user sees the update on their next interaction.
-
-Requires st.secrets: GITHUB_TOKEN, GITHUB_REPO.
+Requires st.secrets: SUPABASE_URL, SUPABASE_KEY.
+All users share the same database — changes are immediately visible to everyone.
 """
 
-import base64 as _b64
-import csv
-import io
 import uuid
 from datetime import datetime, timezone
 
 import streamlit as st
 
-_DEFAULT_REPO = "animesh-sketch/feedback-dashboard"
-_GH_PATH      = "data/clients.csv"
-
+_TABLE = "clients"
 STATUSES = ["Active", "At Risk", "Inactive"]
 
-_FIELDS = ["id", "company", "contact", "emails", "status", "tags", "notes", "added_at"]
+
+# ── Supabase client ────────────────────────────────────────────────────────────
+
+@st.cache_resource
+def _sb():
+    from supabase import create_client
+    url = st.secrets.get("SUPABASE_URL", "")
+    key = st.secrets.get("SUPABASE_KEY", "")
+    return create_client(url, key)
 
 
-# ── GitHub helpers ────────────────────────────────────────────────────────────
-
-def _headers():
-    token = st.secrets.get("GITHUB_TOKEN", "")
-    if not token:
-        return None
-    return {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-
-def _repo():
-    return st.secrets.get("GITHUB_REPO", _DEFAULT_REPO)
-
-
-# ── CSV ↔ dict conversion ─────────────────────────────────────────────────────
+# ── Row ↔ dict conversion ─────────────────────────────────────────────────────
 
 def _row_to_client(row: dict) -> dict:
     return {
         "id":       row.get("id", ""),
         "company":  row.get("company", ""),
         "contact":  row.get("contact", ""),
-        "emails":   [e for e in row.get("emails", "").split("|") if e.strip()],
+        "emails":   [e for e in (row.get("emails", "") or "").split("|") if e.strip()],
         "status":   row.get("status", "Active"),
-        "tags":     [t for t in row.get("tags", "").split("|") if t.strip()],
+        "tags":     [t for t in (row.get("tags", "") or "").split("|") if t.strip()],
         "notes":    row.get("notes", ""),
         "added_at": row.get("added_at", ""),
     }
 
-def _clients_to_csv(clients: list) -> str:
-    buf = io.StringIO()
-    w = csv.DictWriter(buf, fieldnames=_FIELDS, lineterminator="\n")
-    w.writeheader()
-    for c in clients:
-        w.writerow({
-            "id":       c.get("id", ""),
-            "company":  c.get("company", ""),
-            "contact":  c.get("contact", ""),
-            "emails":   "|".join(c.get("emails", [])),
-            "status":   c.get("status", "Active"),
-            "tags":     "|".join(c.get("tags", [])),
-            "notes":    c.get("notes", "").replace("\n", " "),
-            "added_at": c.get("added_at", ""),
-        })
-    return buf.getvalue()
-
-
-# ── GitHub read / write ───────────────────────────────────────────────────────
-
-def _gh_load() -> list | None:
-    try:
-        import requests as _req
-        hdrs = _headers()
-        if not hdrs:
-            return None
-        r = _req.get(
-            f"https://api.github.com/repos/{_repo()}/contents/{_GH_PATH}",
-            headers=hdrs, timeout=8,
-        )
-        if r.status_code == 200:
-            raw = _b64.b64decode(r.json()["content"]).decode("utf-8")
-            return [_row_to_client(row) for row in csv.DictReader(io.StringIO(raw))]
-        if r.status_code == 404:
-            return []
-    except Exception:
-        pass
-    return None
-
-
-def _gh_save(clients: list) -> bool:
-    try:
-        import requests as _req
-        hdrs = _headers()
-        if not hdrs:
-            return False
-        url = f"https://api.github.com/repos/{_repo()}/contents/{_GH_PATH}"
-        sha = None
-        r = _req.get(url, headers=hdrs, timeout=5)
-        if r.status_code == 200:
-            sha = r.json().get("sha")
-        payload = {
-            "message": "chore: update clients",
-            "content": _b64.b64encode(_clients_to_csv(clients).encode()).decode(),
-        }
-        if sha:
-            payload["sha"] = sha
-        return _req.put(url, headers=hdrs, json=payload, timeout=15).status_code in (200, 201)
-    except Exception:
-        return False
-
-
-# ── Shared cache (all users, all sessions) ────────────────────────────────────
-
-@st.cache_data(ttl=15, show_spinner=False)
-def _cached_load() -> list:
-    """Fetches from GitHub. Shared across all users — TTL 15 s."""
-    data = _gh_load()
-    return data if data is not None else []
+def _client_to_row(c: dict) -> dict:
+    return {
+        "id":       c.get("id", ""),
+        "company":  c.get("company", ""),
+        "contact":  c.get("contact", ""),
+        "emails":   "|".join(c.get("emails", [])),
+        "status":   c.get("status", "Active"),
+        "tags":     "|".join(c.get("tags", [])),
+        "notes":    c.get("notes", "").replace("\n", " "),
+        "added_at": c.get("added_at", ""),
+    }
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def load() -> list:
-    """Return current client list (shared cache, max 15 s stale)."""
-    return list(_cached_load())          # copy so callers can't mutate the cache
+    """Return all clients ordered by most recently added."""
+    try:
+        res = _sb().table(_TABLE).select("*").order("added_at", desc=True).execute()
+        return [_row_to_client(r) for r in (res.data or [])]
+    except Exception:
+        return []
 
 
 def save(clients: list) -> None:
-    """Write to GitHub and immediately invalidate shared cache for all users."""
-    _gh_save(clients)
-    _cached_load.clear()                 # all users get fresh data on next call
+    """Full replace — delete all rows then re-insert. Use for bulk operations."""
+    try:
+        sb = _sb()
+        sb.table(_TABLE).delete().neq("id", "").execute()
+        if clients:
+            sb.table(_TABLE).insert([_client_to_row(c) for c in clients]).execute()
+    except Exception:
+        pass
 
 
 def add(company: str, contact: str, emails: list,
@@ -150,20 +85,27 @@ def add(company: str, contact: str, emails: list,
         "notes":    notes,
         "added_at": datetime.now(timezone.utc).strftime("%b %d, %Y"),
     }
-    clients = load()
-    clients.append(client)
-    save(clients)
+    try:
+        _sb().table(_TABLE).insert(_client_to_row(client)).execute()
+    except Exception:
+        pass
     return client
 
 
 def update(client_id: str, updates: dict) -> None:
-    clients = load()
-    for c in clients:
-        if c["id"] == client_id:
-            c.update(updates)
-            break
-    save(clients)
+    try:
+        res = _sb().table(_TABLE).select("*").eq("id", client_id).execute()
+        if not res.data:
+            return
+        current = _row_to_client(res.data[0])
+        current.update(updates)
+        _sb().table(_TABLE).update(_client_to_row(current)).eq("id", client_id).execute()
+    except Exception:
+        pass
 
 
 def delete(client_id: str) -> None:
-    save([c for c in load() if c["id"] != client_id])
+    try:
+        _sb().table(_TABLE).delete().eq("id", client_id).execute()
+    except Exception:
+        pass

@@ -1,55 +1,33 @@
 """
-Sent email log — GitHub CSV storage with shared cache.
+Sent email log — Supabase PostgreSQL storage.
 
-All users share a single @st.cache_data cache (TTL 15 s).
-When any user sends an email, the shared cache is cleared so every
-other user sees the new record on their next interaction.
-
-Requires st.secrets: GITHUB_TOKEN, GITHUB_REPO.
+Requires st.secrets: SUPABASE_URL, SUPABASE_KEY.
+All users share the same database — writes are immediately visible to everyone.
 """
 
-import base64 as _b64
-import csv
-import io
-import json
 import uuid
 from datetime import datetime, timezone
 
 import streamlit as st
 
-_DEFAULT_REPO = "animesh-sketch/feedback-dashboard"
-_GH_PATH      = "data/sent_items.csv"
-
-_FIELDS = [
-    "id", "timestamp", "date", "time", "sender",
-    "draft_name", "subject", "template_num", "template_name",
-    "client", "attachment_name", "is_test",
-    "sent_to", "failed", "body_preview",
-]
+_TABLE = "sent_items"
 
 
-# ── GitHub helpers ────────────────────────────────────────────────────────────
+# ── Supabase client ────────────────────────────────────────────────────────────
 
-def _headers():
-    token = st.secrets.get("GITHUB_TOKEN", "")
-    if not token:
-        return None
-    return {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-
-def _repo():
-    return st.secrets.get("GITHUB_REPO", _DEFAULT_REPO)
+@st.cache_resource
+def _sb():
+    from supabase import create_client
+    url = st.secrets.get("SUPABASE_URL", "")
+    key = st.secrets.get("SUPABASE_KEY", "")
+    return create_client(url, key)
 
 
-# ── CSV ↔ dict conversion ─────────────────────────────────────────────────────
+# ── Row ↔ dict conversion ─────────────────────────────────────────────────────
 
 def _row_to_record(row: dict) -> dict:
-    try:
-        failed = json.loads(row.get("failed", "[]") or "[]")
-    except Exception:
+    failed = row.get("failed") or []
+    if not isinstance(failed, list):
         failed = []
     return {
         "id":              row.get("id", ""),
@@ -63,100 +41,47 @@ def _row_to_record(row: dict) -> dict:
         "template_name":   row.get("template_name", ""),
         "client":          row.get("client", ""),
         "attachment_name": row.get("attachment_name", ""),
-        "is_test":         row.get("is_test", "").lower() == "true",
-        "sent_to":         [e for e in row.get("sent_to", "").split("|") if e.strip()],
+        "is_test":         bool(row.get("is_test", False)),
+        "sent_to":         [e for e in (row.get("sent_to", "") or "").split("|") if e.strip()],
         "failed":          failed,
         "body_preview":    row.get("body_preview", ""),
     }
 
-def _records_to_csv(records: list) -> str:
-    buf = io.StringIO()
-    w = csv.DictWriter(buf, fieldnames=_FIELDS, lineterminator="\n")
-    w.writeheader()
-    for r in records:
-        w.writerow({
-            "id":              r.get("id", ""),
-            "timestamp":       r.get("timestamp", ""),
-            "date":            r.get("date", ""),
-            "time":            r.get("time", ""),
-            "sender":          r.get("sender", ""),
-            "draft_name":      r.get("draft_name", ""),
-            "subject":         r.get("subject", "").replace("\n", " "),
-            "template_num":    r.get("template_num", 1),
-            "template_name":   r.get("template_name", ""),
-            "client":          r.get("client", ""),
-            "attachment_name": r.get("attachment_name", ""),
-            "is_test":         "true" if r.get("is_test") else "false",
-            "sent_to":         "|".join(r.get("sent_to", [])),
-            "failed":          json.dumps(r.get("failed", []), ensure_ascii=False),
-            "body_preview":    r.get("body_preview", "")[:300].replace("\n", " "),
-        })
-    return buf.getvalue()
-
-
-# ── GitHub read / write ───────────────────────────────────────────────────────
-
-def _gh_load() -> list | None:
-    try:
-        import requests as _req
-        hdrs = _headers()
-        if not hdrs:
-            return None
-        r = _req.get(
-            f"https://api.github.com/repos/{_repo()}/contents/{_GH_PATH}",
-            headers=hdrs, timeout=8,
-        )
-        if r.status_code == 200:
-            raw = _b64.b64decode(r.json()["content"]).decode("utf-8")
-            return [_row_to_record(row) for row in csv.DictReader(io.StringIO(raw))]
-        if r.status_code == 404:
-            return []
-    except Exception:
-        pass
-    return None
-
-
-def _gh_save(records: list) -> bool:
-    try:
-        import requests as _req
-        hdrs = _headers()
-        if not hdrs:
-            return False
-        url = f"https://api.github.com/repos/{_repo()}/contents/{_GH_PATH}"
-        sha = None
-        r = _req.get(url, headers=hdrs, timeout=5)
-        if r.status_code == 200:
-            sha = r.json().get("sha")
-        payload = {
-            "message": "chore: update sent items",
-            "content": _b64.b64encode(_records_to_csv(records).encode()).decode(),
-        }
-        if sha:
-            payload["sha"] = sha
-        return _req.put(url, headers=hdrs, json=payload, timeout=15).status_code in (200, 201)
-    except Exception:
-        return False
-
-
-# ── Shared cache (all users, all sessions) ────────────────────────────────────
-
-@st.cache_data(ttl=15, show_spinner=False)
-def _cached_load() -> list:
-    """Fetches from GitHub. Shared across all users — TTL 15 s."""
-    data = _gh_load()
-    return data if data is not None else []
+def _record_to_row(r: dict) -> dict:
+    return {
+        "id":              r.get("id", ""),
+        "timestamp":       r.get("timestamp", ""),
+        "date":            r.get("date", ""),
+        "time":            r.get("time", ""),
+        "sender":          r.get("sender", ""),
+        "draft_name":      r.get("draft_name", ""),
+        "subject":         r.get("subject", "").replace("\n", " "),
+        "template_num":    r.get("template_num", 1),
+        "template_name":   r.get("template_name", ""),
+        "client":          r.get("client", ""),
+        "attachment_name": r.get("attachment_name", ""),
+        "is_test":         bool(r.get("is_test", False)),
+        "sent_to":         "|".join(r.get("sent_to", [])),
+        "failed":          r.get("failed", []),   # JSONB — pass as Python list
+        "body_preview":    r.get("body_preview", "")[:300].replace("\n", " "),
+    }
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def load() -> list:
-    """Return current sent records (shared cache, max 15 s stale)."""
-    return list(_cached_load())
-
-
-def _persist(records: list) -> None:
-    _gh_save(records)
-    _cached_load.clear()                 # all users see update on next interaction
+    """Return sent records newest-first (max 500)."""
+    try:
+        res = (
+            _sb().table(_TABLE)
+            .select("*")
+            .order("timestamp", desc=True)
+            .limit(500)
+            .execute()
+        )
+        return [_row_to_record(r) for r in (res.data or [])]
+    except Exception:
+        return []
 
 
 def log_send(
@@ -196,12 +121,15 @@ def log_send(
         "attachment_name": attachment_name or "",
         "is_test":         is_test,
     }
-    records = load()
-    records.insert(0, record)
-    records = records[:500]
-    _persist(records)
+    try:
+        _sb().table(_TABLE).insert(_record_to_row(record)).execute()
+    except Exception:
+        pass
     return record
 
 
 def clear() -> None:
-    _persist([])
+    try:
+        _sb().table(_TABLE).delete().neq("id", "").execute()
+    except Exception:
+        pass
