@@ -147,6 +147,15 @@ def log_rating(record_id: str, email: str, rating: int) -> None:
     _persist(events)
 
 
+def get_stats_for_send(record_id: str) -> dict:
+    """Return open/click/rating counts for a single sent record."""
+    events  = [e for e in load() if e.get("record_id") == record_id]
+    opens   = len({e["email"] for e in events if e["type"] in ("open", "click")})
+    clicks  = len({e["email"] for e in events if e["type"] == "click"})
+    ratings = [e for e in events if e["type"] == "rating"]
+    return {"opens": opens, "clicks": clicks, "ratings": ratings}
+
+
 def get_stats_for_period(hours: int = None) -> dict:
     """
     Compute stats for the given time window (hours=24 → daily, 168 → weekly, None → all).

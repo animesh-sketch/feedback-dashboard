@@ -2168,16 +2168,16 @@ def render_sent():
 
     st.markdown(f"""<div class="stats-grid">
         <div class="stat-card">
-            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Sends</div>
-            <div style="background:linear-gradient(108deg,#d22c84,#fb6069 52%,#2d84f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(records)}</div>
+            <div style="color:#446688;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Sends</div>
+            <div style="background:var(--gradient-brand);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(records)}</div>
         </div>
-        <div class="stat-card" style="border-top:2px solid #d22c84;">
-            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Emails Delivered</div>
-            <div style="color:#0ebc6e;font-size:1.8rem;font-weight:800;">{total_sent}</div>
+        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div style="color:#446688;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Emails Delivered</div>
+            <div style="color:#22e885;font-size:1.8rem;font-weight:800;">{total_sent}</div>
         </div>
         <div class="stat-card">
-            <div style="color:#64748b;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Unique Recipients</div>
-            <div style="background:linear-gradient(108deg,#d22c84,#fb6069 52%,#2d84f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;">{unique_emails}</div>
+            <div style="color:#446688;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Unique Recipients</div>
+            <div style="background:var(--gradient-brand);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;">{unique_emails}</div>
         </div>
     </div>""", unsafe_allow_html=True)
 
@@ -2207,47 +2207,101 @@ def render_sent():
         unsafe_allow_html=True,
     )
 
-    # ── Records — subject + email IDs only ────────────────────────────────────
+    # ── Records ───────────────────────────────────────────────────────────────
     for rec in filtered:
         _sent     = rec.get("sent_to", [])
         _fail_raw = rec.get("failed", [])
         _fail     = [f if isinstance(f, dict) else {"email": f, "error": ""} for f in _fail_raw]
         _has_f    = bool(_fail)
+        _rid      = rec.get("id", "")
 
-        border_color = "#fecaca" if _has_f else "#f0e8f8"
-        top_color    = "#e72b3b" if _has_f else "#d22c84"
+        top_color = "#e72b3b" if _has_f else "#3d8ef5"
 
         test_badge = (
-            '<span style="background:#fef3c7;color:#b45309;font-size:0.6rem;font-weight:700;'
+            '<span style="background:rgba(245,158,11,0.15);color:#fbbf24;font-size:0.6rem;font-weight:700;'
             'letter-spacing:0.06em;text-transform:uppercase;padding:2px 8px;border-radius:99px;'
-            'border:1px solid #fde68a;margin-left:6px;">TEST</span>'
+            'border:1px solid rgba(245,158,11,0.3);margin-left:6px;">TEST</span>'
         ) if rec.get("is_test") else ""
 
-        sent_pills = " ".join(
-            f'<span class="email-pill">{e}</span>' for e in _sent
-        )
+        sent_pills = " ".join(f'<span class="email-pill">{e}</span>' for e in _sent)
 
         fail_pills = " ".join(
-            f'<span style="display:inline-block;background:#fff1f2;color:#e72b3b;'
+            f'<span style="display:inline-block;background:rgba(231,43,59,0.12);color:#ff6b78;'
             f'font-size:0.7rem;font-weight:500;padding:3px 10px;border-radius:6px;'
-            f'margin:2px 3px 0 0;border:1px solid #fecaca;">{f["email"]}</span>'
+            f'margin:2px 3px 0 0;border:1px solid rgba(231,43,59,0.25);">{f["email"]}</span>'
             for f in _fail
         )
 
+        # ── Tracking stats for this send ──
+        _tracking = tracking_store.get_stats_for_send(_rid) if _rid else {}
+        _opens    = _tracking.get("opens", 0)
+        _clicks   = _tracking.get("clicks", 0)
+        _ratings  = _tracking.get("ratings", [])
+        _avg_r    = (sum(r["rating"] for r in _ratings) / len(_ratings)) if _ratings else None
+
+        def _stat_pill(icon, label, val, color):
+            return (f'<div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);'
+                    f'border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:5px 10px;">'
+                    f'<span style="font-size:0.8rem;">{icon}</span>'
+                    f'<div><div style="color:{color};font-size:0.82rem;font-weight:700;">{val}</div>'
+                    f'<div style="color:#446688;font-size:0.6rem;letter-spacing:0.06em;text-transform:uppercase;">{label}</div></div>'
+                    f'</div>')
+
+        rating_val = f"{_avg_r:.1f}★ ({len(_ratings)})" if _avg_r else "—"
+        tracking_html = (
+            f'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">'
+            + _stat_pill("👁", "Opens",   _opens,    "#6699cc")
+            + _stat_pill("👆", "Clicks",  _clicks,   "#6699cc")
+            + _stat_pill("⭐", "Rating",  rating_val, "#ffaa00")
+            + f'</div>'
+        )
+
+        # ── Meta row ──
+        meta_parts = []
+        if rec.get("client"):
+            meta_parts.append(f'<span style="color:#6699cc;">🏢 {rec["client"]}</span>')
+        if rec.get("template_name"):
+            meta_parts.append(f'<span style="color:#6699cc;">🎨 {rec["template_name"]}</span>')
+        if rec.get("attachment_name"):
+            meta_parts.append(f'<span style="color:#6699cc;">📎 {rec["attachment_name"]}</span>')
+        if rec.get("sender"):
+            meta_parts.append(f'<span style="color:#334466;">✉ {rec["sender"]}</span>')
+        meta_html = (
+            '<div style="display:flex;flex-wrap:wrap;gap:12px;font-size:0.72rem;font-weight:500;margin-top:8px;">'
+            + "".join(meta_parts) + '</div>'
+        ) if meta_parts else ""
+
+        # ── Body preview ──
+        preview = rec.get("body_preview", "")
+        preview_html = (
+            f'<div style="color:#446688;font-size:0.72rem;line-height:1.55;margin-top:8px;'
+            f'padding:8px 12px;background:rgba(61,130,245,0.05);border-radius:8px;'
+            f'border-left:2px solid rgba(61,130,245,0.25);">'
+            f'{preview[:200]}{"…" if len(preview) > 200 else ""}</div>'
+        ) if preview else ""
+
+        # ── Failed row ──
+        fail_html = f'<div style="margin-top:8px;">{fail_pills}</div>' if fail_pills else ""
+
         st.markdown(f"""
-        <div style="background:#fff;border:1px solid {border_color};border-top:3px solid {top_color};
-                    border-radius:12px;padding:14px 18px;margin-bottom:10px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;">
-                <div style="font-size:0.88rem;font-weight:700;color:#0f172a;
-                            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">
+        <div style="background:#071428;border:1px solid rgba(61,130,245,0.16);
+                    border-top:3px solid {top_color};border-radius:14px;
+                    padding:16px 20px;margin-bottom:12px;
+                    box-shadow:0 4px 20px rgba(0,0,0,0.4);">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;">
+                <div style="font-size:0.92rem;font-weight:700;color:#e0ecf8;
+                            overflow:hidden;text-overflow:ellipsis;flex:1;">
                     {rec.get("subject","(no subject)")}{test_badge}
                 </div>
-                <span style="font-size:0.7rem;color:#94a3b8;white-space:nowrap;flex-shrink:0;">
+                <span style="font-size:0.7rem;color:#334466;white-space:nowrap;flex-shrink:0;">
                     {rec.get("date","")} · {rec.get("time","")}
                 </span>
             </div>
-            <div>{sent_pills}</div>
-            {f'<div style="margin-top:6px;">{fail_pills}</div>' if fail_pills else ""}
+            <div style="display:flex;flex-wrap:wrap;gap:4px;">{sent_pills}</div>
+            {fail_html}
+            {meta_html}
+            {preview_html}
+            {tracking_html}
         </div>""", unsafe_allow_html=True)
 
     # ── Export & Clear ────────────────────────────────────────────────────────
