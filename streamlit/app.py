@@ -1351,11 +1351,14 @@ def _render_client_card(c: dict):
                     "tags":    [t.strip() for t in new_tags.split(",") if t.strip()],
                     "notes":   new_notes.strip(),
                 })
-                st.session_state.pop(f"editing_{cid}", None)
+                # Clear all client editing/confirm state
+                for _k in [k for k in st.session_state if k.startswith("editing_") or k.startswith("confirm_del_")]:
+                    del st.session_state[_k]
                 st.toast("Client updated.", icon="✅")
                 st.rerun()
             if cancel_clicked:
-                st.session_state.pop(f"editing_{cid}", None)
+                for _k in [k for k in st.session_state if k.startswith("editing_") or k.startswith("confirm_del_")]:
+                    del st.session_state[_k]
                 st.rerun()
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
@@ -1372,6 +1375,22 @@ def render_clients():
             <div class="page-sub">Manage stakeholders, contacts, tags, and email addresses.</div>
         </div>
     </div>""", unsafe_allow_html=True)
+
+    # ── Persistence warning ───────────────────────────────────────────────────
+    if not st.secrets.get("GITHUB_TOKEN", "").strip():
+        st.markdown("""
+        <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);
+                    border-radius:10px;padding:10px 14px;margin-bottom:16px;
+                    display:flex;align-items:center;gap:10px;">
+            <span style="font-size:1rem;">⚠️</span>
+            <div>
+                <span style="color:#fbbf24;font-size:0.78rem;font-weight:700;">GitHub persistence not configured</span>
+                <span style="color:#92836a;font-size:0.75rem;"> — clients will reset on the next app redeploy.
+                Add <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;">GITHUB_TOKEN</code>
+                to your Streamlit Cloud secrets to persist data across deploys.</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # ── Stats bar ─────────────────────────────────────────────────────────────
     active_n   = sum(1 for c in all_clients if c.get("status") == "Active")
