@@ -28,6 +28,7 @@ from data import format_kpi, format_delta, delta_is_positive, CAMPAIGNS, ACTION_
 from email_builder import build_email_html, TEMPLATE_NAMES
 import client_store
 import sent_store
+import client_emails_store
 import auth
 import gmail_sender
 import tracking_store
@@ -1254,14 +1255,23 @@ def _render_client_card(c: dict):
         unsafe_allow_html=True,
     )
 
-    btn1, btn2, btn3 = st.columns([2, 2, 8])
+    btn1, btn2, btn3, btn4 = st.columns([2, 2, 2, 6])
     with btn1:
         lbl = "✕ Close" if is_editing else "✏️ Edit"
         if st.button(lbl, key=f"edit_c_{cid}", use_container_width=True):
             st.session_state[f"editing_{cid}"] = not is_editing
             st.session_state.pop(confirm_key, None)
+            st.session_state.pop(f"hist_{cid}", None)
             st.rerun()
     with btn2:
+        hist_open = st.session_state.get(f"hist_{cid}", False)
+        hist_lbl = "✕ History" if hist_open else "📧 History"
+        if st.button(hist_lbl, key=f"hist_btn_{cid}", use_container_width=True):
+            st.session_state[f"hist_{cid}"] = not hist_open
+            st.session_state.pop(f"editing_{cid}", None)
+            st.session_state.pop(confirm_key, None)
+            st.rerun()
+    with btn3:
         if not is_confirming:
             if st.button("🗑 Remove", key=f"del_c_{cid}", use_container_width=True):
                 st.session_state[confirm_key] = True
@@ -1271,14 +1281,64 @@ def _render_client_card(c: dict):
             with cc1:
                 if st.button("⚠️ Yes, delete", key=f"conf_del_{cid}", use_container_width=True, type="primary"):
                     client_store.delete(cid)
-                    st.session_state.pop(f"editing_{cid}", None)
-                    st.session_state.pop(confirm_key, None)
+                    for _k in [k for k in st.session_state if cid in k]:
+                        del st.session_state[_k]
                     st.toast(f"Removed {c.get('company','client')}", icon="🗑")
                     st.rerun()
             with cc2:
                 if st.button("Cancel", key=f"cancel_del_{cid}", use_container_width=True):
                     st.session_state.pop(confirm_key, None)
                     st.rerun()
+
+    # ── Email History panel ───────────────────────────────────────────────────
+    if st.session_state.get(f"hist_{cid}"):
+        history = client_emails_store.get_for_client(c.get("company", ""))
+        st.markdown(
+            '<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.18);'
+            'border-radius:12px;padding:16px 20px;margin-top:8px;">',
+            unsafe_allow_html=True,
+        )
+        if not history:
+            st.markdown(
+                '<div style="text-align:center;padding:20px;color:#7a99bb;font-size:0.84rem;">'
+                '📭 No emails sent to this client yet.</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f'<div style="color:#2a5080;font-size:0.72rem;font-weight:700;'
+                f'text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">'
+                f'📧 Email History — {len(history)} email{"s" if len(history)!=1 else ""} (permanent)</div>',
+                unsafe_allow_html=True,
+            )
+            for h in history:
+                sent_pills = " ".join(
+                    f'<span style="display:inline-block;background:rgba(61,130,245,0.07);'
+                    f'border:1px solid rgba(61,130,245,0.18);border-radius:5px;'
+                    f'padding:2px 8px;font-size:0.68rem;color:#1e3a5f;">✉ {e}</span>'
+                    for e in h["sent_to"]
+                )
+                attach_html = (
+                    f'<span style="color:#7a99bb;font-size:0.68rem;">📎 {h["attachment_name"]}</span>'
+                ) if h.get("attachment_name") else ""
+                st.markdown(
+                    f'<div style="background:#ffffff;border:1px solid rgba(61,130,245,0.15);'
+                    f'border-radius:10px;padding:12px 14px;margin-bottom:8px;">'
+                    f'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">'
+                    f'<div style="font-size:0.84rem;font-weight:700;color:#0d1d3a;flex:1;">{h["subject"] or "(no subject)"}</div>'
+                    f'<span style="font-size:0.65rem;color:#7a99bb;white-space:nowrap;flex-shrink:0;">{h["date"]}</span>'
+                    f'</div>'
+                    f'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;">{sent_pills}</div>'
+                    + (f'<div style="color:#3a6699;font-size:0.69rem;margin-bottom:4px;">🎨 {h["template_name"]}</div>' if h.get("template_name") else '')
+                    + (attach_html + '<br>' if attach_html else '')
+                    + (f'<div style="color:#2a5080;font-size:0.71rem;line-height:1.5;margin-top:4px;'
+                       f'padding:6px 10px;background:rgba(61,130,245,0.04);border-radius:6px;">'
+                       f'{h["body_preview"][:150]}{"…" if len(h["body_preview"])>150 else ""}</div>'
+                       if h.get("body_preview") else '') +
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+        st.markdown('</div>', unsafe_allow_html=True)
 
     if is_editing:
         st.markdown(
@@ -1953,6 +2013,19 @@ def render_email_maker():
                             attachment_name=_att_name or "",
                             is_test=False,
                         )
+                        if d.get("client", "").strip():
+                            from datetime import datetime as _dt2, timezone as _tz2
+                            client_emails_store.log(
+                                record_id=_send_id,
+                                client_company=d["client"].strip(),
+                                date=_dt2.now(_tz2.utc).strftime("%b %d, %Y"),
+                                subject=_subject,
+                                template_name=TEMPLATE_NAMES[d.get("template", 1) - 1][0],
+                                sent_to=result["sent"],
+                                body_preview=d.get("body", ""),
+                                sender=st.session_state.get("user_email", ""),
+                                attachment_name=_att_name or "",
+                            )
                     for fail in result["failed"]:
                         if fail["email"] in ("login", "config"):
                             st.error(fail["error"])
