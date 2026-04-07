@@ -15,7 +15,6 @@ _TABLE = "sent_items"
 
 # ── Supabase client ────────────────────────────────────────────────────────────
 
-@st.cache_resource
 def _sb():
     from supabase import create_client
     url = st.secrets.get("SUPABASE_URL", "")
