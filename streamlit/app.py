@@ -1447,39 +1447,52 @@ def render_clients():
     </div>""", unsafe_allow_html=True)
 
     # ── Add New Client ────────────────────────────────────────────────────────
-    with st.expander("➕  Add New Client", expanded=len(all_clients) == 0):
-        with st.form("add_client_repo", clear_on_submit=True):
-            fc1, fc2 = st.columns(2)
-            with fc1:
-                company = st.text_input("Company Name *", placeholder="e.g. Acme Corp")
-            with fc2:
-                contact = st.text_input("Contact Person", placeholder="e.g. John Smith")
+    _show_add = st.session_state.get("show_add_client", False)
+    _btn_label = "✕ Cancel" if _show_add else "➕ Add New Client"
+    if st.button(_btn_label, key="toggle_add_client", type="primary" if not _show_add else "secondary"):
+        st.session_state["show_add_client"] = not _show_add
+        st.rerun()
 
-            tags_raw = st.text_input("Tags", placeholder="Enterprise, Q1, High Priority (comma-separated)")
+    if st.session_state.get("show_add_client", False):
+        st.markdown(
+            '<div style="background:#ffffff;border:2px solid rgba(61,130,245,0.25);'
+            'border-radius:16px;padding:24px;margin:12px 0 20px;">',
+            unsafe_allow_html=True,
+        )
+        fc1, fc2 = st.columns(2)
+        with fc1:
+            company = st.text_input("Company Name *", placeholder="e.g. Acme Corp", key="add_company")
+        with fc2:
+            contact = st.text_input("Contact Person", placeholder="e.g. John Smith", key="add_contact")
 
-            st.markdown('<div style="color:#2a5080;font-size:0.75rem;font-weight:600;margin:10px 0 6px;">Email Addresses</div>', unsafe_allow_html=True)
-            ec1, ec2, ec3 = st.columns(3)
-            with ec1:
-                e1 = st.text_input("Primary Email *", placeholder="primary@company.com")
-            with ec2:
-                e2 = st.text_input("Email 2", placeholder="cc@company.com")
-            with ec3:
-                e3 = st.text_input("Email 3", placeholder="optional@company.com")
+        tags_raw = st.text_input("Tags (comma-separated)", placeholder="Enterprise, Q1, High Priority", key="add_tags")
 
-            notes = st.text_area("Notes", placeholder="Client context, renewal dates, preferences…", height=72)
+        st.markdown("**Email Addresses**")
+        ec1, ec2, ec3 = st.columns(3)
+        with ec1:
+            e1 = st.text_input("Primary Email *", placeholder="primary@company.com", key="add_e1")
+        with ec2:
+            e2 = st.text_input("Email 2", placeholder="cc@company.com", key="add_e2")
+        with ec3:
+            e3 = st.text_input("Email 3", placeholder="optional@company.com", key="add_e3")
 
-            if st.form_submit_button("Add Client", type="primary", use_container_width=True):
+        notes = st.text_area("Notes", placeholder="Client context, renewal dates, preferences…", height=72, key="add_notes")
+
+        sa1, sa2 = st.columns([2, 5])
+        with sa1:
+            if st.button("Save Client", type="primary", use_container_width=True, key="add_client_save"):
                 if not company.strip():
                     st.warning("Company name is required.")
+                elif not any([e1.strip(), e2.strip(), e3.strip()]):
+                    st.warning("At least one email address is required.")
                 else:
                     emails = [e for e in [e1, e2, e3] if e.strip()]
-                    if not emails:
-                        st.warning("At least one email address is required.")
-                    else:
-                        tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
-                        client_store.add(company.strip(), contact.strip(), emails, "Active", tags, notes.strip())
-                        st.toast(f"✓ {company} added.", icon="🏢")
-                        st.rerun()
+                    tags   = [t.strip() for t in tags_raw.split(",") if t.strip()]
+                    client_store.add(company.strip(), contact.strip(), emails, "Active", tags, notes.strip())
+                    st.session_state["show_add_client"] = False
+                    st.toast(f"✓ {company} added!", icon="🏢")
+                    st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("---")
 
