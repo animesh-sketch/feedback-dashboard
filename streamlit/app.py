@@ -1216,57 +1216,38 @@ def _render_client_card(c: dict):
     is_confirming = st.session_state.get(confirm_key, False)
     is_editing    = st.session_state.get(f"editing_{cid}", False)
 
-    avatar_html = _avatar(c.get("company", ""))
-    tag_chips   = " ".join(f'<span class="tag-chip">{t}</span>' for t in tags)
+    # ── Card container
+    with st.container(border=True):
+        # Company + contact
+        col_av, col_info = st.columns([1, 8])
+        with col_av:
+            st.markdown(_avatar(c.get("company", "")), unsafe_allow_html=True)
+        with col_info:
+            st.markdown(f"**{c.get('company', '')}**")
+            if c.get("contact"):
+                st.caption(f"👤 {c['contact']}")
 
-    # Email rows — each on its own line, clearly readable
-    email_rows_html = "".join(
-        f'<div style="display:flex;align-items:center;gap:10px;'
-        f'padding:7px 12px;margin-bottom:4px;'
-        f'background:#f0f8ff;border:1px solid rgba(61,130,245,0.22);border-radius:8px;">'
-        f'<span style="color:#3d8ef5;font-size:0.85rem;flex-shrink:0;">✉</span>'
-        f'<span style="color:#0d1d3a;font-size:0.82rem;font-weight:600;word-break:break-all;">{e}</span>'
-        f'</div>'
-        for e in emails
-    ) if emails else (
-        '<div style="color:#7a99bb;font-size:0.78rem;padding:6px 0;">No email addresses added</div>'
-    )
+        # Emails — always visible, each on its own line
+        st.markdown("**📧 Email Addresses**")
+        if emails:
+            for e in emails:
+                st.markdown(
+                    f'<div style="background:#eef5ff;border:1px solid #b3d0ff;border-radius:8px;'
+                    f'padding:8px 14px;margin-bottom:5px;font-size:0.85rem;color:#0d1d3a;font-weight:500;">'
+                    f'✉&nbsp;&nbsp;{e}</div>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.caption("No email addresses saved yet.")
 
-    st.markdown(
-        f'<div style="background:#ffffff;border:1px solid rgba(61,130,245,0.2);border-radius:16px;'
-        f'padding:20px 22px;margin-bottom:10px;box-shadow:0 2px 14px rgba(61,130,245,0.08);'
-        f'border-left:4px solid #3d8ef5;">'
+        # Tags
+        if tags:
+            st.markdown(" ".join(f'<span class="tag-chip">{t}</span>' for t in tags),
+                        unsafe_allow_html=True)
 
-        # ── Header: avatar + company + date
-        f'<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">'
-        f'{avatar_html}'
-        f'<div style="flex:1;min-width:0;">'
-        f'<div style="font-size:1.08rem;font-weight:800;color:#0d1d3a;'
-        f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{c.get("company","")}</div>'
-        + (f'<div style="color:#3a6699;font-size:0.78rem;margin-top:2px;">👤 {c["contact"]}</div>' if c.get("contact") else '') +
-        f'</div>'
-        f'<span style="font-size:0.62rem;color:#7a99bb;white-space:nowrap;flex-shrink:0;align-self:flex-start;">Added {c.get("added_at","—")}</span>'
-        f'</div>'
-
-        # ── Email section with clear label
-        f'<div style="margin-bottom:12px;">'
-        f'<div style="font-size:0.65rem;font-weight:700;color:#3a6699;text-transform:uppercase;'
-        f'letter-spacing:0.08em;margin-bottom:6px;">📧 Email Addresses</div>'
-        f'{email_rows_html}'
-        f'</div>'
-
-        # ── Tags
-        + (f'<div style="margin-bottom:10px;">{tag_chips}</div>' if tag_chips else '') +
-
-        # ── Notes
-        + (f'<div style="color:#2a5080;font-size:0.72rem;line-height:1.55;'
-           f'padding:8px 12px;background:rgba(61,130,245,0.04);border-radius:8px;'
-           f'border-left:3px solid rgba(61,130,245,0.25);">'
-           f'📝 {notes[:120]}{"…" if len(notes)>120 else ""}</div>' if notes else '') +
-
-        f'</div>',
-        unsafe_allow_html=True,
-    )
+        # Notes
+        if notes:
+            st.caption(f"📝 {notes[:120]}{'…' if len(notes) > 120 else ''}")
 
     btn1, btn2, btn3, btn4 = st.columns([2, 2, 2, 6])
     with btn1:
