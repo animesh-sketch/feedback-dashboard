@@ -74,7 +74,8 @@ def save(clients: list) -> None:
 
 
 def add(company: str, contact: str, emails: list,
-        status: str = "Active", tags: list = None, notes: str = "") -> dict:
+        status: str = "Active", tags: list = None, notes: str = "") -> tuple:
+    """Returns (client_dict, error_string_or_None)."""
     client = {
         "id":       str(uuid.uuid4())[:8],
         "company":  company,
@@ -87,9 +88,9 @@ def add(company: str, contact: str, emails: list,
     }
     try:
         _sb().table(_TABLE).insert(_client_to_row(client)).execute()
-    except Exception:
-        pass
-    return client
+        return client, None
+    except Exception as e:
+        return client, str(e)
 
 
 def update(client_id: str, updates: dict) -> None:
