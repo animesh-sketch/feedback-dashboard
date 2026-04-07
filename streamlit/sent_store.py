@@ -69,8 +69,19 @@ def _record_to_row(r: dict) -> dict:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+def _purge_old() -> None:
+    """Delete sent_items older than 30 days to keep storage lean."""
+    from datetime import datetime, timezone, timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    try:
+        _sb().table(_TABLE).delete().lt("timestamp", cutoff).execute()
+    except Exception:
+        pass
+
+
 def load() -> list:
-    """Return sent records newest-first (max 500)."""
+    """Return sent records newest-first (max 500). Auto-purges >30 days."""
+    _purge_old()
     try:
         res = (
             _sb().table(_TABLE)
