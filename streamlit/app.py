@@ -700,15 +700,17 @@ def _render_login_page():
     _logo_html = _logo_img(72, 20)
     st.markdown(f"""
     <style>
+    .stApp {{ background: linear-gradient(135deg, #041a28 0%, #04201e 50%, #051a28 100%) !important; }}
+    .stApp > div {{ background: transparent !important; }}
     @keyframes loginGlow {{
-        0%, 100% {{ box-shadow: 0 0 40px rgba(61,130,245,0.25), 0 0 80px rgba(224,54,142,0.1); }}
-        50%       {{ box-shadow: 0 0 60px rgba(61,130,245,0.5), 0 0 100px rgba(224,54,142,0.15); }}
+        0%, 100% {{ box-shadow: 0 0 40px rgba(32,178,170,0.25), 0 0 80px rgba(61,130,245,0.15); }}
+        50%       {{ box-shadow: 0 0 60px rgba(32,178,170,0.45), 0 0 100px rgba(61,130,245,0.25); }}
     }}
     .login-wrap {{
         max-width: 390px;
         margin: 8vh auto 0;
-        background: #071428;
-        border: 1px solid rgba(61,130,245,0.22);
+        background: linear-gradient(160deg, #072030 0%, #071e24 100%);
+        border: 1px solid rgba(32,178,170,0.28);
         border-radius: 24px;
         padding: 3rem 2.5rem 2.5rem;
         animation: loginGlow 4s ease-in-out infinite;
@@ -719,12 +721,12 @@ def _render_login_page():
         align-items: center;
         justify-content: center;
         margin-bottom: 1.6rem;
-        filter: drop-shadow(0 8px 24px rgba(61,130,245,0.5));
+        filter: drop-shadow(0 8px 24px rgba(32,178,170,0.55));
     }}
-    .login-brand {{ font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #e0368e; margin-bottom: 6px; }}
-    .login-title {{ font-size: 1.5rem; font-weight: 800; color: #e8f0fc; margin-bottom: 0.3rem; letter-spacing: -0.03em; line-height: 1.2; }}
-    .login-divider {{ width: 40px; height: 3px; background: linear-gradient(90deg, #e0368e, #ff6b78 52%, #3d8ef5); border-radius: 2px; margin: 12px auto 20px; box-shadow: 0 0 10px rgba(61,130,245,0.5); }}
-    .login-sub {{ font-size: 0.83rem; color: #5588bb; margin-bottom: 2rem; }}
+    .login-brand {{ font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #2ec4b6; margin-bottom: 6px; }}
+    .login-title {{ font-size: 1.5rem; font-weight: 800; color: #e0f4f4; margin-bottom: 0.3rem; letter-spacing: -0.03em; line-height: 1.2; }}
+    .login-divider {{ width: 40px; height: 3px; background: linear-gradient(90deg, #3d8ef5, #2ec4b6); border-radius: 2px; margin: 12px auto 20px; box-shadow: 0 0 10px rgba(32,178,170,0.5); }}
+    .login-sub {{ font-size: 0.83rem; color: #4da89a; margin-bottom: 2rem; }}
     </style>
     <div class="login-wrap">
         <div class="login-logo-wrap">{_logo_html}</div>
