@@ -1217,40 +1217,53 @@ def _render_client_card(c: dict):
     is_editing    = st.session_state.get(f"editing_{cid}", False)
 
     avatar_html = _avatar(c.get("company", ""))
-    email_pills = " ".join(
-        f'<span style="display:inline-flex;align-items:center;gap:4px;'
-        f'background:rgba(61,130,245,0.07);border:1px solid rgba(61,130,245,0.18);'
-        f'border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#1e3a5f;font-weight:500;">'
-        f'✉ {e}</span>' for e in emails
-    ) if emails else '<span style="color:#7a99bb;font-size:0.75rem;">No emails</span>'
-    tag_chips = " ".join(f'<span class="tag-chip">{t}</span>' for t in tags)
+    tag_chips   = " ".join(f'<span class="tag-chip">{t}</span>' for t in tags)
+
+    # Email rows — each on its own line, clearly readable
+    email_rows_html = "".join(
+        f'<div style="display:flex;align-items:center;gap:10px;'
+        f'padding:7px 12px;margin-bottom:4px;'
+        f'background:#f0f8ff;border:1px solid rgba(61,130,245,0.22);border-radius:8px;">'
+        f'<span style="color:#3d8ef5;font-size:0.85rem;flex-shrink:0;">✉</span>'
+        f'<span style="color:#0d1d3a;font-size:0.82rem;font-weight:600;word-break:break-all;">{e}</span>'
+        f'</div>'
+        for e in emails
+    ) if emails else (
+        '<div style="color:#7a99bb;font-size:0.78rem;padding:6px 0;">No email addresses added</div>'
+    )
 
     st.markdown(
-        f'<div style="background:#ffffff;border:1px solid rgba(61,130,245,0.18);border-radius:16px;'
-        f'padding:18px 20px;margin-bottom:10px;box-shadow:0 2px 12px rgba(61,130,245,0.07);'
+        f'<div style="background:#ffffff;border:1px solid rgba(61,130,245,0.2);border-radius:16px;'
+        f'padding:20px 22px;margin-bottom:10px;box-shadow:0 2px 14px rgba(61,130,245,0.08);'
         f'border-left:4px solid #3d8ef5;">'
-        # ── Row: avatar + info
-        f'<div style="display:flex;align-items:flex-start;gap:14px;">'
+
+        # ── Header: avatar + company + date
+        f'<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">'
         f'{avatar_html}'
         f'<div style="flex:1;min-width:0;">'
-        # Company + date
-        f'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">'
-        f'<div style="font-size:1.05rem;font-weight:800;color:#0d1d3a;'
+        f'<div style="font-size:1.08rem;font-weight:800;color:#0d1d3a;'
         f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{c.get("company","")}</div>'
-        f'<span style="font-size:0.62rem;color:#7a99bb;white-space:nowrap;flex-shrink:0;">Added {c.get("added_at","—")}</span>'
+        + (f'<div style="color:#3a6699;font-size:0.78rem;margin-top:2px;">👤 {c["contact"]}</div>' if c.get("contact") else '') +
         f'</div>'
-        # Contact
-        + (f'<div style="color:#3a6699;font-size:0.78rem;margin-bottom:8px;">👤 {c["contact"]}</div>' if c.get("contact") else '<div style="margin-bottom:8px;"></div>') +
-        # Emails
-        f'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:{"8px" if tag_chips or notes else "0"};">'
-        f'{email_pills}</div>'
-        # Tags
-        + (f'<div style="margin-bottom:{"6px" if notes else "0"};">{tag_chips}</div>' if tag_chips else '') +
-        # Notes
-        + (f'<div style="color:#2a5080;font-size:0.72rem;line-height:1.5;margin-top:4px;'
-           f'padding:7px 10px;background:rgba(61,130,245,0.04);border-radius:8px;">'
-           f'📝 {notes[:100]}{"…" if len(notes)>100 else ""}</div>' if notes else '') +
-        f'</div></div>'
+        f'<span style="font-size:0.62rem;color:#7a99bb;white-space:nowrap;flex-shrink:0;align-self:flex-start;">Added {c.get("added_at","—")}</span>'
+        f'</div>'
+
+        # ── Email section with clear label
+        f'<div style="margin-bottom:12px;">'
+        f'<div style="font-size:0.65rem;font-weight:700;color:#3a6699;text-transform:uppercase;'
+        f'letter-spacing:0.08em;margin-bottom:6px;">📧 Email Addresses</div>'
+        f'{email_rows_html}'
+        f'</div>'
+
+        # ── Tags
+        + (f'<div style="margin-bottom:10px;">{tag_chips}</div>' if tag_chips else '') +
+
+        # ── Notes
+        + (f'<div style="color:#2a5080;font-size:0.72rem;line-height:1.55;'
+           f'padding:8px 12px;background:rgba(61,130,245,0.04);border-radius:8px;'
+           f'border-left:3px solid rgba(61,130,245,0.25);">'
+           f'📝 {notes[:120]}{"…" if len(notes)>120 else ""}</div>' if notes else '') +
+
         f'</div>',
         unsafe_allow_html=True,
     )
