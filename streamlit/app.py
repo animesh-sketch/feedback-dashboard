@@ -1066,6 +1066,65 @@ def render_overview():
         </div>
     </div>""", unsafe_allow_html=True)
 
+    # ── Real-time client & email activity snapshot ────────────────────────────
+    _ov_clients   = client_store.load()
+    _ov_sent      = sent_store.load()
+    _ov_delivered = sum(len(r.get("sent_to", [])) for r in _ov_sent)
+    _ov_unique_cl = len({r.get("client","") for r in _ov_sent if r.get("client","")})
+    _ov_failed    = sum(len(r.get("failed", [])) for r in _ov_sent)
+    _ov_success   = round((_ov_delivered / (_ov_delivered + _ov_failed) * 100), 1) if (_ov_delivered + _ov_failed) else 100.0
+
+    st.markdown('<div class="section-chip">📬 Client Activity (Last 30 Days)</div>', unsafe_allow_html=True)
+    st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.2rem;">
+        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Clients</div>
+            <div style="background:var(--gradient-brand);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.6rem;font-weight:800;">{len(_ov_clients)}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Campaigns Sent</div>
+            <div style="color:#3d8ef5;font-size:1.6rem;font-weight:800;">{len(_ov_sent)}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid #0ebc6e;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Emails Delivered</div>
+            <div style="color:#0ebc6e;font-size:1.6rem;font-weight:800;">{_ov_delivered}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid #e0368e;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Clients Reached</div>
+            <div style="color:#e0368e;font-size:1.6rem;font-weight:800;">{_ov_unique_cl}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid {'#dc2626' if _ov_failed else '#0ebc6e'};">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Delivery Rate</div>
+            <div style="color:{'#dc2626' if _ov_success < 90 else '#0ebc6e'};font-size:1.6rem;font-weight:800;">{_ov_success}%</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+    # Recent send activity list (last 5)
+    if _ov_sent:
+        _ov_recent5 = _ov_sent[:5]
+        rows_html = "".join(
+            f'<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;'
+            f'border-bottom:1px solid rgba(61,130,245,0.07);">'
+            f'<div style="width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#e0368e,#3d8ef5);flex-shrink:0;"></div>'
+            f'<div style="flex:1;min-width:0;">'
+            f'<div style="font-size:0.8rem;font-weight:600;color:#0d1d3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+            f'{r.get("subject","(no subject)")}</div>'
+            f'<div style="font-size:0.69rem;color:#5588bb;">'
+            f'{"🏢 " + r["client"] + " · " if r.get("client") else ""}'
+            f'{len(r.get("sent_to",[]))} recipient{"s" if len(r.get("sent_to",[]))!=1 else ""}'
+            f'</div></div>'
+            f'<div style="font-size:0.67rem;color:#7a99bb;flex-shrink:0;">{r.get("date","")}</div>'
+            f'</div>'
+            for r in _ov_recent5
+        )
+        st.markdown(
+            f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.15);border-radius:12px;'
+            f'padding:4px 0;margin-bottom:1.4rem;">'
+            f'<div style="padding:10px 14px 6px;color:#2a5080;font-size:0.7rem;font-weight:700;'
+            f'letter-spacing:0.08em;text-transform:uppercase;">Recent Campaigns</div>'
+            + rows_html + '</div>',
+            unsafe_allow_html=True,
+        )
+
     tab_d, tab_w, tab_m = st.tabs(["📅  Daily", "📅  Weekly", "📅  Monthly"])
     with tab_d: _render_period_content("Daily")
     with tab_w: _render_period_content("Weekly")
@@ -1535,6 +1594,176 @@ def render_clients():
                         st.error("Invalid backup file format.")
                 except Exception as _e:
                     st.error(f"Restore failed: {_e}")
+
+
+# ─── Client Emails page ───────────────────────────────────────────────────────
+
+def render_client_emails():
+    all_clients = client_store.load()
+
+    st.markdown("""<div class="page-header">
+        <div class="page-header-icon">📋</div>
+        <div class="page-header-text">
+            <div class="page-title">Client Emails</div>
+            <div class="page-sub">All client email addresses and their complete send history in one place.</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+    # ── Stats ─────────────────────────────────────────────────────────────────
+    total_addrs = sum(len(c.get("emails", [])) for c in all_clients)
+    recent_sends = sent_store.load()
+    total_recent = len(recent_sends)
+    clients_emailed_30d = len({r.get("client","") for r in recent_sends if r.get("client","")})
+
+    st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Clients</div>
+            <div style="background:var(--gradient-brand);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(all_clients)}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Email Addresses</div>
+            <div style="color:#3d8ef5;font-size:1.8rem;font-weight:800;">{total_addrs}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid #e0368e;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Sends (30d)</div>
+            <div style="color:#e0368e;font-size:1.8rem;font-weight:800;">{total_recent}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid #0ebc6e;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Clients Emailed (30d)</div>
+            <div style="color:#0ebc6e;font-size:1.8rem;font-weight:800;">{clients_emailed_30d}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+    if not all_clients:
+        st.markdown(
+            '<div style="text-align:center;padding:60px 20px;color:#7a99bb;font-size:0.84rem;">'
+            'No clients yet. Add one in the Clients page.</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    # ── Client selector ───────────────────────────────────────────────────────
+    client_names = ["All Clients"] + [c["company"] for c in all_clients]
+    sel_col, srch_col = st.columns([2, 3])
+    with sel_col:
+        selected = st.selectbox(
+            "client", client_names, key="ce_selector", label_visibility="collapsed"
+        )
+    with srch_col:
+        ce_search = st.text_input(
+            "search", placeholder="🔍  Search by email or subject…",
+            key="ce_search", label_visibility="collapsed"
+        )
+
+    display_clients = all_clients if selected == "All Clients" else [
+        c for c in all_clients if c["company"] == selected
+    ]
+
+    for c in display_clients:
+        company = c.get("company", "")
+        emails  = c.get("emails", [])
+        history = client_emails_store.get_for_client(company)
+
+        # Apply search filter to history
+        if ce_search:
+            q = ce_search.lower()
+            history = [
+                h for h in history
+                if q in h.get("subject","").lower()
+                or any(q in e.lower() for e in h.get("sent_to",[]))
+            ]
+
+        status_cfg = _STATUS_CFG.get(c.get("status","Active"), _STATUS_CFG["Active"])
+
+        with st.container(border=True):
+            # ── Client header ─────────────────────────────────────────────────
+            col_av, col_info = st.columns([1, 10])
+            with col_av:
+                st.markdown(_avatar(company), unsafe_allow_html=True)
+            with col_info:
+                st.markdown(
+                    f'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+                    f'<span style="font-size:1rem;font-weight:700;color:#0d1d3a;">{company}</span>'
+                    f'<span style="background:{status_cfg[0]};color:{status_cfg[2]};font-size:0.62rem;font-weight:700;'
+                    f'padding:2px 10px;border-radius:99px;letter-spacing:0.06em;text-transform:uppercase;">'
+                    f'{c.get("status","Active")}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                if c.get("contact"):
+                    st.caption(f"👤 {c['contact']}")
+
+            # ── Email addresses ───────────────────────────────────────────────
+            st.markdown(
+                '<div style="color:#2a5080;font-size:0.72rem;font-weight:700;'
+                'text-transform:uppercase;letter-spacing:0.06em;margin:10px 0 6px;">📧 Email Addresses</div>',
+                unsafe_allow_html=True,
+            )
+            if emails:
+                email_pills = " ".join(
+                    f'<span style="display:inline-block;background:#eef5ff;border:1px solid #b3d0ff;'
+                    f'border-radius:8px;padding:6px 14px;margin:3px 4px 3px 0;font-size:0.82rem;'
+                    f'color:#0d1d3a;font-weight:500;">✉&nbsp;{e}</span>'
+                    for e in emails
+                )
+                st.markdown(email_pills, unsafe_allow_html=True)
+            else:
+                st.caption("No email addresses saved.")
+
+            st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+
+            # ── Send history ──────────────────────────────────────────────────
+            hist_count = len(history)
+            st.markdown(
+                f'<div style="color:#2a5080;font-size:0.72rem;font-weight:700;'
+                f'text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">'
+                f'📨 Send History — {hist_count} email{"s" if hist_count!=1 else ""} (all time)</div>',
+                unsafe_allow_html=True,
+            )
+            if not history:
+                st.markdown(
+                    '<div style="text-align:center;padding:16px;color:#7a99bb;font-size:0.82rem;'
+                    'background:#f8faff;border-radius:8px;">📭 No emails sent to this client yet.</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                for h in history:
+                    sent_pills = " ".join(
+                        f'<span style="display:inline-block;background:rgba(61,130,245,0.07);'
+                        f'border:1px solid rgba(61,130,245,0.18);border-radius:5px;'
+                        f'padding:2px 8px;font-size:0.68rem;color:#1e3a5f;">✉ {e}</span>'
+                        for e in h.get("sent_to", [])
+                    )
+                    template_html = (
+                        f'<div style="color:#3a6699;font-size:0.69rem;margin-bottom:4px;">🎨 {h["template_name"]}</div>'
+                    ) if h.get("template_name") else ""
+                    attach_html = (
+                        f'<span style="color:#7a99bb;font-size:0.68rem;">📎 {h["attachment_name"]}</span><br>'
+                    ) if h.get("attachment_name") else ""
+                    preview_html = (
+                        f'<div style="color:#2a5080;font-size:0.71rem;line-height:1.5;margin-top:6px;'
+                        f'padding:6px 10px;background:rgba(61,130,245,0.04);border-radius:6px;">'
+                        f'{h["body_preview"][:180]}{"…" if len(h["body_preview"])>180 else ""}</div>'
+                    ) if h.get("body_preview") else ""
+                    sender_html = (
+                        f'<span style="color:#7a99bb;font-size:0.67rem;margin-left:8px;">via {h["sender"]}</span>'
+                    ) if h.get("sender") else ""
+
+                    st.markdown(
+                        f'<div style="background:#ffffff;border:1px solid rgba(61,130,245,0.15);'
+                        f'border-radius:10px;padding:12px 14px;margin-bottom:8px;">'
+                        f'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">'
+                        f'<div style="font-size:0.84rem;font-weight:700;color:#0d1d3a;flex:1;">'
+                        f'{h.get("subject","") or "(no subject)"}{sender_html}</div>'
+                        f'<span style="font-size:0.65rem;color:#7a99bb;white-space:nowrap;flex-shrink:0;">{h.get("date","")}</span>'
+                        f'</div>'
+                        f'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;">{sent_pills}</div>'
+                        + template_html + attach_html + preview_html
+                        + f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
+        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
 
 # ─── Draft helpers ────────────────────────────────────────────────────────────
@@ -2581,7 +2810,7 @@ st.markdown(f"""
     <div style="display:flex;align-items:center;gap:4px;">
         {"".join(
             f'<div style="padding:7px 16px;border-radius:8px;font-size:0.78rem;font-weight:{"700" if page == _current_page else "500"};color:#fff;background:{"rgba(0,0,0,0.28)" if page == _current_page else "transparent"};border:{"1px solid rgba(255,255,255,0.35)" if page == _current_page else "1px solid transparent"};box-shadow:{"0 2px 10px rgba(0,0,0,0.25)" if page == _current_page else "none"};letter-spacing:0.01em;">{icon} {page}</div>'
-            for icon, page in [("📊","Overview"),("🏢","Clients"),("📧","Email Maker"),("📤","Sent")]
+            for icon, page in [("📊","Overview"),("🏢","Clients"),("📋","Client Emails"),("📧","Email Maker"),("📤","Sent")]
         )}
     </div>
     <!-- User pill -->
@@ -2643,7 +2872,7 @@ div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind
 </style>
 """, unsafe_allow_html=True)
 
-_n0, _n1, _n2, _n3, _n4, _n_spacer = st.columns([1.2, 2, 2, 2, 2, 2])
+_n0, _n1, _n2, _n3, _n4, _n5, _n_spacer = st.columns([1.2, 1.8, 1.6, 1.8, 1.8, 1.4, 0.4])
 
 with _n0:
     _sb_label = "✕ Close" if st.session_state["show_sidebar"] else "⚙️ Settings"
@@ -2653,10 +2882,11 @@ with _n0:
 
 _sent_count = len(sent_store.load())
 _page_btns = {
-    "Overview":    ("📊 Overview",    _n1),
-    "Clients":     ("🏢 Clients",     _n2),
-    "Email Maker": ("📧 Email Maker", _n3),
-    "Sent":        (f"📤 Sent  {_sent_count}" if _sent_count else "📤 Sent", _n4),
+    "Overview":      ("📊 Overview",      _n1),
+    "Clients":       ("🏢 Clients",       _n2),
+    "Client Emails": ("📋 Client Emails", _n3),
+    "Email Maker":   ("📧 Email Maker",   _n4),
+    "Sent":          (f"📤 Sent  {_sent_count}" if _sent_count else "📤 Sent", _n5),
 }
 for _key, (_label, _col) in _page_btns.items():
     with _col:
@@ -2679,6 +2909,8 @@ if _page == "Overview":
     render_overview()
 elif _page == "Clients":
     render_clients()
+elif _page == "Client Emails":
+    render_client_emails()
 elif _page == "Email Maker":
     render_email_maker()
 elif _page == "Sent":
