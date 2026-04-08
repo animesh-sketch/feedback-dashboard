@@ -1253,7 +1253,7 @@ _AVATAR_GRADS = [
 ]
 
 
-def _avatar(company: str) -> str:
+def _avatar(company: str, size: int = 40) -> str:
     words = [w for w in company.split() if w]
     if len(words) >= 2:
         initials = (words[0][0] + words[1][0]).upper()
@@ -1262,98 +1262,151 @@ def _avatar(company: str) -> str:
     else:
         initials = "??"
     grad, color = _AVATAR_GRADS[abs(hash(company)) % len(_AVATAR_GRADS)]
-    return (f'<div class="client-avatar" style="background:{grad};color:{color};">'
-            f'{initials}</div>')
+    return (
+        f'<div style="width:{size}px;height:{size}px;border-radius:{size//3}px;'
+        f'background:{grad};color:{color};display:flex;align-items:center;'
+        f'justify-content:center;font-size:{size//3}px;font-weight:800;'
+        f'flex-shrink:0;letter-spacing:0.02em;">{initials}</div>'
+    )
 
 
-def _render_client_card(c: dict):
-    cid   = c["id"]
-    emails = c.get("emails", [])
-    tags   = c.get("tags", [])
-    notes  = str(c.get("notes") or "")
-    confirm_key   = f"confirm_del_{cid}"
-    is_confirming = st.session_state.get(confirm_key, False)
-    is_editing    = st.session_state.get(f"editing_{cid}", False)
+def _clients_detail_panel(c: dict, all_clients: list):
+    """Right-panel: full client detail + live edit + email history."""
+    cid            = c["id"]
+    current_emails = list(c.get("emails", []))
+    confirm_del    = st.session_state.get(f"cdel_{cid}", False)
 
-    # ── Card container
-    with st.container(border=True):
-        # Company + contact
-        col_av, col_info = st.columns([1, 8])
-        with col_av:
-            st.markdown(_avatar(c.get("company", "")), unsafe_allow_html=True)
-        with col_info:
-            st.markdown(f"**{c.get('company', '')}**")
-            if c.get("contact"):
-                st.caption(f"👤 {c['contact']}")
+    # ── Big avatar + name header ───────────────────────────────────────────────
+    status_bg, status_border, status_text = _STATUS_CFG.get(
+        c.get("status", "Active"), _STATUS_CFG["Active"]
+    )
+    st.markdown(
+        f'<div style="display:flex;align-items:center;gap:16px;'
+        f'background:#fff;border:1px solid rgba(61,130,245,0.18);border-radius:16px;'
+        f'padding:20px 24px;margin-bottom:16px;box-shadow:0 4px 20px rgba(61,130,245,0.08);">'
+        f'{_avatar(c.get("company",""), size=56)}'
+        f'<div style="flex:1;min-width:0;">'
+        f'<div style="font-size:1.15rem;font-weight:800;color:#0d1d3a;margin-bottom:2px;'
+        f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{c.get("company","")}</div>'
+        f'<div style="font-size:0.82rem;color:#3a6699;">'
+        f'{"👤 " + c["contact"] if c.get("contact") else "No contact person"}</div>'
+        f'</div>'
+        f'<div style="background:{status_bg};border:1px solid {status_border};border-radius:20px;'
+        f'padding:4px 14px;font-size:0.72rem;font-weight:700;color:{status_text};'
+        f'white-space:nowrap;">{c.get("status","Active")}</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
-        # Emails — always visible, each on its own line
-        st.markdown("**📧 Email Addresses**")
-        if emails:
-            for e in emails:
+    # ── Tabs: Details | History ────────────────────────────────────────────────
+    tab_det, tab_hist = st.tabs(["✏️  Details & Edit", "📧  Email History"])
+
+    # ── Details tab ───────────────────────────────────────────────────────────
+    with tab_det:
+        with st.form(f"det_f_{cid}"):
+            d1, d2 = st.columns(2)
+            with d1:
+                new_company = st.text_input("Company Name", value=c.get("company", ""))
+            with d2:
+                new_contact = st.text_input("Contact Person", value=c.get("contact", ""))
+
+            new_status = st.selectbox(
+                "Status", options=["Active", "At Risk", "Inactive"],
+                index=["Active", "At Risk", "Inactive"].index(c.get("status", "Active")),
+            )
+            new_tags  = st.text_input("Tags (comma-separated)",
+                                      value=", ".join(c.get("tags", [])),
+                                      placeholder="Enterprise, Q1, High Priority")
+            new_notes = st.text_area("Notes", value=c.get("notes", ""), height=90,
+                                     placeholder="Client context, renewal dates…")
+
+            sb1, sb2 = st.columns(2)
+            with sb1:
+                saved = st.form_submit_button("💾  Save Changes", type="primary",
+                                              use_container_width=True)
+            with sb2:
+                cancelled = st.form_submit_button("✕  Cancel", use_container_width=True)
+
+            if saved:
+                client_store.update(cid, {
+                    "company": new_company.strip(),
+                    "contact": new_contact.strip(),
+                    "status":  new_status,
+                    "tags":    [t.strip() for t in new_tags.split(",") if t.strip()],
+                    "notes":   new_notes.strip(),
+                })
+                st.toast("Saved.", icon="✅")
+                st.rerun()
+            if cancelled:
+                st.rerun()
+
+        # ── Email addresses ────────────────────────────────────────────────────
+        st.markdown(
+            '<div style="color:#2a5080;font-size:0.72rem;font-weight:700;'
+            'text-transform:uppercase;letter-spacing:0.06em;margin:16px 0 8px;">📧 Email Addresses</div>',
+            unsafe_allow_html=True,
+        )
+        for idx, em in enumerate(current_emails):
+            em_c1, em_c2 = st.columns([8, 1])
+            with em_c1:
                 st.markdown(
-                    f'<div style="background:#eef5ff;border:1px solid #b3d0ff;border-radius:8px;'
-                    f'padding:8px 14px;margin-bottom:5px;font-size:0.85rem;color:#0d1d3a;font-weight:500;">'
-                    f'✉&nbsp;&nbsp;{e}</div>',
+                    f'<div style="background:#f0f8ff;border:1px solid rgba(61,130,245,0.2);'
+                    f'border-radius:8px;padding:8px 14px;font-size:0.83rem;color:#1e3a5f;">'
+                    f'✉&nbsp; {em}</div>',
                     unsafe_allow_html=True,
                 )
-        else:
-            st.caption("No email addresses saved yet.")
+            with em_c2:
+                if st.button("✕", key=f"rem_em_{cid}_{idx}", use_container_width=True,
+                             help="Remove email"):
+                    client_store.update(cid, {
+                        "emails": [e for j, e in enumerate(current_emails) if j != idx]
+                    })
+                    st.toast(f"Removed {em}", icon="🗑")
+                    st.rerun()
 
-        # Tags
-        if tags:
-            st.markdown(" ".join(f'<span class="tag-chip">{t}</span>' for t in tags),
-                        unsafe_allow_html=True)
+        add_c1, add_c2 = st.columns([8, 1])
+        with add_c1:
+            new_em = st.text_input("add_email_inp", key=f"new_em_{cid}",
+                                   placeholder="Add email address…",
+                                   label_visibility="collapsed")
+        with add_c2:
+            if st.button("＋", key=f"add_em_{cid}", use_container_width=True, help="Add email"):
+                if new_em.strip():
+                    client_store.update(cid, {"emails": current_emails + [new_em.strip()]})
+                    st.toast(f"Added {new_em.strip()}", icon="✅")
+                    st.rerun()
 
-        # Notes
-        if notes:
-            st.caption(f"📝 {notes[:120]}{'…' if len(notes) > 120 else ''}")
-
-    btn1, btn2, btn3, btn4 = st.columns([2, 2, 2, 6])
-    with btn1:
-        lbl = "✕ Close" if is_editing else "✏️ Edit"
-        if st.button(lbl, key=f"edit_c_{cid}", use_container_width=True):
-            st.session_state[f"editing_{cid}"] = not is_editing
-            st.session_state.pop(confirm_key, None)
-            st.session_state.pop(f"hist_{cid}", None)
-            st.rerun()
-    with btn2:
-        hist_open = st.session_state.get(f"hist_{cid}", False)
-        hist_lbl = "✕ History" if hist_open else "📧 History"
-        if st.button(hist_lbl, key=f"hist_btn_{cid}", use_container_width=True):
-            st.session_state[f"hist_{cid}"] = not hist_open
-            st.session_state.pop(f"editing_{cid}", None)
-            st.session_state.pop(confirm_key, None)
-            st.rerun()
-    with btn3:
-        if not is_confirming:
-            if st.button("🗑 Remove", key=f"del_c_{cid}", use_container_width=True):
-                st.session_state[confirm_key] = True
+        # ── Delete client ──────────────────────────────────────────────────────
+        st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
+        if not confirm_del:
+            if st.button("🗑  Remove Client", key=f"del_btn_{cid}",
+                         use_container_width=True):
+                st.session_state[f"cdel_{cid}"] = True
                 st.rerun()
         else:
-            cc1, cc2 = st.columns(2)
-            with cc1:
-                if st.button("⚠️ Yes, delete", key=f"conf_del_{cid}", use_container_width=True, type="primary"):
+            st.warning("Are you sure? This cannot be undone.")
+            conf1, conf2 = st.columns(2)
+            with conf1:
+                if st.button("⚠️  Yes, delete", key=f"conf_del_{cid}",
+                             type="primary", use_container_width=True):
                     client_store.delete(cid)
+                    st.session_state.pop("clients_sel_id", None)
                     for _k in [k for k in st.session_state if cid in k]:
                         del st.session_state[_k]
                     st.toast(f"Removed {c.get('company','client')}", icon="🗑")
                     st.rerun()
-            with cc2:
-                if st.button("Cancel", key=f"cancel_del_{cid}", use_container_width=True):
-                    st.session_state.pop(confirm_key, None)
+            with conf2:
+                if st.button("Cancel", key=f"cancel_del_{cid}",
+                             use_container_width=True):
+                    st.session_state.pop(f"cdel_{cid}", None)
                     st.rerun()
 
-    # ── Email History panel ───────────────────────────────────────────────────
-    if st.session_state.get(f"hist_{cid}"):
+    # ── History tab ───────────────────────────────────────────────────────────
+    with tab_hist:
         history = client_emails_store.get_for_client(c.get("company", ""))
-        st.markdown(
-            '<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.18);'
-            'border-radius:12px;padding:16px 20px;margin-top:8px;">',
-            unsafe_allow_html=True,
-        )
         if not history:
             st.markdown(
-                '<div style="text-align:center;padding:20px;color:#7a99bb;font-size:0.84rem;">'
+                '<div style="text-align:center;padding:40px 20px;color:#7a99bb;font-size:0.84rem;">'
                 '📭 No emails sent to this client yet.</div>',
                 unsafe_allow_html=True,
             )
@@ -1361,7 +1414,7 @@ def _render_client_card(c: dict):
             st.markdown(
                 f'<div style="color:#2a5080;font-size:0.72rem;font-weight:700;'
                 f'text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">'
-                f'📧 Email History — {len(history)} email{"s" if len(history)!=1 else ""} (permanent)</div>',
+                f'{len(history)} email{"s" if len(history)!=1 else ""} sent</div>',
                 unsafe_allow_html=True,
             )
             for h in history:
@@ -1375,133 +1428,35 @@ def _render_client_card(c: dict):
                     f'<span style="color:#7a99bb;font-size:0.68rem;">📎 {h["attachment_name"]}</span>'
                 ) if h.get("attachment_name") else ""
                 st.markdown(
-                    f'<div style="background:#ffffff;border:1px solid rgba(61,130,245,0.15);'
+                    f'<div style="background:#fff;border:1px solid rgba(61,130,245,0.15);'
                     f'border-radius:10px;padding:12px 14px;margin-bottom:8px;">'
-                    f'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">'
-                    f'<div style="font-size:0.84rem;font-weight:700;color:#0d1d3a;flex:1;">{h["subject"] or "(no subject)"}</div>'
-                    f'<span style="font-size:0.65rem;color:#7a99bb;white-space:nowrap;flex-shrink:0;">{h["date"]}</span>'
-                    f'</div>'
-                    f'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;">{sent_pills}</div>'
-                    + (f'<div style="color:#3a6699;font-size:0.69rem;margin-bottom:4px;">🎨 {h["template_name"]}</div>' if h.get("template_name") else '')
+                    f'<div style="display:flex;justify-content:space-between;align-items:flex-start;'
+                    f'gap:8px;margin-bottom:6px;">'
+                    f'<div style="font-size:0.84rem;font-weight:700;color:#0d1d3a;flex:1;">'
+                    f'{h["subject"] or "(no subject)"}</div>'
+                    f'<span style="font-size:0.65rem;color:#7a99bb;white-space:nowrap;">'
+                    f'{h["date"]}</span></div>'
+                    f'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;">'
+                    f'{sent_pills}</div>'
+                    + (f'<div style="color:#3a6699;font-size:0.69rem;margin-bottom:4px;">'
+                       f'🎨 {h["template_name"]}</div>' if h.get("template_name") else '')
                     + (attach_html + '<br>' if attach_html else '')
                     + (f'<div style="color:#2a5080;font-size:0.71rem;line-height:1.5;margin-top:4px;'
                        f'padding:6px 10px;background:rgba(61,130,245,0.04);border-radius:6px;">'
                        f'{h["body_preview"][:150]}{"…" if len(h["body_preview"])>150 else ""}</div>'
-                       if h.get("body_preview") else '') +
-                    f'</div>',
+                       if h.get("body_preview") else '')
+                    + '</div>',
                     unsafe_allow_html=True,
                 )
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    if is_editing:
-        st.markdown(
-            '<div style="background:rgba(61,130,245,0.04);border:1px solid rgba(61,130,245,0.15);'
-            'border-radius:12px;padding:16px;margin-top:8px;">',
-            unsafe_allow_html=True,
-        )
-        # ── Email management ──────────────────────────────────────────────────
-        st.markdown('<div style="color:#3a6699;font-size:0.72rem;font-weight:700;'
-                    'text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Email Addresses</div>',
-                    unsafe_allow_html=True)
-        current_emails = list(c.get("emails", []))
-        for idx, em in enumerate(current_emails):
-            ec1, ec2 = st.columns([6, 1])
-            with ec1:
-                st.markdown(
-                    f'<div style="background:#f0f8ff;border:1px solid rgba(61,130,245,0.2);border-radius:6px;'
-                    f'padding:7px 12px;font-size:0.78rem;color:#1e3a5f;">✉ {em}</div>',
-                    unsafe_allow_html=True,
-                )
-            with ec2:
-                if st.button("✕", key=f"del_em_{cid}_{idx}", use_container_width=True, help="Remove"):
-                    client_store.update(cid, {"emails": [e for j, e in enumerate(current_emails) if j != idx]})
-                    st.toast(f"Removed {em}", icon="🗑")
-                    st.rerun()
-        ae1, ae2 = st.columns([6, 1])
-        with ae1:
-            new_em = st.text_input("new_email", key=f"add_em_{cid}",
-                                   placeholder="Add email address…", label_visibility="collapsed")
-        with ae2:
-            if st.button("＋", key=f"add_em_btn_{cid}", use_container_width=True, help="Add"):
-                if new_em.strip():
-                    client_store.update(cid, {"emails": current_emails + [new_em.strip()]})
-                    st.toast(f"Added {new_em.strip()}", icon="✅")
-                    st.rerun()
-
-        # ── Other fields ──────────────────────────────────────────────────────
-        with st.form(f"edit_f_{cid}"):
-            ef1, ef2 = st.columns(2)
-            with ef1:
-                new_company = st.text_input("Company Name", value=c.get("company", ""))
-            with ef2:
-                new_contact = st.text_input("Contact Person", value=c.get("contact", ""))
-            new_tags  = st.text_input("Tags", value=", ".join(c.get("tags", [])),
-                                      placeholder="Enterprise, Q1, High Priority")
-            new_notes = st.text_area("Notes", value=c.get("notes", ""), height=68)
-            fs1, fs2 = st.columns(2)
-            with fs1:
-                save_clicked = st.form_submit_button("Save Changes", type="primary", use_container_width=True)
-            with fs2:
-                cancel_clicked = st.form_submit_button("Cancel", use_container_width=True)
-            if save_clicked:
-                client_store.update(cid, {
-                    "company": new_company.strip(),
-                    "contact": new_contact.strip(),
-                    "tags":    [t.strip() for t in new_tags.split(",") if t.strip()],
-                    "notes":   new_notes.strip(),
-                })
-                for _k in [k for k in st.session_state if k.startswith("editing_") or k.startswith("confirm_del_")]:
-                    del st.session_state[_k]
-                st.toast("Client updated.", icon="✅")
-                st.rerun()
-            if cancel_clicked:
-                for _k in [k for k in st.session_state if k.startswith("editing_") or k.startswith("confirm_del_")]:
-                    del st.session_state[_k]
-                st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
 
-def render_clients():
-    all_clients = client_store.load()
-
-    # ── Header ────────────────────────────────────────────────────────────────
-    st.markdown("""<div class="page-header">
-        <div class="page-header-icon">🏢</div>
-        <div class="page-header-text">
-            <div class="page-title">Client Repository</div>
-            <div class="page-sub">All your stakeholders, contacts and email addresses in one place.</div>
-        </div>
-    </div>""", unsafe_allow_html=True)
-
-    # ── Stats ─────────────────────────────────────────────────────────────────
-    total_em   = sum(len(c.get("emails", [])) for c in all_clients)
-    total_tags = len({t for c in all_clients for t in c.get("tags", [])})
-    with_notes = sum(1 for c in all_clients if c.get("notes", "").strip())
-
-    st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
-        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
-            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Clients</div>
-            <div style="background:var(--gradient-brand);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(all_clients)}</div>
-        </div>
-        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
-            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Email Addresses</div>
-            <div style="color:#3d8ef5;font-size:1.8rem;font-weight:800;">{total_em}</div>
-        </div>
-        <div class="stat-card" style="border-top:2px solid #e0368e;">
-            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Unique Tags</div>
-            <div style="color:#e0368e;font-size:1.8rem;font-weight:800;">{total_tags}</div>
-        </div>
-        <div class="stat-card" style="border-top:2px solid #0ebc6e;">
-            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">With Notes</div>
-            <div style="color:#0ebc6e;font-size:1.8rem;font-weight:800;">{with_notes}</div>
-        </div>
-    </div>""", unsafe_allow_html=True)
-
-    # ── Add New Client ────────────────────────────────────────────────────────
+def _clients_add_panel():
+    """Right-panel: add new client form."""
+    st.markdown(
+        '<div style="font-size:1rem;font-weight:700;color:#0d1d3a;margin-bottom:16px;">➕ New Client</div>',
+        unsafe_allow_html=True,
+    )
     with st.form("add_client_form", clear_on_submit=True):
-        st.markdown("### ➕ Add New Client")
         fc1, fc2 = st.columns(2)
         with fc1:
             company = st.text_input("Company Name *", placeholder="e.g. Acme Corp")
@@ -1518,71 +1473,176 @@ def render_clients():
             e3 = st.text_input("Email 3", placeholder="optional@company.com")
 
         tags_raw = st.text_input("Tags (comma-separated)", placeholder="Enterprise, Q1, High Priority")
-        notes    = st.text_area("Notes", placeholder="Client context, renewal dates…", height=68)
+        notes    = st.text_area("Notes", placeholder="Client context, renewal dates…", height=80)
 
-        submitted = st.form_submit_button("Save Client", type="primary", use_container_width=True)
+        sb1, sb2 = st.columns(2)
+        with sb1:
+            submitted = st.form_submit_button("💾  Save Client", type="primary",
+                                              use_container_width=True)
+        with sb2:
+            cancel_add = st.form_submit_button("✕  Cancel", use_container_width=True)
+
         if submitted:
             if not company.strip():
                 st.error("Company name is required.")
             elif not any([e1.strip(), e2.strip(), e3.strip()]):
-                st.error("Please enter at least one email address.")
+                st.error("At least one email address is required.")
             else:
                 emails = [e for e in [e1, e2, e3] if e.strip()]
                 tags   = [t.strip() for t in tags_raw.split(",") if t.strip()]
-                _, err = client_store.add(company.strip(), contact.strip(), emails, "Active", tags, notes.strip())
+                new_c, err = client_store.add(
+                    company.strip(), contact.strip(), emails, "Active", tags, notes.strip()
+                )
                 if err:
                     st.error(f"Could not save: {err}")
                 else:
-                    st.success(f"✓ {company} added successfully!")
+                    st.session_state["clients_mode"] = "view"
+                    st.session_state["clients_sel_id"] = new_c["id"]
+                    st.toast(f"✓ {company} added!", icon="✅")
                     st.rerun()
+        if cancel_add:
+            st.session_state["clients_mode"] = "view"
+            st.rerun()
 
-    st.markdown("---")
 
-    # ── Search ────────────────────────────────────────────────────────────────
-    search = st.text_input("", placeholder="🔍  Search by company, contact, email or tag…",
-                           label_visibility="collapsed", key="client_search")
+def render_clients():
+    # ── Session-state defaults ─────────────────────────────────────────────────
+    if "clients_sel_id" not in st.session_state:
+        st.session_state["clients_sel_id"] = None
+    if "clients_mode" not in st.session_state:
+        st.session_state["clients_mode"] = "view"   # "view" | "add"
 
-    filtered = all_clients
-    if search:
-        q = search.lower()
-        filtered = [c for c in filtered if
-                    q in c.get("company","").lower() or
-                    q in c.get("contact","").lower() or
-                    any(q in e.lower() for e in c.get("emails",[])) or
-                    any(q in t.lower() for t in c.get("tags",[]))]
+    all_clients = client_store.load()
 
-    if not filtered:
-        st.markdown('<div style="text-align:center;padding:60px 20px;color:#7a99bb;font-size:0.84rem;">No clients found. Add one above.</div>', unsafe_allow_html=True)
-        return
+    # ── Header ────────────────────────────────────────────────────────────────
+    st.markdown("""<div class="page-header">
+        <div class="page-header-icon">🏢</div>
+        <div class="page-header-text">
+            <div class="page-title">Client Repository</div>
+            <div class="page-sub">Select a client to view and edit, or add a new one.</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
 
-    st.markdown(f'<div style="color:#2a5080;font-size:0.75rem;font-weight:600;margin-bottom:12px;">'
-                f'{len(filtered)} client{"s" if len(filtered)!=1 else ""}</div>', unsafe_allow_html=True)
+    # ── Stats row ─────────────────────────────────────────────────────────────
+    total_em  = sum(len(c.get("emails", [])) for c in all_clients)
+    active_n  = sum(1 for c in all_clients if c.get("status") == "Active")
+    at_risk_n = sum(1 for c in all_clients if c.get("status") == "At Risk")
 
-    # ── Client List ───────────────────────────────────────────────────────────
-    for c in filtered:
-        _render_client_card(c)
+    st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
+        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Clients</div>
+            <div style="background:var(--gradient-brand);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(all_clients)}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Email Addresses</div>
+            <div style="color:#3d8ef5;font-size:1.8rem;font-weight:800;">{total_em}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid #0ebc6e;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Active</div>
+            <div style="color:#0ebc6e;font-size:1.8rem;font-weight:800;">{active_n}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid #f59e0b;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">At Risk</div>
+            <div style="color:#f59e0b;font-size:1.8rem;font-weight:800;">{at_risk_n}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
 
-    # ── Export ────────────────────────────────────────────────────────────────
-    if all_clients:
-        st.markdown("---")
-        rows = [{"Company": c.get("company",""), "Contact": c.get("contact",""),
-                 "Email": e, "Tags": ", ".join(c.get("tags",[])),
-                 "Notes": c.get("notes",""), "Added": c.get("added_at","")}
-                for c in all_clients for e in c.get("emails",[])]
-        csv = pd.DataFrame(rows).to_csv(index=False)
-        exp_col, bak_col, res_col = st.columns([2, 1, 2])
-        with exp_col:
+    # ── Split pane: left list | right detail ─────────────────────────────────
+    left_col, right_col = st.columns([2, 3], gap="medium")
+
+    # ────── LEFT PANEL ────────────────────────────────────────────────────────
+    with left_col:
+        search = st.text_input("", placeholder="🔍  Search clients…",
+                               label_visibility="collapsed", key="cl_search")
+        sf1, sf2 = st.columns([3, 2])
+        with sf1:
+            status_filter = st.selectbox("Status", ["All", "Active", "At Risk", "Inactive"],
+                                         label_visibility="collapsed", key="cl_status_filter")
+        with sf2:
+            if st.button("➕  Add Client", use_container_width=True, key="cl_add_btn"):
+                st.session_state["clients_mode"] = "add"
+                st.session_state["clients_sel_id"] = None
+                st.rerun()
+
+        filtered = all_clients
+        if search:
+            q = search.lower()
+            filtered = [c for c in filtered if
+                        q in c.get("company", "").lower() or
+                        q in c.get("contact", "").lower() or
+                        any(q in e.lower() for e in c.get("emails", [])) or
+                        any(q in t.lower() for t in c.get("tags", []))]
+        if status_filter != "All":
+            filtered = [c for c in filtered if c.get("status") == status_filter]
+
+        st.markdown(
+            f'<div style="font-size:0.72rem;color:#7a99bb;font-weight:600;'
+            f'margin:8px 0 6px;">{len(filtered)} client{"s" if len(filtered)!=1 else ""}</div>',
+            unsafe_allow_html=True,
+        )
+
+        sel_id = st.session_state.get("clients_sel_id")
+        if not filtered:
+            st.markdown(
+                '<div style="text-align:center;padding:40px 16px;color:#7a99bb;font-size:0.82rem;">'
+                'No clients found.</div>',
+                unsafe_allow_html=True,
+            )
+        for c in filtered:
+            cid = c["id"]
+            is_sel = (sel_id == cid)
+            st_bg, st_border, st_col = _STATUS_CFG.get(c.get("status", "Active"), _STATUS_CFG["Active"])
+            em_count = len(c.get("emails", []))
+            row_bg     = "#e8f0ff" if is_sel else "#fff"
+            row_border = "rgba(61,130,245,0.55)" if is_sel else "rgba(61,130,245,0.15)"
+            row_lborder = "3px solid #3d8ef5" if is_sel else "3px solid transparent"
+            st.markdown(
+                f'<div style="background:{row_bg};border:1px solid {row_border};'
+                f'border-left:{row_lborder};border-radius:10px;padding:10px 14px;'
+                f'margin-bottom:4px;display:flex;align-items:center;gap:12px;'
+                f'box-shadow:{"0 2px 10px rgba(61,130,245,0.15)" if is_sel else "none"};">'
+                f'{_avatar(c.get("company",""), size=36)}'
+                f'<div style="flex:1;min-width:0;">'
+                f'<div style="font-size:0.84rem;font-weight:700;color:#0d1d3a;'
+                f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+                f'{c.get("company","")}</div>'
+                f'<div style="font-size:0.72rem;color:#5a7aaa;margin-top:1px;">'
+                f'{"👤 " + c["contact"] if c.get("contact") else ""}'
+                f'{"  ·  " if c.get("contact") else ""}'
+                f'{em_count} email{"s" if em_count!=1 else ""}</div>'
+                f'</div>'
+                f'<div style="background:{st_bg};border:1px solid {st_border};border-radius:10px;'
+                f'padding:2px 8px;font-size:0.65rem;font-weight:700;color:{st_col};'
+                f'white-space:nowrap;">{c.get("status","Active")}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            if st.button("Select", key=f"sel_{cid}", use_container_width=True,
+                         type="primary" if is_sel else "secondary"):
+                st.session_state["clients_sel_id"] = cid
+                st.session_state["clients_mode"] = "view"
+                st.rerun()
+
+        # Export at bottom of left panel
+        if all_clients:
+            st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
+            rows = [{"Company": c.get("company",""), "Contact": c.get("contact",""),
+                     "Email": e, "Status": c.get("status",""),
+                     "Tags": ", ".join(c.get("tags",[])),
+                     "Notes": c.get("notes",""), "Added": c.get("added_at","")}
+                    for c in all_clients for e in c.get("emails",[])]
+            csv = pd.DataFrame(rows).to_csv(index=False)
             st.download_button("⬇️  Export CSV", data=csv,
-                               file_name="convin_clients.csv", mime="text/csv")
-        with bak_col:
+                               file_name="convin_clients.csv", mime="text/csv",
+                               use_container_width=True)
             import json as _json
             _bak = _json.dumps(all_clients, indent=2, ensure_ascii=False)
             st.download_button("⬇️  Backup JSON", data=_bak,
-                               file_name="clients_backup.json", mime="application/json")
-        with res_col:
-            _uploaded = st.file_uploader("📥 Restore from JSON backup", type=["json"],
+                               file_name="clients_backup.json", mime="application/json",
+                               use_container_width=True)
+            _uploaded = st.file_uploader("📥 Restore from backup", type=["json"],
                                          key="client_restore_upload",
-                                         label_visibility="collapsed")
+                                         label_visibility="visible")
             if _uploaded:
                 try:
                     _restored = _json.loads(_uploaded.read())
@@ -1594,6 +1654,34 @@ def render_clients():
                         st.error("Invalid backup file format.")
                 except Exception as _e:
                     st.error(f"Restore failed: {_e}")
+
+    # ────── RIGHT PANEL ───────────────────────────────────────────────────────
+    with right_col:
+        mode   = st.session_state.get("clients_mode", "view")
+        sel_id = st.session_state.get("clients_sel_id")
+
+        if mode == "add":
+            _clients_add_panel()
+        elif sel_id:
+            sel_client = next((c for c in all_clients if c["id"] == sel_id), None)
+            if sel_client:
+                _clients_detail_panel(sel_client, all_clients)
+            else:
+                st.session_state["clients_sel_id"] = None
+                st.rerun()
+        else:
+            st.markdown(
+                '<div style="display:flex;flex-direction:column;align-items:center;'
+                'justify-content:center;padding:80px 20px;text-align:center;">'
+                '<div style="font-size:2.5rem;margin-bottom:16px;">🏢</div>'
+                '<div style="font-size:0.95rem;font-weight:600;color:#0d1d3a;margin-bottom:8px;">'
+                'Select a client</div>'
+                '<div style="font-size:0.82rem;color:#7a99bb;line-height:1.6;">'
+                'Click any client on the left to view and edit their details,<br>'
+                'or use <strong>➕ Add Client</strong> to create a new one.</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
 
 
 # ─── Client Emails page ───────────────────────────────────────────────────────
