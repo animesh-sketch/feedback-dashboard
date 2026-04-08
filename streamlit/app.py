@@ -1512,6 +1512,25 @@ def render_clients():
     if "clients_mode" not in st.session_state:
         st.session_state["clients_mode"] = "view"   # "view" | "add"
 
+    # ── Supabase connection diagnostic ────────────────────────────────────────
+    with st.expander("🔌 Supabase connection test", expanded=False):
+        url = st.secrets.get("SUPABASE_URL", "")
+        key = st.secrets.get("SUPABASE_KEY", "")
+        masked_url = url if not url else (url[:12] + "..." + url[-12:] if len(url) > 28 else url)
+        masked_key = ("set ✓" if key else "MISSING ✗")
+        st.code(f"SUPABASE_URL = {masked_url or 'MISSING ✗'}\nSUPABASE_KEY = {masked_key}")
+        if st.button("Run connection test", key="sb_conn_test"):
+            if not url or not key:
+                st.error("One or both secrets are missing — check Streamlit Cloud → Settings → Secrets")
+            else:
+                try:
+                    from supabase import create_client as _cc
+                    _client = _cc(url, key)
+                    _res = _client.table("clients").select("id").limit(1).execute()
+                    st.success(f"Connected — clients table reachable. Rows sampled: {len(_res.data)}")
+                except Exception as _e:
+                    st.error(f"Connection failed: {_e}")
+
     all_clients = client_store.load()
 
     # ── Header ────────────────────────────────────────────────────────────────
