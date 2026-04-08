@@ -3081,7 +3081,7 @@ st.markdown(f"""
     <div style="display:flex;align-items:center;gap:4px;">
         {"".join(
             f'<div style="padding:7px 16px;border-radius:8px;font-size:0.78rem;font-weight:{"700" if page == _current_page else "500"};color:#fff;background:{"rgba(0,0,0,0.28)" if page == _current_page else "transparent"};border:{"1px solid rgba(255,255,255,0.35)" if page == _current_page else "1px solid transparent"};box-shadow:{"0 2px 10px rgba(0,0,0,0.25)" if page == _current_page else "none"};letter-spacing:0.01em;">{icon} {page}</div>'
-            for icon, page in [("📊","Overview"),("🏢","Clients"),("📋","Client Emails"),("📧","Email Maker"),("📤","Sent")]
+            for icon, page in [("📊","Overview"),("🏢","Clients"),("📋","Client Emails"),("📧","Email Maker")]
         )}
     </div>
     <!-- User pill -->
