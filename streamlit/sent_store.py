@@ -5,6 +5,7 @@ Requires st.secrets: SUPABASE_URL, SUPABASE_KEY.
 All users share the same database — writes are immediately visible to everyone.
 """
 
+import sys
 import uuid
 from datetime import datetime, timezone
 
@@ -13,13 +14,20 @@ import streamlit as st
 _TABLE = "sent_items"
 
 
-# ── Supabase client ────────────────────────────────────────────────────────────
+# ── Supabase client (cached — one connection per app process) ─────────────────
 
+@st.cache_resource
 def _sb():
     from supabase import create_client
     url = st.secrets.get("SUPABASE_URL", "")
     key = st.secrets.get("SUPABASE_KEY", "")
+    if not url or not key:
+        raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set in st.secrets")
     return create_client(url, key)
+
+
+def _log_err(fn: str, exc: Exception) -> None:
+    print(f"[sent_store.{fn}] ERROR: {exc}", file=sys.stderr)
 
 
 # ── Row ↔ dict conversion ─────────────────────────────────────────────────────
@@ -70,12 +78,12 @@ def _record_to_row(r: dict) -> dict:
 
 def _purge_old() -> None:
     """Delete sent_items older than 30 days to keep storage lean."""
-    from datetime import datetime, timezone, timedelta
+    from datetime import timedelta
     cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
     try:
         _sb().table(_TABLE).delete().lt("timestamp", cutoff).execute()
-    except Exception:
-        pass
+    except Exception as e:
+        _log_err("_purge_old", e)
 
 
 def load() -> list:
@@ -90,7 +98,8 @@ def load() -> list:
             .execute()
         )
         return [_row_to_record(r) for r in (res.data or [])]
-    except Exception:
+    except Exception as e:
+        _log_err("load", e)
         return []
 
 
@@ -107,7 +116,11 @@ def log_send(
     sender: str = "",
     attachment_name: str = "",
     is_test: bool = False,
-) -> dict:
+) -> tuple:
+    """
+    Returns (record_dict, error_string_or_None).
+    Caller should check the error and surface it to the user.
+    """
     now = datetime.now(timezone.utc)
     normalised_failed = [
         {"email": f.get("email", ""), "error": f.get("error", "")}
@@ -133,13 +146,17 @@ def log_send(
     }
     try:
         _sb().table(_TABLE).insert(_record_to_row(record)).execute()
-    except Exception:
-        pass
-    return record
+        return record, None
+    except Exception as e:
+        _log_err("log_send", e)
+        return record, str(e)
 
 
-def clear() -> None:
+def clear() -> str | None:
+    """Returns error string on failure, None on success."""
     try:
         _sb().table(_TABLE).delete().neq("id", "").execute()
-    except Exception:
-        pass
+        return None
+    except Exception as e:
+        _log_err("clear", e)
+        return str(e)

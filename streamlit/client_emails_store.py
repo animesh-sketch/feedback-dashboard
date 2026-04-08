@@ -2,17 +2,29 @@
 Client email history — permanent storage, never purged.
 Requires st.secrets: SUPABASE_URL, SUPABASE_KEY.
 """
+import sys
 import streamlit as st
 
 _TABLE = "client_emails"
 
 
+# ── Supabase client (cached — one connection per app process) ─────────────────
+
+@st.cache_resource
 def _sb():
     from supabase import create_client
     url = st.secrets.get("SUPABASE_URL", "")
     key = st.secrets.get("SUPABASE_KEY", "")
+    if not url or not key:
+        raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set in st.secrets")
     return create_client(url, key)
 
+
+def _log_err(fn: str, exc: Exception) -> None:
+    print(f"[client_emails_store.{fn}] ERROR: {exc}", file=sys.stderr)
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
 
 def log(
     record_id: str,
@@ -24,8 +36,11 @@ def log(
     body_preview: str,
     sender: str,
     attachment_name: str,
-) -> None:
-    """Permanently store an email send under the client's history."""
+) -> str | None:
+    """
+    Permanently store an email send under the client's history.
+    Returns error string on failure, None on success.
+    """
     try:
         _sb().table(_TABLE).insert({
             "id":              record_id,
@@ -38,8 +53,10 @@ def log(
             "sender":          sender,
             "attachment_name": attachment_name or "",
         }).execute()
-    except Exception:
-        pass
+        return None
+    except Exception as e:
+        _log_err("log", e)
+        return str(e)
 
 
 def get_for_client(client_company: str) -> list:
@@ -65,5 +82,6 @@ def get_for_client(client_company: str) -> list:
             }
             for r in (res.data or [])
         ]
-    except Exception:
+    except Exception as e:
+        _log_err("get_for_client", e)
         return []

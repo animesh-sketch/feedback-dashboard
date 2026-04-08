@@ -1647,9 +1647,12 @@ def render_clients():
                 try:
                     _restored = _json.loads(_uploaded.read())
                     if isinstance(_restored, list):
-                        client_store.save(_restored)
-                        st.toast(f"Restored {len(_restored)} clients.", icon="✅")
-                        st.rerun()
+                        _save_err = client_store.save(_restored)
+                        if _save_err:
+                            st.error(f"Restore failed: {_save_err}")
+                        else:
+                            st.toast(f"Restored {len(_restored)} clients.", icon="✅")
+                            st.rerun()
                     else:
                         st.error("Invalid backup file format.")
                 except Exception as _e:
@@ -2258,7 +2261,7 @@ def render_email_maker():
                         )
                     if _res["sent"]:
                         st.success(f"Test sent to {_test_addr}")
-                        sent_store.log_send(
+                        _, _log_err = sent_store.log_send(
                             draft_name=d["name"] + " [TEST]",
                             subject=(d.get("subject") or "Test Email") + " [TEST]",
                             template_num=d.get("template", 1),
@@ -2272,6 +2275,8 @@ def render_email_maker():
                             attachment_name=_att_name or "",
                             is_test=True,
                         )
+                        if _log_err:
+                            st.warning(f"Email sent but log failed to save: {_log_err}")
                     else:
                         for _f in _res["failed"]:
                             st.error(_f["error"])
@@ -2312,7 +2317,7 @@ def render_email_maker():
                     if result["sent"]:
                         st.success(f"✓ Sent to: {', '.join(result['sent'])}")
                         st.session_state.drafts[ci]["status"] = "ready"
-                        sent_store.log_send(
+                        _, _log_err = sent_store.log_send(
                             draft_name=d["name"],
                             subject=_subject,
                             template_num=d.get("template", 1),
@@ -2326,9 +2331,11 @@ def render_email_maker():
                             attachment_name=_att_name or "",
                             is_test=False,
                         )
+                        if _log_err:
+                            st.warning(f"Email sent but log failed to save: {_log_err}")
                         if d.get("client", "").strip():
                             from datetime import datetime as _dt2, timezone as _tz2
-                            client_emails_store.log(
+                            _hist_err = client_emails_store.log(
                                 record_id=_send_id,
                                 client_company=d["client"].strip(),
                                 date=_dt2.now(_tz2.utc).strftime("%b %d, %Y"),
@@ -2339,6 +2346,8 @@ def render_email_maker():
                                 sender=st.session_state.get("user_email", ""),
                                 attachment_name=_att_name or "",
                             )
+                            if _hist_err:
+                                st.warning(f"Client email history failed to save: {_hist_err}")
                     for fail in result["failed"]:
                         if fail["email"] in ("login", "config"):
                             st.error(fail["error"])
