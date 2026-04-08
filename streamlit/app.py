@@ -3136,7 +3136,7 @@ div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind
 </style>
 """, unsafe_allow_html=True)
 
-_n0, _n1, _n2, _n3, _n4, _n_spacer = st.columns([1.2, 1.8, 1.6, 1.8, 1.4, 0.4])
+_n0, _n1, _n2, _n3, _n4, _n_spacer = st.columns([1.2, 1.8, 1.6, 2.0, 1.8, 0.4])
 
 with _n0:
     _sb_label = "✕ Close" if st.session_state["show_sidebar"] else "⚙️ Settings"
@@ -3144,12 +3144,11 @@ with _n0:
         st.session_state["show_sidebar"] = not st.session_state["show_sidebar"]
         st.rerun()
 
-_sent_count = len(sent_store.load())
 _page_btns = {
-    "Overview":    ("📊 Overview",      _n1),
-    "Clients":     ("🏢 Clients",       _n2),
-    "Email Maker": ("📧 Email Maker",   _n3),
-    "Sent":        (f"📤 Sent  {_sent_count}" if _sent_count else "📤 Sent", _n4),
+    "Overview":      ("📊 Overview",       _n1),
+    "Clients":       ("🏢 Clients",        _n2),
+    "Client Emails": ("📋 Client Emails",  _n3),
+    "Email Maker":   ("📧 Email Maker",    _n4),
 }
 for _key, (_label, _col) in _page_btns.items():
     with _col:
@@ -3168,14 +3167,11 @@ st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 # ─── Route pages ──────────────────────────────────────────────────────────────
 
 _page = st.session_state["current_page"]
-if _page == "Client Emails":
-    st.session_state["current_page"] = "Clients"
-    _page = "Clients"
 if _page == "Overview":
     render_overview()
 elif _page == "Clients":
     render_clients()
+elif _page == "Client Emails":
+    render_client_emails()
 elif _page == "Email Maker":
     render_email_maker()
-elif _page == "Sent":
-    render_sent()
