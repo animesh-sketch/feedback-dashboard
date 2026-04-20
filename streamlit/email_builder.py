@@ -61,10 +61,15 @@ def _tracking_pixel(send_id, em_b64):
     )
 
 
-def build_email_html(draft: dict, template_id: int = 1, send_id: str = None, recipient_email: str = None) -> str:
+def build_email_html(draft: dict, template_id: int = 1, send_id: str = None, recipient_email: str = None, font_size: str = None, font_family: str = None) -> str:
     c  = draft.get("client")              or "—"
     h  = draft.get("headline")            or "—"
     b  = (draft.get("body") or draft.get("intro") or "").replace("\n", "<br>")
+    if font_size or font_family:
+        _b_style = ""
+        if font_size:   _b_style += f"font-size:{font_size};"
+        if font_family: _b_style += f"font-family:{font_family};"
+        b = f'<span style="{_b_style}">{b}</span>'
     ss = draft.get("screenshot_url")      or ""
     sc = draft.get("screenshot_caption")  or ""
     rl = draft.get("report_link")         or "#"
@@ -161,7 +166,6 @@ body { background: #08080f; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   {ss_html}{extra_imgs_html}
   <div style="padding:40px 44px;background:#0e0e0e;border-bottom:1px solid #1e1e1e;text-align:center;">
-    <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#555;margin-bottom:10px;">Full Report</div>
     <div style="font-size:18px;font-weight:600;color:#ffffff;margin-bottom:24px;">Access the complete analysis</div>
     <a href="{rl}" style="display:inline-block;background:#4d65ff;color:#fff;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;padding:14px 40px;border-radius:6px;">Open Full Report →</a>
   </div>
@@ -220,7 +224,6 @@ body { background: #eef0ff; font-family: 'Inter', sans-serif; color: #151515; pa
   </div>
   {ss_html}{extra_imgs_html}
   <div style="padding:36px 40px;background:#f7f8ff;border-bottom:1px solid #eef0ff;text-align:center;">
-    <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#aaa;margin-bottom:14px;">Full Report Available</div>
     <a href="{rl}" style="display:inline-block;background:#4d65ff;color:#fff;text-decoration:none;font-size:12px;font-weight:600;padding:14px 42px;border-radius:10px;letter-spacing:0.01em;">Open Full Report →</a>
   </div>
   <div style="padding:28px 40px 24px;border-bottom:1px solid #f0f1ff;">
@@ -281,7 +284,6 @@ body { background: #4d65ff; font-family: 'Inter', sans-serif; color: #151515; pa
   </div>
   {ss_html}{extra_imgs_html}
   <div style="padding:40px 44px;text-align:center;border-bottom:1px solid #f0f1ff;background:#f7f8ff;">
-    <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#4d65ff;margin-bottom:12px;">Full Analysis Ready</div>
     <div style="font-size:20px;font-weight:700;color:#151515;margin-bottom:24px;">Access the complete report</div>
     <a href="{rl}" style="display:inline-block;background:#151515;color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:16px 48px;border-radius:6px;letter-spacing:0.03em;">Open Full Report →</a>
   </div>
@@ -343,7 +345,6 @@ body { background: #05050f; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   {ss_html}{extra_imgs_html}
   <div style="padding:36px 40px;background:#0a0a18;border-bottom:1px solid #1a1a30;text-align:center;">
-    <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#333;margin-bottom:14px;">Full Analysis</div>
     <a href="{rl}" style="display:inline-block;background:#4d65ff;color:#fff;text-decoration:none;font-size:12px;font-weight:600;padding:14px 44px;border-radius:10px;letter-spacing:0.03em;box-shadow:0 4px 24px rgba(77,101,255,0.4);">Open Full Report →</a>
   </div>
   <div style="padding:28px 40px 24px;background:#0a0a18;border-top:1px solid #1a1a30;border-bottom:1px solid #1a1a30;">
@@ -409,7 +410,6 @@ body { background: #f0e6d3; font-family: 'Lora', Georgia, serif; color: #1a0a00;
   </div>
   {ss_html}{extra_imgs_html}
   <div style="padding:36px 48px;background:#faf5ed;border-bottom:1px solid #d5c4a8;text-align:center;">
-    <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#8b7355;margin-bottom:14px;">Full Report Available</div>
     <a href="{rl}" style="display:inline-block;border:1.5px solid #2c1a0e;color:#2c1a0e;text-decoration:none;font-family:'Playfair Display',serif;font-size:13px;padding:12px 40px;letter-spacing:0.04em;">Open Full Report</a>
   </div>
   <div style="padding:32px 48px 28px;border-bottom:1px solid #d5c4a8;">
@@ -470,7 +470,6 @@ body { background: #020a12; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   {ss_html}{extra_imgs_html}
   <div style="padding:36px 40px;background:#030b14;border-bottom:1px solid #0c2a3a;text-align:center;">
-    <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#164e63;margin-bottom:14px;">Full Analysis Ready</div>
     <a href="{rl}" style="display:inline-block;background:transparent;border:1.5px solid #06b6d4;color:#06b6d4;text-decoration:none;font-size:12px;font-weight:700;padding:13px 44px;border-radius:8px;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 0 16px rgba(6,182,212,0.2);">Open Full Report →</a>
   </div>
   <div style="padding:26px 40px 22px;background:#030b14;border-bottom:1px solid #0c2a3a;">
@@ -533,7 +532,6 @@ body { background: #fde8d0; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   {ss_html}{extra_imgs_html}
   <div style="padding:36px 44px;background:#fff8f3;border-bottom:1px solid #fde8d0;text-align:center;">
-    <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#c2410c;margin-bottom:14px;">Full Report Available</div>
     <a href="{rl}" style="display:inline-block;background:linear-gradient(135deg,#ea580c,#f97316);color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:14px 44px;border-radius:12px;letter-spacing:0.02em;box-shadow:0 4px 20px rgba(234,88,12,0.3);">Open Full Report →</a>
   </div>
   <div style="padding:28px 44px 24px;border-bottom:1px solid #fde8d0;">
@@ -592,7 +590,6 @@ body { background: #071a0e; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   {ss_html}{extra_imgs_html}
   <div style="padding:36px 44px;background:#071a0e;border-bottom:1px solid #132e1c;text-align:center;">
-    <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#166534;margin-bottom:14px;">Full Analysis Ready</div>
     <a href="{rl}" style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:14px 44px;border-radius:10px;letter-spacing:0.04em;box-shadow:0 4px 20px rgba(16,185,129,0.25);">Open Full Report →</a>
   </div>
   <div style="padding:26px 44px 22px;background:#071a0e;border-bottom:1px solid #132e1c;">
@@ -649,7 +646,6 @@ body { background: #111; font-family: 'Inter', sans-serif; padding: 32px 16px 48
   </div>
   {ss_html}{extra_imgs_html}
   <div style="padding:38px 44px;background:#141414;border-bottom:1px solid #222;text-align:center;">
-    <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#555;margin-bottom:14px;">Full Analysis Ready</div>
     <a href="{rl}" style="display:inline-block;background:#f97316;color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:15px 48px;letter-spacing:0.04em;text-transform:uppercase;">Open Report →</a>
   </div>
   <div style="padding:28px 44px 24px;background:#141414;border-bottom:1px solid #222;">
@@ -709,7 +705,6 @@ body { background: #f9f9f9; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   {ss_html}{extra_imgs_html}
   <div style="padding:36px 44px;background:#fdf8ff;border-bottom:1px solid #f0e8f8;text-align:center;">
-    <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#aaa;margin-bottom:12px;">Full Report</div>
     <a href="{rl}" style="display:inline-block;background:linear-gradient(108deg,#d22c84,#fb6069 52%,#2d84f1);color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:14px 44px;border-radius:8px;letter-spacing:0.03em;">Open Full Report →</a>
   </div>
   <div style="padding:28px 44px 24px;border-bottom:1px solid #f5f0fc;">
@@ -817,7 +812,6 @@ body { background: #f1f6fe; font-family: 'Inter', sans-serif; padding: 32px 16px
   </div>
   {ss_html}{extra_imgs_html}
   <div style="padding:36px 44px;background:#f7f8ff;border-bottom:1px solid #eef0ff;text-align:center;">
-    <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#aaa;margin-bottom:12px;">Full Report</div>
     <a href="{rl}" style="display:inline-block;background:#1a62f2;color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:14px 44px;border-radius:8px;letter-spacing:0.04em;">Open Full Report →</a>
   </div>
   <div style="padding:28px 44px 24px;border-bottom:1px solid #f0f1ff;">

@@ -82,6 +82,15 @@ if "current_page" not in st.session_state:
 if "show_sidebar" not in st.session_state:
     st.session_state["show_sidebar"] = False
 
+_FONT_SIZE_MAP   = {"Small (13px)": "13px", "Normal (14px)": None, "Large (16px)": "16px", "X-Large (18px)": "18px"}
+_FONT_FAMILY_MAP = {"Default (Inter)": None, "Serif (Georgia)": "Georgia,serif", "Classic (Times New Roman)": "'Times New Roman',serif", "Clean (Arial)": "Arial,sans-serif"}
+
+def _email_font_kwargs():
+    return {
+        "font_size":   _FONT_SIZE_MAP.get(st.session_state.get("email_font_size_pick",   "Normal (14px)")),
+        "font_family": _FONT_FAMILY_MAP.get(st.session_state.get("email_font_family_pick", "Default (Inter)")),
+    }
+
 # Auto-load Gmail credentials from secrets — only on the very first load,
 # NOT on every rerun (so the sidebar "Change" button actually works).
 if "gmail_secrets_loaded" not in st.session_state:
@@ -2254,7 +2263,7 @@ def render_drafts_tab():
             tpl_name = TEMPLATE_NAMES[draft.get("template", 1) - 1][0]
             st.markdown(f'<div style="color:#0f172a;font-size:0.88rem;font-weight:600;margin:8px 0;">Preview · {draft["name"]} · {tpl_name}</div>', unsafe_allow_html=True)
             try:
-                html_content = build_email_html(draft, draft.get("template", 1))
+                html_content = build_email_html(draft, draft.get("template", 1), **_email_font_kwargs())
                 components.html(html_content, height=2200, scrolling=True)
             except Exception as e:
                 st.error(f"Preview error: {e}")
@@ -2311,6 +2320,14 @@ def render_email_maker():
         )
         d["body"]     = st.text_area("Email Body",                    value=d["body"],     key=f"cc_body_{ci}", height=120, placeholder="Write the main body of the email…")
 
+        _fs_opts = ["Small (13px)", "Normal (14px)", "Large (16px)", "X-Large (18px)"]
+        _ff_opts = ["Default (Inter)", "Serif (Georgia)", "Classic (Times New Roman)", "Clean (Arial)"]
+        _fscol, _ffcol = st.columns(2)
+        with _fscol:
+            st.selectbox("Font Size", _fs_opts, index=1, key="email_font_size_pick")
+        with _ffcol:
+            st.selectbox("Font Style", _ff_opts, index=0, key="email_font_family_pick")
+
         with st.expander("🖼  Images, Attachment & Survey (optional)", expanded=True):
             _screenshot_input(d, f"c{ci}")
             st.markdown("")
@@ -2330,7 +2347,7 @@ def render_email_maker():
                 st.rerun()
         with pc3:
             try:
-                _dl_html = build_email_html(d, d.get("template", 1))
+                _dl_html = build_email_html(d, d.get("template", 1), **_email_font_kwargs())
                 st.download_button(
                     "⬇️ HTML",
                     data=_dl_html,
@@ -2349,7 +2366,7 @@ def render_email_maker():
 
         if st.session_state.get(f"cc_show_prev_{ci}", False):
             try:
-                components.html(build_email_html(d, d.get("template", 1)), height=2000, scrolling=True)
+                components.html(build_email_html(d, d.get("template", 1), **_email_font_kwargs()), height=2000, scrolling=True)
             except Exception as e:
                 st.error(f"Preview error: {e}")
 
@@ -2421,12 +2438,13 @@ def render_email_maker():
                     _subj = (d.get("subject") or "Test Email") + " [TEST]"
                     import uuid as _uuid
                     _send_id = str(_uuid.uuid4())[:8]
+                    _fkw = _email_font_kwargs()
                     def _html_builder_test(addr):
-                        return build_email_html(d, d.get("template", 1), send_id=_send_id, recipient_email=addr)
+                        return build_email_html(d, d.get("template", 1), send_id=_send_id, recipient_email=addr, **_fkw)
                     with st.spinner("Sending test…"):
                         _res = gmail_sender.send_report_email(
                             None, [_test_addr], _subj[:80],
-                            build_email_html(d, d.get("template", 1)),
+                            build_email_html(d, d.get("template", 1), **_fkw),
                             _test_addr,
                             attachment_name=_att_name,
                             attachment_data=_att_bytes,
@@ -2469,12 +2487,13 @@ def render_email_maker():
                     _subject = (d.get("subject") or "Report from Convin Data Labs")[:80]
                     import uuid as _uuid
                     _send_id = str(_uuid.uuid4())[:8]
+                    _fkw = _email_font_kwargs()
                     def _html_builder_prod(addr):
-                        return build_email_html(d, d.get("template", 1), send_id=_send_id, recipient_email=addr)
+                        return build_email_html(d, d.get("template", 1), send_id=_send_id, recipient_email=addr, **_fkw)
                     with st.spinner(f"Sending to {len(all_emails)} recipient(s)…"):
                         result = gmail_sender.send_report_email(
                             None, all_emails, _subject,
-                            build_email_html(d, d.get("template", 1)),
+                            build_email_html(d, d.get("template", 1), **_fkw),
                             st.session_state.get("user_email", ""),
                             attachment_name=_att_name,
                             attachment_data=_att_bytes,
