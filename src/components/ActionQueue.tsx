@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Clock, Tag, ChevronRight, Flame } from "lucide-react";
 import type { ActionItem, FeedbackTag } from "../types";
 import { formatDistanceToNow } from "../utils/date";
@@ -102,7 +103,19 @@ interface ActionItemCardProps {
 }
 
 function ActionItemCard({ item }: ActionItemCardProps) {
+  const [resolved, setResolved] = useState(false);
   const p = priorityConfig(item.priority);
+
+  if (resolved) {
+    return (
+      <div className="flex gap-3 p-4 rounded-xl border border-emerald-900/40 bg-emerald-900/10 transition-all duration-200 animate-fade-in">
+        <div className="flex-1 text-xs text-emerald-400 font-medium flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+          Marked as resolved · {item.customerName}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -145,7 +158,10 @@ function ActionItemCard({ item }: ActionItemCardProps) {
               {tag}
             </span>
           ))}
-          <button className="ml-auto text-xs text-violet-400 hover:text-violet-300 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => { e.stopPropagation(); setResolved(true); }}
+            className="ml-auto text-xs text-violet-400 hover:text-violet-300 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
             Resolve <ChevronRight size={11} />
           </button>
         </div>
@@ -160,9 +176,20 @@ interface ActionQueueProps {
   items: ActionItem[];
 }
 
+type FilterMode = "all" | "critical" | "sla";
+
 export function ActionQueue({ items }: ActionQueueProps) {
+  const [filter, setFilter] = useState<FilterMode>("all");
+
   const slaBreached = items.filter((i) => i.slaBreached).length;
-  const sorted = [...items].sort((a, b) => {
+
+  const filtered = items.filter((i) => {
+    if (filter === "critical") return i.priority === "critical";
+    if (filter === "sla") return i.slaBreached;
+    return true;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
     const prio = { critical: 0, high: 1, medium: 2, low: 3 };
     if (a.slaBreached !== b.slaBreached) return a.slaBreached ? -1 : 1;
     return prio[a.priority] - prio[b.priority];
@@ -190,23 +217,31 @@ export function ActionQueue({ items }: ActionQueueProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <select className="text-xs bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-2.5 py-1.5 cursor-pointer">
-            <option>All priorities</option>
-            <option>Critical only</option>
-            <option>SLA breached</option>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as FilterMode)}
+            className="text-xs bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-2.5 py-1.5 cursor-pointer"
+          >
+            <option value="all">All priorities</option>
+            <option value="critical">Critical only</option>
+            <option value="sla">SLA breached</option>
           </select>
         </div>
       </div>
 
       <div className="flex flex-col gap-2 overflow-y-auto max-h-[520px] pr-1">
-        {sorted.map((item) => (
-          <ActionItemCard key={item.id} item={item} />
-        ))}
+        {sorted.length === 0 ? (
+          <p className="text-xs text-slate-500 text-center py-8">
+            No items match this filter.
+          </p>
+        ) : (
+          sorted.map((item) => <ActionItemCard key={item.id} item={item} />)
+        )}
       </div>
 
       <div className="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between">
         <span className="text-xs text-slate-500">
-          Showing {items.length} open items
+          Showing {sorted.length} of {items.length} open items
         </span>
         <button className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors">
           View all issues <ChevronRight size={12} />

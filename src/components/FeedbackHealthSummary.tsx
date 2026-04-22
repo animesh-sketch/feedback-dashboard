@@ -35,7 +35,7 @@ function KPICard({ metric, icon, accentColor, bgGlow }: KPICardProps) {
 
   return (
     <div
-      className={`card card-hover p-5 flex flex-col gap-4 relative overflow-hidden`}
+      className={`card card-hover p-5 flex flex-col gap-4 relative overflow-hidden animate-fade-in`}
       style={{ animationFillMode: "both" }}
     >
       {/* Subtle glow background */}
