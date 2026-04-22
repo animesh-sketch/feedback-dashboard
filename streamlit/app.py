@@ -3459,9 +3459,13 @@ def _compute_qa_score(pv):
             for p in tier["params"]:
                 if p["weight"] > 0:
                     try:
-                        s = float(str(pv.get(p["col"], "")).strip())
-                        ws += s * p["weight"]
-                        tw += p["weight"] * 2.0
+                        _raw = str(pv.get(p["col"], "")).strip()
+                        if _raw.upper() == "NA" or _raw == "":
+                            pass  # NA = not applicable, skip without penalty
+                        else:
+                            s = float(_raw)
+                            ws += s * p["weight"]
+                            tw += p["weight"] * 2.0
                     except (ValueError, TypeError):
                         pass
         bot_score = round(ws / tw * 100, 2) if tw > 0 else 0.0
@@ -5489,6 +5493,139 @@ def _render_sense_insights(df, fname, sheets=None):
                     st.rerun()
 
 
+def _render_param_manager():
+    """Parameter manager: view/edit weights, add custom params, auto-generate legend."""
+    if "sense_custom_audit_params" not in st.session_state:
+        st.session_state["sense_custom_audit_params"] = []
+
+    with st.expander("⚙️ Parameter Manager — Add / Edit Parameters & Weights", expanded=False):
+        st.markdown("""
+<style>
+.pm-table { width:100%; border-collapse:collapse; font-size:0.72rem; }
+.pm-table th { background:#f0f5ff; color:#2a5080; font-weight:700; padding:6px 10px;
+               text-align:left; border-bottom:2px solid #ddeeff; font-size:0.65rem;
+               letter-spacing:0.06em; text-transform:uppercase; }
+.pm-table td { padding:5px 10px; border-bottom:1px solid #edf2fb; color:#0d1d3a; vertical-align:middle; }
+.pm-tier-chip { display:inline-block; border-radius:4px; padding:2px 8px; font-size:0.58rem;
+                font-weight:700; letter-spacing:0.05em; text-transform:uppercase; }
+</style>""", unsafe_allow_html=True)
+
+        # ── Built-in params table ──────────────────────────────────────────────
+        st.markdown('<div style="font-size:0.7rem;font-weight:700;color:#2a5080;margin-bottom:6px;">Built-in Parameters</div>', unsafe_allow_html=True)
+        _tier_colors = {"Critical": "#dc2626", "Important": "#f59e0b", "Quality": "#7c3aed"}
+        _rows = ""
+        for _tier in _QA_SCHEMA["tiers"]:
+            _tc = _tier["color"]
+            _tlabel = _tier["label"]
+            for _p in _tier["params"]:
+                _wt_pct = f"{int(_p['weight']*100)}%" if _p["weight"] > 0 else ("FATAL" if _p.get("fatal") else "0%")
+                _opts = " · ".join(_p["options"])
+                _rows += (
+                    f'<tr><td>{_p["col"]}</td>'
+                    f'<td><span class="pm-tier-chip" style="background:{_tc}18;color:{_tc};">{_tlabel}</span></td>'
+                    f'<td style="font-weight:700;color:#3d8ef5;">{_wt_pct}</td>'
+                    f'<td style="color:#7a99bb;">{_opts} · <span style="color:#e0368e;">NA</span></td></tr>'
+                )
+        for _ip in _QA_SCHEMA["intelligence"]:
+            _opts = " · ".join(_ip["options"])
+            _rows += (
+                f'<tr><td>{_ip["icon"]} {_ip["col"]}</td>'
+                f'<td><span class="pm-tier-chip" style="background:rgba(224,54,142,0.1);color:#e0368e;">🧠 Intelligence</span></td>'
+                f'<td style="font-weight:700;color:#e0368e;">{_ip["weight"]}×</td>'
+                f'<td style="color:#7a99bb;">{_opts} · <span style="color:#e0368e;">NA</span></td></tr>'
+            )
+        # Custom params
+        for _cp in st.session_state["sense_custom_audit_params"]:
+            _opts = " · ".join(_cp.get("options", ["0","1","2"]))
+            _rows += (
+                f'<tr style="background:#fffbf5;"><td>⭐ {_cp["name"]}</td>'
+                f'<td><span class="pm-tier-chip" style="background:#0ebc6e18;color:#0ebc6e;">Custom</span></td>'
+                f'<td style="font-weight:700;color:#0ebc6e;">{_cp["weight"]}×</td>'
+                f'<td style="color:#7a99bb;">{_opts} · <span style="color:#e0368e;">NA</span></td></tr>'
+            )
+        st.markdown(
+            f'<table class="pm-table"><thead><tr>'
+            f'<th>Parameter</th><th>Tier</th><th>Weight</th><th>Options (NA always included)</th>'
+            f'</tr></thead><tbody>{_rows}</tbody></table>',
+            unsafe_allow_html=True,
+        )
+
+        st.markdown('<hr style="border:none;border-top:1px solid #edf2fb;margin:14px 0 10px;">', unsafe_allow_html=True)
+
+        # ── Add custom parameter ───────────────────────────────────────────────
+        st.markdown('<div style="font-size:0.7rem;font-weight:700;color:#0ebc6e;margin-bottom:8px;">➕ Add Custom Parameter</div>', unsafe_allow_html=True)
+        _pc1, _pc2, _pc3, _pc4 = st.columns([3, 1.5, 1.5, 1])
+        with _pc1:
+            _new_name = st.text_input("Parameter Name", placeholder="e.g. Empathy Score", key="pm_new_name")
+        with _pc2:
+            _new_type = st.selectbox("Scoring Type", ["0 / 1 / 2", "0 / 1", "Pass / Fail", "Custom"], key="pm_new_type")
+        with _pc3:
+            _new_weight = st.number_input("Weight", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key="pm_new_weight")
+        with _pc4:
+            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+            _add_btn = st.button("Add", key="pm_add_param", use_container_width=True, type="primary")
+
+        _type_map = {
+            "0 / 1 / 2":   ["0", "1", "2"],
+            "0 / 1":       ["0", "1"],
+            "Pass / Fail":  ["Pass", "Fail"],
+            "Custom":       ["0", "1", "2"],
+        }
+        if _add_btn and _new_name.strip():
+            _existing = [p["name"].lower() for p in st.session_state["sense_custom_audit_params"]]
+            if _new_name.strip().lower() not in _existing:
+                st.session_state["sense_custom_audit_params"].append({
+                    "name":    _new_name.strip(),
+                    "options": _type_map.get(_new_type, ["0","1","2"]),
+                    "weight":  round(float(_new_weight), 1),
+                })
+                st.success(f"Added '{_new_name.strip()}' — it will appear in the audit form below.")
+                st.rerun()
+            else:
+                st.warning("A parameter with that name already exists.")
+
+        # Remove custom params
+        if st.session_state["sense_custom_audit_params"]:
+            st.markdown('<div style="font-size:0.68rem;color:#5588bb;margin-top:10px;">Remove custom parameter:</div>', unsafe_allow_html=True)
+            _del_opts = ["—"] + [p["name"] for p in st.session_state["sense_custom_audit_params"]]
+            _del_sel = st.selectbox("", _del_opts, key="pm_del_sel", label_visibility="collapsed")
+            if _del_sel != "—":
+                if st.button(f"🗑 Remove '{_del_sel}'", key="pm_del_btn"):
+                    st.session_state["sense_custom_audit_params"] = [
+                        p for p in st.session_state["sense_custom_audit_params"] if p["name"] != _del_sel
+                    ]
+                    st.rerun()
+
+        # ── Auto-generated legend preview ─────────────────────────────────────
+        with st.expander("📋 Auto-Generated Legend Preview", expanded=False):
+            _leg_rows = ""
+            for _tier in _QA_SCHEMA["tiers"]:
+                for _p in _tier["params"]:
+                    _opts_str = ", ".join(_p["options"] + ["NA"])
+                    _leg_rows += f'<tr><td>{_p["col"]}</td><td>{_tier["label"]}</td><td>{int(_p["weight"]*100)}%</td><td>{_opts_str}</td></tr>'
+            for _ip in _QA_SCHEMA["intelligence"]:
+                _opts_str = ", ".join(_ip["options"] + ["NA"])
+                _leg_rows += f'<tr><td>{_ip["icon"]} {_ip["col"]}</td><td>Intelligence</td><td>{_ip["weight"]}×</td><td>{_opts_str}</td></tr>'
+            for _cp in st.session_state["sense_custom_audit_params"]:
+                _opts_str = ", ".join(_cp["options"] + ["NA"])
+                _leg_rows += f'<tr><td>⭐ {_cp["name"]}</td><td>Custom</td><td>{_cp["weight"]}×</td><td>{_opts_str}</td></tr>'
+            st.markdown(
+                f'<table class="pm-table"><thead><tr><th>Parameter</th><th>Tier</th><th>Weight</th><th>Options</th></tr></thead>'
+                f'<tbody>{_leg_rows}</tbody></table>',
+                unsafe_allow_html=True,
+            )
+            # CSV download
+            import io as _io
+            _leg_csv_lines = ["Parameter,Tier,Weight,Options"]
+            for _tier in _QA_SCHEMA["tiers"]:
+                for _p in _tier["params"]:
+                    _leg_csv_lines.append(f'"{_p["col"]}","{_tier["label"]}","{int(_p["weight"]*100)}%","{", ".join(_p["options"] + ["NA"])}"')
+            for _cp in st.session_state["sense_custom_audit_params"]:
+                _leg_csv_lines.append(f'"{_cp["name"]}","Custom","{_cp["weight"]}×","{", ".join(_cp["options"] + ["NA"])}"')
+            st.download_button("⬇ Download Legend CSV", "\n".join(_leg_csv_lines).encode(),
+                               "audit_legend.csv", "text/csv", key="pm_dl_legend")
+
+
 def _render_audit_form(legend_map, fname):
     """Convin Sense QA audit form — exact Convin.ai schema, all fields mandatory, auto-scoring."""
     if "sense_audit_log" not in st.session_state:
@@ -5560,7 +5697,44 @@ def _render_audit_form(legend_map, fname):
     _tier_html += '</div>'
     st.markdown(_tier_html, unsafe_allow_html=True)
 
+    # ── Parameter manager (outside form) ─────────────────────────────────────
+    _render_param_manager()
+
     # ── Audit form ────────────────────────────────────────────────────────────
+    st.markdown("""
+<style>
+/* Tick-mark style for QA scoring radio buttons */
+div[data-testid="stRadio"] > div[role="radiogroup"] {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    margin-top: 4px !important;
+}
+div[data-testid="stRadio"] > div[role="radiogroup"] > label {
+    background: rgba(61,130,245,0.06) !important;
+    border: 1.5px solid rgba(61,130,245,0.22) !important;
+    border-radius: 8px !important;
+    padding: 5px 14px !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: background 0.15s, border-color 0.15s !important;
+    min-width: 44px !important;
+    text-align: center !important;
+}
+div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {
+    background: rgba(61,130,245,0.13) !important;
+    border-color: rgba(61,130,245,0.5) !important;
+}
+div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) {
+    background: linear-gradient(108deg,#3d8ef5,#e0368e) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+}
+div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
+    display: none !important;
+}
+</style>""", unsafe_allow_html=True)
     st.markdown('<div class="section-chip">✍️ New QA Audit — Convin.ai Standard Sheet</div>', unsafe_allow_html=True)
 
     with st.form("qa_audit_form_v2", clear_on_submit=True):
@@ -5621,18 +5795,21 @@ def _render_audit_form(legend_map, fname):
                 unsafe_allow_html=True,
             )
 
-            # Tier params (3 per row)
+            # Tier params (2 per row for tick-mark radio layout)
             _params = _tier["params"]
-            for _ri in range(0, len(_params), 3):
-                _batch = _params[_ri: _ri + 3]
+            for _ri in range(0, len(_params), 2):
+                _batch = _params[_ri: _ri + 2]
                 _wcols = st.columns(len(_batch))
                 for _wc, _p in zip(_wcols, _batch):
                     with _wc:
-                        _wt  = f"  ({int(_p['weight']*100)}%)" if _p["weight"] > 0 else ("  ⚠️ FATAL" if _p.get("fatal") else "")
+                        _wt  = f" ({int(_p['weight']*100)}%)" if _p["weight"] > 0 else (" ⚠️ FATAL" if _p.get("fatal") else "")
                         _key = f"af_t_{_p['col'][:22].replace(' ','_').replace('/','_').replace('(','').replace(')','')}"
-                        _pv[_p["col"]] = st.selectbox(
+                        _tick_opts = _p["options"] + ["NA"]
+                        _pv[_p["col"]] = st.radio(
                             f"{_p['col']}{_wt} *",
-                            ["— select —"] + _p["options"],
+                            _tick_opts,
+                            index=len(_tick_opts) - 1,
+                            horizontal=True,
                             key=_key,
                             help=_p.get("guide", ""),
                         )
@@ -5648,12 +5825,15 @@ def _render_audit_form(legend_map, fname):
                     f'</div>',
                     unsafe_allow_html=True,
                 )
-                _icol1, _icol2, _icol3 = st.columns(3)
+                _icol1, _icol2 = st.columns(2)
                 with _icol1:
                     _ikey = f"af_i_{_ip['col'][:20].replace(' ','_')}"
-                    _pv[_ip["col"]] = st.selectbox(
+                    _itick_opts = _ip["options"] + ["NA"]
+                    _pv[_ip["col"]] = st.radio(
                         f"{_ip['icon']} {_ip['col']} *",
-                        ["— select —"] + _ip["options"],
+                        _itick_opts,
+                        index=len(_itick_opts) - 1,
+                        horizontal=True,
                         key=_ikey,
                         help=_ip.get("guide", _ip["desc"]),
                     )
@@ -5693,8 +5873,9 @@ def _render_audit_form(legend_map, fname):
             if not _f_pm_csm.strip():
                 _errs.append("PM / CSM is required")
             for _col, _val in _pv.items():
-                if _val == "— select —":
+                if not _val or str(_val).strip() == "— select —":
                     _errs.append(f"'{_col}' must be selected")
+                # NA is accepted as "not applicable" — no error
             if _f_lead_stage == "— select —":
                 _errs.append("Lead Stage must be selected")
             for _fn, _fv in [("Product Interest", _f_pi), ("Follow-up Readiness", _f_fr), ("DM Confirmed", _f_dm)]:
