@@ -4094,13 +4094,14 @@ def _render_sense_scorecard(sheets, legend_map):
 
         # Apply filters
         _sc_total_before = len(audit_df)
-        if _sc_cli  != "All Clients"   and "Client"       in audit_df.columns: audit_df = audit_df[audit_df["Client"].astype(str)==_sc_cli]
-        if _sc_camp != "All Campaigns" and "Campaign Name" in audit_df.columns: audit_df = audit_df[audit_df["Campaign Name"].astype(str)==_sc_camp]
-        if _sc_qa   != "All QA"        and "QA"            in audit_df.columns: audit_df = audit_df[audit_df["QA"].astype(str)==_sc_qa]
+        if _sc_cli  != "All Clients"   and "Client"       in audit_df.columns: audit_df = audit_df[audit_df["Client"].astype(str)==_sc_cli].copy()
+        if _sc_camp != "All Campaigns" and "Campaign Name" in audit_df.columns: audit_df = audit_df[audit_df["Campaign Name"].astype(str)==_sc_camp].copy()
+        if _sc_qa   != "All QA"        and "QA"            in audit_df.columns: audit_df = audit_df[audit_df["QA"].astype(str)==_sc_qa].copy()
         if _sc_dc and _sc_from is not None and _sc_to is not None:
             try:
+                audit_df = audit_df.copy()
                 audit_df["_sc_date_tmp"] = pd.to_datetime(audit_df[_sc_dc], errors="coerce")
-                audit_df = audit_df[(audit_df["_sc_date_tmp"].dt.date >= _sc_from) & (audit_df["_sc_date_tmp"].dt.date <= _sc_to)]
+                audit_df = audit_df[(audit_df["_sc_date_tmp"].dt.date >= _sc_from) & (audit_df["_sc_date_tmp"].dt.date <= _sc_to)].copy()
                 audit_df = audit_df.drop(columns=["_sc_date_tmp"])
             except Exception:
                 pass
@@ -4492,7 +4493,8 @@ def _render_sense_scorecard(sheets, legend_map):
         for _tier2 in _QA_SCHEMA["tiers"]:
             for _p2 in _tier2["params"]:
                 if _p2["col"] in audit_df.columns:
-                    _pmax2 = max(int(o) for o in _p2["options"] if o != "NA")
+                    _pmax2_vals = [int(o) for o in _p2["options"] if o not in ("NA",) and str(o).lstrip("-").isdigit()]
+                    _pmax2 = max(_pmax2_vals) if _pmax2_vals else 2
                     _pv2 = audit_df[_p2["col"]].astype(str).str.strip()
                     _pv2 = _pv2[~_pv2.str.upper().isin(["NA",""])]
                     _pn2 = pd.to_numeric(_pv2, errors="coerce").dropna()
