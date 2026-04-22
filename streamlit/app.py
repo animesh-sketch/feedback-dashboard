@@ -1067,6 +1067,79 @@ def _render_period_content(period: str):
 # ─── Overview ─────────────────────────────────────────────────────────────────
 
 def render_overview():
+    # ── Two-window landing cards ──────────────────────────────────────────────
+    st.markdown("""
+<style>
+.landing-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:28px; }
+@media(max-width:720px){ .landing-grid { grid-template-columns:1fr; } }
+.landing-card {
+    border-radius:18px; padding:32px 30px 26px;
+    position:relative; overflow:hidden; min-height:230px;
+    display:flex; flex-direction:column; justify-content:space-between;
+}
+.landing-card-cdl {
+    background:linear-gradient(135deg,#071428 0%,#0d2040 55%,#0d1d3a 100%);
+    border:1px solid rgba(61,130,245,0.22);
+}
+.landing-card-sense {
+    background:linear-gradient(135deg,#180828 0%,#1a0d30 50%,#0d1d3a 100%);
+    border:1px solid rgba(224,54,142,0.28);
+}
+.landing-card::before {
+    content:""; position:absolute; top:-60px; right:-60px;
+    width:260px; height:260px; border-radius:50%; pointer-events:none;
+}
+.landing-card-cdl::before { background:radial-gradient(circle,rgba(61,130,245,0.14) 0%,transparent 68%); }
+.landing-card-sense::before { background:radial-gradient(circle,rgba(224,54,142,0.15) 0%,transparent 68%); }
+.lc-icon { font-size:2rem; margin-bottom:12px; }
+.lc-title { font-size:1.25rem; font-weight:900; color:#e8f0fc; letter-spacing:-0.02em; margin-bottom:5px; }
+.lc-sub   { font-size:0.74rem; font-weight:600; color:rgba(180,210,255,0.6); margin-bottom:14px; }
+.lc-pills { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px; }
+.lc-pill  { font-size:0.64rem; font-weight:600; color:rgba(200,225,255,0.55);
+            background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09);
+            border-radius:99px; padding:3px 10px; white-space:nowrap; }
+</style>
+<div class="landing-grid">
+  <div class="landing-card landing-card-cdl">
+    <div>
+      <div class="lc-icon">📊</div>
+      <div class="lc-title">Convin Data Labs</div>
+      <div class="lc-sub">Insights &amp; Email Intelligence Platform</div>
+      <div class="lc-pills">
+        <span class="lc-pill">📬 Campaign tracking</span>
+        <span class="lc-pill">⭐ CSAT feedback</span>
+        <span class="lc-pill">📧 Email delivery</span>
+        <span class="lc-pill">🏢 Client management</span>
+        <span class="lc-pill">📈 KPI monitoring</span>
+      </div>
+    </div>
+    <div style="font-size:0.7rem;color:rgba(150,190,255,0.5);">Currently viewing ↓</div>
+  </div>
+  <div class="landing-card landing-card-sense" id="sense-landing-card">
+    <div>
+      <div class="lc-icon">🎯</div>
+      <div class="lc-title">Sense Audit</div>
+      <div class="lc-sub">Real-time QA &amp; Bot Intelligence Engine</div>
+      <div class="lc-pills">
+        <span class="lc-pill">🤖 Bot scoring</span>
+        <span class="lc-pill">🧠 Flow intelligence</span>
+        <span class="lc-pill">👤 Auditor leaderboard</span>
+        <span class="lc-pill">📊 Tier-based QA</span>
+        <span class="lc-pill">⚡ Auto-fail detection</span>
+      </div>
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
+
+    _lc_left, _lc_right = st.columns(2)
+    with _lc_right:
+        if st.button("🎯 Open Sense Audit →", key="home_open_sense",
+                     use_container_width=True, type="primary"):
+            st.session_state["current_page"] = "Sense Audit"
+            st.rerun()
+
+    st.markdown('<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:4px 0 20px;">', unsafe_allow_html=True)
+
     st.markdown("""<div class="page-header">
         <div class="page-header-icon">📊</div>
         <div class="page-header-text">
@@ -3052,6 +3125,3210 @@ def render_quality_engine():
         </div>""", unsafe_allow_html=True)
 
 
+# ─── Convin Sense ─────────────────────────────────────────────────────────────
+
+_SENSE_CACHE     = os.path.join(os.path.dirname(__file__), ".sense_cache.pkl")
+_SENSE_PROTECTED = os.path.join(os.path.dirname(__file__), ".sense_protected.pkl")
+_SENSE_AUDIT_LOG = os.path.join(os.path.dirname(__file__), ".sense_audit_log.pkl")
+
+# ── Convin Sense built-in intelligence parameters ──────────────────────────
+# These 3 params are DEFECT metrics: lower severity = higher (better) score.
+# They are automatically injected into every audit sheet if not already present.
+_SENSE_BUILTIN_PARAMS = {
+    "Flow Issue": {
+        "description": "Measures conversation breakdown / logical gaps",
+        "options":     ["None", "Minor", "Major", "Critical"],
+        "inverted":    True,   # None=best, Critical=worst
+        "weight":      1.5,
+        "color":       "#ef4444",
+        "icon":        "🔍",
+    },
+    "Bot Restarted Conversation": {
+        "description": "Tracks forced restarts / resets",
+        "options":     ["No", "Once", "Multiple"],
+        "inverted":    True,
+        "weight":      1.2,
+        "color":       "#f59e0b",
+        "icon":        "🔁",
+    },
+    "Bot Repetition": {
+        "description": "Captures redundant or looping responses",
+        "options":     ["None", "1–2 times", "3–5 times", "5+ times"],
+        "inverted":    True,
+        "weight":      1.0,
+        "color":       "#7c3aed",
+        "icon":        "🔄",
+    },
+}
+_DEFAULT_PARAM_WEIGHT = 1.0   # weight for any legend param not listed above
+
+# ── Convin Sense QA Audit Schema (Convin.ai standard sheet) ──────────────────
+_QA_SCHEMA = {
+    "tiers": [
+        {
+            "label": "TIER 1 · CRITICAL",
+            "weight_pct": 61,
+            "color": "#dc2626",
+            "params": [
+                {
+                    "col": "Disposition Accuracy",
+                    "weight": 0.24,
+                    "options": ["0", "1", "2"],
+                    "fatal": False,
+                    "guide": "2 = Correctly reflects outcome, lead status & entities  |  1 = Minor mismatch  |  0 = Does not align with conversation outcome",
+                },
+                {
+                    "col": "Context Passing",
+                    "weight": 0.19,
+                    "options": ["0", "1", "2"],
+                    "fatal": False,
+                    "guide": "2 = Context maintained across all turns / channels  |  1 = Context passed but some info lost  |  0 = Context not maintained; repetitive/irrelevant questions",
+                },
+                {
+                    "col": "Message Content",
+                    "weight": 0.10,
+                    "options": ["0", "1", "2"],
+                    "fatal": False,
+                    "guide": "2 = Bot fully understood intent and responded appropriately  |  1 = Partially understood  |  0 = Bot misunderstood or ignored customer intent",
+                },
+                {
+                    "col": "Follow-up in Specified Time",
+                    "weight": 0.08,
+                    "options": ["0", "1", "2"],
+                    "fatal": False,
+                    "guide": "2 = Follow-up within SLA  |  1 = Completed but exceeded SLA timeline  |  0 = No follow-up attempt made",
+                },
+            ],
+        },
+        {
+            "label": "TIER 2 · IMPORTANT",
+            "weight_pct": 28,
+            "color": "#f59e0b",
+            "params": [
+                {
+                    "col": "Dead Air/Blank Space",
+                    "weight": 0.07,
+                    "options": ["0", "1", "2"],
+                    "fatal": False,
+                    "guide": "2 = No silence/awkward pauses  |  1 = Short acceptable silence 4–5s  |  0 = Long silence >5s; call appeared stuck",
+                },
+                {
+                    "col": "Repeated Calls",
+                    "weight": 0.07,
+                    "options": ["0", "2"],
+                    "fatal": False,
+                    "guide": "2 = No unnecessary repeat calls  |  0 = Multiple calls placed to customer within short duration",
+                },
+                {
+                    "col": "Introduction",
+                    "weight": 0.06,
+                    "options": ["0", "1", "2"],
+                    "fatal": False,
+                    "guide": "2 = Bot introduced itself, company name & purpose  |  1 = Present but key details missing  |  0 = No introduction provided",
+                },
+                {
+                    "col": "Background Noise",
+                    "weight": 0.04,
+                    "options": ["0", "2"],
+                    "fatal": False,
+                    "guide": "2 = Audio clear, no background noise  |  0 = Background noise affected clarity",
+                },
+                {
+                    "col": "Transcription Issues",
+                    "weight": 0.04,
+                    "options": ["0", "2"],
+                    "fatal": False,
+                    "guide": "2 = Transcription accurate and complete  |  0 = Inaccuracies impacted audit reliability",
+                },
+            ],
+        },
+        {
+            "label": "TIER 3 · QUALITY",
+            "weight_pct": 11,
+            "color": "#3d8ef5",
+            "params": [
+                {
+                    "col": "Language Switch",
+                    "weight": 0.03,
+                    "options": ["0", "1", "2"],
+                    "fatal": False,
+                    "guide": "2 = Switched language correctly per customer preference  |  1 = No switch required  |  0 = Failed to switch despite customer indication",
+                },
+                {
+                    "col": "Script Issue in Transcript",
+                    "weight": 0.03,
+                    "options": ["0", "2"],
+                    "fatal": False,
+                    "guide": "2 = Approved script followed correctly  |  0 = Bot deviated from script / used incorrect phrasing",
+                },
+                {
+                    "col": "TTS Issues (Voice)",
+                    "weight": 0.03,
+                    "options": ["0", "2"],
+                    "fatal": False,
+                    "guide": "2 = No voice quality issues  |  0 = Tempo inconsistency, sudden voice change, giggles, or volume issues",
+                },
+                {
+                    "col": "Template Issues",
+                    "weight": 0.01,
+                    "options": ["0", "2"],
+                    "fatal": False,
+                    "guide": "2 = Correct template followed  |  0 = Incorrect or outdated template used",
+                },
+                {
+                    "col": "Pronunciation Issue",
+                    "weight": 0.01,
+                    "options": ["0", "2"],
+                    "fatal": False,
+                    "guide": "2 = Pronunciation clear and understandable  |  0 = Issues impacted customer understanding",
+                },
+                {
+                    "col": "Abrupt Disconnection",
+                    "weight": 0.00,
+                    "options": ["0", "Fatal"],
+                    "fatal": True,
+                    "guide": "0 = Call ended smoothly as per designed flow  |  Fatal = Call ended abruptly before logical closure (Auto-Fail)",
+                },
+                {
+                    "col": "NBA Not Executed",
+                    "weight": 0.00,
+                    "options": ["0", "2"],
+                    "fatal": False,
+                    "guide": "2 = NBA executed correctly or not applicable  |  0 = NBA was generated but not executed by bot",
+                },
+            ],
+        },
+    ],
+    # Convin Sense intelligence parameters — scored on 0–2 scale, inverted
+    "intelligence": [
+        {
+            "col":       "Flow Issue",
+            "weight":    1.5,
+            "options":   ["None", "Minor", "Major", "Critical"],
+            "score_map": {"None": 2, "Minor": 1, "Major": 0, "Critical": 0},
+            "inverted":  True,
+            "color":     "#ef4444",
+            "icon":      "🔍",
+            "desc":      "Measures conversation breakdown / logical gaps",
+            "guide":     "None = No flow issue (2)  |  Minor = Small gap (1)  |  Major = Significant breakdown (0)  |  Critical = Complete failure (0)",
+        },
+        {
+            "col":       "Bot Restarted Conversation",
+            "weight":    1.2,
+            "options":   ["No", "Once", "Multiple"],
+            "score_map": {"No": 2, "Once": 1, "Multiple": 0},
+            "inverted":  True,
+            "color":     "#f59e0b",
+            "icon":      "🔁",
+            "desc":      "Tracks forced restarts / resets",
+            "guide":     "No = No restart (2)  |  Once = Restarted once (1)  |  Multiple = Restarted multiple times (0)",
+        },
+        {
+            "col":       "Bot Repetition",
+            "weight":    1.0,
+            "options":   ["None", "1–2 times", "3–5 times", "5+ times"],
+            "score_map": {"None": 2, "1–2 times": 1, "3–5 times": 0, "5+ times": 0},
+            "inverted":  True,
+            "color":     "#7c3aed",
+            "icon":      "🔄",
+            "desc":      "Captures redundant or looping responses",
+            "guide":     "None = No repetition (2)  |  1–2 times = Acceptable (1)  |  3–5 times = Issue (0)  |  5+ times = Severe (0)",
+        },
+    ],
+    "lead_stage_opts":   ["Cold", "Warm", "Hot", "Not Interested", "RNR"],
+    "lead_stage_scores": {"Cold": 30, "Warm": 70, "Hot": 90, "Not Interested": 0, "RNR": 10},
+    "lead_score_cols":   ["Lead Stage", "Product Interest (0/1/2)", "Follow-up Readiness (0/1/2)", "DM Confirmed (0/1/2)"],
+    "auto_cols":         ["Lead Score", "Lead Composite", "Bot Score", "Intelligence Score", "Status", "Fatal?"],
+    "metadata_cols":     ["Audit Date", "Auditor", "Client", "Campaign Name", "PM / CSM", "Lead Number", "Lead Link", "Phone Number", "Conversation Link"],
+    # Status bands: Bot Score ≥ 80 Pass | 60–79 Needs Review | < 60 Fail | Fatal → Auto-Fail
+    "status_bands": [
+        {"min": 80,  "label": "Pass",         "color": "#0ebc6e"},
+        {"min": 60,  "label": "Needs Review", "color": "#f59e0b"},
+        {"min":  0,  "label": "Fail",         "color": "#dc2626"},
+        {"min": -1,  "label": "Auto-Fail",    "color": "#7f1d1d"},
+    ],
+}
+
+
+def _qa_status(bot_score, is_fatal):
+    if is_fatal:
+        return "Auto-Fail"
+    for band in _QA_SCHEMA["status_bands"]:
+        if bot_score >= band["min"]:
+            return band["label"]
+    return "Fail"
+
+
+def _qa_status_color(status):
+    for band in _QA_SCHEMA["status_bands"]:
+        if band["label"] == status:
+            return band["color"]
+    return "#aabbcc"
+
+
+def _compute_qa_score(pv):
+    """Compute Bot Score, Intelligence Score, Status, Fatal?, Lead Score, Lead Composite."""
+    # Fatal detection
+    is_fatal = any(
+        p.get("fatal") and str(pv.get(p["col"], "")).strip() == "Fatal"
+        for tier in _QA_SCHEMA["tiers"]
+        for p in tier["params"]
+    )
+
+    # Bot Score (QA tier params only — weights sum to 1.0, max score per param = 2)
+    if is_fatal:
+        bot_score = 0.0
+    else:
+        ws = tw = 0.0
+        for tier in _QA_SCHEMA["tiers"]:
+            for p in tier["params"]:
+                if p["weight"] > 0:
+                    try:
+                        s = float(str(pv.get(p["col"], "")).strip())
+                        ws += s * p["weight"]
+                        tw += p["weight"] * 2.0
+                    except (ValueError, TypeError):
+                        pass
+        bot_score = round(ws / tw * 100, 2) if tw > 0 else 0.0
+
+    # Intelligence Score (Convin Sense params — separate 0–100 metric)
+    _iparts = []
+    for _ip in _QA_SCHEMA["intelligence"]:
+        v = str(pv.get(_ip["col"], "")).strip()
+        s = _ip["score_map"].get(v)
+        if s is not None:
+            _iparts.append((s, _ip["weight"]))
+    _itw = sum(w for _, w in _iparts)
+    intel_score = round(sum(s * w for s, w in _iparts) / (_itw * 2.0) * 100, 1) if _itw > 0 else None
+
+    status = _qa_status(bot_score, is_fatal)
+
+    # Lead composite
+    lead_score_raw = _QA_SCHEMA["lead_stage_scores"].get(str(pv.get("Lead Stage", "")), None)
+    lead_composite = None
+    if lead_score_raw is not None:
+        try:
+            _ls = (int(pv.get("Product Interest (0/1/2)", 0) or 0) +
+                   int(pv.get("Follow-up Readiness (0/1/2)", 0) or 0) +
+                   int(pv.get("DM Confirmed (0/1/2)", 0) or 0))
+            lead_composite = round((lead_score_raw + _ls / 6 * 100) / 2, 1)
+        except (ValueError, TypeError):
+            pass
+
+    return {
+        "Bot Score":          bot_score,
+        "Intelligence Score": intel_score if intel_score is not None else "",
+        "Status":             status,
+        "Fatal?":             "YES" if is_fatal else "NO",
+        "Lead Score":         lead_score_raw if lead_score_raw is not None else "",
+        "Lead Composite":     lead_composite if lead_composite is not None else "",
+    }
+
+
+def _builtin_cfg(col_name):
+    """Return built-in config dict if col_name matches a Convin Sense param."""
+    _cl = str(col_name).strip().lower()
+    for k, cfg in _SENSE_BUILTIN_PARAMS.items():
+        if k.lower() in _cl or _cl in k.lower():
+            return cfg
+    return None
+
+def _merge_builtin_params(legend_map):
+    """Return legend_map enriched with Convin Sense built-in params."""
+    merged = dict(legend_map)
+    for param, cfg in _SENSE_BUILTIN_PARAMS.items():
+        if not any(param.lower() in k.lower() or k.lower() in param.lower()
+                   for k in merged):
+            merged[param] = cfg["options"]
+    return merged
+
+def _is_protected_sheet(name):
+    _l = name.strip().lower()
+    return any(k in _l for k in ("legend", "audit"))
+
+def _sense_save(sheets, fname):
+    try:
+        import pickle
+        with open(_SENSE_CACHE, "wb") as _f:
+            pickle.dump({"sheets": sheets, "fname": fname}, _f)
+    except Exception:
+        pass
+
+def _sense_save_protected(sheets, fname):
+    """Save only Legend + Audit sheets to a separate, clear-proof cache."""
+    try:
+        import pickle
+        protected = {k: v for k, v in sheets.items() if _is_protected_sheet(k)}
+        if protected:
+            with open(_SENSE_PROTECTED, "wb") as _f:
+                pickle.dump({"sheets": protected, "fname": fname}, _f)
+    except Exception:
+        pass
+
+def _sense_load():
+    try:
+        import pickle
+        if os.path.exists(_SENSE_CACHE):
+            with open(_SENSE_CACHE, "rb") as _f:
+                return pickle.load(_f)
+    except Exception:
+        pass
+    return None
+
+def _sense_load_protected():
+    try:
+        import pickle
+        if os.path.exists(_SENSE_PROTECTED):
+            with open(_SENSE_PROTECTED, "rb") as _f:
+                return pickle.load(_f)
+    except Exception:
+        pass
+    return None
+
+def _sense_clear_cache():
+    """Clear only the regular cache. Protected sheets are NEVER deleted here."""
+    try:
+        if os.path.exists(_SENSE_CACHE):
+            os.remove(_SENSE_CACHE)
+    except Exception:
+        pass
+
+def _audit_log_save(records):
+    try:
+        import pickle
+        with open(_SENSE_AUDIT_LOG, "wb") as _f:
+            pickle.dump(records, _f)
+    except Exception:
+        pass
+
+def _audit_log_load():
+    try:
+        import pickle
+        if os.path.exists(_SENSE_AUDIT_LOG):
+            with open(_SENSE_AUDIT_LOG, "rb") as _f:
+                data = pickle.load(_f)
+                if data:
+                    return data
+    except Exception:
+        pass
+    return list(_SEED_AUDIT_RECORDS)
+
+
+# ── Seed demo records (25 audits — "Animesh test" as auditor + client) ─────────
+# Bot Score formula: Σ(score×weight) / (Σweight×2) × 100  (total weight=1.0 → tw=2.0)
+# Profiles pre-computed:
+#   P100: all 2s                              → 100.0  Pass
+#   P88:  DA=1                                →  88.0  Pass
+#   P90:  CP=1                                →  90.5  Pass
+#   P84:  DA=1,FT=1                           →  84.0  Pass
+#   P78:  DA=1,CP=1                           →  78.5  Needs Review
+#   P73:  DA=1,CP=1,MC=1                      →  73.5  Needs Review
+#   P66:  DA=0,CP=1                           →  66.5  Needs Review
+#   P53:  DA=0,CP=1,MC=1,FT=1,RC=0,Intro=1   →  53.0  Fail
+#   P0:   Abrupt Disconnection=Fatal          →   0.0  Auto-Fail
+def _mk(auditor, date, client, campaign, pm, agent_tag,
+        da, cp, mc, ft, dair, rc, intro, bn, trans, ls, scr, tts, tmpl, pron, disc, nba,
+        fi, brc, br,
+        lead_stage, pi, fr, dm, notes=""):
+    """Build a fully computed QA record dict."""
+    pv = {
+        "Disposition Accuracy": str(da),
+        "Context Passing": str(cp),
+        "Message Content": str(mc),
+        "Follow-up in Specified Time": str(ft),
+        "Dead Air/Blank Space": str(dair),
+        "Repeated Calls": str(rc),
+        "Introduction": str(intro),
+        "Background Noise": str(bn),
+        "Transcription Issues": str(trans),
+        "Language Switch": str(ls),
+        "Script Issue in Transcript": str(scr),
+        "TTS Issues (Voice)": str(tts),
+        "Template Issues": str(tmpl),
+        "Pronunciation Issue": str(pron),
+        "Abrupt Disconnection": str(disc),
+        "NBA Not Executed": str(nba),
+        "Flow Issue": fi,
+        "Bot Restarted Conversation": brc,
+        "Bot Repetition": br,
+        "Lead Stage": lead_stage,
+        "Product Interest (0/1/2)": str(pi),
+        "Follow-up Readiness (0/1/2)": str(fr),
+        "DM Confirmed (0/1/2)": str(dm),
+    }
+    computed = _compute_qa_score(pv)
+    return {
+        "Audit Date": date,
+        "Auditor": auditor,
+        "Client": client,
+        "Campaign Name": campaign,
+        "PM / CSM": pm,
+        "Lead Number": f"LD-{agent_tag}",
+        "Lead Link": "",
+        "Phone Number": "",
+        "Conversation Link": "",
+        **pv,
+        "Lead Score": computed["Lead Score"],
+        "Lead Composite": computed["Lead Composite"],
+        "Bot Score": computed["Bot Score"],
+        "Intelligence Score": computed["Intelligence Score"],
+        "Status": computed["Status"],
+        "Fatal?": computed["Fatal?"],
+        "Notes": notes,
+    }
+
+
+_SEED_AUDIT_RECORDS = [
+    # ── Animesh test audits (Pass) ─────────────────────────────────────────────
+    _mk("Animesh test","2026-04-22","Animesh test","Q2 Lead Gen","Animesh test","001",
+        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
+        "Hot",2,2,2,"Perfect audit — all params maxed"),
+    _mk("Animesh test","2026-04-21","Animesh test","Q2 Lead Gen","Animesh test","002",
+        1,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
+        "Hot",2,2,2),
+    _mk("Animesh test","2026-04-20","Animesh test","Summer Outreach","Animesh test","003",
+        2,1,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","Minor","No","None",
+        "Warm",2,2,1),
+    _mk("Animesh test","2026-04-19","Animesh test","Summer Outreach","Animesh test","004",
+        2,2,2,1,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
+        "Hot",2,1,2),
+    _mk("Animesh test","2026-04-18","Animesh test","Cold Re-engage","Animesh test","005",
+        2,2,1,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","1–2 times",
+        "Warm",1,2,2),
+    # ── Animesh test audits (Needs Review) ────────────────────────────────────
+    _mk("Animesh test","2026-04-17","Animesh test","Cold Re-engage","Animesh test","006",
+        1,1,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","Minor","Once","None",
+        "Cold",1,1,1,"Context handoff had some gaps"),
+    _mk("Animesh test","2026-04-15","Animesh test","Q2 Lead Gen","Animesh test","007",
+        1,1,1,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","1–2 times",
+        "Warm",2,1,1),
+    _mk("Animesh test","2026-04-13","Animesh test","Summer Outreach","Animesh test","008",
+        0,1,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","Minor","No","None",
+        "Cold",1,1,0),
+    # ── Priya QA audits ────────────────────────────────────────────────────────
+    _mk("Priya QA","2026-04-22","Animesh test","Q2 Lead Gen","Priya QA","009",
+        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
+        "Hot",2,2,2),
+    _mk("Priya QA","2026-04-21","Animesh test","Q2 Lead Gen","Priya QA","010",
+        2,1,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
+        "Hot",2,2,1),
+    _mk("Priya QA","2026-04-20","Animesh test","Summer Outreach","Priya QA","011",
+        2,2,2,2,1,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
+        "Warm",2,1,2),
+    _mk("Priya QA","2026-04-18","Animesh test","Cold Re-engage","Priya QA","012",
+        1,1,2,1,2,"2",2,"2","2",2,"2","2","2","2","0","2","Minor","Once","None",
+        "Warm",1,1,1,"Slight delay in follow-up"),
+    _mk("Priya QA","2026-04-16","Animesh test","Q2 Lead Gen","Priya QA","013",
+        0,1,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","Minor","No","None",
+        "Cold",0,1,0,"Disposition mismatch noted"),
+    _mk("Priya QA","2026-04-14","Animesh test","Summer Outreach","Priya QA","014",
+        0,0,1,1,2,"0",1,"2","2",1,"2","2","2","2","0","2","Major","No","1–2 times",
+        "Not Interested",0,0,0,"Multiple critical failures"),
+    _mk("Priya QA","2026-04-11","Animesh test","Cold Re-engage","Priya QA","015",
+        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
+        "Hot",2,2,2),
+    # ── Rahul QA audits ────────────────────────────────────────────────────────
+    _mk("Rahul QA","2026-04-22","Animesh test","Q2 Lead Gen","Rahul QA","016",
+        1,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
+        "Hot",2,2,2),
+    _mk("Rahul QA","2026-04-20","Animesh test","Summer Outreach","Rahul QA","017",
+        2,2,1,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","1–2 times",
+        "Warm",2,1,1),
+    _mk("Rahul QA","2026-04-18","Animesh test","Cold Re-engage","Rahul QA","018",
+        1,1,1,1,2,"2",2,"2","2",2,"2","2","2","2","0","2","Minor","No","None",
+        "Cold",1,1,0),
+    _mk("Rahul QA","2026-04-16","Animesh test","Q2 Lead Gen","Rahul QA","019",
+        0,0,0,1,1,"0",1,"2","2",2,"2","2","2","2","0","2","Major","Once","3–5 times",
+        "RNR",0,0,0,"Bot failed to maintain context entirely"),
+    _mk("Rahul QA","2026-04-14","Animesh test","Summer Outreach","Rahul QA","020",
+        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","Fatal","2","None","No","None",
+        "Hot",2,2,2,"Auto-fail: abrupt disconnection"),
+    _mk("Rahul QA","2026-04-09","Animesh test","Q2 Lead Gen","Rahul QA","021",
+        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
+        "Warm",2,2,1),
+    # ── Sneha QA audits ────────────────────────────────────────────────────────
+    _mk("Sneha QA","2026-04-21","Animesh test","Summer Outreach","Sneha QA","022",
+        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
+        "Hot",2,2,2),
+    _mk("Sneha QA","2026-04-17","Animesh test","Cold Re-engage","Sneha QA","023",
+        1,2,2,2,2,"2",1,"2","2",2,"2","2","2","2","0","2","None","No","None",
+        "Warm",1,2,2),
+    _mk("Sneha QA","2026-04-13","Animesh test","Q2 Lead Gen","Sneha QA","024",
+        0,1,1,1,2,"2",2,"2","2",1,"2","2","2","2","0","2","Minor","No","1–2 times",
+        "Cold",0,1,0,"Several tier-1 issues"),
+    _mk("Sneha QA","2026-04-07","Animesh test","Summer Outreach","Sneha QA","025",
+        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","Fatal","2","None","No","None",
+        "Warm",2,2,1,"Auto-fail: call dropped mid-conversation"),
+]
+
+def _parse_legend(legend_df):
+    """Extract {parameter: [score_options]} from a legend sheet."""
+    result = {}
+    if legend_df is None or legend_df.empty:
+        return result
+
+    # Clean column names
+    legend_df = legend_df.copy()
+    legend_df.columns = [str(c).strip() for c in legend_df.columns]
+
+    cols = legend_df.columns.tolist()
+    _param_kw = ("param", "criteria", "category", "metric", "indicator", "question",
+                 "field", "name", "item", "parameter", "attribute")
+    _score_kw = ("score", "rating", "value", "option", "grade", "mark", "point", "scale")
+
+    param_col = next((c for c in cols if any(k in c.lower() for k in _param_kw)), None)
+    score_col = next((c for c in cols if any(k in c.lower() for k in _score_kw)), None)
+
+    if param_col and score_col:
+        for _, row in legend_df.iterrows():
+            p = str(row[param_col]).strip()
+            s = str(row[score_col]).strip()
+            if p and p.lower() not in ("nan", "none", ""):
+                result.setdefault(p, [])
+                if s and s.lower() not in ("nan", "none", ""):
+                    if s not in result[p]:
+                        result[p].append(s)
+        return result
+
+    # Fallback: first col = parameter name, rest of cols = valid score values per row
+    if len(cols) >= 2:
+        for _, row in legend_df.iterrows():
+            p = str(row[cols[0]]).strip()
+            if p and p.lower() not in ("nan", "none", ""):
+                vals = []
+                for c in cols[1:]:
+                    v = str(row[c]).strip()
+                    if v and v.lower() not in ("nan", "none", "") and v not in vals:
+                        vals.append(v)
+                if vals:
+                    result[p] = vals
+
+    # Fallback 2: treat every column's unique non-null values as score options
+    if not result:
+        for col in cols:
+            vals = (legend_df[col].dropna().astype(str)
+                    .str.strip()
+                    .loc[lambda s: ~s.str.lower().isin(("nan", "none", ""))]
+                    .unique().tolist())
+            if vals:
+                result[col] = vals
+
+    return result
+
+
+def _match_legend(col_name, legend_map):
+    """Return score options for col_name if it fuzzy-matches a legend parameter."""
+    col_l = str(col_name).strip().lower()
+    for param, opts in legend_map.items():
+        param_l = param.strip().lower()
+        if param_l == col_l or param_l in col_l or col_l in param_l:
+            return opts
+    return None
+
+
+def _score_to_numeric(series, options=None, inverted=False):
+    """Convert a score series to 0–1 floats where 1.0 = best performance.
+    inverted=True for defect params (None/No = best → 1.0, Critical/Multiple = 0.0).
+    """
+    _BINARY_POS = {"yes", "pass", "ok", "good", "true", "1", "compliant", "met", "done", "complete"}
+    _BINARY_NEG = {"no", "fail", "bad", "false", "0", "non-compliant", "not met", "incomplete", "na", "n/a"}
+    s = series.astype(str).str.strip().str.lower().replace({"nan": None, "none": None, "": None})
+
+    result = None
+    # Try numeric first
+    try:
+        num = pd.to_numeric(s, errors="coerce")
+        if num.notna().sum() > 0:
+            _min, _max = num.min(), num.max()
+            result = (num - _min) / (_max - _min) if _max > _min else num.clip(0, 1)
+    except Exception:
+        pass
+
+    if result is None:
+        # Ordinal rank by option order from legend (first option = rank 0, last = rank 1)
+        if options:
+            _rank = {str(o).strip().lower(): i / max(len(options) - 1, 1)
+                     for i, o in enumerate(options)}
+            result = s.map(lambda v: _rank.get(v) if v is not None else None)
+
+    if result is None:
+        # Binary fallback
+        _vals = set(s.dropna().unique())
+        if _vals <= (_BINARY_POS | _BINARY_NEG):
+            result = s.map(lambda v: 1.0 if v in _BINARY_POS else (0.0 if v in _BINARY_NEG else None))
+
+    if result is None:
+        return None
+
+    # Invert so that for defect params: low severity (first option) → 1.0 (perfect)
+    if inverted:
+        result = result.map(lambda v: round(1.0 - v, 6) if v is not None else None)
+    return result
+
+
+def _gen_qa_insights(audit_df):
+    """Rule-based Key Insights + Action Items from QA audit data."""
+    insights, actions = [], []
+    if audit_df is None or audit_df.empty:
+        return {"insights": insights, "actions": actions}
+    if not ("Bot Score" in audit_df.columns and "Status" in audit_df.columns):
+        return {"insights": insights, "actions": actions}
+
+    total      = len(audit_df)
+    _bs        = pd.to_numeric(audit_df["Bot Score"], errors="coerce")
+    _st        = audit_df["Status"].astype(str).str.strip()
+    _avg       = round(_bs.dropna().mean(), 1) if _bs.dropna().notna().any() else None
+    pass_count   = int((_st == "Pass").sum())
+    review_count = int((_st == "Needs Review").sum())
+    fail_count   = int((_st == "Fail").sum())
+    fatal_count  = int((_st == "Auto-Fail").sum())
+    pass_rate    = round(pass_count  / total * 100, 1) if total else 0
+    fail_rate    = round((fail_count + fatal_count) / total * 100, 1) if total else 0
+    fatal_rate   = round(fatal_count / total * 100, 1) if total else 0
+    _target      = 80.0
+
+    # Auto-fail critical alert
+    if fatal_count > 0:
+        insights.append({"type": "critical",
+            "title": f"🚨 {fatal_count} Auto-Fail{'s' if fatal_count>1 else ''} Detected",
+            "detail": f"{fatal_rate}% of audits triggered a fatal disconnection. Abrupt call drops have been recorded — immediate investigation required."})
+        actions.append({"priority": "high", "category": "Technical",
+            "action": f"Investigate {fatal_count} auto-fail conversation{'s' if fatal_count>1 else ''} for root cause (network drops, bot logic errors, or CTI integration failures)",
+            "impact": "Eliminating fatal disconnections directly protects lead conversion and bot trust scores."})
+
+    # Pass rate vs target
+    if pass_rate < _target:
+        _gap = round(_target - pass_rate, 1)
+        insights.append({"type": "warning" if pass_rate >= 60 else "critical",
+            "title": f"⚠️ Pass Rate {pass_rate}% — {_gap}% Below {int(_target)}% Target",
+            "detail": f"{pass_count} passed, {review_count} need review, {fail_count} failed out of {total} total. Coaching focus needed."})
+        actions.append({"priority": "high" if pass_rate < 60 else "medium", "category": "Coaching",
+            "action": f"Target the {review_count} 'Needs Review' audits (60–79% band) — these are closest to the pass threshold and fastest to convert",
+            "impact": f"Moving all review cases to Pass would add +{round(review_count/total*100,1)}% to overall pass rate."})
+    else:
+        insights.append({"type": "success",
+            "title": f"✅ Strong Pass Rate: {pass_rate}%",
+            "detail": f"{pass_count} of {total} audits passed — {round(pass_rate - _target, 1)}pp above the {int(_target)}% target. Performance is on track."})
+
+    # Best / worst auditor
+    if "Auditor" in audit_df.columns:
+        _auditor_stats = []
+        for _aud, _grp in audit_df.groupby("Auditor"):
+            _g_st    = _grp["Status"].astype(str).str.strip()
+            _g_fail  = int(_g_st.isin(["Fail", "Auto-Fail"]).sum())
+            _g_pass  = int((_g_st == "Pass").sum())
+            _g_bs    = pd.to_numeric(_grp["Bot Score"], errors="coerce").dropna()
+            _g_avg   = round(_g_bs.mean(), 1) if len(_g_bs) else None
+            _auditor_stats.append({"name": str(_aud), "total": len(_grp), "fail": _g_fail,
+                                   "pass": _g_pass, "avg": _g_avg,
+                                   "fail_rate": round(_g_fail / len(_grp) * 100, 1) if len(_grp) else 0})
+        if _auditor_stats:
+            _best  = max(_auditor_stats, key=lambda x: x["avg"] or 0)
+            _worst = min(_auditor_stats, key=lambda x: x["avg"] or 100)
+            if _best["avg"] is not None:
+                insights.append({"type": "success",
+                    "title": f"🏆 Top Performer: {_best['name']}",
+                    "detail": f"Avg score {_best['avg']}% across {_best['total']} audits ({_best['pass']} passes). Ideal coaching benchmark for the team."})
+            if _worst["avg"] is not None and _worst["name"] != _best["name"] and _worst["avg"] < 72:
+                insights.append({"type": "warning",
+                    "title": f"📉 Needs Attention: {_worst['name']}",
+                    "detail": f"Avg score {_worst['avg']}% with {_worst['fail']} fails ({_worst['fail_rate']}% fail rate) — below 72% performance threshold."})
+                actions.append({"priority": "high", "category": "Coaching",
+                    "action": f"Schedule 1:1 coaching for {_worst['name']} focusing on Tier-1 Critical parameters (highest weighted failures)",
+                    "impact": f"Raising {_worst['name']}'s score to pass threshold directly reduces team-level fail rate."})
+
+    # Weakest campaign
+    if "Campaign Name" in audit_df.columns:
+        _camp_stats = []
+        for _cn, _cgrp in audit_df.groupby("Campaign Name"):
+            _cbs = pd.to_numeric(_cgrp["Bot Score"], errors="coerce").dropna()
+            if len(_cbs):
+                _camp_stats.append({"name": str(_cn), "avg": round(_cbs.mean(), 1), "total": len(_cgrp)})
+        if _camp_stats:
+            _wc = min(_camp_stats, key=lambda x: x["avg"])
+            if _wc["avg"] < 72:
+                insights.append({"type": "warning",
+                    "title": f"🎯 Underperforming Campaign: {_wc['name']}",
+                    "detail": f"'{_wc['name']}' avg {_wc['avg']}% across {_wc['total']} audits — review bot scripts and conversation flows."})
+                actions.append({"priority": "medium", "category": "Campaign",
+                    "action": f"Audit the bot script for '{_wc['name']}' — check Tier-1 flow parameters (DA, CP, MC, FT) for drop-off points",
+                    "impact": "Fixing script issues in this campaign can improve its pass rate and overall portfolio score."})
+
+    # Intelligence parameter issues
+    for _ip in _QA_SCHEMA["intelligence"]:
+        _col = next((c for c in audit_df.columns if _ip["col"].lower() in str(c).lower()), None)
+        if _col:
+            _clean  = audit_df[_col].replace("", None).dropna().astype(str).str.strip()
+            _issues = int((_clean != _ip["options"][0]).sum())
+            _pct    = round(_issues / total * 100, 1) if total else 0
+            if _pct > 15:
+                insights.append({"type": "warning",
+                    "title": f"{_ip['icon']} {_ip['col']}: {_pct}% Issue Rate",
+                    "detail": f"{_issues} conversations flagged — above 15% threshold. {_ip['desc']}"})
+                actions.append({"priority": "medium", "category": "Bot Quality",
+                    "action": f"Pull conversation logs with '{_ip['col']}' issues and trace to the triggering bot node or API call",
+                    "impact": f"Reducing {_ip['col'].lower()} defect rate from {_pct}% to <10% improves Intelligence Score."})
+
+    # Large review queue
+    if review_count > 0:
+        _rr = round(review_count / total * 100, 1)
+        if _rr > 20:
+            insights.append({"type": "info",
+                "title": f"📋 Review Queue: {review_count} Audits ({_rr}%)",
+                "detail": f"{_rr}% of audits are in the 60–79% band — high volume of borderline cases. Prioritise coaching to convert these."})
+            actions.append({"priority": "low", "category": "Process",
+                "action": f"Sort borderline audits by score descending and coach the 75–79% group first — smallest effort, highest conversion probability",
+                "impact": "Clearing the review queue improves pass rate accuracy and shortens coaching cycles."})
+
+    # High top-decile cluster
+    if _avg is not None:
+        _above90 = int((_bs.dropna() >= 90).sum())
+        _pct90   = round(_above90 / total * 100, 1)
+        if _pct90 > 25:
+            insights.append({"type": "success",
+                "title": f"⭐ {_pct90}% of Audits Scored 90%+",
+                "detail": f"{_above90} high-performing conversations — extract these as training examples for low-scoring agents."})
+
+    return {"insights": insights, "actions": actions}
+
+
+def _render_sense_scorecard(sheets, legend_map):
+    """Full QA Scorecard — weighted scoring, intelligence params, agent breakdown."""
+
+    # ── Merge built-in Convin Sense params into legend map ────────────────────
+    legend_map = _merge_builtin_params(legend_map)
+
+    # ── Find audit sheet (prefer edited version from session state) ────────────
+    audit_df   = None
+    audit_name = None
+    for k, v in sheets.items():
+        if any(kw in k.lower() for kw in ("audit", "qa", "review", "score")):
+            _safe_k  = k.replace(" ", "_").lower()
+            audit_df = st.session_state.get(f"sense_audit_edits_{_safe_k}", v).copy()
+            audit_name = k
+            break
+
+    # ── Merge form-submitted audit log into audit_df ──────────────────────────
+    _form_log = st.session_state.get("sense_audit_log")
+    if _form_log is None:
+        _form_log = _audit_log_load()
+        if _form_log:
+            st.session_state["sense_audit_log"] = _form_log
+    if _form_log:
+        _log_df = pd.DataFrame(_form_log)
+        if audit_df is not None:
+            _appended = _log_df.reindex(columns=audit_df.columns, fill_value="")
+            audit_df  = pd.concat([audit_df, _appended], ignore_index=True)
+        else:
+            audit_df  = _log_df
+            audit_name = "Form Submissions"
+
+    if audit_df is None:
+        st.markdown(
+            '<div style="text-align:center;padding:3rem;color:#5588bb;font-size:0.9rem;">'
+            '📋 No data yet. Upload a file with an <strong>Audit Sheet</strong>, '
+            'or submit your first QA audit using the <strong>✍️ New Audit</strong> tab.</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    # ── Inject missing built-in columns ───────────────────────────────────────
+    for param in _SENSE_BUILTIN_PARAMS:
+        if not any(param.lower() in str(c).lower() or str(c).lower() in param.lower()
+                   for c in audit_df.columns):
+            audit_df[param] = ""
+
+    # ── Detect scored columns ─────────────────────────────────────────────────
+    scored_cols = [c for c in audit_df.columns if _match_legend(c, legend_map)]
+
+    # ── Detect whether this is QA schema data (has Bot Score / Status) ────────
+    _has_qa_schema = ("Bot Score" in audit_df.columns and "Status" in audit_df.columns)
+
+    # ── Detect grouping / date columns ────────────────────────────────────────
+    _GRP_KW  = ("auditor","agent","rep","analyst","team","name","user","operator","staff","reviewer","caller")
+    _DATE_KW = ("audit date","date","time","month","week","day","period","created","submitted")
+    group_col = next((c for c in audit_df.columns if any(k == str(c).strip().lower() or k in str(c).lower() for k in _GRP_KW)), None)
+    date_col  = next((c for c in audit_df.columns if any(k in str(c).lower() for k in _DATE_KW)), None)
+
+    # ── Scoring: use Bot Score column if QA schema, else compute from legend ──
+    if _has_qa_schema:
+        _row_scores_pct = pd.to_numeric(audit_df["Bot Score"], errors="coerce")
+        _row_scores     = _row_scores_pct / 100.0
+        total_weight    = 1.0   # not applicable but used in header
+        _custom_weights = {}
+        for col in scored_cols:
+            _bcfg = _builtin_cfg(col)
+            _custom_weights[col] = float(_bcfg["weight"]) if _bcfg else _DEFAULT_PARAM_WEIGHT
+    else:
+        _custom_weights = {}
+        for col in scored_cols:
+            _bcfg  = _builtin_cfg(col)
+            _def_w = float(_bcfg["weight"]) if _bcfg else float(_DEFAULT_PARAM_WEIGHT)
+            _custom_weights[col] = st.session_state.get(f"sense_w_{col}", _def_w)
+
+        _score_parts = []
+        for c in scored_cols:
+            opts  = legend_map.get(c) or _match_legend(c, legend_map) or []
+            _bcfg = _builtin_cfg(c)
+            _inv  = _bcfg["inverted"] if _bcfg else False
+            _w    = _custom_weights[c]
+            _ns   = _score_to_numeric(audit_df[c], opts, inverted=_inv)
+            if _ns is not None:
+                _score_parts.append((_ns, _w))
+
+        total_weight = sum(w for _, w in _score_parts)
+        if _score_parts and total_weight > 0:
+            _row_scores = sum(s * w for s, w in _score_parts) / total_weight
+        else:
+            _row_scores = None
+
+    # ── KPI calculations ──────────────────────────────────────────────────────
+    total_rows = len(audit_df)
+    if _has_qa_schema:
+        _valid_bs    = _row_scores_pct.dropna()
+        avg_score    = round(_valid_bs.mean(), 1) if len(_valid_bs) else None
+        scored_rows  = int(_valid_bs.notna().sum())
+        partial_rows = 0
+        completion_pct = round(scored_rows / total_rows * 100, 1) if total_rows else 0
+        _status_col    = audit_df["Status"].astype(str).str.strip()
+        pass_count     = int((_status_col == "Pass").sum())
+        review_count   = int((_status_col == "Needs Review").sum())
+        fail_count     = int((_status_col == "Fail").sum())
+        fatal_count    = int((_status_col == "Auto-Fail").sum())
+        pass_rate      = round(pass_count / total_rows * 100, 1) if total_rows else None
+        fatal_rate     = round(fatal_count / total_rows * 100, 1) if total_rows else None
+    else:
+        if scored_cols:
+            _scored_mask = audit_df[scored_cols].replace("", None).notna().all(axis=1)
+            scored_rows  = int(_scored_mask.sum())
+            partial_rows = int((audit_df[scored_cols].replace("", None).notna().any(axis=1) & ~_scored_mask).sum())
+        else:
+            scored_rows = partial_rows = 0
+        completion_pct = round(scored_rows / total_rows * 100, 1) if total_rows else 0
+        avg_score  = round(_row_scores.mean() * 100, 1)          if _row_scores is not None else None
+        pass_rate  = round((_row_scores >= 0.5).mean() * 100, 1) if _row_scores is not None else None
+        pass_count = fatal_count = fatal_rate = None
+
+    # ── Convin Sense intelligence KPIs (defect counts) ───────────────────────
+    _intel_kpis = {}
+    for _ip in _QA_SCHEMA["intelligence"]:
+        _col = next((c for c in audit_df.columns
+                     if _ip["col"].lower() in str(c).lower() or str(c).lower() in _ip["col"].lower()), None)
+        if _col:
+            _clean = audit_df[_col].replace("", None).dropna().astype(str).str.strip()
+            _good  = _ip["options"][0]
+            _dc    = int((_clean != _good).sum())
+            _dp    = round(_dc / total_rows * 100, 1) if total_rows else 0
+            _intel_kpis[_ip["col"]] = {"count": _dc, "pct": _dp,
+                                       "color": _ip["color"], "icon": _ip["icon"],
+                                       "desc": _ip["desc"]}
+
+    # ── Page header ───────────────────────────────────────────────────────────
+    _src_label      = "Convin.ai QA Schema" if _has_qa_schema else audit_name
+    _auditor_count  = audit_df["Auditor"].nunique() if "Auditor" in audit_df.columns else 0
+    _campaign_count = audit_df["Campaign Name"].nunique() if "Campaign Name" in audit_df.columns else 0
+    st.markdown(
+        f'<div style="display:flex;align-items:center;justify-content:space-between;'
+        f'margin-bottom:1.2rem;flex-wrap:wrap;gap:8px;">'
+        f'<div>'
+        f'<div style="font-size:1.2rem;font-weight:900;color:#0d1d3a;letter-spacing:-0.02em;">📊 QA Scorecard</div>'
+        f'<div style="font-size:0.72rem;color:#5588bb;margin-top:2px;">'
+        f'Source: <strong>{_src_label}</strong>'
+        f' &nbsp;·&nbsp; <strong>{total_rows:,}</strong> audits'
+        f'{f" &nbsp;·&nbsp; <strong>{_auditor_count}</strong> auditors" if _auditor_count else ""}'
+        f'{f" &nbsp;·&nbsp; <strong>{_campaign_count}</strong> campaigns" if _campaign_count else ""}'
+        f'</div>'
+        f'</div>'
+        f'<div style="font-size:0.67rem;color:#aabbcc;background:#f5f9ff;'
+        f'border:1px solid rgba(61,130,245,0.12);border-radius:8px;padding:4px 10px;">'
+        f'{pd.Timestamp.now().strftime("%d %b %Y  %H:%M")}</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Hero row: gauge + KPI cards ───────────────────────────────────────────
+    if _has_qa_schema:
+        _fc        = "#dc2626" if (fatal_count or 0) > 0 else "#0ebc6e"
+        _gs        = avg_score or 0
+        _gc_gauge  = "#0ebc6e" if _gs >= 80 else "#f59e0b" if _gs >= 60 else "#dc2626"
+        _arc_total = 219.9   # π × 70
+        _arc_fill  = round(_arc_total * _gs / 100, 1)
+        _slabel    = _qa_status(_gs, False)
+        _sc_col    = _qa_status_color(_slabel)
+        _rr        = round(review_count / total_rows * 100, 1) if total_rows else 0
+        _fr2       = round(fail_count   / total_rows * 100, 1) if total_rows else 0
+        _afr       = round(fatal_count  / total_rows * 100, 1) if total_rows else 0
+        _compl_c   = "#0ebc6e" if completion_pct >= 80 else "#f59e0b" if completion_pct >= 50 else "#dc2626"
+
+        _gauge_svg = (
+            f'<svg width="160" height="100" viewBox="0 0 160 100" style="display:block;margin:auto;">'
+            f'<path d="M 10 85 A 70 70 0 0 1 150 85" fill="none" stroke="#edf2fb" stroke-width="14" stroke-linecap="round"/>'
+            f'<path d="M 10 85 A 70 70 0 0 1 150 85" fill="none" stroke="{_gc_gauge}" stroke-width="14"'
+            f' stroke-linecap="round" stroke-dasharray="{_arc_fill} 1000"/>'
+            f'<text x="80" y="73" text-anchor="middle" font-size="27" font-weight="900" fill="{_gc_gauge}"'
+            f' font-family="Inter,sans-serif">{_gs}%</text>'
+            f'<text x="80" y="90" text-anchor="middle" font-size="9.5" fill="#5588bb" font-family="Inter,sans-serif">Avg Bot Score</text>'
+            f'</svg>'
+        )
+
+        st.markdown(f"""
+<div style="display:grid;grid-template-columns:190px 1fr;gap:16px;margin-bottom:1.4rem;align-items:stretch;">
+  <div style="background:#fff;border:1px solid rgba(61,130,245,0.12);border-radius:14px;
+    padding:18px 12px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    {_gauge_svg}
+    <div style="margin-top:8px;background:{_sc_col}18;border:1px solid {_sc_col}55;
+      border-radius:20px;padding:3px 16px;font-size:0.72rem;font-weight:800;color:{_sc_col};">{_slabel}</div>
+    <div style="font-size:0.62rem;color:#aabbcc;margin-top:6px;">{total_rows:,} total audits</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+    <div style="background:#fff;border:1px solid rgba(61,130,245,0.1);border-left:3px solid #3d8ef5;border-radius:10px;padding:13px 14px;">
+      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3d8ef5;margin-bottom:4px;">Total Audits</div>
+      <div style="font-size:1.65rem;font-weight:900;color:#3d8ef5;line-height:1;">{total_rows:,}</div>
+      <div style="font-size:0.62rem;color:#aabbcc;margin-top:3px;">{_auditor_count} auditor{"s" if _auditor_count != 1 else ""}</div>
+    </div>
+    <div style="background:#fff;border:1px solid rgba(61,130,245,0.1);border-left:3px solid #0ebc6e;border-radius:10px;padding:13px 14px;">
+      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#0ebc6e;margin-bottom:4px;">Pass ≥80%</div>
+      <div style="font-size:1.65rem;font-weight:900;color:#0ebc6e;line-height:1;">{pass_count:,}</div>
+      <div style="height:4px;background:#edf2fb;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{pass_rate or 0}%;height:100%;background:#0ebc6e;border-radius:2px;"></div></div>
+      <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">{pass_rate}% pass rate</div>
+    </div>
+    <div style="background:#fff;border:1px solid rgba(61,130,245,0.1);border-left:3px solid #f59e0b;border-radius:10px;padding:13px 14px;">
+      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f59e0b;margin-bottom:4px;">Needs Review</div>
+      <div style="font-size:1.65rem;font-weight:900;color:#f59e0b;line-height:1;">{review_count:,}</div>
+      <div style="height:4px;background:#edf2fb;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{_rr}%;height:100%;background:#f59e0b;border-radius:2px;"></div></div>
+      <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">60–79% range</div>
+    </div>
+    <div style="background:#fff;border:1px solid rgba(61,130,245,0.1);border-left:3px solid #dc2626;border-radius:10px;padding:13px 14px;">
+      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#dc2626;margin-bottom:4px;">Fail &lt;60%</div>
+      <div style="font-size:1.65rem;font-weight:900;color:#dc2626;line-height:1;">{fail_count:,}</div>
+      <div style="height:4px;background:#edf2fb;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{_fr2}%;height:100%;background:#dc2626;border-radius:2px;"></div></div>
+      <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">{_fr2}% of total</div>
+    </div>
+    <div style="background:#fff;border:1px solid rgba(61,130,245,0.1);border-left:3px solid {_fc};border-radius:10px;padding:13px 14px;">
+      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{_fc};margin-bottom:4px;">Auto-Fail</div>
+      <div style="font-size:1.65rem;font-weight:900;color:{_fc};line-height:1;">{fatal_count:,}</div>
+      <div style="height:4px;background:#edf2fb;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{_afr}%;height:100%;background:{_fc};border-radius:2px;"></div></div>
+      <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">Fatal trigger</div>
+    </div>
+    <div style="background:#fff;border:1px solid rgba(61,130,245,0.1);border-left:3px solid {_compl_c};border-radius:10px;padding:13px 14px;">
+      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{_compl_c};margin-bottom:4px;">Completion</div>
+      <div style="font-size:1.65rem;font-weight:900;color:{_compl_c};line-height:1;">{completion_pct}%</div>
+      <div style="height:4px;background:#edf2fb;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{completion_pct}%;height:100%;background:{_compl_c};border-radius:2px;"></div></div>
+      <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">{scored_rows:,} scored</div>
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
+    else:
+        st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1rem;">
+          <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">Total Rows</div>
+            <div style="color:#3d8ef5;font-size:1.7rem;font-weight:800;">{total_rows:,}</div>
+          </div>
+          <div class="stat-card" style="border-top:2px solid #0ebc6e;">
+            <div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">Fully Scored</div>
+            <div style="color:#0ebc6e;font-size:1.7rem;font-weight:800;">{scored_rows:,}</div>
+            <div style="font-size:0.65rem;color:#5588bb;margin-top:2px;">{partial_rows} partial</div>
+          </div>
+          <div class="stat-card" style="border-top:2px solid {'#dc2626' if completion_pct<50 else '#f59e0b' if completion_pct<80 else '#0ebc6e'};">
+            <div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">Completion</div>
+            <div style="color:{'#dc2626' if completion_pct<50 else '#f59e0b' if completion_pct<80 else '#0ebc6e'};font-size:1.7rem;font-weight:800;">{completion_pct}%</div>
+          </div>
+          <div class="stat-card" style="border-top:2px solid #7c3aed;">
+            <div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">Weighted Score</div>
+            <div style="color:#7c3aed;font-size:1.7rem;font-weight:800;">{"—" if avg_score is None else f"{avg_score}%"}</div>
+          </div>
+          <div class="stat-card" style="border-top:2px solid {'#0ebc6e' if pass_rate and pass_rate>=70 else '#dc2626' if pass_rate is not None else '#aabbcc'};">
+            <div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">Pass Rate</div>
+            <div style="color:{'#0ebc6e' if pass_rate and pass_rate>=70 else '#dc2626' if pass_rate is not None else '#aabbcc'};font-size:1.7rem;font-weight:800;">{"—" if pass_rate is None else f"{pass_rate}%"}</div>
+          </div>
+        </div>""", unsafe_allow_html=True)
+
+    # ── Key Insights + Action Items ───────────────────────────────────────────
+    if _has_qa_schema:
+        _qi = _gen_qa_insights(audit_df)
+        _all_insights = _qi.get("insights", [])
+        _all_actions  = _qi.get("actions",  [])
+        if _all_insights or _all_actions:
+            _ins_cols = st.columns([3, 2])
+            with _ins_cols[0]:
+                st.markdown('<div class="section-chip">💡 Key Insights</div>', unsafe_allow_html=True)
+                _TYPE_CFG = {
+                    "critical": ("#fef2f2", "#dc2626", "#991b1b", "#fee2e2"),
+                    "warning":  ("#fffbeb", "#f59e0b", "#92400e", "#fde68a"),
+                    "success":  ("#f0fdf4", "#16a34a", "#14532d", "#bbf7d0"),
+                    "info":     ("#eff6ff", "#2563eb", "#1e3a8a", "#bfdbfe"),
+                }
+                for _ins in _all_insights:
+                    _tcfg = _TYPE_CFG.get(_ins["type"], _TYPE_CFG["info"])
+                    st.markdown(
+                        f'<div style="background:{_tcfg[0]};border:1px solid {_tcfg[3]};'
+                        f'border-left:4px solid {_tcfg[1]};border-radius:10px;'
+                        f'padding:12px 16px;margin-bottom:8px;">'
+                        f'<div style="font-size:0.78rem;font-weight:700;color:{_tcfg[2]};margin-bottom:4px;">{_ins["title"]}</div>'
+                        f'<div style="font-size:0.72rem;color:{_tcfg[2]};opacity:0.85;line-height:1.5;">{_ins["detail"]}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+            with _ins_cols[1]:
+                st.markdown('<div class="section-chip">🎯 Action Items</div>', unsafe_allow_html=True)
+                _PRI_CFG = {
+                    "high":   ("#dc2626", "🔴", "#fef2f2"),
+                    "medium": ("#f59e0b", "🟡", "#fffbeb"),
+                    "low":    ("#16a34a", "🟢", "#f0fdf4"),
+                }
+                for _act in _all_actions:
+                    _pcfg = _PRI_CFG.get(_act["priority"], _PRI_CFG["low"])
+                    st.markdown(
+                        f'<div style="background:{_pcfg[2]};border:1px solid {_pcfg[0]}33;'
+                        f'border-radius:10px;padding:12px 15px;margin-bottom:8px;">'
+                        f'<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">'
+                        f'<span style="font-size:0.75rem;">{_pcfg[1]}</span>'
+                        f'<span style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;'
+                        f'text-transform:uppercase;color:{_pcfg[0]};">{_act["priority"].upper()} · {_act["category"]}</span>'
+                        f'</div>'
+                        f'<div style="font-size:0.73rem;font-weight:600;color:#0d1d3a;margin-bottom:5px;line-height:1.4;">{_act["action"]}</div>'
+                        f'<div style="font-size:0.65rem;color:#5588bb;line-height:1.4;border-top:1px solid {_pcfg[0]}22;padding-top:5px;">'
+                        f'Impact: {_act["impact"]}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
+    # ── Convin Sense Intelligence strip ───────────────────────────────────────
+    if _intel_kpis:
+        st.markdown('<div class="section-chip">🧠 Sense Intelligence</div>', unsafe_allow_html=True)
+        _intel_cards = ""
+        for param, kpi in _intel_kpis.items():
+            _alert = kpi["pct"] > 20
+            _intel_cards += (
+                f'<div style="background:#fff;border:1px solid {kpi["color"]}33;border-left:4px solid {kpi["color"]};'
+                f'border-radius:12px;padding:14px 18px;flex:1;min-width:200px;">'
+                f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+                f'<span style="font-size:1.2rem;">{kpi["icon"]}</span>'
+                f'<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:{kpi["color"]};">{param}</div>'
+                f'</div>'
+                f'<div style="font-size:0.7rem;color:#5588bb;margin-bottom:10px;">{kpi["desc"]}</div>'
+                f'<div style="display:flex;align-items:baseline;gap:8px;">'
+                f'<div style="font-size:1.8rem;font-weight:900;color:{kpi["color"]};">{kpi["count"]:,}</div>'
+                f'<div style="font-size:0.78rem;color:#5588bb;">issues detected</div>'
+                f'</div>'
+                f'<div style="height:6px;background:#edf2fb;border-radius:3px;margin-top:8px;overflow:hidden;">'
+                f'<div style="width:{min(kpi["pct"],100)}%;height:100%;background:{kpi["color"]};border-radius:3px;"></div>'
+                f'</div>'
+                f'<div style="font-size:0.65rem;color:{"#dc2626" if _alert else "#5588bb"};margin-top:4px;font-weight:{"700" if _alert else "400"};">'
+                f'{"⚠️ " if _alert else ""}{kpi["pct"]}% of conversations affected</div>'
+                f'</div>'
+            )
+        st.markdown(
+            f'<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1.4rem;">{_intel_cards}</div>',
+            unsafe_allow_html=True,
+        )
+
+    if not scored_cols:
+        st.info("No scored parameters detected. Upload a file with an Audit Sheet and Legend, or the built-in parameters will appear automatically.")
+        return
+
+    # ── Weight editor ─────────────────────────────────────────────────────────
+    with st.expander("⚙️ Adjust Parameter Weights", expanded=False):
+        st.markdown(
+            '<div style="font-size:0.71rem;color:#5588bb;margin-bottom:10px;">'
+            'Weights control how much each parameter influences the overall score. '
+            '🧠 Intelligence params are pre-set (Flow Issue=1.5×, Bot Restart=1.2×, Bot Repetition=1.0×) but adjustable.</div>',
+            unsafe_allow_html=True,
+        )
+        _w_cols = st.columns(min(len(scored_cols), 4))
+        for wi, col in enumerate(scored_cols):
+            _bcfg  = _builtin_cfg(col)
+            _def_w = float(_bcfg["weight"]) if _bcfg else float(_DEFAULT_PARAM_WEIGHT)
+            with _w_cols[wi % len(_w_cols)]:
+                _new_w = st.number_input(
+                    str(col), min_value=0.1, max_value=5.0,
+                    value=float(st.session_state.get(f"sense_w_{col}", _def_w)),
+                    step=0.1, key=f"sense_w_{col}", format="%.1f",
+                )
+                _custom_weights[col] = _new_w
+
+    # ── Tier breakdown (QA schema only) ──────────────────────────────────────
+    if _has_qa_schema and scored_cols:
+        st.markdown('<div class="section-chip">📊 Score Breakdown by Tier</div>', unsafe_allow_html=True)
+        _tier_row = ""
+        for _tier in _QA_SCHEMA["tiers"]:
+            _tc = _tier["color"]
+            _tier_params = [p["col"] for p in _tier["params"] if p["weight"] > 0]
+            _scores_for_tier = []
+            for _tp in _tier_params:
+                _col_match = next((c for c in audit_df.columns if c == _tp), None)
+                if _col_match:
+                    _ns = pd.to_numeric(audit_df[_col_match].replace("", None), errors="coerce")
+                    _valid = _ns.dropna()
+                    if len(_valid):
+                        _scores_for_tier.append(_valid.mean() / 2.0)  # normalise 0-2 → 0-1
+            _tier_avg = round(sum(_scores_for_tier) / len(_scores_for_tier) * 100, 1) if _scores_for_tier else None
+            _tier_row += (
+                f'<div style="flex:1;min-width:160px;background:#fff;border:1px solid {_tc}33;'
+                f'border-top:3px solid {_tc};border-radius:10px;padding:12px 16px;">'
+                f'<div style="font-size:0.62rem;font-weight:700;color:{_tc};letter-spacing:0.08em;'
+                f'text-transform:uppercase;margin-bottom:4px;">{_tier["label"]}</div>'
+                f'<div style="font-size:0.62rem;color:#aabbcc;margin-bottom:8px;">{_tier["weight_pct"]}% of score</div>'
+                f'<div style="font-size:1.9rem;font-weight:900;color:{_tc};">{"—" if _tier_avg is None else f"{_tier_avg}%"}</div>'
+                f'<div style="height:5px;background:#edf2fb;border-radius:3px;margin-top:6px;overflow:hidden;">'
+                f'<div style="width:{_tier_avg or 0}%;height:100%;background:{_tc};border-radius:3px;"></div></div>'
+                f'</div>'
+            )
+        st.markdown(
+            f'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.2rem;">{_tier_row}</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Campaign breakdown (QA schema only) ──────────────────────────────────
+    if _has_qa_schema and "Campaign Name" in audit_df.columns:
+        _camp_rows_html = ""
+        for _cn, _cgrp in audit_df.groupby("Campaign Name", sort=False):
+            if not str(_cn).strip() or str(_cn).strip() == "nan":
+                continue
+            _cbs = pd.to_numeric(_cgrp["Bot Score"], errors="coerce").dropna()
+            if _cbs.empty:
+                continue
+            _cavg = round(_cbs.mean(), 1)
+            _cc   = _qa_status_color(_qa_status(_cavg, False))
+            _cpass  = int((_cgrp["Status"].astype(str).str.strip() == "Pass").sum())
+            _creview= int((_cgrp["Status"].astype(str).str.strip() == "Needs Review").sum())
+            _cfail  = len(_cgrp) - _cpass - _creview
+            _camp_rows_html += (
+                f'<div style="display:flex;align-items:center;gap:12px;padding:9px 14px;background:#fff;'
+                f'border:1px solid rgba(61,130,245,0.08);border-left:3px solid {_cc};'
+                f'border-radius:10px;margin-bottom:5px;">'
+                f'<div style="flex:1;font-size:0.8rem;font-weight:600;color:#0d1d3a;'
+                f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_cn}</div>'
+                f'<div style="display:flex;gap:5px;">'
+                f'<span style="background:#0ebc6e18;border:1px solid #0ebc6e44;border-radius:4px;padding:1px 7px;font-size:0.6rem;font-weight:700;color:#0ebc6e;">{_cpass}P</span>'
+                f'<span style="background:#f59e0b18;border:1px solid #f59e0b44;border-radius:4px;padding:1px 7px;font-size:0.6rem;font-weight:700;color:#f59e0b;">{_creview}R</span>'
+                f'<span style="background:#dc262618;border:1px solid #dc262644;border-radius:4px;padding:1px 7px;font-size:0.6rem;font-weight:700;color:#dc2626;">{_cfail}F</span>'
+                f'</div>'
+                f'<div style="width:130px;height:7px;background:#edf2fb;border-radius:4px;overflow:hidden;">'
+                f'<div style="width:{min(_cavg,100)}%;height:100%;background:{_cc};border-radius:4px;"></div></div>'
+                f'<div style="width:46px;text-align:right;font-size:0.83rem;font-weight:800;color:{_cc};">{_cavg}%</div>'
+                f'<div style="width:56px;text-align:right;font-size:0.65rem;color:#aabbcc;">{len(_cgrp)} audits</div>'
+                f'</div>'
+            )
+        if _camp_rows_html:
+            st.markdown('<div class="section-chip">🎯 Score by Campaign</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="margin-bottom:1.2rem;">{_camp_rows_html}</div>', unsafe_allow_html=True)
+
+    # ── Auditor × Campaign cross-matrix ───────────────────────────────────────
+    if (_has_qa_schema and "Auditor" in audit_df.columns and "Campaign Name" in audit_df.columns):
+        with st.expander("🔀 Auditor × Campaign Score Matrix", expanded=False):
+            try:
+                _mx = audit_df.copy()
+                _mx["_bs"] = pd.to_numeric(_mx["Bot Score"], errors="coerce")
+                _pivot = _mx.pivot_table(index="Auditor", columns="Campaign Name",
+                                         values="_bs", aggfunc="mean").round(1)
+                if not _pivot.empty:
+                    st.markdown(
+                        '<div style="font-size:0.7rem;color:#5588bb;margin-bottom:10px;">'
+                        'Each cell shows the average Bot Score for that auditor × campaign combination. '
+                        'Blank = no data.</div>',
+                        unsafe_allow_html=True,
+                    )
+                    # Colour-coded table
+                    def _cell_color(v):
+                        if pd.isna(v):
+                            return "background:#f5f9ff;color:#aabbcc;"
+                        c = "#0ebc6e" if v >= 80 else "#f59e0b" if v >= 60 else "#dc2626"
+                        return f"background:{c}18;color:{c};font-weight:700;"
+                    _cells_html = '<table style="width:100%;border-collapse:separate;border-spacing:4px;">'
+                    _cells_html += '<tr><th style="text-align:left;font-size:0.65rem;color:#aabbcc;padding:4px 8px;">Auditor</th>'
+                    for _cc in _pivot.columns:
+                        _cells_html += f'<th style="font-size:0.65rem;color:#5588bb;padding:4px 8px;text-align:center;max-width:100px;overflow:hidden;">{_cc}</th>'
+                    _cells_html += '</tr>'
+                    for _aud_row in _pivot.index:
+                        _cells_html += f'<tr><td style="font-size:0.73rem;font-weight:600;color:#0d1d3a;padding:4px 8px;white-space:nowrap;">{_aud_row}</td>'
+                        for _cc in _pivot.columns:
+                            _v = _pivot.loc[_aud_row, _cc]
+                            _cs = _cell_color(_v)
+                            _cells_html += f'<td style="{_cs}border-radius:6px;padding:5px 10px;text-align:center;font-size:0.75rem;">{"—" if pd.isna(_v) else f"{_v}%"}</td>'
+                        _cells_html += '</tr>'
+                    _cells_html += '</table>'
+                    st.markdown(_cells_html, unsafe_allow_html=True)
+                    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+            except Exception:
+                pass
+
+    # ── Lead Quality Analysis ─────────────────────────────────────────────────
+    if _has_qa_schema and "Lead Stage" in audit_df.columns:
+        with st.expander("🏷️ Lead Quality Drill-Down", expanded=False):
+            try:
+                _lc1, _lc2 = st.columns(2)
+                with _lc1:
+                    st.markdown(
+                        '<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
+                        'text-transform:uppercase;color:#5588bb;margin-bottom:8px;">Lead Stage Distribution</div>',
+                        unsafe_allow_html=True,
+                    )
+                    _ls_vc  = audit_df["Lead Stage"].replace("", None).dropna().value_counts()
+                    _ls_order = list(_QA_SCHEMA.get("lead_stage_opts", [])) or _ls_vc.index.tolist()
+                    _LS_COLORS = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#3d8ef5",
+                                  "Not Interested": "#aabbcc", "RNR": "#7c3aed", "": "#edf2fb"}
+                    _ls_html = ""
+                    for _ls_name in _ls_order:
+                        if _ls_name not in _ls_vc.index:
+                            continue
+                        _lsv  = int(_ls_vc[_ls_name])
+                        _lspct = round(_lsv / total * 100, 1)
+                        _lsc  = _LS_COLORS.get(_ls_name, "#3d8ef5")
+                        _ls_html += (
+                            f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+                            f'<div style="width:110px;font-size:0.73rem;color:#0d1d3a;font-weight:600;flex-shrink:0;">{_ls_name}</div>'
+                            f'<div style="flex:1;height:16px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                            f'<div style="width:{_lspct}%;height:100%;background:{_lsc};border-radius:3px;"></div></div>'
+                            f'<div style="width:75px;text-align:right;font-size:0.71rem;color:#5588bb;flex-shrink:0;">'
+                            f'{_lsv:,} ({_lspct}%)</div>'
+                            f'</div>'
+                        )
+                    st.markdown(
+                        f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.1);'
+                        f'border-radius:10px;padding:12px 16px;">{_ls_html}</div>',
+                        unsafe_allow_html=True,
+                    )
+                with _lc2:
+                    st.markdown(
+                        '<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
+                        'text-transform:uppercase;color:#5588bb;margin-bottom:8px;">Lead Composite & PI/FR/DM</div>',
+                        unsafe_allow_html=True,
+                    )
+                    _lcomp = pd.to_numeric(audit_df.get("Lead Composite", pd.Series(dtype=float)), errors="coerce").dropna()
+                    _pi    = pd.to_numeric(audit_df.get("Product Interest (0/1/2)", pd.Series(dtype=float)), errors="coerce").dropna()
+                    _fr    = pd.to_numeric(audit_df.get("Follow-up Readiness (0/1/2)", pd.Series(dtype=float)), errors="coerce").dropna()
+                    _dm    = pd.to_numeric(audit_df.get("DM Confirmed (0/1/2)", pd.Series(dtype=float)), errors="coerce").dropna()
+                    _lead_kpis = []
+                    if len(_lcomp): _lead_kpis.append(("Lead Composite", round(_lcomp.mean(),1), "%", "#e0368e"))
+                    if len(_pi):    _lead_kpis.append(("Product Interest", round(_pi.mean(),2),  "/2", "#3d8ef5"))
+                    if len(_fr):    _lead_kpis.append(("Follow-up Readiness", round(_fr.mean(),2), "/2", "#0ebc6e"))
+                    if len(_dm):    _lead_kpis.append(("DM Confirmed",  round(_dm.mean(),2),  "/2", "#f59e0b"))
+                    _lk_html = ""
+                    for _lk_name, _lk_val, _lk_unit, _lk_c in _lead_kpis:
+                        _lk_html += (
+                            f'<div style="display:flex;align-items:center;justify-content:space-between;'
+                            f'padding:8px 0;border-bottom:1px solid rgba(61,130,245,0.06);">'
+                            f'<div style="font-size:0.73rem;color:#0d1d3a;font-weight:500;">{_lk_name}</div>'
+                            f'<div style="font-size:1.1rem;font-weight:800;color:{_lk_c};">{_lk_val}{_lk_unit}</div>'
+                            f'</div>'
+                        )
+                    _hot  = int((audit_df["Lead Stage"] == "Hot").sum())
+                    _warm = int((audit_df["Lead Stage"] == "Warm").sum())
+                    _qualif_pct = round((_hot + _warm) / total * 100, 1) if total else 0
+                    _lk_html += (
+                        f'<div style="margin-top:8px;background:#e0368e18;border:1px solid #e0368e44;'
+                        f'border-radius:8px;padding:8px 12px;text-align:center;">'
+                        f'<div style="font-size:0.65rem;font-weight:700;color:#e0368e;letter-spacing:0.08em;'
+                        f'text-transform:uppercase;margin-bottom:3px;">Qualified Leads (Hot+Warm)</div>'
+                        f'<div style="font-size:1.5rem;font-weight:900;color:#e0368e;">{_qualif_pct}%</div>'
+                        f'<div style="font-size:0.62rem;color:#5588bb;">{_hot+_warm} of {total} conversations</div>'
+                        f'</div>'
+                    )
+                    st.markdown(
+                        f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.1);'
+                        f'border-radius:10px;padding:12px 16px;">{_lk_html}</div>',
+                        unsafe_allow_html=True,
+                    )
+                # Lead stage × campaign
+                if "Campaign Name" in audit_df.columns:
+                    st.markdown(
+                        '<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
+                        'text-transform:uppercase;color:#5588bb;margin:14px 0 8px;">Lead Stage by Campaign</div>',
+                        unsafe_allow_html=True,
+                    )
+                    _lsc_pivot = audit_df.groupby(["Campaign Name", "Lead Stage"]).size().unstack(fill_value=0)
+                    if not _lsc_pivot.empty:
+                        st.dataframe(_lsc_pivot, use_container_width=True)
+            except Exception:
+                pass
+
+    # ── Top-5 Weakest Parameters (QA schema only) ─────────────────────────────
+    if _has_qa_schema and scored_cols:
+        with st.expander("🔍 Parameter Weakness Analysis", expanded=False):
+            try:
+                _param_fail_rates = []
+                for _pcol in scored_cols:
+                    _bcfg = _builtin_cfg(_pcol)
+                    _opts  = (legend_map.get(_pcol) or _match_legend(_pcol, legend_map) or [])
+                    _ns    = _score_to_numeric(audit_df[_pcol].replace("", None), _opts,
+                                               inverted=(_bcfg["inverted"] if _bcfg else False))
+                    if _ns is not None:
+                        _valid = _ns.dropna()
+                        if len(_valid):
+                            _mean_s  = round(_valid.mean() * 100, 1)
+                            _fail_n  = int((_valid < 0.5).sum())
+                            _fail_p  = round(_fail_n / len(_valid) * 100, 1)
+                            _tier_l  = "—"
+                            for _t in _QA_SCHEMA["tiers"]:
+                                if any(_p["col"] == _pcol for _p in _t["params"]):
+                                    _tier_l = _t["label"]
+                                    break
+                            _param_fail_rates.append({"param": _pcol, "avg": _mean_s,
+                                                      "fail_pct": _fail_p, "tier": _tier_l,
+                                                      "color": _bcfg["color"] if _bcfg else "#3d8ef5"})
+                _param_fail_rates.sort(key=lambda x: x["fail_pct"], reverse=True)
+                if _param_fail_rates:
+                    st.markdown(
+                        '<div style="font-size:0.7rem;color:#5588bb;margin-bottom:10px;">'
+                        'Parameters ranked by failure rate — highest-impact coaching targets appear first.</div>',
+                        unsafe_allow_html=True,
+                    )
+                    for _pfr in _param_fail_rates[:8]:
+                        _pfc = "#dc2626" if _pfr["fail_pct"] > 30 else "#f59e0b" if _pfr["fail_pct"] > 15 else "#0ebc6e"
+                        st.markdown(
+                            f'<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;'
+                            f'background:#fff;border:1px solid rgba(61,130,245,0.08);border-left:3px solid {_pfc};'
+                            f'border-radius:8px;margin-bottom:5px;">'
+                            f'<div style="flex:1;font-size:0.73rem;font-weight:600;color:#0d1d3a;">{_pfr["param"]}</div>'
+                            f'<div style="font-size:0.65rem;color:#aabbcc;width:90px;text-align:center;">{_pfr["tier"]}</div>'
+                            f'<div style="width:140px;height:9px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                            f'<div style="width:{min(_pfr["fail_pct"],100)}%;height:100%;background:{_pfc};border-radius:3px;"></div></div>'
+                            f'<div style="width:55px;text-align:right;font-size:0.73rem;font-weight:700;color:{_pfc};">{_pfr["fail_pct"]}%</div>'
+                            f'<div style="width:60px;text-align:right;font-size:0.65rem;color:#5588bb;">avg {_pfr["avg"]}%</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+            except Exception:
+                pass
+
+    # ── Weight overview bar ───────────────────────────────────────────────────
+    st.markdown('<div class="section-chip">⚖️ Parameter Weights</div>', unsafe_allow_html=True)
+    _weight_html = ""
+    for col in scored_cols:
+        _w   = _custom_weights.get(col, _DEFAULT_PARAM_WEIGHT)
+        _pct = round(_w / total_weight * 100, 1) if total_weight else 0
+        _bcfg = _builtin_cfg(col)
+        _col_c = _bcfg["color"] if _bcfg else "#3d8ef5"
+        _tag  = " 🧠" if _bcfg else ""
+        _weight_html += (
+            f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+            f'<div style="width:200px;font-size:0.73rem;color:#0d1d3a;font-weight:500;'
+            f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">{col}{_tag}</div>'
+            f'<div style="flex:1;height:14px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+            f'<div style="width:{_pct}%;height:100%;background:{_col_c};border-radius:3px;"></div></div>'
+            f'<div style="width:90px;text-align:right;font-size:0.7rem;color:#5588bb;flex-shrink:0;">'
+            f'w={_w:.1f} &nbsp;<span style="color:#aabbcc;">({_pct}%)</span></div>'
+            f'</div>'
+        )
+    st.markdown(
+        f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:10px;'
+        f'padding:14px 18px;margin-bottom:1.2rem;">{_weight_html}</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Per-parameter score distribution ──────────────────────────────────────
+    st.markdown('<div class="section-chip">🎯 Score Distribution by Parameter</div>', unsafe_allow_html=True)
+    _PARAM_COLORS = ["#e0368e","#3d8ef5","#0ebc6e","#f59e0b","#7c3aed","#06b6d4","#ef4444","#84cc16"]
+
+    # Split: intelligence params first, then others
+    _intel_cols  = [c for c in scored_cols if _builtin_cfg(c)]
+    _other_cols  = [c for c in scored_cols if not _builtin_cfg(c)]
+
+    for section_cols, section_label in [(_intel_cols, "🧠 Intelligence Parameters"), (_other_cols, "📋 Audit Parameters")]:
+        if not section_cols:
+            continue
+        st.markdown(
+            f'<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;'
+            f'color:#5588bb;margin:12px 0 8px;">{section_label}</div>',
+            unsafe_allow_html=True,
+        )
+        for p_idx, col in enumerate(section_cols):
+            _bcfg     = _builtin_cfg(col)
+            opts      = legend_map.get(col) or _match_legend(col, legend_map) or []
+            _vals     = audit_df[col].replace("", None).dropna().astype(str).str.strip()
+            vc        = _vals.value_counts()
+            total_filled = vc.sum()
+            blank_count  = total_rows - total_filled
+            col_color = _bcfg["color"] if _bcfg else _PARAM_COLORS[p_idx % len(_PARAM_COLORS)]
+            _w        = _custom_weights.get(col, _DEFAULT_PARAM_WEIGHT)
+            _inv_tag  = " ↓ lower=better" if (_bcfg and _bcfg["inverted"]) else ""
+
+            bars_html = ""
+            _ordered  = [str(o) for o in opts if str(o) in vc.index]
+            _ordered += [v for v in vc.index if v not in _ordered]
+            for val in _ordered:
+                cnt = int(vc.get(val, 0))
+                pct = round(cnt / total_rows * 100, 1)
+                # colour the bar: for inverted params first option is green, last is red
+                if _bcfg and opts:
+                    _rank_i = opts.index(val) if val in opts else len(opts) // 2
+                    _bar_c  = ["#0ebc6e","#84cc16","#f59e0b","#ef4444"][min(_rank_i, 3)]
+                else:
+                    _bar_c  = col_color
+                bars_html += (
+                    f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+                    f'<div style="width:130px;font-size:0.73rem;color:#0d1d3a;font-weight:500;'
+                    f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">{val}</div>'
+                    f'<div style="flex:1;height:16px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                    f'<div style="width:{pct}%;height:100%;background:{_bar_c};border-radius:3px;"></div></div>'
+                    f'<div style="width:80px;text-align:right;font-size:0.71rem;color:#5588bb;flex-shrink:0;">'
+                    f'{cnt:,} <span style="color:#aabbcc;">({pct}%)</span></div>'
+                    f'</div>'
+                )
+            if blank_count > 0:
+                _bp = round(blank_count / total_rows * 100, 1)
+                bars_html += (
+                    f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;opacity:0.45;">'
+                    f'<div style="width:130px;font-size:0.71rem;color:#aabbcc;flex-shrink:0;">— not scored</div>'
+                    f'<div style="flex:1;height:16px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                    f'<div style="width:{_bp}%;height:100%;background:#cbd5e0;border-radius:3px;"></div></div>'
+                    f'<div style="width:80px;text-align:right;font-size:0.71rem;color:#aabbcc;flex-shrink:0;">'
+                    f'{blank_count:,} ({_bp}%)</div></div>'
+                )
+
+            st.markdown(
+                f'<div style="background:#fff;border:1px solid rgba(61,130,245,0.1);'
+                f'border-left:3px solid {col_color};border-radius:10px;padding:14px 18px;margin-bottom:8px;">'
+                f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+                f'<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:{col_color};">'
+                f'{"" if not _bcfg else _bcfg["icon"]+" "}{col}</div>'
+                f'<div style="font-size:0.63rem;color:#aabbcc;">weight {_w:.1f}{_inv_tag} &nbsp;·&nbsp; {total_filled:,}/{total_rows:,} scored</div>'
+                f'</div>'
+                f'{bars_html}</div>',
+                unsafe_allow_html=True,
+            )
+
+    # ── Agent / Auditor performance leaderboard ───────────────────────────────
+    if group_col and (scored_cols or _has_qa_schema):
+        st.markdown(f'<div class="section-chip">👤 Auditor Leaderboard — {group_col}</div>', unsafe_allow_html=True)
+        _grp_rows = []
+        for agent, grp in audit_df.groupby(group_col, sort=False):
+            _row = {"Agent": str(agent), "Audits": len(grp)}
+            if _has_qa_schema:
+                _bs_grp = pd.to_numeric(grp.get("Bot Score", pd.Series(dtype=float)), errors="coerce").dropna()
+                _ws = _bs_grp.mean() / 100.0 if len(_bs_grp) else None
+                _st  = grp.get("Status", pd.Series(dtype=str)).astype(str).str.strip()
+                _row["Pass"]         = int((_st == "Pass").sum())
+                _row["Needs Review"] = int((_st == "Needs Review").sum())
+                _row["Fail"]         = int((_st == "Fail").sum())
+                _row["Fatal"]        = int((_st == "Auto-Fail").sum())
+            else:
+                _wsc, _wts = [], []
+                for c in scored_cols:
+                    opts  = legend_map.get(c) or _match_legend(c, legend_map) or []
+                    _bcfg = _builtin_cfg(c)
+                    _inv  = _bcfg["inverted"] if _bcfg else False
+                    _w    = _custom_weights.get(c, _DEFAULT_PARAM_WEIGHT)
+                    _ns   = _score_to_numeric(grp[c], opts, inverted=_inv)
+                    if _ns is not None and _ns.notna().sum() > 0:
+                        _m = _ns.mean()
+                        _row[c] = f"{round(_m*100,1)}%"
+                        _wsc.append(_m * _w); _wts.append(_w)
+                    else:
+                        _vc = grp[c].replace("", None).dropna().value_counts()
+                        _row[c] = _vc.index[0] if len(_vc) else "—"
+                _ws = sum(_wsc) / sum(_wts) if _wts else None
+                _row["Pass"] = _row["Needs Review"] = _row["Fail"] = _row["Fatal"] = 0
+            _row["_score_raw"] = round(_ws * 100, 1) if _ws is not None else None
+            _row["Score"]      = f"{_row['_score_raw']}%" if _row["_score_raw"] is not None else "—"
+            _row["Completion"] = f"{round(grp[scored_cols].replace('',None).notna().all(axis=1).mean()*100,1)}%" if scored_cols else "100%"
+            _grp_rows.append(_row)
+
+        if _grp_rows:
+            _ranked = sorted(
+                [r for r in _grp_rows if r.get("_score_raw") is not None],
+                key=lambda r: r["_score_raw"], reverse=True,
+            )
+            _rank_html = ""
+            for _ri, _ar in enumerate(_ranked[:12]):
+                _sc    = _ar["_score_raw"]
+                _gc    = _qa_status_color(_qa_status(_sc, False))
+                _bg    = "rgba(14,188,110,0.03)" if _ri == 0 else "#fff"
+                _bdr   = "#0ebc6e44" if _ri == 0 else "rgba(61,130,245,0.08)"
+                _medal = ["🥇","🥈","🥉"][_ri] if _ri < 3 else f'<span style="font-size:0.72rem;color:#aabbcc;">#{_ri+1}</span>'
+                _p  = _ar.get("Pass", 0)
+                _rv = _ar.get("Needs Review", 0)
+                _fl = _ar.get("Fail", 0) + _ar.get("Fatal", 0)
+                _rank_html += (
+                    f'<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;'
+                    f'background:{_bg};border:1px solid {_bdr};border-radius:11px;margin-bottom:6px;">'
+                    f'<div style="width:26px;text-align:center;flex-shrink:0;font-size:1rem;">{_medal}</div>'
+                    f'<div style="flex:1;min-width:0;">'
+                    f'<div style="font-size:0.84rem;font-weight:700;color:#0d1d3a;'
+                    f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_ar["Agent"]}</div>'
+                    f'<div style="display:flex;gap:5px;margin-top:3px;">'
+                    f'<span style="background:#0ebc6e18;border:1px solid #0ebc6e55;border-radius:4px;'
+                    f'padding:1px 7px;font-size:0.6rem;font-weight:700;color:#0ebc6e;">{_p} Pass</span>'
+                    f'<span style="background:#f59e0b18;border:1px solid #f59e0b55;border-radius:4px;'
+                    f'padding:1px 7px;font-size:0.6rem;font-weight:700;color:#f59e0b;">{_rv} Review</span>'
+                    f'<span style="background:#dc262618;border:1px solid #dc262655;border-radius:4px;'
+                    f'padding:1px 7px;font-size:0.6rem;font-weight:700;color:#dc2626;">{_fl} Fail</span>'
+                    f'</div>'
+                    f'</div>'
+                    f'<div style="width:150px;height:9px;background:#edf2fb;border-radius:5px;overflow:hidden;flex-shrink:0;">'
+                    f'<div style="width:{min(_sc,100)}%;height:100%;background:{_gc};border-radius:5px;"></div></div>'
+                    f'<div style="width:50px;text-align:right;font-size:0.88rem;font-weight:900;color:{_gc};flex-shrink:0;">{_sc}%</div>'
+                    f'<div style="width:52px;text-align:right;font-size:0.65rem;color:#aabbcc;flex-shrink:0;">{_ar["Audits"]} audits</div>'
+                    f'</div>'
+                )
+            st.markdown(f'<div style="margin-bottom:1.2rem;">{_rank_html}</div>', unsafe_allow_html=True)
+
+            # Bar chart
+            _chart_df = pd.DataFrame(
+                {"Score (%)": [r["_score_raw"] for r in _ranked]},
+                index=[r["Agent"] for r in _ranked],
+            )
+            st.bar_chart(_chart_df, use_container_width=True)
+
+            # Full parameter table (collapsible)
+            with st.expander("📊 Full Parameter Breakdown by Agent", expanded=False):
+                _tbl = [{k: v for k, v in r.items() if k != "_score_raw"} for r in _grp_rows]
+                st.dataframe(pd.DataFrame(_tbl), use_container_width=True, hide_index=True)
+
+    # ── QA Score Trends ───────────────────────────────────────────────────────
+    _trend_scores = (
+        pd.to_numeric(audit_df["Bot Score"], errors="coerce")
+        if _has_qa_schema and "Bot Score" in audit_df.columns
+        else (_row_scores * 100 if _row_scores is not None else None)
+    )
+    if date_col and _trend_scores is not None:
+        st.markdown(f'<div class="section-chip">📅 QA Score Trends — {date_col}</div>', unsafe_allow_html=True)
+        try:
+            _td = audit_df[[date_col]].copy()
+            _td["score"] = _trend_scores.values
+            if group_col and group_col in audit_df.columns:
+                _td["group"] = audit_df[group_col].values
+            _td[date_col] = pd.to_datetime(_td[date_col], errors="coerce")
+            _td = _td.dropna(subset=[date_col, "score"]).sort_values(date_col)
+
+            _tc1, _tc2 = st.columns([4, 1])
+            with _tc2:
+                _period = st.selectbox("Period", ["Daily", "Weekly", "Monthly"],
+                                       index=1, key="sense_trend_period")
+            _freq = {"Daily": "D", "Weekly": "W", "Monthly": "M"}[_period]
+            try:
+                _agg = (_td.set_index(date_col)[["score"]]
+                        .resample(_freq).mean().dropna().round(1)
+                        .rename(columns={"score": "Avg Score (%)"}))
+            except Exception:
+                _agg = pd.DataFrame()
+            with _tc1:
+                if not _agg.empty:
+                    st.line_chart(_agg, use_container_width=True)
+
+            if group_col and "group" in _td.columns:
+                with st.expander(f"📊 Score Trend by {group_col}", expanded=False):
+                    try:
+                        _apt = _td.pivot_table(
+                            index=pd.Grouper(key=date_col, freq=_freq),
+                            columns="group", values="score", aggfunc="mean",
+                        ).round(1)
+                        if not _apt.empty:
+                            st.line_chart(_apt, use_container_width=True)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+    # ── Incomplete rows ────────────────────────────────────────────────────────
+    _incomplete = audit_df[~audit_df[scored_cols].replace("", None).notna().all(axis=1)]
+    if not _incomplete.empty:
+        with st.expander(f"⚠️ {len(_incomplete):,} rows not fully scored", expanded=False):
+            st.dataframe(_incomplete, use_container_width=True, height=300)
+            st.download_button(
+                "⬇ Download incomplete rows",
+                data=_incomplete.to_csv(index=False).encode("utf-8"),
+                file_name="incomplete_rows.csv", mime="text/csv",
+                key="sense_dl_incomplete",
+            )
+
+
+def _render_sense_sheet(df, sheet_name, fname, sheets=None):
+    """Renders a single sheet. Audit sheets get an editable data_editor with score dropdowns."""
+    _safe     = sheet_name.replace(" ", "_").lower()
+    _is_audit = any(k in _safe for k in ("audit", "qa", "review", "score", "evaluat"))
+
+    if _is_audit:
+        # ── Parse legend + merge built-in params FIRST (needed for KPI strip) ──
+        legend_map = {}
+        if sheets:
+            for k, v in sheets.items():
+                if "legend" in k.lower():
+                    legend_map = _parse_legend(v)
+                    break
+        legend_map = _merge_builtin_params(legend_map)
+
+        # ── Load or init editable copy (inject missing built-in cols) ────────
+        edit_key = f"sense_audit_edits_{_safe}"
+        if edit_key not in st.session_state:
+            _init = df.copy()
+            for param in _SENSE_BUILTIN_PARAMS:
+                if not any(param.lower() in str(c).lower() or str(c).lower() in param.lower()
+                           for c in _init.columns):
+                    _init[param] = ""
+            for col in _init.columns:
+                opts = _match_legend(col, legend_map)
+                if opts:
+                    _init[col] = _init[col].astype(str).str.strip().replace("nan", "")
+            st.session_state[edit_key] = _init
+
+        working_df = st.session_state[edit_key]
+
+        # ── Build column config (scored cols now known before KPI strip) ──────
+        col_config  = {}
+        scored_cols = []
+        for col in working_df.columns:
+            opts = _match_legend(col, legend_map)
+            if opts:
+                scored_cols.append(col)
+                _bcfg = _builtin_cfg(col)
+                _lbl  = f"{_bcfg['icon']} {col}" if _bcfg else str(col)
+                col_config[col] = st.column_config.SelectboxColumn(
+                    label=_lbl,
+                    options=[""] + opts,
+                    required=False,
+                    width="medium",
+                )
+
+        # ── Scoring summary for KPI strip ──────────────────────────────────
+        _scored_mask  = working_df[scored_cols].replace("", None).notna().all(axis=1) if scored_cols else pd.Series([False]*len(working_df))
+        _scored_rows  = int(_scored_mask.sum())
+        _completion   = round(_scored_rows / len(working_df) * 100, 1) if len(working_df) else 0
+        null_pct      = round(working_df.isnull().sum().sum() / working_df.size * 100, 1) if working_df.size else 0
+    else:
+        scored_cols  = []
+        _scored_rows = 0
+        _completion  = 0.0
+        null_pct     = round(df.isnull().sum().sum() / df.size * 100, 1) if df.size else 0
+
+    # ── KPI strip (accurate for both audit and non-audit) ────────────────────
+    _display_df = working_df if _is_audit else df
+    st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1rem;">
+        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Rows</div>
+            <div style="color:#3d8ef5;font-size:1.5rem;font-weight:800;">{len(_display_df):,}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid #e0368e;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Total Columns</div>
+            <div style="color:#e0368e;font-size:1.5rem;font-weight:800;">{len(_display_df.columns)}</div>
+        </div>
+        <div class="stat-card" style="border-top:2px solid #7c3aed;">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">{"Scored Params" if _is_audit else "Numeric Cols"}</div>
+            <div style="color:#7c3aed;font-size:1.5rem;font-weight:800;">{len(scored_cols) if _is_audit else len(_display_df.select_dtypes(include="number").columns)}</div>
+            {f'<div style="font-size:0.65rem;color:#5588bb;margin-top:2px;">{_completion}% rows complete</div>' if _is_audit else ""}
+        </div>
+        <div class="stat-card" style="border-top:2px solid {'#dc2626' if null_pct > 5 else '#0ebc6e'};">
+            <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Missing Values</div>
+            <div style="color:{'#dc2626' if null_pct > 5 else '#0ebc6e'};font-size:1.5rem;font-weight:800;">{null_pct}%</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+    if _is_audit:
+        # ── Legend reference ──────────────────────────────────────────────────
+        with st.expander("📖 Score Legend — all parameters & valid values", expanded=False):
+            _rows_html = ""
+            for param, opts in legend_map.items():
+                _bcfg = _builtin_cfg(param)
+                _tag  = f'<span style="background:rgba(224,54,142,0.1);border:1px solid rgba(224,54,142,0.3);border-radius:4px;padding:1px 6px;font-size:0.6rem;color:#e0368e;margin-left:6px;">🧠 Intelligence</span>' if _bcfg else ""
+                _desc = f'<div style="font-size:0.65rem;color:#7a99bb;margin-top:2px;">{_bcfg["description"]}</div>' if _bcfg else ""
+                _chips = "".join(
+                    f'<span style="background:rgba(61,130,245,0.08);border:1px solid rgba(61,130,245,0.2);'
+                    f'border-radius:6px;padding:2px 9px;font-size:0.7rem;color:#3d8ef5;">{o}</span>'
+                    for o in opts
+                )
+                _rows_html += (
+                    f'<div style="padding:8px 0;border-bottom:1px solid rgba(61,130,245,0.07);">'
+                    f'<div style="display:flex;align-items:center;gap:4px;margin-bottom:5px;">'
+                    f'<span style="font-size:0.76rem;font-weight:700;color:#0d1d3a;">{param}</span>{_tag}</div>'
+                    f'{_desc}'
+                    f'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;">{_chips}</div>'
+                    f'</div>'
+                )
+            st.markdown(_rows_html, unsafe_allow_html=True)
+
+        if scored_cols and not col_config:
+            st.info("No audit sheet columns matched legend parameters. All columns are freely editable.")
+
+        # ── Search / filter ───────────────────────────────────────────────────
+        search = st.text_input("🔍 Search rows", key=f"sense_search_{_safe}",
+                               placeholder="Filter across all columns…")
+        _display_df = working_df.copy()
+        if search:
+            mask = _display_df.astype(str).apply(
+                lambda c: c.str.contains(search, case=False, na=False)).any(axis=1)
+            _display_df = _display_df[mask]
+
+        st.markdown(
+            f'<div style="font-size:0.74rem;color:#5588bb;margin-bottom:4px;">'
+            f'{len(_display_df):,} of {len(working_df):,} rows &nbsp;·&nbsp; '
+            f'<span style="color:#7c3aed;font-weight:600;">{len(scored_cols)} scored column{"s" if len(scored_cols)!=1 else ""}</span>'
+            f' with dropdown</div>',
+            unsafe_allow_html=True,
+        )
+
+        # ── Editable table ────────────────────────────────────────────────────
+        edited = st.data_editor(
+            _display_df,
+            column_config=col_config,
+            use_container_width=True,
+            height=520,
+            num_rows="fixed",
+            key=f"sense_editor_{_safe}",
+        )
+
+        # Merge edits back into full working_df (search may have filtered rows)
+        if search:
+            working_df.loc[_display_df.index] = edited.values
+        else:
+            working_df = edited
+        st.session_state[edit_key] = working_df
+        # Persist scored edits so they survive hot-reloads
+        _sense_save(st.session_state.get("sense_sheets", {}),
+                    st.session_state.get("sense_filename", "data"))
+
+        # ── Actions row ───────────────────────────────────────────────────────
+        dl_col, reset_col = st.columns([4, 1])
+        with dl_col:
+            st.download_button(
+                label="⬇ Download Scored Audit Sheet",
+                data=working_df.to_csv(index=False).encode("utf-8"),
+                file_name=f"{fname.rsplit('.',1)[0]}_scored_audit.csv",
+                mime="text/csv",
+                key=f"sense_dl_{_safe}",
+            )
+        with reset_col:
+            _protected = _is_protected_sheet(sheet_name)
+            if _protected:
+                st.markdown(
+                    '<div style="text-align:center;font-size:0.7rem;color:#e0368e;padding:6px 0;'
+                    'border:1px solid rgba(224,54,142,0.25);border-radius:6px;">🔒 Protected</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                if st.button("↺ Reset scores", key=f"sense_reset_{_safe}", use_container_width=True):
+                    st.session_state.pop(edit_key, None)
+                    st.rerun()
+
+    else:
+        # ── Non-audit sheet: read-only searchable table ───────────────────────
+        search = st.text_input("🔍 Search rows", key=f"sense_search_{_safe}",
+                               placeholder="Filter across all columns…")
+        _df = df.copy()
+        if search:
+            mask = _df.astype(str).apply(
+                lambda c: c.str.contains(search, case=False, na=False)).any(axis=1)
+            _df = _df[mask]
+
+        st.markdown(
+            f'<div style="font-size:0.74rem;color:#5588bb;margin-bottom:4px;">'
+            f'{len(_df):,} of {len(df):,} rows shown</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(_df, use_container_width=True, height=480)
+
+        st.download_button(
+            label=f"⬇ Download — {sheet_name}",
+            data=df.to_csv(index=False).encode("utf-8"),
+            file_name=f"{fname.rsplit('.',1)[0]}_{_safe}.csv",
+            mime="text/csv",
+            key=f"sense_dl_{_safe}",
+        )
+
+
+def _render_sense_insights(df, fname, sheets=None):
+    """Comprehensive Insights Dashboard — rule-based analytics + AI deep-dive."""
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+    # ── Build audit_df — always seeds from form log / seed records ────────────
+    _form_log_ins = st.session_state.get("sense_audit_log")
+    if _form_log_ins is None:
+        _form_log_ins = _audit_log_load()
+        if _form_log_ins:
+            st.session_state["sense_audit_log"] = _form_log_ins
+
+    _audit_df_ins = None
+    _all_sheets   = sheets or {}
+    for _sk, _sv in _all_sheets.items():
+        if any(kw in _sk.lower() for kw in ("audit", "qa", "review", "score")):
+            _audit_df_ins = _sv.copy()
+            break
+
+    if _form_log_ins:
+        _log_df_ins = pd.DataFrame(_form_log_ins)
+        if _audit_df_ins is not None:
+            _audit_df_ins = pd.concat([_audit_df_ins,
+                                       _log_df_ins.reindex(columns=_audit_df_ins.columns, fill_value="")],
+                                      ignore_index=True)
+        else:
+            _audit_df_ins = _log_df_ins
+
+    # Use audit_df as AI sheet if no other sheets uploaded
+    if not _all_sheets and _audit_df_ins is not None:
+        _all_sheets = {"Sense Audit": _audit_df_ins}
+    elif not _all_sheets:
+        _all_sheets = {"Data": df} if df is not None and not (hasattr(df, "empty") and df.empty) else {}
+
+    _has_qa_ins = (_audit_df_ins is not None and
+                   "Bot Score" in (_audit_df_ins.columns if _audit_df_ins is not None else []) and
+                   "Status"    in (_audit_df_ins.columns if _audit_df_ins is not None else []))
+
+    # ── TABS ──────────────────────────────────────────────────────────────────
+    _itab_labels = ["📊 Analytics", "📈 Trends", "🧩 Drill-Downs", "🤖 AI Deep Dive"]
+    _i1, _i2, _i3, _i4 = st.tabs(_itab_labels)
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # Tab 1 — Analytics (rule-based Key Insights + performance summary)
+    # ══════════════════════════════════════════════════════════════════════════
+    with _i1:
+        if not _has_qa_ins:
+            st.info("No QA schema data found. Submit audits via the ✍️ New Audit tab first.")
+        else:
+            # Demo data notice when no file uploaded
+            if not sheets:
+                st.markdown(
+                    '<div style="background:rgba(61,130,245,0.08);border:1px solid rgba(61,130,245,0.2);'
+                    'border-radius:8px;padding:9px 16px;margin-bottom:12px;font-size:0.73rem;color:#3d8ef5;">'
+                    '📊 <strong>Demo data</strong> — showing 25 seed audits. Upload a file or submit audits via ✍️ New Audit to see your own data.</div>',
+                    unsafe_allow_html=True,
+                )
+            _qi2 = _gen_qa_insights(_audit_df_ins)
+            total_i    = len(_audit_df_ins)
+            _bs_i      = pd.to_numeric(_audit_df_ins["Bot Score"], errors="coerce")
+            _st_i      = _audit_df_ins["Status"].astype(str).str.strip()
+            _avg_i     = round(_bs_i.dropna().mean(), 1) if _bs_i.dropna().notna().any() else None
+            pass_i     = int((_st_i == "Pass").sum())
+            review_i   = int((_st_i == "Needs Review").sum())
+            fail_i     = int((_st_i == "Fail").sum())
+            fatal_i    = int((_st_i == "Auto-Fail").sum())
+            pass_rate_i  = round(pass_i  / total_i * 100, 1) if total_i else 0
+            fatal_rate_i = round(fatal_i / total_i * 100, 1) if total_i else 0
+
+            # Summary band
+            _band_c = "#0ebc6e" if (_avg_i or 0) >= 80 else "#f59e0b" if (_avg_i or 0) >= 60 else "#dc2626"
+            st.markdown(f"""
+<div style="background:linear-gradient(120deg,#0d1d3a,#1a2d50);border-radius:14px;
+  padding:20px 24px;margin-bottom:1.4rem;">
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;">
+    <div style="text-align:center;">
+      <div style="font-size:2rem;font-weight:900;color:#fff;">{total_i}</div>
+      <div style="font-size:0.62rem;color:#93c5fd;letter-spacing:0.08em;text-transform:uppercase;">Total Audits</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-size:2rem;font-weight:900;color:{_band_c};">{_avg_i or "—"}%</div>
+      <div style="font-size:0.62rem;color:#93c5fd;letter-spacing:0.08em;text-transform:uppercase;">Avg Bot Score</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-size:2rem;font-weight:900;color:#0ebc6e;">{pass_rate_i}%</div>
+      <div style="font-size:0.62rem;color:#93c5fd;letter-spacing:0.08em;text-transform:uppercase;">Pass Rate</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-size:2rem;font-weight:900;color:#f59e0b;">{review_i}</div>
+      <div style="font-size:0.62rem;color:#93c5fd;letter-spacing:0.08em;text-transform:uppercase;">Needs Review</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-size:2rem;font-weight:900;color:{"#dc2626" if fatal_i else "#6ee7b7"};">{fatal_i}</div>
+      <div style="font-size:0.62rem;color:#93c5fd;letter-spacing:0.08em;text-transform:uppercase;">Auto-Fails</div>
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
+
+            # Key Insights
+            _TYPE_CFG2 = {
+                "critical": ("#fef2f2", "#dc2626", "#991b1b", "#fee2e2"),
+                "warning":  ("#fffbeb", "#f59e0b", "#92400e", "#fde68a"),
+                "success":  ("#f0fdf4", "#16a34a", "#14532d", "#bbf7d0"),
+                "info":     ("#eff6ff", "#2563eb", "#1e3a8a", "#bfdbfe"),
+            }
+            if _qi2["insights"]:
+                st.markdown('<div class="section-chip">💡 Key Insights</div>', unsafe_allow_html=True)
+                _ic1, _ic2 = st.columns(2)
+                for _ii, _ins in enumerate(_qi2["insights"]):
+                    _tcfg2 = _TYPE_CFG2.get(_ins["type"], _TYPE_CFG2["info"])
+                    _col_target = _ic1 if _ii % 2 == 0 else _ic2
+                    with _col_target:
+                        st.markdown(
+                            f'<div style="background:{_tcfg2[0]};border:1px solid {_tcfg2[3]};'
+                            f'border-left:4px solid {_tcfg2[1]};border-radius:10px;'
+                            f'padding:12px 16px;margin-bottom:8px;">'
+                            f'<div style="font-size:0.78rem;font-weight:700;color:{_tcfg2[2]};margin-bottom:4px;">{_ins["title"]}</div>'
+                            f'<div style="font-size:0.71rem;color:{_tcfg2[2]};opacity:0.85;line-height:1.5;">{_ins["detail"]}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+
+            # Action Items
+            if _qi2["actions"]:
+                st.markdown('<div class="section-chip">🎯 Action Items</div>', unsafe_allow_html=True)
+                _PRI_CFG2 = {
+                    "high":   ("#dc2626", "🔴", "#fef2f2", "#fee2e2"),
+                    "medium": ("#f59e0b", "🟡", "#fffbeb", "#fde68a"),
+                    "low":    ("#16a34a", "🟢", "#f0fdf4", "#bbf7d0"),
+                }
+                _ac1, _ac2 = st.columns(2)
+                for _ai2, _act in enumerate(_qi2["actions"]):
+                    _pcfg2 = _PRI_CFG2.get(_act["priority"], _PRI_CFG2["low"])
+                    _col_target = _ac1 if _ai2 % 2 == 0 else _ac2
+                    with _col_target:
+                        st.markdown(
+                            f'<div style="background:{_pcfg2[2]};border:1px solid {_pcfg2[3]};'
+                            f'border-left:4px solid {_pcfg2[0]};border-radius:10px;'
+                            f'padding:12px 15px;margin-bottom:8px;">'
+                            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'
+                            f'<span>{_pcfg2[1]}</span>'
+                            f'<span style="font-size:0.63rem;font-weight:700;letter-spacing:0.08em;'
+                            f'text-transform:uppercase;color:{_pcfg2[0]};">{_act["priority"].upper()} · {_act["category"]}</span>'
+                            f'</div>'
+                            f'<div style="font-size:0.73rem;font-weight:600;color:#0d1d3a;margin-bottom:5px;line-height:1.4;">{_act["action"]}</div>'
+                            f'<div style="font-size:0.65rem;color:#5588bb;line-height:1.4;border-top:1px solid {_pcfg2[0]}22;padding-top:5px;">'
+                            f'Impact: {_act["impact"]}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+
+            # Auditor performance summary table
+            if "Auditor" in _audit_df_ins.columns:
+                st.markdown('<div class="section-chip">👤 Auditor Performance Summary</div>', unsafe_allow_html=True)
+                _aud_rows = []
+                for _aud, _agrp in _audit_df_ins.groupby("Auditor"):
+                    _a_bs   = pd.to_numeric(_agrp["Bot Score"], errors="coerce").dropna()
+                    _a_st   = _agrp["Status"].astype(str).str.strip()
+                    _a_pass = int((_a_st == "Pass").sum())
+                    _a_rev  = int((_a_st == "Needs Review").sum())
+                    _a_fail = int((_a_st.isin(["Fail","Auto-Fail"])).sum())
+                    _a_avg  = round(_a_bs.mean(), 1) if len(_a_bs) else None
+                    _a_pr   = round(_a_pass / len(_agrp) * 100, 1) if len(_agrp) else 0
+                    _aud_rows.append({"Auditor": str(_aud), "Audits": len(_agrp),
+                                      "Avg Score": f"{_a_avg}%" if _a_avg else "—",
+                                      "Pass": _a_pass, "Review": _a_rev,
+                                      "Fail/Fatal": _a_fail, "Pass Rate": f"{_a_pr}%"})
+                _aud_rows.sort(key=lambda x: float(x["Avg Score"].rstrip("%")) if x["Avg Score"] != "—" else 0, reverse=True)
+                st.dataframe(pd.DataFrame(_aud_rows), use_container_width=True, hide_index=True)
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # Tab 2 — Trends
+    # ══════════════════════════════════════════════════════════════════════════
+    with _i2:
+        if not _has_qa_ins or _audit_df_ins is None:
+            st.info("No QA data available.")
+        else:
+            if not sheets:
+                st.markdown(
+                    '<div style="background:rgba(61,130,245,0.08);border:1px solid rgba(61,130,245,0.2);'
+                    'border-radius:8px;padding:9px 16px;margin-bottom:12px;font-size:0.73rem;color:#3d8ef5;">'
+                    '📊 <strong>Demo data</strong> — showing 25 seed audits across 4 auditors & 3 campaigns.</div>',
+                    unsafe_allow_html=True,
+                )
+            _DATE_KW2 = ("audit date","date","time","month","week","day","period","created","submitted")
+            _dc2 = next((c for c in _audit_df_ins.columns if any(k in str(c).lower() for k in _DATE_KW2)), None)
+            if _dc2 is None:
+                st.info("No date column found — trends require a date column (e.g. 'Audit Date').")
+            else:
+                try:
+                    _td2 = _audit_df_ins.copy()
+                    _td2["_date"] = pd.to_datetime(_td2[_dc2], errors="coerce")
+                    _td2["_bs"]   = pd.to_numeric(_td2["Bot Score"], errors="coerce")
+                    _td2 = _td2.dropna(subset=["_date", "_bs"]).sort_values("_date")
+                    _td2["_pass"] = (_td2["Status"].astype(str).str.strip() == "Pass").astype(int)
+
+                    _tr_c1, _tr_c2 = st.columns([4, 1])
+                    with _tr_c2:
+                        _t_period = st.selectbox("Period", ["Daily", "Weekly", "Monthly"],
+                                                  index=1, key="insights_trend_period")
+                    _t_freq = {"Daily": "D", "Weekly": "W", "Monthly": "M"}[_t_period]
+
+                    with _tr_c1:
+                        # Avg score over time
+                        _agg2 = (_td2.set_index("_date")[["_bs", "_pass"]]
+                                 .resample(_t_freq).agg({"_bs": "mean", "_pass": "mean"})
+                                 .dropna(how="all").round(2))
+                        _agg2.index.name = _dc2
+                        _agg2 = _agg2.rename(columns={"_bs": "Avg Bot Score (%)", "_pass": "Pass Rate (0-1)"})
+                        _agg2["Pass Rate (%)"] = (_agg2["Pass Rate (0-1)"] * 100).round(1)
+                        _agg2.drop(columns=["Pass Rate (0-1)"], inplace=True)
+                        if not _agg2.empty:
+                            st.markdown('<div class="section-chip">📈 Score & Pass Rate Over Time</div>',
+                                        unsafe_allow_html=True)
+                            st.line_chart(_agg2[["Avg Bot Score (%)", "Pass Rate (%)"]], use_container_width=True)
+
+                    # Per-auditor trend
+                    if "Auditor" in _audit_df_ins.columns:
+                        with st.expander("👤 Score Trend by Auditor", expanded=True):
+                            try:
+                                _aud_pt = _td2.pivot_table(
+                                    index=pd.Grouper(key="_date", freq=_t_freq),
+                                    columns="Auditor", values="_bs", aggfunc="mean").round(1)
+                                _aud_pt.index.name = _dc2
+                                if not _aud_pt.empty:
+                                    st.line_chart(_aud_pt, use_container_width=True)
+                            except Exception:
+                                pass
+
+                    # Per-campaign trend
+                    if "Campaign Name" in _audit_df_ins.columns:
+                        with st.expander("🎯 Score Trend by Campaign", expanded=False):
+                            try:
+                                _camp_pt = _td2.pivot_table(
+                                    index=pd.Grouper(key="_date", freq=_t_freq),
+                                    columns="Campaign Name", values="_bs", aggfunc="mean").round(1)
+                                _camp_pt.index.name = _dc2
+                                if not _camp_pt.empty:
+                                    st.line_chart(_camp_pt, use_container_width=True)
+                            except Exception:
+                                pass
+
+                    # Status distribution over time (stacked bar via dataframe)
+                    with st.expander("📊 Status Distribution Over Time", expanded=False):
+                        try:
+                            _status_pt = _td2.groupby([pd.Grouper(key="_date", freq=_t_freq),
+                                                        "Status"]).size().unstack(fill_value=0)
+                            _status_pt.index = _status_pt.index.strftime("%Y-%m-%d")
+                            if not _status_pt.empty:
+                                st.dataframe(_status_pt, use_container_width=True)
+                                st.bar_chart(_status_pt, use_container_width=True)
+                        except Exception:
+                            pass
+
+                    # Volume trend
+                    with st.expander("📋 Audit Volume Over Time", expanded=False):
+                        try:
+                            _vol = _td2.resample(_t_freq, on="_date").size().rename("Audit Count")
+                            _vol.index.name = _dc2
+                            if not _vol.empty:
+                                st.bar_chart(_vol, use_container_width=True)
+                        except Exception:
+                            pass
+                except Exception:
+                    st.info("Unable to compute trends — check date column format.")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # Tab 3 — Drill-Downs
+    # ══════════════════════════════════════════════════════════════════════════
+    with _i3:
+        if not _has_qa_ins or _audit_df_ins is None:
+            st.info("No QA data available.")
+        else:
+            if not sheets:
+                st.markdown(
+                    '<div style="background:rgba(61,130,245,0.08);border:1px solid rgba(61,130,245,0.2);'
+                    'border-radius:8px;padding:9px 16px;margin-bottom:12px;font-size:0.73rem;color:#3d8ef5;">'
+                    '📊 <strong>Demo data</strong> — showing 25 seed audits. Use filters below to drill down.</div>',
+                    unsafe_allow_html=True,
+                )
+            _dd_total = len(_audit_df_ins)
+            # Filter controls
+            _fc1, _fc2, _fc3 = st.columns(3)
+            with _fc1:
+                _dd_aud_opts = ["All"] + sorted(_audit_df_ins["Auditor"].dropna().astype(str).unique().tolist()) \
+                               if "Auditor" in _audit_df_ins.columns else ["All"]
+                _dd_aud = st.selectbox("Filter by Auditor", _dd_aud_opts, key="dd_aud_filter")
+            with _fc2:
+                _dd_camp_opts = ["All"] + sorted(_audit_df_ins["Campaign Name"].dropna().astype(str).unique().tolist()) \
+                                if "Campaign Name" in _audit_df_ins.columns else ["All"]
+                _dd_camp = st.selectbox("Filter by Campaign", _dd_camp_opts, key="dd_camp_filter")
+            with _fc3:
+                _dd_st_opts = ["All", "Pass", "Needs Review", "Fail", "Auto-Fail"]
+                _dd_st = st.selectbox("Filter by Status", _dd_st_opts, key="dd_st_filter")
+
+            _dd_df = _audit_df_ins.copy()
+            if _dd_aud  != "All": _dd_df = _dd_df[_dd_df.get("Auditor","").astype(str) == _dd_aud]
+            if _dd_camp != "All": _dd_df = _dd_df[_dd_df.get("Campaign Name","").astype(str) == _dd_camp]
+            if _dd_st   != "All": _dd_df = _dd_df[_dd_df.get("Status","").astype(str).str.strip() == _dd_st]
+
+            st.markdown(
+                f'<div style="font-size:0.72rem;color:#5588bb;margin-bottom:1rem;">'
+                f'Showing <strong>{len(_dd_df):,}</strong> of {_dd_total:,} audits</div>',
+                unsafe_allow_html=True,
+            )
+
+            # Auditor × Campaign matrix
+            if ("Auditor" in _dd_df.columns and "Campaign Name" in _dd_df.columns and len(_dd_df) > 0):
+                st.markdown('<div class="section-chip">🔀 Auditor × Campaign Score Matrix</div>',
+                            unsafe_allow_html=True)
+                try:
+                    _mx2 = _dd_df.copy()
+                    _mx2["_bs2"] = pd.to_numeric(_mx2["Bot Score"], errors="coerce")
+                    _pv2 = _mx2.pivot_table(index="Auditor", columns="Campaign Name",
+                                            values="_bs2", aggfunc="mean").round(1)
+                    if not _pv2.empty:
+                        _mx_html = '<table style="width:100%;border-collapse:separate;border-spacing:4px;">'
+                        _mx_html += '<tr><th style="text-align:left;font-size:0.65rem;color:#aabbcc;padding:4px 8px;">Auditor</th>'
+                        for _cc2 in _pv2.columns:
+                            _mx_html += f'<th style="font-size:0.65rem;color:#5588bb;padding:4px 8px;text-align:center;">{_cc2}</th>'
+                        _mx_html += '</tr>'
+                        for _ar2 in _pv2.index:
+                            _mx_html += f'<tr><td style="font-size:0.73rem;font-weight:600;color:#0d1d3a;padding:4px 8px;white-space:nowrap;">{_ar2}</td>'
+                            for _cc2 in _pv2.columns:
+                                _v2 = _pv2.loc[_ar2, _cc2]
+                                _vc2 = "#0ebc6e" if not pd.isna(_v2) and _v2 >= 80 else "#f59e0b" if not pd.isna(_v2) and _v2 >= 60 else "#dc2626" if not pd.isna(_v2) else "#aabbcc"
+                                _mx_html += (f'<td style="background:{_vc2}18;color:{_vc2};font-weight:700;'
+                                             f'border-radius:6px;padding:5px 10px;text-align:center;font-size:0.75rem;">'
+                                             f'{"—" if pd.isna(_v2) else f"{_v2}%"}</td>')
+                            _mx_html += '</tr>'
+                        _mx_html += '</table>'
+                        st.markdown(_mx_html, unsafe_allow_html=True)
+                        st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+                except Exception:
+                    pass
+
+            # Score distribution histogram buckets
+            st.markdown('<div class="section-chip">📊 Score Bucket Distribution</div>', unsafe_allow_html=True)
+            _dd_bs = pd.to_numeric(_dd_df.get("Bot Score", pd.Series(dtype=float)), errors="coerce").dropna()
+            if len(_dd_bs):
+                _buckets = [("90–100%","#0ebc6e",90,101),("80–89%","#16a34a",80,90),
+                            ("70–79%","#84cc16",70,80),("60–69%","#f59e0b",60,70),
+                            ("50–59%","#ef4444",50,60),("<50%","#dc2626",0,50)]
+                _bk_html = ""
+                for _bl, _bc, _lo, _hi in _buckets:
+                    _cnt = int(((_dd_bs >= _lo) & (_dd_bs < _hi)).sum())
+                    _pct = round(_cnt / len(_dd_bs) * 100, 1) if len(_dd_bs) else 0
+                    _bk_html += (
+                        f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+                        f'<div style="width:70px;font-size:0.73rem;color:#0d1d3a;font-weight:600;flex-shrink:0;">{_bl}</div>'
+                        f'<div style="flex:1;height:18px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                        f'<div style="width:{_pct}%;height:100%;background:{_bc};border-radius:3px;"></div></div>'
+                        f'<div style="width:75px;text-align:right;font-size:0.71rem;color:#5588bb;flex-shrink:0;">'
+                        f'{_cnt:,} ({_pct}%)</div>'
+                        f'</div>'
+                    )
+                st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.1);'
+                            f'border-radius:10px;padding:14px 18px;margin-bottom:1rem;">{_bk_html}</div>',
+                            unsafe_allow_html=True)
+
+            # Lead stage × status cross-tab
+            if ("Lead Stage" in _dd_df.columns and len(_dd_df) > 0):
+                with st.expander("🏷️ Lead Stage × Status Cross-Tab", expanded=False):
+                    try:
+                        _ls_ct = pd.crosstab(_dd_df["Lead Stage"], _dd_df["Status"])
+                        if not _ls_ct.empty:
+                            st.dataframe(_ls_ct, use_container_width=True)
+                    except Exception:
+                        pass
+
+            # Full audit log
+            st.markdown('<div class="section-chip">📋 Full Audit Log</div>', unsafe_allow_html=True)
+            _display_cols = ["Audit Date","Auditor","Campaign Name","Agent Tag","Bot Score","Status",
+                             "Lead Stage","Lead Composite","Notes"]
+            _show_cols = [c for c in _display_cols if c in _dd_df.columns]
+            if _show_cols:
+                st.dataframe(_dd_df[_show_cols].reset_index(drop=True),
+                             use_container_width=True, height=320)
+                _dl_col, _ = st.columns([1, 4])
+                with _dl_col:
+                    st.download_button(
+                        "⬇ Download filtered log",
+                        data=_dd_df[_show_cols].to_csv(index=False).encode("utf-8"),
+                        file_name="sense_audit_filtered.csv", mime="text/csv",
+                        key="ins_dl_filtered",
+                    )
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # Tab 4 — AI Deep Dive
+    # ══════════════════════════════════════════════════════════════════════════
+    with _i4:
+        ss_key  = "sense_ai_insights"
+        err_key = "sense_ai_insights_err"
+
+        _ai_sheet_names = list(_all_sheets.keys())
+        if not _ai_sheet_names:
+            _ai_sheet_names = ["Sense Audit"]
+            _all_sheets = {"Sense Audit": _audit_df_ins} if _audit_df_ins is not None else {}
+        if len(_ai_sheet_names) > 1:
+            _sel = st.selectbox("Analyse sheet", _ai_sheet_names, key="sense_ai_sheet_pick")
+            _ai_df = _all_sheets.get(_sel, _audit_df_ins if _audit_df_ins is not None else pd.DataFrame())
+        else:
+            _sel   = _ai_sheet_names[0]
+            _ai_df = _all_sheets.get(_sel, _audit_df_ins if _audit_df_ins is not None else pd.DataFrame())
+
+        if st.session_state.get(ss_key):
+            s = st.session_state[ss_key]
+
+            def _card(title, items, bg, border, tc, dot):
+                bullets = "".join(
+                    f'<div style="display:flex;gap:8px;margin-bottom:6px;">'
+                    f'<span style="color:{dot};font-size:0.85rem;flex-shrink:0;">●</span>'
+                    f'<span style="font-size:0.8rem;color:{tc};line-height:1.5;">{item}</span></div>'
+                    for item in items
+                )
+                return (
+                    f'<div style="background:{bg};border:1px solid {border};border-radius:8px;'
+                    f'padding:14px 16px;margin-bottom:12px;">'
+                    f'<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
+                    f'text-transform:uppercase;color:{dot};margin-bottom:10px;">{title}</div>'
+                    f'{bullets}</div>'
+                )
+
+            st.markdown(
+                f'<div style="background:#f0f7ff;border:1px solid #e2e8f0;border-radius:8px;'
+                f'padding:14px 16px;margin-bottom:12px;">'
+                f'<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
+                f'text-transform:uppercase;color:#0284c7;margin-bottom:8px;">Dataset Summary</div>'
+                f'<div style="font-size:0.84rem;color:#0f172a;line-height:1.6;">{s.get("summary","—")}</div>'
+                f'</div>'
+                + _card("Key Trends",           s.get("trends",[]),         "#f0fdf4","#bbf7d0","#166534","#16a34a")
+                + _card("Anomalies / Red Flags", s.get("anomalies",[]),      "#fff7ed","#fed7aa","#9a3412","#ea580c")
+                + _card("Recommended Actions",  s.get("recommendations",[]),"#fdf8ff","#f0e8f8","#7a1558","#d22c84"),
+                unsafe_allow_html=True,
+            )
+            col_r, _ = st.columns([1, 4])
+            with col_r:
+                if st.button("↺ Regenerate", key="sense_ai_regen", use_container_width=True):
+                    st.session_state.pop(ss_key, None)
+                    st.session_state.pop(err_key, None)
+                    st.rerun()
+        else:
+            if st.session_state.get(err_key):
+                st.error(st.session_state[err_key])
+
+            if st.button(f'✨ Generate AI Insights  —  "{_sel}"', key="sense_ai_gen", type="primary"):
+                api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+                if not api_key:
+                    st.session_state[err_key] = "ANTHROPIC_API_KEY not found in secrets."
+                    st.rerun()
+                else:
+                    num_cols = _ai_df.select_dtypes(include="number").columns.tolist()
+                    cat_cols = _ai_df.select_dtypes(exclude="number").columns.tolist()
+                    null_pct = round(_ai_df.isnull().sum().sum() / _ai_df.size * 100, 1) if _ai_df.size else 0
+                    stats_text = _ai_df[num_cols].describe().round(2).to_string() if num_cols else "No numeric columns."
+                    all_sheets_info = "\n".join(
+                        f"  - {k}: {len(v)} rows × {len(v.columns)} cols, columns: {', '.join(v.columns[:10].tolist())}"
+                        for k, v in _all_sheets.items()
+                    )
+                    # Include QA summary if available
+                    _qa_ctx = ""
+                    if _has_qa_ins and _audit_df_ins is not None:
+                        _qi3 = _gen_qa_insights(_audit_df_ins)
+                        _qa_ctx = (
+                            f"\n\nQA Summary:\n"
+                            + "\n".join(f"- {i['title']}: {i['detail']}" for i in _qi3.get("insights", []))
+                        )
+                    prompt = (
+                        f"You are a senior data analyst specialising in conversation intelligence and QA scoring.\n"
+                        f"Analyse the dataset below and return structured insights.\n\n"
+                        f"File: {fname}\nSheets:\n{all_sheets_info}\n"
+                        f"Analysing: {_sel}\n"
+                        f"Shape: {len(_ai_df)} rows × {len(_ai_df.columns)} cols\n"
+                        f"Columns: {', '.join(_ai_df.columns.tolist())}\n"
+                        f"Numeric: {', '.join(num_cols) or 'none'}\nText: {', '.join(cat_cols) or 'none'}\n"
+                        f"Missing: {null_pct}%\n\nStats:\n{stats_text}\n\n"
+                        f"Sample (first 10):\n{_ai_df.head(10).to_csv(index=False)}"
+                        f"{_qa_ctx}\n\n"
+                        f"Return ONLY valid JSON with exactly these keys:\n"
+                        f'{{"summary":"2-3 sentence overview","trends":["trend 1","trend 2","trend 3"],'
+                        f'"anomalies":["anomaly 1","anomaly 2","anomaly 3"],'
+                        f'"recommendations":["action 1","action 2","action 3"]}}'
+                    )
+                    try:
+                        import anthropic as _anthropic, json as _json
+                        _client = _anthropic.Anthropic(api_key=api_key)
+                        with st.spinner("Analysing with Claude AI…"):
+                            _msg = _client.messages.create(
+                                model="claude-haiku-4-5-20251001",
+                                max_tokens=900,
+                                messages=[{"role": "user", "content": prompt}],
+                            )
+                        raw = _msg.content[0].text.strip()
+                        if raw.startswith("```"):
+                            raw = raw.split("```")[1]
+                            if raw.startswith("json"):
+                                raw = raw[4:]
+                        st.session_state[ss_key] = _json.loads(raw)
+                        st.session_state.pop(err_key, None)
+                    except Exception as e:
+                        st.session_state[err_key] = f"AI error: {e}"
+                    st.rerun()
+
+
+def _render_audit_form(legend_map, fname):
+    """Convin Sense QA audit form — exact Convin.ai schema, all fields mandatory, auto-scoring."""
+    if "sense_audit_log" not in st.session_state:
+        st.session_state["sense_audit_log"] = _audit_log_load()
+    audit_log = st.session_state["sense_audit_log"]
+
+    # ── "What's new" banner ────────────────────────────────────────────────────
+    st.markdown("""
+<div style="background:linear-gradient(120deg,#0d1d3a 0%,#1e3a5f 50%,#1a2d50 100%);
+  border-radius:14px;padding:20px 24px;margin-bottom:1.4rem;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;
+    background:rgba(61,142,245,0.12);border-radius:50%;"></div>
+  <div style="position:absolute;bottom:-30px;left:40%;width:180px;height:180px;
+    background:rgba(224,54,142,0.07);border-radius:50%;"></div>
+  <div style="display:flex;align-items:flex-start;gap:16px;position:relative;">
+    <div style="background:linear-gradient(135deg,#e0368e,#3d8ef5);border-radius:10px;
+      padding:10px;flex-shrink:0;font-size:1.3rem;">🚀</div>
+    <div>
+      <div style="font-size:1rem;font-weight:900;color:#fff;letter-spacing:-0.01em;margin-bottom:4px;">
+        Audit &amp; QA Intelligence Engine</div>
+      <div style="font-size:0.74rem;color:#93c5fd;margin-bottom:12px;">
+        Fully automated · Zero manual dependency · Real-time scoring</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <span style="background:rgba(14,188,110,0.15);border:1px solid rgba(14,188,110,0.3);
+          border-radius:6px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:#6ee7b7;">
+          ✓ Flow Issue · Bot Restart · Bot Repetition</span>
+        <span style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);
+          border-radius:6px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:#fca5a5;">
+          ⚠️ Auto-Fail for Fatal triggers</span>
+        <span style="background:rgba(61,142,245,0.15);border:1px solid rgba(61,142,245,0.3);
+          border-radius:6px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:#93c5fd;">
+          📊 Critical 61% · Important 28% · Quality 11%</span>
+        <span style="background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);
+          border-radius:6px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:#c4b5fd;">
+          🎯 Pass ≥80 · Review 60-79 · Fail &lt;60</span>
+      </div>
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
+
+    # ── Schema overview: tiers with embedded intelligence params ──────────────
+    st.markdown('<div class="section-chip">⚖️ Scoring Schema</div>', unsafe_allow_html=True)
+    _tier_html = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.2rem;">'
+    for _ti, _tier in enumerate(_QA_SCHEMA["tiers"]):
+        _tc = _tier["color"]
+        _params_list = "  ·  ".join(p["col"] for p in _tier["params"])
+        _ip = _QA_SCHEMA["intelligence"][_ti] if _ti < len(_QA_SCHEMA["intelligence"]) else None
+        _ip_badge = ""
+        if _ip:
+            _ip_badge = (
+                f'<div style="margin-top:7px;padding-top:7px;border-top:1px dashed rgba(224,54,142,0.25);">'
+                f'<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(224,54,142,0.08);'
+                f'border:1px solid rgba(224,54,142,0.22);border-radius:5px;padding:2px 8px;">'
+                f'<span style="font-size:0.68rem;">🧠</span>'
+                f'<span style="font-size:0.62rem;font-weight:700;color:#e0368e;">{_ip["icon"]} {_ip["col"]}</span>'
+                f'</span>'
+                f'<span style="font-size:0.58rem;color:#aabbcc;margin-left:5px;">{" · ".join(_ip["options"])}</span>'
+                f'</div>'
+            )
+        _tier_html += (
+            f'<div style="flex:1;min-width:210px;background:#fff;border:1px solid {_tc}33;'
+            f'border-top:3px solid {_tc};border-radius:10px;padding:10px 14px;">'
+            f'<div style="font-size:0.68rem;font-weight:800;letter-spacing:0.08em;color:{_tc};'
+            f'text-transform:uppercase;margin-bottom:4px;">{_tier["label"]} ({_tier["weight_pct"]}%)</div>'
+            f'<div style="font-size:0.63rem;color:#5588bb;line-height:1.7;">{_params_list}</div>'
+            f'{_ip_badge}'
+            f'</div>'
+        )
+    _tier_html += '</div>'
+    st.markdown(_tier_html, unsafe_allow_html=True)
+
+    # ── Audit form ────────────────────────────────────────────────────────────
+    st.markdown('<div class="section-chip">✍️ New QA Audit — Convin.ai Standard Sheet</div>', unsafe_allow_html=True)
+
+    with st.form("qa_audit_form_v2", clear_on_submit=True):
+        # ── Audit & Lead details ──────────────────────────────────────────────
+        st.markdown(
+            '<div style="font-size:0.68rem;font-weight:700;color:#2a5080;letter-spacing:0.08em;'
+            'text-transform:uppercase;margin-bottom:6px;">Audit Details</div>',
+            unsafe_allow_html=True,
+        )
+        _ad1, _ad2, _ad3, _ad4 = st.columns(4)
+        with _ad1:
+            _f_audit_date = st.date_input("Audit Date *", value=pd.Timestamp.now().date())
+        with _ad2:
+            _f_auditor    = st.text_input("Auditor *", placeholder="e.g. Rahul Singh")
+        with _ad3:
+            _f_client     = st.text_input("Client *", placeholder="e.g. Acme Corp")
+        with _ad4:
+            _f_campaign   = st.text_input("Campaign Name *", placeholder="e.g. Q2 Outreach")
+
+        _ld1, _ld2, _ld3, _ld4 = st.columns(4)
+        with _ld1:
+            _f_pm_csm     = st.text_input("PM / CSM *", placeholder="e.g. Sneha Kapoor")
+        with _ld2:
+            _f_lead_no    = st.text_input("Lead Number", placeholder="e.g. LD-20250422")
+        with _ld3:
+            _f_phone      = st.text_input("Phone Number", placeholder="+91-XXXXXXXXXX")
+        with _ld4:
+            _f_conv_link  = st.text_input("Conversation Link", placeholder="https://...")
+
+        _ll1, _ll2 = st.columns(2)
+        with _ll1:
+            _f_lead_link  = st.text_input("Lead Link", placeholder="https://...")
+        with _ll2:
+            st.empty()
+
+        st.markdown(
+            '<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:10px 0 4px;">',
+            unsafe_allow_html=True,
+        )
+
+        # ── QA parameter scoring — tiers with embedded intelligence params ───────
+        _pv = {}
+        for _ti, _tier in enumerate(_QA_SCHEMA["tiers"]):
+            _tc = _tier["color"]
+            _ip = _QA_SCHEMA["intelligence"][_ti] if _ti < len(_QA_SCHEMA["intelligence"]) else None
+
+            # Tier header
+            _ip_badge_inline = (
+                f' <span style="background:rgba(224,54,142,0.12);border:1px solid rgba(224,54,142,0.3);'
+                f'border-radius:4px;padding:1px 7px;font-size:0.58rem;font-weight:700;color:#e0368e;">'
+                f'🧠 +{_ip["icon"]} {_ip["col"]}</span>'
+            ) if _ip else ""
+            st.markdown(
+                f'<div style="display:flex;align-items:center;gap:8px;font-size:0.68rem;font-weight:700;'
+                f'letter-spacing:0.08em;text-transform:uppercase;color:{_tc};margin:12px 0 6px;">'
+                f'{_tier["label"]} ({_tier["weight_pct"]}%){_ip_badge_inline}</div>',
+                unsafe_allow_html=True,
+            )
+
+            # Tier params (3 per row)
+            _params = _tier["params"]
+            for _ri in range(0, len(_params), 3):
+                _batch = _params[_ri: _ri + 3]
+                _wcols = st.columns(len(_batch))
+                for _wc, _p in zip(_wcols, _batch):
+                    with _wc:
+                        _wt  = f"  ({int(_p['weight']*100)}%)" if _p["weight"] > 0 else ("  ⚠️ FATAL" if _p.get("fatal") else "")
+                        _key = f"af_t_{_p['col'][:22].replace(' ','_').replace('/','_').replace('(','').replace(')','')}"
+                        _pv[_p["col"]] = st.selectbox(
+                            f"{_p['col']}{_wt} *",
+                            ["— select —"] + _p["options"],
+                            key=_key,
+                            help=_p.get("guide", ""),
+                        )
+
+            # Intelligence param embedded at bottom of this tier
+            if _ip:
+                st.markdown(
+                    f'<div style="display:flex;align-items:center;gap:6px;margin:6px 0 4px;">'
+                    f'<div style="flex:1;height:1px;background:rgba(224,54,142,0.15);"></div>'
+                    f'<span style="font-size:0.62rem;font-weight:700;color:#e0368e;white-space:nowrap;">'
+                    f'🧠 Sense Intelligence</span>'
+                    f'<div style="flex:1;height:1px;background:rgba(224,54,142,0.15);"></div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                _icol1, _icol2, _icol3 = st.columns(3)
+                with _icol1:
+                    _ikey = f"af_i_{_ip['col'][:20].replace(' ','_')}"
+                    _pv[_ip["col"]] = st.selectbox(
+                        f"{_ip['icon']} {_ip['col']} *",
+                        ["— select —"] + _ip["options"],
+                        key=_ikey,
+                        help=_ip.get("guide", _ip["desc"]),
+                    )
+
+        # ── Lead scoring ──────────────────────────────────────────────────────
+        st.markdown(
+            '<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:10px 0 4px;">',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            '<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
+            'text-transform:uppercase;color:#3d8ef5;margin-bottom:6px;">Lead Scoring</div>',
+            unsafe_allow_html=True,
+        )
+        _ls1, _ls2, _ls3, _ls4 = st.columns(4)
+        with _ls1:
+            _f_lead_stage = st.selectbox("Lead Stage *", ["— select —"] + _QA_SCHEMA["lead_stage_opts"], key="af_ls_stage")
+        with _ls2:
+            _f_pi = st.selectbox("Product Interest (0/1/2) *", ["— select —", "0", "1", "2"], key="af_ls_pi")
+        with _ls3:
+            _f_fr = st.selectbox("Follow-up Readiness (0/1/2) *", ["— select —", "0", "1", "2"], key="af_ls_fr")
+        with _ls4:
+            _f_dm = st.selectbox("DM Confirmed (0/1/2) *", ["— select —", "0", "1", "2"], key="af_ls_dm")
+
+        _f_notes = st.text_area("Reviewer Notes", placeholder="Optional observations…", height=56)
+        _sub     = st.form_submit_button("✅ Submit Audit  — Auto-Score", use_container_width=True, type="primary")
+
+        if _sub:
+            # Mandatory validation
+            _errs = []
+            if not _f_auditor.strip():
+                _errs.append("Auditor name is required")
+            if not _f_client.strip():
+                _errs.append("Client is required")
+            if not _f_campaign.strip():
+                _errs.append("Campaign Name is required")
+            if not _f_pm_csm.strip():
+                _errs.append("PM / CSM is required")
+            for _col, _val in _pv.items():
+                if _val == "— select —":
+                    _errs.append(f"'{_col}' must be selected")
+            if _f_lead_stage == "— select —":
+                _errs.append("Lead Stage must be selected")
+            for _fn, _fv in [("Product Interest", _f_pi), ("Follow-up Readiness", _f_fr), ("DM Confirmed", _f_dm)]:
+                if _fv == "— select —":
+                    _errs.append(f"'{_fn}' must be selected")
+
+            if _errs:
+                for _e in _errs:
+                    st.error(_e)
+            else:
+                # Build full param dict including lead fields
+                _full_pv = dict(_pv)
+                _full_pv["Lead Stage"]                   = _f_lead_stage
+                _full_pv["Product Interest (0/1/2)"]    = _f_pi
+                _full_pv["Follow-up Readiness (0/1/2)"] = _f_fr
+                _full_pv["DM Confirmed (0/1/2)"]         = _f_dm
+
+                # Auto-compute all scores
+                _computed = _compute_qa_score(_full_pv)
+
+                _rec = {
+                    "Audit Date":         str(_f_audit_date),
+                    "Auditor":            _f_auditor.strip(),
+                    "Client":             _f_client.strip(),
+                    "Campaign Name":      _f_campaign.strip(),
+                    "PM / CSM":           _f_pm_csm.strip(),
+                    "Lead Number":        _f_lead_no.strip(),
+                    "Lead Link":          _f_lead_link.strip(),
+                    "Phone Number":       _f_phone.strip(),
+                    "Conversation Link":  _f_conv_link.strip(),
+                    **_full_pv,
+                    "Lead Score":          _computed["Lead Score"],
+                    "Lead Composite":      _computed["Lead Composite"],
+                    "Bot Score":           _computed["Bot Score"],
+                    "Intelligence Score":  _computed["Intelligence Score"],
+                    "Status":              _computed["Status"],
+                    "Fatal?":              _computed["Fatal?"],
+                    "Notes":              _f_notes,
+                }
+                audit_log = st.session_state.get("sense_audit_log", [])
+                audit_log.append(_rec)
+                st.session_state["sense_audit_log"] = audit_log
+                _audit_log_save(audit_log)
+
+                # Store last result for display below
+                st.session_state["qa_last_result"] = _computed
+
+                st.rerun()
+
+    # ── Last submission result ─────────────────────────────────────────────────
+    if st.session_state.get("qa_last_result"):
+        _lr  = st.session_state["qa_last_result"]
+        _sc  = _lr["Bot Score"]
+        _sgc = _qa_status_color(_lr["Status"])
+        _isc = _lr.get("Intelligence Score", "—")
+        st.markdown(
+            f'<div style="background:{_sgc}0d;border:1px solid {_sgc}44;border-left:4px solid {_sgc};'
+            f'border-radius:10px;padding:14px 18px;margin-bottom:1rem;">'
+            f'<div style="font-size:0.7rem;font-weight:700;color:{_sgc};text-transform:uppercase;'
+            f'letter-spacing:0.08em;margin-bottom:8px;">✅ Last Audit Result</div>'
+            f'<div style="display:flex;gap:28px;flex-wrap:wrap;">'
+            f'<div><div style="font-size:1.8rem;font-weight:900;color:{_sgc};">{_sc}%</div>'
+            f'<div style="font-size:0.62rem;color:#5588bb;">Bot Score</div></div>'
+            f'<div><div style="font-size:1.4rem;font-weight:800;color:{_sgc};">{_lr["Status"]}</div>'
+            f'<div style="font-size:0.62rem;color:#5588bb;">Status</div></div>'
+            f'<div><div style="font-size:1.4rem;font-weight:800;color:#7c3aed;">'
+            f'{"—" if _isc == "" else f"{_isc}%"}</div>'
+            f'<div style="font-size:0.62rem;color:#5588bb;">Intelligence Score</div></div>'
+            f'<div><div style="font-size:1.4rem;font-weight:800;color:#3d8ef5;">{_lr.get("Lead Composite","—")}</div>'
+            f'<div style="font-size:0.62rem;color:#5588bb;">Lead Composite</div></div>'
+            f'<div><div style="font-size:1.4rem;font-weight:800;color:{"#dc2626" if _lr["Fatal?"]=="YES" else "#0ebc6e"};">{_lr["Fatal?"]}</div>'
+            f'<div style="font-size:0.62rem;color:#5588bb;">Fatal?</div></div>'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Audit log table ────────────────────────────────────────────────────────
+    if audit_log:
+        st.markdown('<div class="section-chip">📋 Audit Log</div>', unsafe_allow_html=True)
+
+        _scores_v   = [r.get("Bot Score", 0) for r in audit_log if r.get("Bot Score") is not None]
+        _avg_s      = round(sum(_scores_v) / len(_scores_v), 1) if _scores_v else 0
+        _pass_ct    = sum(1 for r in audit_log if str(r.get("Status","")) == "Pass")
+        _review_ct  = sum(1 for r in audit_log if str(r.get("Status","")) == "Needs Review")
+        _fatal_ct   = sum(1 for r in audit_log if str(r.get("Fatal?","")) == "YES")
+        _n          = len(audit_log)
+
+        _lc1, _lc2, _lc3, _lc4, _lc5, _lc6 = st.columns(6)
+        _lc1.metric("Total Audits",   _n)
+        _lc2.metric("Avg Bot Score",  f"{_avg_s}%")
+        _lc3.metric("Pass ≥80%",      f"{_pass_ct}  ({round(_pass_ct/_n*100,1)}%)")
+        _lc4.metric("Needs Review",   f"{_review_ct}  ({round(_review_ct/_n*100,1)}%)")
+        _lc5.metric("Auto-Fail",      f"{_fatal_ct}  ({round(_fatal_ct/_n*100,1)}%)")
+        _lc6.metric("Auditors",       len(set(r.get("Auditor","") for r in audit_log)))
+
+        _log_df = pd.DataFrame(audit_log[::-1])
+        st.dataframe(_log_df, use_container_width=True, height=280, hide_index=True)
+
+        _dl_c, _clr_c = st.columns([4, 1])
+        with _dl_c:
+            st.download_button(
+                "⬇ Export Audit Log",
+                data=_log_df.to_csv(index=False).encode("utf-8"),
+                file_name="convin_qa_audit_log.csv",
+                mime="text/csv",
+                key="sense_dl_auditlog",
+            )
+        with _clr_c:
+            if st.button("✕ Clear log", key="sense_clear_auditlog", use_container_width=True):
+                st.session_state["sense_audit_log"] = []
+                st.session_state.pop("qa_last_result", None)
+                _audit_log_save([])
+                st.rerun()
+
+
+def _render_legend_page():
+    """Full parameter legend & scoring guide — mirrors the Convin Sense audit spec."""
+
+    # ── Page header ───────────────────────────────────────────────────────────
+    st.markdown(
+        '<div style="display:flex;align-items:center;justify-content:space-between;'
+        'margin-bottom:1.2rem;flex-wrap:wrap;gap:8px;">'
+        '<div>'
+        '<div style="font-size:1.05rem;font-weight:800;color:#0d1d3a;letter-spacing:-0.01em;">'
+        '📖 Sense Audit — Parameter Legend & Scoring Guide</div>'
+        '<div style="font-size:0.72rem;color:#5588bb;margin-top:2px;">'
+        'Complete reference for all QA parameters, weights, scoring options and definitions</div>'
+        '</div>'
+        f'<div style="font-size:0.65rem;color:#aabbcc;background:#f5f9ff;'
+        f'border:1px solid rgba(61,130,245,0.12);border-radius:8px;padding:4px 10px;">'
+        f'Last updated · {pd.Timestamp.now().strftime("%d %b %Y")}</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Quick-stats strip ─────────────────────────────────────────────────────
+    _all_params = [p for tier in _QA_SCHEMA["tiers"] for p in tier["params"]]
+    _scored_w   = sum(p["weight"] for p in _all_params if p["weight"] > 0)
+    st.markdown(
+        f'<div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.4rem;">'
+        f'<div class="stat-card" style="border-top:2px solid #dc2626;">'
+        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Total Parameters</div>'
+        f'<div style="color:#dc2626;font-size:1.6rem;font-weight:800;">{len(_all_params) + len(_QA_SCHEMA["intelligence"])}</div>'
+        f'</div>'
+        f'<div class="stat-card" style="border-top:2px solid #f59e0b;">'
+        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">QA Tiers</div>'
+        f'<div style="color:#f59e0b;font-size:1.6rem;font-weight:800;">{len(_QA_SCHEMA["tiers"])}</div>'
+        f'</div>'
+        f'<div class="stat-card" style="border-top:2px solid #3d8ef5;">'
+        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Intelligence Params</div>'
+        f'<div style="color:#3d8ef5;font-size:1.6rem;font-weight:800;">{len(_QA_SCHEMA["intelligence"])}</div>'
+        f'</div>'
+        f'<div class="stat-card" style="border-top:2px solid #0ebc6e;">'
+        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Total Weight</div>'
+        f'<div style="color:#0ebc6e;font-size:1.6rem;font-weight:800;">{round(_scored_w*100)}%</div>'
+        f'</div>'
+        f'<div class="stat-card" style="border-top:2px solid #7c3aed;">'
+        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Pass Threshold</div>'
+        f'<div style="color:#7c3aed;font-size:1.6rem;font-weight:800;">≥ 80%</div>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Tier parameter tables (intelligence param embedded per tier) ─────────
+    _ROW_COLORS = {"0/1/2": "#3d8ef5", "0/2": "#f59e0b", "0/Fatal": "#dc2626", "Fatal": "#7f1d1d"}
+
+    for _tier_idx, (_tier, _ip) in enumerate(
+        zip(_QA_SCHEMA["tiers"],
+            _QA_SCHEMA["intelligence"] + [None] * max(0, len(_QA_SCHEMA["tiers"]) - len(_QA_SCHEMA["intelligence"]))),
+        1
+    ):
+        _tc = _tier["color"]
+        _tier_params = _tier["params"]
+
+        # Tier header with intelligence badge
+        _ip_hdr = ""
+        if _ip:
+            _ip_hdr = (
+                f' &nbsp;<span style="background:rgba(224,54,142,0.1);border:1px solid rgba(224,54,142,0.3);'
+                f'border-radius:5px;padding:2px 9px;font-size:0.6rem;font-weight:700;color:#e0368e;">'
+                f'🧠 {_ip["icon"]} {_ip["col"]}</span>'
+            )
+        st.markdown(
+            f'<div style="display:flex;align-items:center;gap:12px;margin:1.2rem 0 0.6rem;flex-wrap:wrap;">'
+            f'<div style="background:{_tc};color:#fff;font-size:0.62rem;font-weight:800;'
+            f'letter-spacing:0.12em;text-transform:uppercase;border-radius:6px;padding:4px 12px;">'
+            f'{_tier["label"]}</div>'
+            f'<div style="font-size:0.7rem;color:#5588bb;">'
+            f'Weight: <strong style="color:{_tc};">{_tier["weight_pct"]}%</strong>'
+            f' &nbsp;·&nbsp; {len(_tier_params)} param{"s" if len(_tier_params)!=1 else ""}'
+            f'{_ip_hdr}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Table — shared columns for tier params + intelligence row
+        _tbl = (
+            '<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:12px;overflow:hidden;margin-bottom:0.8rem;">'
+            '<div style="display:grid;grid-template-columns:2rem 1fr 0.55fr 0.55fr 2.8fr;'
+            'gap:0;padding:8px 16px;background:rgba(61,130,245,0.06);'
+            'font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5588bb;">'
+            '<div>#</div><div>Parameter</div><div>Weight</div><div>Scoring</div><div>Definition &amp; Guide</div>'
+            '</div>'
+        )
+
+        for _pi, _p in enumerate(_tier_params, 1):
+            _opts_str = "/".join(_p["options"])
+            _opts_c   = _ROW_COLORS.get(_opts_str, "#3d8ef5")
+            _w_pct    = f'{int(_p["weight"]*100)}%' if _p["weight"] > 0 else ("FATAL" if _p.get("fatal") else "—")
+            _w_c      = "#dc2626" if _p.get("fatal") else "#0d1d3a"
+            _bg       = "#fff" if _pi % 2 == 1 else "#f9fbff"
+            _guide    = _p.get("guide", "")
+            _guide_html = _guide
+            for _opt in _p["options"]:
+                _guide_html = _guide_html.replace(
+                    f"{_opt} =",
+                    f'<span style="background:{_opts_c}18;border:1px solid {_opts_c}55;'
+                    f'border-radius:4px;padding:0 5px;font-weight:700;color:{_opts_c};">{_opt}</span> =',
+                )
+            _fatal_badge = (
+                '  <span style="background:#dc262618;color:#dc2626;border-radius:4px;'
+                'padding:1px 6px;font-size:0.58rem;font-weight:700;">FATAL</span>'
+                if _p.get("fatal") else ""
+            )
+            _tbl += (
+                f'<div style="display:grid;grid-template-columns:2rem 1fr 0.55fr 0.55fr 2.8fr;'
+                f'gap:0;padding:10px 16px;background:{_bg};'
+                f'border-top:1px solid rgba(61,130,245,0.06);align-items:start;">'
+                f'<div style="font-size:0.68rem;color:#aabbcc;font-weight:600;">{_pi}</div>'
+                f'<div style="font-size:0.78rem;font-weight:700;color:#0d1d3a;">{_p["col"]}{_fatal_badge}</div>'
+                f'<div style="font-size:0.75rem;font-weight:800;color:{_w_c};">{_w_pct}</div>'
+                f'<div><span style="background:{_opts_c}18;border:1px solid {_opts_c}55;'
+                f'border-radius:6px;padding:2px 9px;font-size:0.68rem;font-weight:700;color:{_opts_c};">'
+                f'{_opts_str}</span></div>'
+                f'<div style="font-size:0.7rem;color:#5588bb;line-height:1.55;">{_guide_html}</div>'
+                f'</div>'
+            )
+
+        # Intelligence row appended to this tier
+        if _ip:
+            _ic = _ip["color"]
+            _score_chips = "".join(
+                f'<span style="background:{_ic}18;border:1px solid {_ic}55;border-radius:5px;'
+                f'padding:1px 6px;font-size:0.63rem;font-weight:700;color:{_ic};margin-right:3px;">'
+                f'{opt}→{_ip["score_map"][opt]}</span>'
+                for opt in _ip["options"]
+            )
+            _guide_ip = _ip.get("guide", _ip.get("desc", ""))
+            _tbl += (
+                f'<div style="display:grid;grid-template-columns:2rem 1fr 0.55fr 0.55fr 2.8fr;'
+                f'gap:0;padding:10px 16px;background:rgba(224,54,142,0.04);'
+                f'border-top:2px dashed rgba(224,54,142,0.2);align-items:start;">'
+                f'<div style="font-size:0.68rem;color:#e0368e;font-weight:700;">🧠</div>'
+                f'<div style="font-size:0.78rem;font-weight:700;color:{_ic};">'
+                f'{_ip["icon"]} {_ip["col"]}'
+                f'<div style="font-size:0.6rem;font-weight:500;color:#aabbcc;margin-top:1px;">Convin Sense Intelligence · {_ip["weight"]}× weight</div>'
+                f'</div>'
+                f'<div style="font-size:0.75rem;font-weight:800;color:{_ic};">{_ip["weight"]}×</div>'
+                f'<div style="display:flex;flex-wrap:wrap;gap:3px;padding-top:2px;">{_score_chips}</div>'
+                f'<div style="font-size:0.7rem;color:#5588bb;line-height:1.55;">{_guide_ip}</div>'
+                f'</div>'
+            )
+
+        _tbl += '</div>'
+        st.markdown(_tbl, unsafe_allow_html=True)
+
+    # ── Status bands ─────────────────────────────────────────────────────────
+    st.markdown('<div class="section-chip">🎨 Status Bands</div>', unsafe_allow_html=True)
+    _bands_html = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.2rem;">'
+    _band_defs = [
+        {"label": "Pass",         "range": "Bot Score ≥ 80",  "color": "#0ebc6e", "desc": "All critical parameters met; high-quality interaction"},
+        {"label": "Needs Review", "range": "Bot Score 60–79", "color": "#f59e0b", "desc": "Acceptable but improvement areas exist; flag for coaching"},
+        {"label": "Fail",         "range": "Bot Score < 60",  "color": "#dc2626", "desc": "Significant issues present; requires immediate action"},
+        {"label": "Auto-Fail",    "range": "Fatal Error",     "color": "#7f1d1d", "desc": "Abrupt disconnection detected — score zeroed regardless of other params"},
+    ]
+    for _bd in _band_defs:
+        _c = _bd["color"]
+        _bands_html += (
+            f'<div style="flex:1;min-width:180px;background:#fff;border:1px solid {_c}33;'
+            f'border-top:4px solid {_c};border-radius:10px;padding:14px 16px;">'
+            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+            f'<div style="width:12px;height:12px;border-radius:50%;background:{_c};flex-shrink:0;"></div>'
+            f'<div style="font-size:0.78rem;font-weight:800;color:{_c};">{_bd["label"]}</div>'
+            f'</div>'
+            f'<div style="font-size:0.68rem;font-weight:700;color:#0d1d3a;margin-bottom:4px;">{_bd["range"]}</div>'
+            f'<div style="font-size:0.65rem;color:#5588bb;line-height:1.5;">{_bd["desc"]}</div>'
+            f'</div>'
+        )
+    _bands_html += '</div>'
+    st.markdown(_bands_html, unsafe_allow_html=True)
+
+    # ── Lead stage colour key ─────────────────────────────────────────────────
+    st.markdown('<div class="section-chip">🏷️ Lead Stage Reference</div>', unsafe_allow_html=True)
+    _lead_colors = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#3d8ef5", "Not Interested": "#6b7280", "RNR": "#9ca3af"}
+    _lead_html = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.2rem;">'
+    for _stage, _lc in _lead_colors.items():
+        _ls = _QA_SCHEMA["lead_stage_scores"].get(_stage, 0)
+        _lead_html += (
+            f'<div style="background:#fff;border:1px solid {_lc}33;border-left:4px solid {_lc};'
+            f'border-radius:8px;padding:8px 14px;min-width:120px;">'
+            f'<div style="font-size:0.75rem;font-weight:700;color:{_lc};">{_stage}</div>'
+            f'<div style="font-size:0.65rem;color:#5588bb;margin-top:2px;">Lead Score = {_ls}</div>'
+            f'</div>'
+        )
+    _lead_html += '</div>'
+    st.markdown(_lead_html, unsafe_allow_html=True)
+
+    # ── Scoring formula ───────────────────────────────────────────────────────
+    st.markdown('<div class="section-chip">🔢 Scoring Formulas</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:12px;padding:20px 24px;margin-bottom:1rem;">'
+        '<div style="display:flex;flex-direction:column;gap:14px;">'
+
+        '<div><div style="font-size:0.68rem;font-weight:700;color:#3d8ef5;text-transform:uppercase;'
+        'letter-spacing:0.08em;margin-bottom:4px;">Bot Score</div>'
+        '<div style="font-family:monospace;font-size:0.82rem;color:#0d1d3a;background:#fff;'
+        'border:1px solid rgba(61,130,245,0.15);border-radius:6px;padding:8px 14px;">'
+        'Bot Score = Σ (param_score × weight) / (Σ weight × 2) × 100</div>'
+        '<div style="font-size:0.65rem;color:#5588bb;margin-top:4px;">'
+        'Each param scored 0–2. Max possible per param = weight × 2. '
+        'If Abrupt Disconnection = Fatal → Bot Score forced to 0.</div></div>'
+
+        '<div><div style="font-size:0.68rem;font-weight:700;color:#7c3aed;text-transform:uppercase;'
+        'letter-spacing:0.08em;margin-bottom:4px;">Intelligence Score</div>'
+        '<div style="font-family:monospace;font-size:0.82rem;color:#0d1d3a;background:#fff;'
+        'border:1px solid rgba(124,58,237,0.15);border-radius:6px;padding:8px 14px;">'
+        'Intelligence Score = Σ (mapped_score × weight) / (Σ weight × 2) × 100</div>'
+        '<div style="font-size:0.65rem;color:#5588bb;margin-top:4px;">'
+        'Separate metric — does not affect Bot Score. Weights are relative multipliers (1.5×, 1.2×, 1.0×).</div></div>'
+
+        '<div><div style="font-size:0.68rem;font-weight:700;color:#0ebc6e;text-transform:uppercase;'
+        'letter-spacing:0.08em;margin-bottom:4px;">Lead Composite</div>'
+        '<div style="font-family:monospace;font-size:0.82rem;color:#0d1d3a;background:#fff;'
+        'border:1px solid rgba(14,188,110,0.15);border-radius:6px;padding:8px 14px;">'
+        'Lead Composite = (Lead Score + (PI + FR + DM) / 6 × 100) / 2</div>'
+        '<div style="font-size:0.65rem;color:#5588bb;margin-top:4px;">'
+        'PI = Product Interest · FR = Follow-up Readiness · DM = DM Confirmed (each 0–2). '
+        'Lead Score from stage mapping.</div></div>'
+
+        '</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_convin_sense():
+    _has_data = bool(st.session_state.get("sense_sheets"))
+
+    st.markdown("""
+<style>
+@keyframes navGradientSense {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.sense-hero-full {
+    background: linear-gradient(135deg, #040d1e 0%, #071428 55%, #0d1d3a 100%);
+    border: 1px solid rgba(224,54,142,0.2);
+    border-radius: 20px;
+    padding: 56px 52px 48px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+.sense-hero-full::before {
+    content: "";
+    position: absolute;
+    top: -70px; right: -70px;
+    width: 320px; height: 320px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(224,54,142,0.13) 0%, transparent 68%);
+    pointer-events: none;
+}
+.sense-hero-full::after {
+    content: "";
+    position: absolute;
+    bottom: -90px; left: -50px;
+    width: 360px; height: 360px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(61,130,245,0.09) 0%, transparent 68%);
+    pointer-events: none;
+}
+.sense-hero-compact {
+    background: linear-gradient(108deg, #040d1e, #071428 60%, #0d1d3a);
+    border: 1px solid rgba(224,54,142,0.15);
+    border-radius: 14px;
+    padding: 18px 28px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+}
+.sense-hero-compact::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(108deg, rgba(224,54,142,0.06), rgba(61,130,245,0.04));
+    pointer-events: none;
+}
+.sense-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(224,54,142,0.12);
+    border: 1px solid rgba(224,54,142,0.32);
+    border-radius: 99px;
+    padding: 4px 14px;
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #e0368e;
+    margin-bottom: 18px;
+}
+.sense-headline {
+    font-size: 2.15rem;
+    font-weight: 900;
+    line-height: 1.13;
+    color: #e8f0fc;
+    margin-bottom: 12px;
+    letter-spacing: -0.025em;
+}
+.sense-headline .grad {
+    background: linear-gradient(108deg, #e0368e, #ff6b78 45%, #3d8ef5);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.sense-body {
+    font-size: 0.88rem;
+    color: rgba(200,220,255,0.58);
+    line-height: 1.7;
+    max-width: 560px;
+    margin-bottom: 28px;
+}
+.sense-body strong { color: rgba(220,235,255,0.88); }
+.sense-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 28px;
+}
+.sense-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 99px;
+    padding: 5px 14px;
+    font-size: 0.73rem;
+    font-weight: 600;
+    color: rgba(200,220,255,0.82);
+    white-space: nowrap;
+}
+.sense-divider {
+    height: 1px;
+    background: linear-gradient(90deg, rgba(224,54,142,0.3), rgba(61,130,245,0.25), transparent);
+    margin-bottom: 22px;
+}
+.sense-tagline {
+    font-size: 0.77rem;
+    color: rgba(200,220,255,0.38);
+    letter-spacing: 0.05em;
+}
+.sense-tagline strong { color: rgba(200,220,255,0.72); }
+.sense-compact-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: #e8f0fc;
+}
+.sense-compact-title .grad {
+    background: linear-gradient(108deg, #e0368e, #ff6b78 45%, #3d8ef5);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.sense-compact-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.sense-compact-pill {
+    font-size: 0.67rem;
+    font-weight: 600;
+    color: rgba(200,220,255,0.65);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 99px;
+    padding: 3px 10px;
+    white-space: nowrap;
+}
+</style>
+""", unsafe_allow_html=True)
+
+    if not _has_data:
+        # ── Full hero (empty state) ──────────────────────────────────────────
+        st.markdown("""
+<div class="sense-hero-full">
+    <div class="sense-badge">🎯 Sense Audit</div>
+    <div class="sense-headline">
+        Not just analytics. Not just QA.<br>
+        This is <span class="grad">real-time conversation intelligence.</span>
+    </div>
+    <div class="sense-body">
+        <p style="margin:0 0 10px;">
+            🔍 Detect flow issues instantly &nbsp;·&nbsp;
+            🔁 Track bot restarts &amp; repetitions &nbsp;·&nbsp;
+            📊 Monitor quality across every interaction &nbsp;·&nbsp;
+            ⚡ Turn conversations into actionable insights
+        </p>
+        <p style="margin:0 0 10px;">
+            Unlike traditional dashboards,
+            <strong>Sense Audit thinks, not just reports.</strong>
+        </p>
+        <p style="margin:0;">
+            Built to work alongside Data Labs —
+            but powerful enough to stand on its own.
+        </p>
+    </div>
+    <div class="sense-divider"></div>
+    <div class="sense-tagline">👉 <strong>Smarter conversations start here.</strong> &nbsp;Upload your data below to begin.</div>
+</div>
+""", unsafe_allow_html=True)
+    else:
+        # ── Compact hero bar (data loaded) ───────────────────────────────────
+        st.markdown("""
+<div class="sense-hero-compact">
+    <div>
+        <div class="sense-badge" style="margin-bottom:6px;">🎯 Sense Audit</div>
+        <div class="sense-compact-title">
+            <span class="grad">Real-time conversation intelligence</span>
+            &nbsp;— thinks, not just reports.
+        </div>
+    </div>
+    <div class="sense-compact-pills">
+        <span class="sense-compact-pill">🔍 Flow issues</span>
+        <span class="sense-compact-pill">🔁 Bot restarts</span>
+        <span class="sense-compact-pill">📊 Quality monitoring</span>
+        <span class="sense-compact-pill">⚡ Actionable insights</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+    # ── Restore from disk if session was wiped (hot-reload / refresh) ────────
+    if "sense_sheets" not in st.session_state:
+        _cached = _sense_load()
+        if _cached:
+            st.session_state["sense_sheets"] = _cached["sheets"]
+            st.session_state["sense_filename"] = _cached["fname"]
+        else:
+            # Even without the main cache, restore protected sheets
+            _prot = _sense_load_protected()
+            if _prot:
+                st.session_state["sense_sheets"] = _prot["sheets"]
+                st.session_state["sense_filename"] = _prot["fname"]
+
+    st.markdown('<div class="section-chip">📂 Upload Data</div>', unsafe_allow_html=True)
+    uploaded = st.file_uploader(
+        "Upload a file to analyse",
+        key="sense_csv_upload",
+        help="Supported: CSV, Excel (.xlsx/.xls), JSON, TSV, Parquet, TXT",
+    )
+    if uploaded is not None:
+        _raw = uploaded.read()
+        _name = uploaded.name.lower()
+        try:
+            if _name.endswith((".xlsx", ".xls")):
+                _all = pd.read_excel(io.BytesIO(_raw), sheet_name=None)
+                sheets = {k: v for k, v in _all.items()}
+            elif _name.endswith(".json"):
+                sheets = {"Data": pd.read_json(io.BytesIO(_raw))}
+            elif _name.endswith((".tsv", ".txt")):
+                sheets = {"Data": pd.read_csv(io.BytesIO(_raw), sep="\t")}
+            elif _name.endswith(".parquet"):
+                sheets = {"Data": pd.read_parquet(io.BytesIO(_raw))}
+            else:
+                sheets = {"Data": pd.read_csv(io.BytesIO(_raw))}
+            st.session_state["sense_sheets"] = sheets
+            st.session_state["sense_filename"] = uploaded.name
+            st.session_state.pop("sense_ai_insights", None)
+            st.session_state.pop("sense_ai_insights_err", None)
+            _sense_save(sheets, uploaded.name)
+            _sense_save_protected(sheets, uploaded.name)  # lock Legend + Audit
+            st.rerun()
+        except Exception as _e:
+            st.error(f"Could not read file: {_e}")
+
+    sheets = st.session_state.get("sense_sheets") or {}
+    fname  = st.session_state.get("sense_filename", "data")
+
+    # ── Build legend map (needed for New Audit tab even with no sheets) ───────
+    _legend_map_pre = {}
+    for _k, _v in sheets.items():
+        if "legend" in _k.lower():
+            _legend_map_pre = _parse_legend(_v)
+            break
+
+    if not sheets:
+        # No file yet — still allow all tabs; Insights uses seed data
+        _tabs_empty = st.tabs(["📊  Scorecard", "✍️  New Audit", "📖  Legend", "🤖  Insights"])
+        with _tabs_empty[0]:
+            _render_sense_scorecard({}, {})
+        with _tabs_empty[1]:
+            _render_audit_form(_legend_map_pre, "")
+        with _tabs_empty[2]:
+            _render_legend_page()
+        with _tabs_empty[3]:
+            _render_sense_insights(pd.DataFrame(), "Seed Data", {})
+        return
+
+    # ── File info bar ─────────────────────────────────────────────────────────
+    _total_rows = sum(len(v) for v in sheets.values())
+    col_info, col_clear = st.columns([6, 1])
+    with col_info:
+        _sheet_names = ", ".join(sheets.keys())
+        st.markdown(
+            f'<div style="font-size:0.78rem;color:#5588bb;padding:6px 0;">'
+            f'📄 <strong>{fname}</strong> &nbsp;·&nbsp; {len(sheets)} sheet{"s" if len(sheets)>1 else ""}'
+            f' &nbsp;·&nbsp; {_total_rows:,} total rows &nbsp;·&nbsp; <span style="color:#3d8ef5;">{_sheet_names}</span></div>',
+            unsafe_allow_html=True,
+        )
+    with col_clear:
+        if st.button("✕ Clear other sheets", key="sense_clear", use_container_width=True):
+            # Save protected sheets before wiping session
+            _cur_sheets = st.session_state.get("sense_sheets", {})
+            _cur_fname  = st.session_state.get("sense_filename", "data")
+            _prot_sheets = {k: v for k, v in _cur_sheets.items() if _is_protected_sheet(k)}
+            # Wipe session state
+            _stale = [k for k in st.session_state if any(k.startswith(p) for p in
+                ("sense_sheets", "sense_filename", "sense_ai_insights", "sense_audit_edits", "sense_editor_"))]
+            for _k in _stale:
+                st.session_state.pop(_k, None)
+            _sense_clear_cache()
+            # Restore protected sheets immediately
+            if _prot_sheets:
+                st.session_state["sense_sheets"] = _prot_sheets
+                st.session_state["sense_filename"] = _cur_fname
+            st.rerun()
+
+    # ── Sheet icon mapping ────────────────────────────────────────────────────
+    _SHEET_ICONS = {
+        "dashboard":   "📈",
+        "audit":       "📋",
+        "trend":       "📉",
+        "legend":      "📖",
+        "formula":     "🧮",
+        "data":        "🗂️",
+        "summary":     "📊",
+        "overview":    "🔍",
+        "insight":     "💡",
+        "report":      "📝",
+        "metric":      "📐",
+    }
+    def _sheet_icon(name):
+        _low = name.lower()
+        for key, icon in _SHEET_ICONS.items():
+            if key in _low:
+                return icon
+        return "📄"
+
+    # Legend map already built above (_legend_map_pre); reuse it
+    _legend_map = _legend_map_pre
+
+    # ── Dynamic tabs: Scorecard, New Audit, one per sheet, AI Insights ───────
+    def _tab_label(name):
+        icon = _sheet_icon(name)
+        lock = " 🔒" if _is_protected_sheet(name) else ""
+        return f"{icon}  {name}{lock}"
+
+    _tab_labels = ["📊  Scorecard", "✍️  New Audit", "📖  Legend"] + [_tab_label(s) for s in sheets] + ["🤖  Insights"]
+    _tabs = st.tabs(_tab_labels)
+
+    with _tabs[0]:
+        _render_sense_scorecard(sheets, _legend_map)
+
+    with _tabs[1]:
+        _render_audit_form(_legend_map, fname)
+
+    with _tabs[2]:
+        _render_legend_page()
+
+    for i, (sheet_name, df) in enumerate(sheets.items()):
+        with _tabs[i + 3]:
+            _render_sense_sheet(df, sheet_name, fname, sheets=sheets)
+
+    with _tabs[-1]:
+        _primary_df = next(iter(sheets.values()))
+        _render_sense_insights(_primary_df, fname, sheets)
+
+
 if not st.session_state["show_sidebar"]:
     st.markdown("""
     <style>
@@ -3155,7 +6432,7 @@ div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind
 </style>
 """, unsafe_allow_html=True)
 
-_n0, _n1, _n2, _n3, _n4, _n_spacer = st.columns([1.2, 1.8, 1.6, 2.0, 1.8, 0.4])
+_n0, _n1, _n2, _n3, _n4, _n5, _n_spacer = st.columns([1.0, 1.4, 1.3, 1.7, 1.5, 1.8, 0.3])
 
 with _n0:
     _sb_label = "✕ Close" if st.session_state["show_sidebar"] else "⚙️ Settings"
@@ -3164,10 +6441,11 @@ with _n0:
         st.rerun()
 
 _page_btns = {
-    "Overview":      ("📊 Overview",       _n1),
-    "Clients":       ("🏢 Clients",        _n2),
-    "Client Emails": ("📋 Client Emails",  _n3),
-    "Email Maker":   ("📧 Email Maker",    _n4),
+    "Overview":        ("📊 Overview",        _n1),
+    "Clients":         ("🏢 Clients",         _n2),
+    "Client Emails":   ("📋 Client Emails",   _n3),
+    "Email Maker":     ("📧 Email Maker",      _n4),
+    "Sense Audit":     ("🎯 Sense Audit",      _n5),
 }
 for _key, (_label, _col) in _page_btns.items():
     with _col:
@@ -3194,3 +6472,5 @@ elif _page == "Client Emails":
     render_client_emails()
 elif _page == "Email Maker":
     render_email_maker()
+elif _page == "Sense Audit":
+    render_convin_sense()

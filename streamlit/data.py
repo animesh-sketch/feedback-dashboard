@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 CSAT_RESPONDENTS = [
     # 5-star (11)
+    {"name": "Animesh test",   "email": "animesh@convin.ai",      "rating": 5, "date": "Apr 22"},
     {"name": "Aiden Clarke",   "email": "a.clarke@techwave.io",   "rating": 5, "date": "Feb 24"},
     {"name": "Maya Patel",     "email": "maya.p@growthhub.com",   "rating": 5, "date": "Feb 23"},
     {"name": "Lucas Bennett",  "email": "l.bennett@scalex.co",    "rating": 5, "date": "Feb 23"},
@@ -109,6 +110,16 @@ HEALTH_KPIS: list[KPIMetric] = [
 # ─── DL Reports ───────────────────────────────────────────────────────────────
 
 CAMPAIGNS = [
+    {
+        "name":      "Animesh test — Q2 Bot QA Campaign",
+        "type":      "CSAT",
+        "responses": 312,
+        "sent":      390,
+        "score":     4.7,
+        "status":    "✅ Healthy",
+        "audience":  "QA Reviewers",
+        "sent_at":   "2026-04-22",
+    },
     {
         "name":      "Feb 2026 Monthly Analytics Report",
         "type":      "CSAT",
