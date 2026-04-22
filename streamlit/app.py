@@ -7280,151 +7280,284 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
 
     st.markdown("""
 <style>
-@keyframes navGradientSense {
+@keyframes heroFloat {
+  0%,100% { transform: translateY(0px) scale(1); }
+  50%      { transform: translateY(-18px) scale(1.04); }
+}
+@keyframes heroFloatB {
+  0%,100% { transform: translateY(0px) scale(1); }
+  50%      { transform: translateY(14px) scale(0.97); }
+}
+@keyframes gradientShift {
   0%   { background-position: 0% 50%; }
   50%  { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+@keyframes fadeSlideUp {
+  from { opacity:0; transform:translateY(22px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes badgePulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(96,165,250,0.4); }
+  50%      { box-shadow: 0 0 0 7px rgba(96,165,250,0); }
+}
+@keyframes gridFade {
+  from { opacity:0; }
+  to   { opacity:0.06; }
+}
+
+/* ════════════════════════════════════════
+   FULL HERO  (empty state / landing)
+════════════════════════════════════════ */
 .sense-hero-full {
-    background: linear-gradient(135deg, #040d1e 0%, #071428 55%, #0d1d3a 100%);
-    border: 1px solid rgba(224,54,142,0.2);
-    border-radius: 20px;
-    padding: 56px 52px 48px;
-    margin-bottom: 24px;
+    background: linear-gradient(145deg, #061224 0%, #0B1F3A 45%, #0D2960 100%);
+    border-radius: 24px;
+    padding: 64px 56px 52px;
+    margin-bottom: 28px;
     position: relative;
     overflow: hidden;
+    border: 1px solid rgba(37,99,235,0.22);
+    box-shadow: 0 24px 80px rgba(11,31,58,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+    animation: fadeSlideUp 0.6s ease both;
 }
+/* Animated grid overlay */
 .sense-hero-full::before {
     content: "";
-    position: absolute;
-    top: -70px; right: -70px;
-    width: 320px; height: 320px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(224,54,142,0.13) 0%, transparent 68%);
+    position: absolute; inset: 0;
+    background-image:
+        linear-gradient(rgba(37,99,235,0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37,99,235,0.07) 1px, transparent 1px);
+    background-size: 40px 40px;
     pointer-events: none;
+    animation: gridFade 1.2s ease forwards;
 }
+/* Glow orb — top right */
 .sense-hero-full::after {
     content: "";
     position: absolute;
-    bottom: -90px; left: -50px;
-    width: 360px; height: 360px;
+    top: -100px; right: -80px;
+    width: 420px; height: 420px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(61,130,245,0.09) 0%, transparent 68%);
+    background: radial-gradient(circle, rgba(37,99,235,0.22) 0%, rgba(96,165,250,0.08) 45%, transparent 70%);
     pointer-events: none;
+    animation: heroFloat 7s ease-in-out infinite;
 }
+/* Second orb — bottom left */
+.sense-hero-orb2 {
+    position: absolute;
+    bottom: -110px; left: -60px;
+    width: 380px; height: 380px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(56,189,248,0.12) 0%, transparent 65%);
+    pointer-events: none;
+    animation: heroFloatB 9s ease-in-out infinite;
+}
+
+/* Badge */
+.sense-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(37,99,235,0.15);
+    border: 1px solid rgba(96,165,250,0.40);
+    border-radius: 99px;
+    padding: 5px 16px;
+    font-size: 0.63rem;
+    font-weight: 800;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: #93C5FD;
+    margin-bottom: 22px;
+    animation: badgePulse 2.5s ease-in-out infinite, fadeSlideUp 0.5s ease both;
+}
+.sense-badge .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #60A5FA;
+    box-shadow: 0 0 8px #60A5FA;
+}
+
+/* Headline */
+.sense-headline {
+    font-size: 2.4rem;
+    font-weight: 900;
+    line-height: 1.12;
+    color: #F0F8FF;
+    margin-bottom: 14px;
+    letter-spacing: -0.03em;
+    animation: fadeSlideUp 0.6s 0.1s ease both;
+}
+.sense-headline .grad {
+    background: linear-gradient(110deg, #60A5FA 0%, #38BDF8 40%, #818CF8 80%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 4s ease infinite;
+}
+
+/* Body */
+.sense-body {
+    font-size: 0.9rem;
+    color: rgba(186,210,240,0.70);
+    line-height: 1.75;
+    max-width: 600px;
+    margin-bottom: 30px;
+    animation: fadeSlideUp 0.6s 0.2s ease both;
+}
+.sense-body strong { color: rgba(224,240,255,0.92); font-weight: 700; }
+
+/* Feature cards row */
+.sense-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 32px;
+    animation: fadeSlideUp 0.6s 0.3s ease both;
+}
+.sense-feat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(96,165,250,0.20);
+    border-radius: 12px;
+    padding: 9px 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(186,210,240,0.85);
+    transition: all 0.2s ease;
+    cursor: default;
+    backdrop-filter: blur(4px);
+}
+.sense-feat:hover {
+    background: rgba(37,99,235,0.14);
+    border-color: rgba(96,165,250,0.45);
+    color: #DBEAFE;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(37,99,235,0.18);
+}
+.sense-feat .fi { font-size: 1rem; }
+
+/* Divider */
+.sense-divider {
+    height: 1px;
+    background: linear-gradient(90deg, rgba(37,99,235,0.5), rgba(56,189,248,0.3), transparent 80%);
+    margin-bottom: 22px;
+    animation: fadeSlideUp 0.6s 0.35s ease both;
+}
+
+/* Tagline CTA */
+.sense-tagline {
+    font-size: 0.8rem;
+    color: rgba(186,210,240,0.45);
+    letter-spacing: 0.04em;
+    animation: fadeSlideUp 0.6s 0.4s ease both;
+}
+.sense-tagline strong { color: rgba(186,210,240,0.80); }
+.sense-tagline .arrow {
+    display: inline-block;
+    color: #60A5FA;
+    font-size: 1rem;
+    margin-right: 4px;
+    animation: gradientShift 1.5s ease-in-out infinite alternate;
+}
+
+/* ════════════════════════════════════════
+   COMPACT HERO  (data loaded)
+════════════════════════════════════════ */
 .sense-hero-compact {
-    background: linear-gradient(108deg, #040d1e, #071428 60%, #0d1d3a);
-    border: 1px solid rgba(224,54,142,0.15);
-    border-radius: 14px;
-    padding: 18px 28px;
-    margin-bottom: 20px;
+    background: linear-gradient(135deg, #061224 0%, #0B1F3A 60%, #0D2960 100%);
+    border: 1px solid rgba(37,99,235,0.25);
+    border-radius: 16px;
+    padding: 20px 30px;
+    margin-bottom: 22px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 14px;
     position: relative;
     overflow: hidden;
+    box-shadow: 0 8px 32px rgba(11,31,58,0.4);
 }
 .sense-hero-compact::before {
     content: "";
     position: absolute; inset: 0;
-    background: linear-gradient(108deg, rgba(224,54,142,0.06), rgba(61,130,245,0.04));
+    background-image:
+        linear-gradient(rgba(37,99,235,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37,99,235,0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
     pointer-events: none;
 }
-.sense-badge {
+.sense-hero-compact::after {
+    content: "";
+    position: absolute;
+    top: -60px; right: -40px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 65%);
+    pointer-events: none;
+}
+.sense-compact-left { position: relative; z-index: 1; }
+.sense-compact-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: rgba(224,54,142,0.12);
-    border: 1px solid rgba(224,54,142,0.32);
+    background: rgba(37,99,235,0.15);
+    border: 1px solid rgba(96,165,250,0.35);
     border-radius: 99px;
-    padding: 4px 14px;
-    font-size: 0.63rem;
-    font-weight: 700;
+    padding: 3px 12px;
+    font-size: 0.6rem;
+    font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #e0368e;
-    margin-bottom: 18px;
+    color: #93C5FD;
+    margin-bottom: 7px;
 }
-.sense-headline {
-    font-size: 2.15rem;
-    font-weight: 900;
-    line-height: 1.13;
-    color: #e8f0fc;
-    margin-bottom: 12px;
-    letter-spacing: -0.025em;
+.sense-compact-badge .live-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #34D399;
+    box-shadow: 0 0 6px #34D399;
+    animation: badgePulse 1.8s ease-in-out infinite;
 }
-.sense-headline .grad {
-    background: linear-gradient(108deg, #e0368e, #ff6b78 45%, #3d8ef5);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-.sense-body {
-    font-size: 0.88rem;
-    color: rgba(200,220,255,0.58);
-    line-height: 1.7;
-    max-width: 560px;
-    margin-bottom: 28px;
-}
-.sense-body strong { color: rgba(220,235,255,0.88); }
-.sense-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 28px;
-}
-.sense-pill {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 99px;
-    padding: 5px 14px;
-    font-size: 0.73rem;
-    font-weight: 600;
-    color: rgba(200,220,255,0.82);
-    white-space: nowrap;
-}
-.sense-divider {
-    height: 1px;
-    background: linear-gradient(90deg, rgba(224,54,142,0.3), rgba(61,130,245,0.25), transparent);
-    margin-bottom: 22px;
-}
-.sense-tagline {
-    font-size: 0.77rem;
-    color: rgba(200,220,255,0.38);
-    letter-spacing: 0.05em;
-}
-.sense-tagline strong { color: rgba(200,220,255,0.72); }
 .sense-compact-title {
     font-size: 1.05rem;
     font-weight: 800;
-    letter-spacing: -0.01em;
-    color: #e8f0fc;
+    letter-spacing: -0.015em;
+    color: #EFF6FF;
 }
 .sense-compact-title .grad {
-    background: linear-gradient(108deg, #e0368e, #ff6b78 45%, #3d8ef5);
+    background: linear-gradient(110deg, #60A5FA, #38BDF8 50%, #818CF8);
+    background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    animation: gradientShift 4s ease infinite;
 }
 .sense-compact-pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 7px;
+    position: relative;
+    z-index: 1;
 }
 .sense-compact-pill {
-    font-size: 0.67rem;
+    font-size: 0.68rem;
     font-weight: 600;
-    color: rgba(200,220,255,0.65);
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(186,210,240,0.75);
+    background: rgba(37,99,235,0.10);
+    border: 1px solid rgba(96,165,250,0.22);
     border-radius: 99px;
-    padding: 3px 10px;
+    padding: 4px 12px;
     white-space: nowrap;
+    transition: all 0.18s ease;
+}
+.sense-compact-pill:hover {
+    background: rgba(37,99,235,0.20);
+    border-color: rgba(96,165,250,0.45);
+    color: #DBEAFE;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -7433,48 +7566,52 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         # ── Full hero (empty state) ──────────────────────────────────────────
         st.markdown("""
 <div class="sense-hero-full">
-    <div class="sense-badge">🎯 Sense Audit</div>
-    <div class="sense-headline">
-        Not just analytics. Not just QA.<br>
-        This is <span class="grad">real-time conversation intelligence.</span>
-    </div>
-    <div class="sense-body">
-        <p style="margin:0 0 10px;">
-            🔍 Detect flow issues instantly &nbsp;·&nbsp;
-            🔁 Track bot restarts &amp; repetitions &nbsp;·&nbsp;
-            📊 Monitor quality across every interaction &nbsp;·&nbsp;
-            ⚡ Turn conversations into actionable insights
-        </p>
-        <p style="margin:0 0 10px;">
-            Unlike traditional dashboards,
-            <strong>Sense Audit thinks, not just reports.</strong>
-        </p>
-        <p style="margin:0;">
-            Built to work alongside Data Labs —
-            but powerful enough to stand on its own.
-        </p>
-    </div>
-    <div class="sense-divider"></div>
-    <div class="sense-tagline">👉 <strong>Smarter conversations start here.</strong> &nbsp;Upload your data below to begin.</div>
+  <div class="sense-hero-orb2"></div>
+  <div class="sense-badge"><span class="dot"></span>Convin &nbsp;·&nbsp; Sense Audit</div>
+  <div class="sense-headline">
+    Not just analytics.<br>Not just QA.<br>
+    This is <span class="grad">real-time conversation intelligence.</span>
+  </div>
+  <div class="sense-body">
+    <strong>Sense Audit thinks — it doesn't just report.</strong><br>
+    Upload your audit data and instantly unlock bot failure patterns,
+    QA leaderboards, score trends, and prioritised action plans —
+    all in one beautifully crafted dashboard.
+  </div>
+  <div class="sense-features">
+    <div class="sense-feat"><span class="fi">🔍</span> Instant flow-issue detection</div>
+    <div class="sense-feat"><span class="fi">🤖</span> Bot failure intelligence</div>
+    <div class="sense-feat"><span class="fi">🏆</span> Agent &amp; campaign leaderboards</div>
+    <div class="sense-feat"><span class="fi">📈</span> Score trends &amp; pass-rate tracking</div>
+    <div class="sense-feat"><span class="fi">⚡</span> Auto-prioritised action plans</div>
+    <div class="sense-feat"><span class="fi">📋</span> One-click PDF reports</div>
+  </div>
+  <div class="sense-divider"></div>
+  <div class="sense-tagline">
+    <span class="arrow">↓</span>
+    <strong>Drop your file below to begin.</strong>
+    &nbsp; Supports CSV, Excel, JSON — results in seconds.
+  </div>
 </div>
 """, unsafe_allow_html=True)
     else:
         # ── Compact hero bar (data loaded) ───────────────────────────────────
         st.markdown("""
 <div class="sense-hero-compact">
-    <div>
-        <div class="sense-badge" style="margin-bottom:6px;">🎯 Sense Audit</div>
-        <div class="sense-compact-title">
-            <span class="grad">Real-time conversation intelligence</span>
-            &nbsp;— thinks, not just reports.
-        </div>
+  <div class="sense-compact-left">
+    <div class="sense-compact-badge"><span class="live-dot"></span> Live &nbsp;·&nbsp; Convin Sense Audit</div>
+    <div class="sense-compact-title">
+      <span class="grad">Real-time conversation intelligence</span>
+      &nbsp;— thinks, not just reports.
     </div>
-    <div class="sense-compact-pills">
-        <span class="sense-compact-pill">🔍 Flow issues</span>
-        <span class="sense-compact-pill">🔁 Bot restarts</span>
-        <span class="sense-compact-pill">📊 Quality monitoring</span>
-        <span class="sense-compact-pill">⚡ Actionable insights</span>
-    </div>
+  </div>
+  <div class="sense-compact-pills">
+    <span class="sense-compact-pill">🔍 Flow issues</span>
+    <span class="sense-compact-pill">🤖 Bot failures</span>
+    <span class="sense-compact-pill">🏆 Leaderboards</span>
+    <span class="sense-compact-pill">📈 Score trends</span>
+    <span class="sense-compact-pill">⚡ Action plans</span>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
