@@ -5028,8 +5028,8 @@ def _render_sense_insights(df, fname, sheets=None):
                    "Status"    in (_audit_df_ins.columns if _audit_df_ins is not None else []))
 
     # ── TABS ──────────────────────────────────────────────────────────────────
-    _itab_labels = ["📊 Analytics", "📈 Trends", "🧩 Drill-Downs", "🤖 AI Deep Dive"]
-    _i1, _i2, _i3, _i4 = st.tabs(_itab_labels)
+    _itab_labels = ["📊 Analytics", "📈 Trends", "🧩 Drill-Downs", "🏢 Client Report", "🎯 Campaign Report", "🤖 AI Deep Dive"]
+    _i1, _i2, _i3, _i4, _i5, _i6 = st.tabs(_itab_labels)
 
     # ══════════════════════════════════════════════════════════════════════════
     # Tab 1 — Analytics (rule-based Key Insights + performance summary)
@@ -5377,9 +5377,311 @@ def _render_sense_insights(df, fname, sheets=None):
                     )
 
     # ══════════════════════════════════════════════════════════════════════════
-    # Tab 4 — AI Deep Dive
+    # Tab 4 — Client Report
     # ══════════════════════════════════════════════════════════════════════════
+    def _render_entity_kpi_band(df, label):
+        if df is None or df.empty:
+            return
+        _tot  = len(df)
+        _bs   = pd.to_numeric(df["Bot Score"], errors="coerce")
+        _st   = df["Status"].astype(str).str.strip()
+        _avg  = round(_bs.dropna().mean(), 1) if _bs.dropna().notna().any() else None
+        _pas  = int((_st == "Pass").sum())
+        _rev  = int((_st == "Needs Review").sum())
+        _fai  = int((_st == "Fail").sum())
+        _fat  = int((_st == "Auto-Fail").sum())
+        _pr   = round(_pas / _tot * 100, 1) if _tot else 0
+        _fr   = round((_fai + _fat) / _tot * 100, 1) if _tot else 0
+        _bc   = "#0ebc6e" if (_avg or 0) >= 80 else "#f59e0b" if (_avg or 0) >= 60 else "#dc2626"
+        st.markdown(f"""
+<div style="background:linear-gradient(120deg,#0d1d3a,#1a2d50);border-radius:14px;padding:18px 22px;margin-bottom:1.2rem;">
+  <div style="font-size:0.65rem;font-weight:700;color:#93c5fd;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">{label}</div>
+  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;">
+    <div style="text-align:center;"><div style="font-size:1.7rem;font-weight:900;color:#fff;">{_tot}</div><div style="font-size:0.58rem;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">Audits</div></div>
+    <div style="text-align:center;"><div style="font-size:1.7rem;font-weight:900;color:{_bc};">{_avg or "—"}%</div><div style="font-size:0.58rem;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">Avg Score</div></div>
+    <div style="text-align:center;"><div style="font-size:1.7rem;font-weight:900;color:#0ebc6e;">{_pr}%</div><div style="font-size:0.58rem;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">Pass Rate</div></div>
+    <div style="text-align:center;"><div style="font-size:1.7rem;font-weight:900;color:#f59e0b;">{_rev}</div><div style="font-size:0.58rem;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">Review</div></div>
+    <div style="text-align:center;"><div style="font-size:1.7rem;font-weight:900;color:#ef4444;">{_fai}</div><div style="font-size:0.58rem;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">Fails</div></div>
+    <div style="text-align:center;"><div style="font-size:1.7rem;font-weight:900;color:{"#dc2626" if _fat else "#6ee7b7"};">{_fat}</div><div style="font-size:0.58rem;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">Auto-Fails</div></div>
+  </div>
+</div>""", unsafe_allow_html=True)
+
+    def _render_param_weakness(df, key_pfx):
+        _all_params = []
+        for _tier in _QA_SCHEMA["tiers"]:
+            for _p in _tier["params"]:
+                _pmax = max(int(o) for o in _p["options"] if o != "NA")
+                _all_params.append({"col": _p["col"], "max": _pmax, "weight": _p["weight"], "tier": _tier["label"], "color": _tier["color"]})
+        _param_rows = []
+        for _pp in _all_params:
+            if _pp["col"] not in df.columns:
+                continue
+            _vals = df[_pp["col"]].astype(str).str.strip()
+            _vals = _vals[~_vals.str.upper().isin(["NA", ""])]
+            _nums = pd.to_numeric(_vals, errors="coerce").dropna()
+            if len(_nums) == 0:
+                continue
+            _avg_pct = round(_nums.mean() / _pp["max"] * 100, 1)
+            _param_rows.append({"param": _pp["col"], "avg_pct": _avg_pct, "n": len(_nums), "tier": _pp["tier"], "color": _pp["color"]})
+        if not _param_rows:
+            st.info("No parameter-level data found.")
+            return
+        _param_rows.sort(key=lambda x: x["avg_pct"])
+        st.markdown('<div class="section-chip">🔍 Parameter Score Breakdown (weakest first)</div>', unsafe_allow_html=True)
+        _pw_html = ""
+        for _idx, _pr in enumerate(_param_rows):
+            _bar_bg = _pr["color"] + "22"
+            _tier_short = _pr["tier"].split("·")[-1].strip() if "·" in _pr["tier"] else _pr["tier"]
+            _badge_color = _pr["color"]
+            _bar_fill = _pr["color"]
+            _pw_html += (
+                f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+                f'<div style="width:180px;font-size:0.7rem;color:#0d1d3a;font-weight:600;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+                f'{"⚠️ " if _pr["avg_pct"] < 60 else ""}{_pr["param"]}</div>'
+                f'<div style="flex:1;height:16px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                f'<div style="width:{_pr["avg_pct"]}%;height:100%;background:{_bar_fill};border-radius:3px;"></div></div>'
+                f'<div style="width:48px;text-align:right;font-size:0.7rem;font-weight:700;color:{_badge_color};flex-shrink:0;">{_pr["avg_pct"]}%</div>'
+                f'<div style="width:50px;font-size:0.6rem;color:#aabbcc;flex-shrink:0;text-align:right;">n={_pr["n"]}</div>'
+                f'</div>'
+            )
+        st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:10px;padding:14px 18px;margin-bottom:1rem;">{_pw_html}</div>', unsafe_allow_html=True)
+
+    def _render_entity_insights(df, entity_type, entity_name):
+        insights, actions = [], []
+        if df is None or df.empty:
+            return
+        _tot  = len(df)
+        _bs   = pd.to_numeric(df["Bot Score"], errors="coerce")
+        _st   = df["Status"].astype(str).str.strip()
+        _avg  = round(_bs.dropna().mean(), 1) if _bs.dropna().notna().any() else None
+        _pas  = int((_st == "Pass").sum())
+        _fai  = int((_st == "Fail").sum())
+        _fat  = int((_st == "Auto-Fail").sum())
+        _rev  = int((_st == "Needs Review").sum())
+        _pr   = round(_pas  / _tot * 100, 1) if _tot else 0
+        _fr   = round((_fai + _fat) / _tot * 100, 1) if _tot else 0
+        _tar  = 80.0
+        _TCFG = {"critical":("#fef2f2","#dc2626","#991b1b","#fee2e2"),"warning":("#fffbeb","#f59e0b","#92400e","#fde68a"),"success":("#f0fdf4","#16a34a","#14532d","#bbf7d0"),"info":("#eff6ff","#2563eb","#1e3a8a","#bfdbfe")}
+        _PCFG = {"high":("#dc2626","🔴","#fef2f2","#fee2e2"),"medium":("#f59e0b","🟡","#fffbeb","#fde68a"),"low":("#16a34a","🟢","#f0fdf4","#bbf7d0")}
+
+        if _fat > 0:
+            insights.append({"type":"critical","title":f"🚨 {_fat} Auto-Fail(s)","detail":f"{round(_fat/_tot*100,1)}% auto-fail rate — immediate review of these calls required."})
+            actions.append({"priority":"high","category":"Technical","action":f"Review all {_fat} auto-fail conversation(s) in {entity_name} for bot logic errors or CTI failures","impact":"Eliminating fatal drops protects conversion rate and client trust."})
+        if _pr < _tar:
+            _gap = round(_tar - _pr, 1)
+            insights.append({"type":"warning" if _pr>=60 else "critical","title":f"⚠️ Pass Rate {_pr}% (−{_gap}pp from target)","detail":f"{_pas} passed, {_rev} need review, {_fai} failed of {_tot} total."})
+            actions.append({"priority":"high" if _pr<60 else "medium","category":"Coaching","action":f"Focus coaching on {_rev} 'Needs Review' audits — closest to pass threshold","impact":f"Pushing review cases to Pass adds +{round(_rev/_tot*100,1)}pp pass rate."})
+        else:
+            insights.append({"type":"success","title":f"✅ Pass Rate {_pr}% — above {int(_tar)}% target","detail":f"{_pas} of {_tot} audits passed (+{round(_pr-_tar,1)}pp above target). Performance is strong."})
+
+        # Weakest parameter
+        _all_params = []
+        for _tier in _QA_SCHEMA["tiers"]:
+            for _p in _tier["params"]:
+                _pmax = max(int(o) for o in _p["options"] if o != "NA")
+                if _p["col"] in df.columns:
+                    _vals = df[_p["col"]].astype(str).str.strip()
+                    _vals = _vals[~_vals.str.upper().isin(["NA",""])]
+                    _nums = pd.to_numeric(_vals, errors="coerce").dropna()
+                    if len(_nums):
+                        _all_params.append({"col":_p["col"],"pct":round(_nums.mean()/_pmax*100,1)})
+        if _all_params:
+            _all_params.sort(key=lambda x: x["pct"])
+            _wp = _all_params[0]
+            if _wp["pct"] < 75:
+                insights.append({"type":"warning","title":f"📉 Weakest Parameter: {_wp['col']}","detail":f"Avg score {_wp['pct']}% — consistently underperforming. Bot logic for this area needs improvement."})
+                actions.append({"priority":"medium","category":"Bot Tuning","action":f"Improve bot logic for '{_wp['col']}' — retrain or reconfigure this module","impact":"Fixing the weakest parameter has outsized impact on overall bot score."})
+
+        # Trend
+        _DATE_KW = ("audit date","date","created","submitted","month","week","day","period","time")
+        _dc = next((c for c in df.columns if any(k in str(c).lower() for k in _DATE_KW)), None)
+        if _dc:
+            try:
+                _td = df.copy()
+                _td["_d"] = pd.to_datetime(_td[_dc], errors="coerce")
+                _td["_b"] = _bs
+                _td = _td.dropna(subset=["_d","_b"]).sort_values("_d")
+                if len(_td) >= 6:
+                    _first_h = _td.iloc[:len(_td)//2]["_b"].mean()
+                    _last_h  = _td.iloc[len(_td)//2:]["_b"].mean()
+                    _diff    = round(_last_h - _first_h, 1)
+                    if _diff >= 3:
+                        insights.append({"type":"success","title":f"📈 Improving Trend (+{_diff}%)","detail":f"Second half avg {round(_last_h,1)}% vs first half {round(_first_h,1)}%. Performance trajectory is positive."})
+                    elif _diff <= -3:
+                        insights.append({"type":"warning","title":f"📉 Declining Trend ({_diff}%)","detail":f"Second half avg {round(_last_h,1)}% vs first half {round(_first_h,1)}%. Investigate recent process changes."})
+                        actions.append({"priority":"medium","category":"Process","action":f"Investigate root cause of score decline in recent audits for {entity_name}","impact":"Early identification of decline prevents further KPI deterioration."})
+            except Exception:
+                pass
+
+        if insights:
+            st.markdown('<div class="section-chip">💡 Key Insights</div>', unsafe_allow_html=True)
+            _ic1, _ic2 = st.columns(2)
+            for _ii, _ins in enumerate(insights):
+                _tcfg = _TCFG.get(_ins["type"], _TCFG["info"])
+                with (_ic1 if _ii%2==0 else _ic2):
+                    st.markdown(f'<div style="background:{_tcfg[0]};border:1px solid {_tcfg[3]};border-left:4px solid {_tcfg[1]};border-radius:10px;padding:12px 16px;margin-bottom:8px;"><div style="font-size:0.78rem;font-weight:700;color:{_tcfg[2]};margin-bottom:4px;">{_ins["title"]}</div><div style="font-size:0.71rem;color:{_tcfg[2]};opacity:0.85;line-height:1.5;">{_ins["detail"]}</div></div>', unsafe_allow_html=True)
+        if actions:
+            st.markdown('<div class="section-chip">🎯 Actionable Suggestions</div>', unsafe_allow_html=True)
+            _ac1, _ac2 = st.columns(2)
+            for _ai, _act in enumerate(actions):
+                _pcfg = _PCFG.get(_act["priority"], _PCFG["low"])
+                with (_ac1 if _ai%2==0 else _ac2):
+                    st.markdown(f'<div style="background:{_pcfg[2]};border:1px solid {_pcfg[3]};border-left:4px solid {_pcfg[0]};border-radius:10px;padding:12px 15px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;"><span>{_pcfg[1]}</span><span style="font-size:0.63rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:{_pcfg[0]};">{_act["priority"].upper()} · {_act["category"]}</span></div><div style="font-size:0.73rem;font-weight:600;color:#0d1d3a;margin-bottom:5px;line-height:1.4;">{_act["action"]}</div><div style="font-size:0.65rem;color:#5588bb;line-height:1.4;border-top:1px solid {_pcfg[0]}22;padding-top:5px;">Impact: {_act["impact"]}</div></div>', unsafe_allow_html=True)
+
     with _i4:
+        if not _has_qa_ins:
+            st.info("No QA schema data found. Submit audits via the ✍️ New Audit tab first.")
+        elif "Client" not in _audit_df_ins.columns:
+            st.info("No 'Client' column found in audit data.")
+        else:
+            _cli_list = sorted(_audit_df_ins["Client"].dropna().astype(str).unique().tolist())
+            _cli_opts_r = ["All Clients"] + _cli_list
+            _rc1, _rc2, _rc3 = st.columns([2, 1, 3])
+            with _rc1:
+                _sel_cli_r = st.selectbox("Select Client", _cli_opts_r, key="rep_client_sel")
+            with _rc2:
+                if "Campaign Name" in _audit_df_ins.columns:
+                    _camp_f_opts = ["All Campaigns"] + sorted(_audit_df_ins[_audit_df_ins["Client"].astype(str)==_sel_cli_r]["Campaign Name"].dropna().astype(str).unique().tolist()) if _sel_cli_r != "All Clients" else ["All Campaigns"]
+                    _camp_f = st.selectbox("Campaign", _camp_f_opts, key="rep_cli_camp_f")
+                else:
+                    _camp_f = "All Campaigns"
+
+            _cr_df = _audit_df_ins.copy()
+            if _sel_cli_r != "All Clients":
+                _cr_df = _cr_df[_cr_df["Client"].astype(str) == _sel_cli_r]
+            if _camp_f != "All Campaigns" and "Campaign Name" in _cr_df.columns:
+                _cr_df = _cr_df[_cr_df["Campaign Name"].astype(str) == _camp_f]
+
+            if _cr_df.empty:
+                st.warning("No audits found for this selection.")
+            else:
+                _kpi_label = f"{_sel_cli_r}" + (f" · {_camp_f}" if _camp_f != "All Campaigns" else "")
+                _render_entity_kpi_band(_cr_df, _kpi_label)
+
+                # Campaign breakdown table (only when showing all campaigns for a client)
+                if _sel_cli_r != "All Clients" and _camp_f == "All Campaigns" and "Campaign Name" in _cr_df.columns:
+                    st.markdown('<div class="section-chip">📋 Campaign Breakdown</div>', unsafe_allow_html=True)
+                    _cb_rows = []
+                    for _cn, _cg in _cr_df.groupby("Campaign Name"):
+                        _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce")
+                        _c_st = _cg["Status"].astype(str).str.strip()
+                        _c_avg = round(_c_bs.dropna().mean(), 1) if _c_bs.dropna().notna().any() else None
+                        _c_pr  = round(int((_c_st=="Pass").sum())/len(_cg)*100,1) if len(_cg) else 0
+                        _c_fat = int((_c_st=="Auto-Fail").sum())
+                        _c_rev = int((_c_st=="Needs Review").sum())
+                        _health = "🟢 Good" if (_c_avg or 0)>=80 else "🟡 Review" if (_c_avg or 0)>=65 else "🔴 Critical"
+                        _cb_rows.append({"Campaign":str(_cn),"Audits":len(_cg),"Avg Score":f"{_c_avg}%" if _c_avg else "—","Pass Rate":f"{_c_pr}%","Needs Review":_c_rev,"Auto-Fails":_c_fat,"Health":_health})
+                    _cb_rows.sort(key=lambda x:float(x["Avg Score"].rstrip("%")) if x["Avg Score"]!="—" else 0, reverse=True)
+                    st.dataframe(pd.DataFrame(_cb_rows), use_container_width=True, hide_index=True)
+
+                # Auditor breakdown table
+                if "Auditor" in _cr_df.columns:
+                    st.markdown('<div class="section-chip">👤 Auditor Performance</div>', unsafe_allow_html=True)
+                    _ab_rows = []
+                    for _aud, _ag in _cr_df.groupby("Auditor"):
+                        _a_bs = pd.to_numeric(_ag["Bot Score"], errors="coerce")
+                        _a_st = _ag["Status"].astype(str).str.strip()
+                        _a_avg = round(_a_bs.dropna().mean(),1) if _a_bs.dropna().notna().any() else None
+                        _a_pr  = round(int((_a_st=="Pass").sum())/len(_ag)*100,1) if len(_ag) else 0
+                        _a_fat = int((_a_st=="Auto-Fail").sum())
+                        _ab_rows.append({"Auditor":str(_aud),"Audits":len(_ag),"Avg Score":f"{_a_avg}%" if _a_avg else "—","Pass Rate":f"{_a_pr}%","Auto-Fails":_a_fat})
+                    _ab_rows.sort(key=lambda x:float(x["Avg Score"].rstrip("%")) if x["Avg Score"]!="—" else 0, reverse=True)
+                    st.dataframe(pd.DataFrame(_ab_rows), use_container_width=True, hide_index=True)
+
+                _render_param_weakness(_cr_df, "rep_cli_pw")
+                _render_entity_insights(_cr_df, "client", _sel_cli_r)
+
+                _dl2, _ = st.columns([1,4])
+                with _dl2:
+                    st.download_button("⬇ Download Client Report", data=_cr_df.to_csv(index=False).encode("utf-8"),
+                                       file_name=f"client_report_{_sel_cli_r.replace(' ','_')}.csv", mime="text/csv", key="dl_cli_rep")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # Tab 5 — Campaign Report
+    # ══════════════════════════════════════════════════════════════════════════
+    with _i5:
+        if not _has_qa_ins:
+            st.info("No QA schema data found. Submit audits via the ✍️ New Audit tab first.")
+        elif "Campaign Name" not in _audit_df_ins.columns:
+            st.info("No 'Campaign Name' column found in audit data.")
+        else:
+            _camp_list_r = sorted(_audit_df_ins["Campaign Name"].dropna().astype(str).unique().tolist())
+            _camp_opts_r = ["All Campaigns"] + _camp_list_r
+            _rca1, _rca2, _rca3 = st.columns([2, 1, 3])
+            with _rca1:
+                _sel_camp_r = st.selectbox("Select Campaign", _camp_opts_r, key="rep_camp_sel")
+            with _rca2:
+                if "Auditor" in _audit_df_ins.columns:
+                    _aud_f_opts = ["All Auditors"] + sorted(_audit_df_ins["Auditor"].dropna().astype(str).unique().tolist())
+                    _aud_f = st.selectbox("Auditor", _aud_f_opts, key="rep_camp_aud_f")
+                else:
+                    _aud_f = "All Auditors"
+
+            _crp_df = _audit_df_ins.copy()
+            if _sel_camp_r != "All Campaigns":
+                _crp_df = _crp_df[_crp_df["Campaign Name"].astype(str) == _sel_camp_r]
+            if _aud_f != "All Auditors" and "Auditor" in _crp_df.columns:
+                _crp_df = _crp_df[_crp_df["Auditor"].astype(str) == _aud_f]
+
+            if _crp_df.empty:
+                st.warning("No audits found for this selection.")
+            else:
+                _kpi_label_c = f"{_sel_camp_r}" + (f" · {_aud_f}" if _aud_f != "All Auditors" else "")
+                _render_entity_kpi_band(_crp_df, _kpi_label_c)
+
+                # Meta row: client + PM
+                if "Client" in _crp_df.columns:
+                    _meta_clients = _crp_df["Client"].dropna().astype(str).unique().tolist()
+                    _meta_pms     = _crp_df["PM / CSM"].dropna().astype(str).unique().tolist() if "PM / CSM" in _crp_df.columns else []
+                    st.markdown(
+                        f'<div style="background:#f0f7ff;border:1px solid #ddeeff;border-radius:8px;padding:9px 16px;margin-bottom:10px;font-size:0.73rem;color:#2a5080;">'
+                        f'<strong>Client(s):</strong> {", ".join(_meta_clients)} &nbsp;|&nbsp; <strong>PM:</strong> {", ".join(_meta_pms) or "—"}</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                # Auditor performance within campaign
+                if "Auditor" in _crp_df.columns and _aud_f == "All Auditors":
+                    st.markdown('<div class="section-chip">👤 Auditor Performance (this campaign)</div>', unsafe_allow_html=True)
+                    _ca_rows = []
+                    for _aud, _ag in _crp_df.groupby("Auditor"):
+                        _ca_bs = pd.to_numeric(_ag["Bot Score"], errors="coerce")
+                        _ca_st = _ag["Status"].astype(str).str.strip()
+                        _ca_avg = round(_ca_bs.dropna().mean(),1) if _ca_bs.dropna().notna().any() else None
+                        _ca_pr  = round(int((_ca_st=="Pass").sum())/len(_ag)*100,1) if len(_ag) else 0
+                        _ca_fat = int((_ca_st=="Auto-Fail").sum())
+                        _ca_rev = int((_ca_st=="Needs Review").sum())
+                        _ca_rows.append({"Auditor":str(_aud),"Audits":len(_ag),"Avg Score":f"{_ca_avg}%" if _ca_avg else "—","Pass Rate":f"{_ca_pr}%","Needs Review":_ca_rev,"Auto-Fails":_ca_fat})
+                    _ca_rows.sort(key=lambda x:float(x["Avg Score"].rstrip("%")) if x["Avg Score"]!="—" else 0, reverse=True)
+                    st.dataframe(pd.DataFrame(_ca_rows), use_container_width=True, hide_index=True)
+
+                # Status distribution pie-like breakdown
+                st.markdown('<div class="section-chip">📊 Status Distribution</div>', unsafe_allow_html=True)
+                _sd_st = _crp_df["Status"].astype(str).str.strip().value_counts()
+                _sd_total = len(_crp_df)
+                _sd_cfg = {"Pass":("#0ebc6e","✅"),"Needs Review":("#f59e0b","🟡"),"Fail":("#ef4444","❌"),"Auto-Fail":("#dc2626","🚨")}
+                _sd_html = ""
+                for _sn, _scfg in _sd_cfg.items():
+                    _sc = _sd_st.get(_sn, 0)
+                    _sp = round(_sc/_sd_total*100,1) if _sd_total else 0
+                    _sd_html += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+                                 f'<div style="width:120px;font-size:0.72rem;font-weight:600;color:#0d1d3a;flex-shrink:0;">{_scfg[1]} {_sn}</div>'
+                                 f'<div style="flex:1;height:16px;background:#edf2fb;border-radius:3px;overflow:hidden;"><div style="width:{_sp}%;height:100%;background:{_scfg[0]};border-radius:3px;"></div></div>'
+                                 f'<div style="width:80px;text-align:right;font-size:0.7rem;font-weight:700;color:{_scfg[0]};flex-shrink:0;">{_sc} ({_sp}%)</div>'
+                                 f'</div>')
+                st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:10px;padding:14px 18px;margin-bottom:1rem;">{_sd_html}</div>', unsafe_allow_html=True)
+
+                _render_param_weakness(_crp_df, "rep_camp_pw")
+                _render_entity_insights(_crp_df, "campaign", _sel_camp_r)
+
+                _dl3, _ = st.columns([1,4])
+                with _dl3:
+                    st.download_button("⬇ Download Campaign Report", data=_crp_df.to_csv(index=False).encode("utf-8"),
+                                       file_name=f"campaign_report_{_sel_camp_r.replace(' ','_')}.csv", mime="text/csv", key="dl_camp_rep")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # Tab 6 — AI Deep Dive
+    # ══════════════════════════════════════════════════════════════════════════
+    with _i6:
         ss_key  = "sense_ai_insights"
         err_key = "sense_ai_insights_err"
 
@@ -5756,8 +6058,10 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
 
         _ld1, _ld2, _ld3, _ld4 = st.columns(4)
         with _ld1:
-            _auto_pm = _SENSE_CLIENT_MAP.get(_f_client, {}).get("pm", "")
-            _f_pm_csm = st.text_input("PM / CSM *", value=_auto_pm, placeholder="e.g. Sneha Kapoor")
+            _auto_pm  = _SENSE_CLIENT_MAP.get(_f_client, {}).get("pm", "")
+            _pm_opts  = [""] + sorted(set(r["pm"] for r in _SENSE_CLIENTS))
+            _pm_idx   = _pm_opts.index(_auto_pm) if _auto_pm in _pm_opts else 0
+            _f_pm_csm = st.selectbox("PM / CSM *", _pm_opts, index=_pm_idx, key="f_pm_csm_sel")
         with _ld2:
             _f_lead_no    = st.text_input("Lead Number", placeholder="e.g. LD-20250422")
         with _ld3:
