@@ -611,13 +611,13 @@ label { color: #3a6699 !important; font-size: 0.8rem !important; font-weight: 50
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--brand-primary);
-    background: rgba(37,99,235,0.08);
-    border: 1px solid rgba(37,99,235,0.28);
+    color: #ffffff;
+    background: linear-gradient(135deg,#0B1F3A,#2563EB);
+    border: none;
     border-radius: 6px;
-    padding: 3px 10px;
+    padding: 4px 12px;
     margin-bottom: 14px;
-    box-shadow: 0 0 10px rgba(37,99,235,0.12);
+    box-shadow: 0 2px 8px rgba(37,99,235,0.22);
 }
 
 /* ── Client avatar ── */
@@ -5436,10 +5436,38 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     '📊 <strong>Demo data</strong> — showing seed audits. Upload a file or submit audits via ✍️ New Audit to see your own data.</div>',
                     unsafe_allow_html=True,
                 )
-            _qi2 = _gen_qa_insights(_audit_df_ins)
-            total_i  = len(_audit_df_ins)
-            _bs_i    = pd.to_numeric(_audit_df_ins["Bot Score"], errors="coerce")
-            _st_i    = _audit_df_ins["Status"].astype(str).str.strip()
+            # ── Client / Campaign filter bar ─────────────────────────────────
+            _ins_fc1, _ins_fc2, _ins_fc3 = st.columns([2, 2, 1])
+            with _ins_fc1:
+                _ins_cli_opts = ["All Clients"] + sorted(_audit_df_ins["Client"].dropna().astype(str).unique().tolist()) if "Client" in _audit_df_ins.columns else ["All Clients"]
+                _ins_cli = st.selectbox("Client", _ins_cli_opts, key="ins_filter_client")
+            with _ins_fc2:
+                if _ins_cli != "All Clients" and "Client" in _audit_df_ins.columns and "Campaign Name" in _audit_df_ins.columns:
+                    _ins_camp_src = _audit_df_ins[_audit_df_ins["Client"].astype(str) == _ins_cli]["Campaign Name"]
+                else:
+                    _ins_camp_src = _audit_df_ins["Campaign Name"] if "Campaign Name" in _audit_df_ins.columns else pd.Series(dtype=str)
+                _ins_camp_opts = ["All Campaigns"] + sorted(_ins_camp_src.dropna().astype(str).unique().tolist())
+                _ins_camp = st.selectbox("Campaign", _ins_camp_opts, key="ins_filter_camp")
+            with _ins_fc3:
+                if st.button("↺ Reset", key="ins_filter_reset", use_container_width=True):
+                    for _k in ["ins_filter_client", "ins_filter_camp"]:
+                        st.session_state.pop(_k, None)
+                    st.rerun()
+            _ins_df = _audit_df_ins.copy()
+            if _ins_cli != "All Clients" and "Client" in _ins_df.columns:
+                _ins_df = _ins_df[_ins_df["Client"].astype(str) == _ins_cli]
+            if _ins_camp != "All Campaigns" and "Campaign Name" in _ins_df.columns:
+                _ins_df = _ins_df[_ins_df["Campaign Name"].astype(str) == _ins_camp]
+            if len(_ins_df) != len(_audit_df_ins):
+                st.markdown(f'<div style="font-size:0.7rem;color:#2563EB;background:rgba(37,99,235,0.06);border-radius:6px;padding:4px 12px;margin-bottom:8px;">🔍 Filtered: <strong>{len(_ins_df):,}</strong> of <strong>{len(_audit_df_ins):,}</strong> audits</div>', unsafe_allow_html=True)
+                _audit_df_ins_view = _ins_df
+            else:
+                _audit_df_ins_view = _audit_df_ins
+
+            _qi2 = _gen_qa_insights(_audit_df_ins_view)
+            total_i  = len(_audit_df_ins_view)
+            _bs_i    = pd.to_numeric(_audit_df_ins_view["Bot Score"], errors="coerce")
+            _st_i    = _audit_df_ins_view["Status"].astype(str).str.strip()
             _avg_i   = round(_bs_i.dropna().mean(), 1) if _bs_i.dropna().notna().any() else None
             pass_i   = int((_st_i == "Pass").sum())
             review_i = int((_st_i == "Needs Review").sum())
@@ -5494,8 +5522,8 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
 
             # ── Disposition Breakdown ─────────────────────────────────────────
             with _ov_r:
-                if "Disposition" in _audit_df_ins.columns:
-                    _disp_vc = _audit_df_ins["Disposition"].astype(str).str.strip()
+                if "Disposition" in _audit_df_ins_view.columns:
+                    _disp_vc = _audit_df_ins_view["Disposition"].astype(str).str.strip()
                     _disp_vc = _disp_vc[~_disp_vc.isin(["", "nan", "— select —", "None"])]
                     _disp_counts = _disp_vc.value_counts()
                     if len(_disp_counts):
@@ -5521,12 +5549,12 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
             _param_avgs = []
             for _tier in _QA_SCHEMA["tiers"]:
                 for _p in _tier["params"]:
-                    if _p["col"] not in _audit_df_ins.columns:
+                    if _p["col"] not in _audit_df_ins_view.columns:
                         continue
                     _pmax_v = [int(o) for o in _p["options"] if str(o).lstrip("-").isdigit()]
                     _pmax = max(_pmax_v) if _pmax_v else 2
                     _pvals = pd.to_numeric(
-                        _audit_df_ins[_p["col"]].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":""}),
+                        _audit_df_ins_view[_p["col"]].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":""}),
                         errors="coerce").dropna()
                     if len(_pvals) == 0:
                         continue
@@ -5596,8 +5624,8 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
 
             # ── Top 5 Best Calls Handled ──────────────────────────────────────
             st.markdown('<div class="section-chip">🏅 Top 5 Best Calls Handled</div>', unsafe_allow_html=True)
-            _bs_col = pd.to_numeric(_audit_df_ins["Bot Score"], errors="coerce")
-            _top5_df = _audit_df_ins.copy()
+            _bs_col = pd.to_numeric(_audit_df_ins_view["Bot Score"], errors="coerce")
+            _top5_df = _audit_df_ins_view.copy()
             _top5_df["_bs_num"] = _bs_col
             _top5_df = _top5_df.dropna(subset=["_bs_num"]).sort_values("_bs_num", ascending=False).head(5)
             if not _top5_df.empty:
@@ -5655,6 +5683,71 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
 
             st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
+            # ── Top 5 Worst Calls with Conversation Links ─────────────────────
+            st.markdown('<div class="section-chip">🚨 Top 5 Worst Calls — Needs Attention</div>', unsafe_allow_html=True)
+            _worst5_df = _audit_df_ins_view.copy()
+            _worst5_df["_bs_num"] = pd.to_numeric(_worst5_df["Bot Score"], errors="coerce")
+            _worst5_df = _worst5_df.dropna(subset=["_bs_num"]).sort_values("_bs_num", ascending=True).head(5)
+            if not _worst5_df.empty:
+                _w5_html = ""
+                _w5_medal = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣"]
+                for _w5i, (_, _w5row) in enumerate(_worst5_df.iterrows()):
+                    _w5sc  = float(_w5row["_bs_num"])
+                    _w5sta = str(_w5row.get("Status","—")).strip()
+                    _w5qa  = str(_w5row.get("QA","—")).strip() if "QA" in _w5row.index else "—"
+                    _w5cam = str(_w5row.get("Campaign Name","—")).strip() if "Campaign Name" in _w5row.index else "—"
+                    _w5ld  = str(_w5row.get("Lead Number", _w5row.get("Lead", _w5row.get("Phone Number","—")))).strip()
+                    _w5ld  = _w5ld[:18] if _w5ld not in ("—","nan","") else f"#{_w5i+1}"
+                    _w5link = str(_w5row.get("Conversation Link","")).strip()
+                    _w5link_html = (f'<a href="{_w5link}" target="_blank" style="font-size:0.62rem;color:#2563EB;font-weight:700;'
+                                    f'text-decoration:none;background:#EBF5FF;border:1px solid #BFDBFE;border-radius:4px;'
+                                    f'padding:2px 7px;white-space:nowrap;">🔗 View Call</a>') if _w5link and _w5link.startswith("http") else '<span style="font-size:0.62rem;color:#aabbcc;">—</span>'
+                    _w5sc_c = "#dc2626" if _w5sc < 60 else "#d97706"
+                    _w5_fail_params = [p["col"] for p in [q for t in _QA_SCHEMA["tiers"] for q in t["params"]]
+                                       if p["col"] in _w5row.index and str(_w5row[p["col"]]).strip() == "0"][:3]
+                    _w5_fail_chips = "".join(
+                        f'<span style="background:#FEE2E2;border:1px solid #FECACA;border-radius:4px;'
+                        f'padding:1px 5px;font-size:0.58rem;font-weight:700;color:#dc2626;margin-right:3px;">{s}</span>'
+                        for s in _w5_fail_params
+                    )
+                    _w5_html += (
+                        f'<div style="display:grid;grid-template-columns:2rem 2.5rem 1fr 1fr 1fr auto;'
+                        f'align-items:center;gap:10px;padding:10px 16px;'
+                        f'border-top:{"none" if _w5i==0 else "1px solid #F1F5F9"};">'
+                        f'<div style="font-size:1.1rem;text-align:center;">{_w5_medal[_w5i]}</div>'
+                        f'<div style="background:linear-gradient(135deg,#7F1D1D,#dc2626);border-radius:8px;'
+                        f'padding:4px 0;text-align:center;font-size:0.85rem;font-weight:900;color:#fff;">{int(_w5sc)}</div>'
+                        f'<div>'
+                        f'<div style="font-size:0.73rem;font-weight:700;color:#0B1F3A;">{_w5ld}</div>'
+                        f'<div style="font-size:0.62rem;color:#64748b;margin-top:1px;">{_w5cam[:22] if _w5cam!="—" else ""}</div>'
+                        f'</div>'
+                        f'<div style="font-size:0.69rem;color:#475569;">👤 {_w5qa[:16]}</div>'
+                        f'<div style="display:flex;flex-wrap:wrap;gap:2px;">{_w5_fail_chips if _w5_fail_chips else "<span style=\"font-size:0.62rem;color:#94a3b8;\">—</span>"}</div>'
+                        f'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+                        f'{_w5link_html}'
+                        f'<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:2px 8px;'
+                        f'font-size:0.65rem;font-weight:700;color:#dc2626;white-space:nowrap;">{_w5sta}</div>'
+                        f'</div>'
+                        f'</div>'
+                    )
+                st.markdown(
+                    f'<div style="background:#fff;border:1px solid #FECACA;border-radius:12px;overflow:hidden;'
+                    f'box-shadow:0 2px 8px rgba(220,38,38,0.08);">'
+                    f'<div style="background:linear-gradient(135deg,#7F1D1D,#dc2626);padding:10px 16px;'
+                    f'display:grid;grid-template-columns:2rem 2.5rem 1fr 1fr 1fr auto;gap:10px;align-items:center;">'
+                    f'<div style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;">#</div>'
+                    f'<div style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;">Score</div>'
+                    f'<div style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;">Lead / ID</div>'
+                    f'<div style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;">QA</div>'
+                    f'<div style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;">Failed Params</div>'
+                    f'<div style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;">Conversation</div>'
+                    f'</div>'
+                    f'{_w5_html}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+
             # ── Parameter-wise Insights (ALL parameters) ─────────────────────
             st.markdown('<div class="section-chip">🔬 Parameter-wise Performance — All Tiers</div>', unsafe_allow_html=True)
             _tier_cols = st.columns(len(_QA_SCHEMA["tiers"]))
@@ -5666,11 +5759,11 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     for _pp in _tier_g["params"]:
                         _pmx_v = [int(o) for o in _pp["options"] if str(o).lstrip("-").isdigit()]
                         _pmx = max(_pmx_v) if _pmx_v else 2
-                        if _pp["col"] not in _audit_df_ins.columns:
+                        if _pp["col"] not in _audit_df_ins_view.columns:
                             _bar_pct = None
                         else:
                             _pv2 = pd.to_numeric(
-                                _audit_df_ins[_pp["col"]].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":""}),
+                                _audit_df_ins_view[_pp["col"]].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":""}),
                                 errors="coerce").dropna()
                             _bar_pct = round(_pv2.mean() / _pmx * 100, 1) if len(_pv2) else None
                         if _bar_pct is None:
@@ -5823,6 +5916,111 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                                 f'</div>',
                                 unsafe_allow_html=True,
                             )
+
+            # ── Send Insights as One-Pager Email ─────────────────────────────
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+            with st.expander("📧 Send Insights Report as Email", expanded=False):
+                st.markdown(
+                    '<div style="font-size:0.72rem;color:#475569;margin-bottom:14px;">'
+                    'Choose a template, preview, and send a one-pager email with the key insights from this audit dataset.</div>',
+                    unsafe_allow_html=True,
+                )
+                _email_templates = {
+                    "📊 Executive Summary": "exec_summary",
+                    "🏆 Performance Report": "perf_report",
+                    "🎯 Action Plan": "action_plan",
+                    "📈 Campaign Spotlight": "campaign_spot",
+                    "👥 QA Team Digest": "qa_digest",
+                }
+                _sel_tpl = st.radio("Choose template", list(_email_templates.keys()), horizontal=True, key="ins_email_tpl")
+                _tpl_key = _email_templates[_sel_tpl]
+                _now_str = pd.Timestamp.now().strftime("%d %b %Y")
+                _cli_label = _ins_cli if _ins_cli != "All Clients" else "All Clients"
+                _camp_label = _ins_camp if _ins_camp != "All Campaigns" else "All Campaigns"
+                _avg_str = f"{_avg_i}%" if _avg_i else "—"
+                _insights_bullets = "".join(f'<li style="margin-bottom:5px;">{i["title"]}: {i["detail"][:120]}…</li>' for i in _qi2.get("insights",[])[:5])
+                _action_bullets   = "".join(f'<li style="margin-bottom:5px;"><strong>[{a["priority"].upper()}]</strong> {a["action"][:120]}…</li>' for a in _qi2.get("actions",[])[:5])
+                _camp_avgs_html = ""
+                if "Campaign Name" in _audit_df_ins_view.columns:
+                    for _cn3, _cg3 in _audit_df_ins_view.groupby("Campaign Name"):
+                        _cbs3 = pd.to_numeric(_cg3["Bot Score"], errors="coerce").dropna()
+                        if len(_cbs3):
+                            _camp_avgs_html += f'<tr><td style="padding:6px 12px;border-bottom:1px solid #f0f4f9;">{_cn3}</td><td style="padding:6px 12px;border-bottom:1px solid #f0f4f9;text-align:center;font-weight:700;color:#2563EB;">{round(_cbs3.mean(),1)}%</td><td style="padding:6px 12px;border-bottom:1px solid #f0f4f9;text-align:center;">{len(_cg3)}</td></tr>'
+                _qa_avgs_html = ""
+                if "QA" in _audit_df_ins_view.columns:
+                    for _qn3, _qg3 in _audit_df_ins_view.groupby("QA"):
+                        _qbs3 = pd.to_numeric(_qg3["Bot Score"], errors="coerce").dropna()
+                        if len(_qbs3):
+                            _qp3 = round(int((_qg3["Status"].astype(str).str.strip()=="Pass").sum())/len(_qg3)*100,1)
+                            _qa_avgs_html += f'<tr><td style="padding:6px 12px;border-bottom:1px solid #f0f4f9;">{_qn3}</td><td style="padding:6px 12px;border-bottom:1px solid #f0f4f9;text-align:center;font-weight:700;color:#2563EB;">{round(_qbs3.mean(),1)}%</td><td style="padding:6px 12px;border-bottom:1px solid #f0f4f9;text-align:center;">{_qp3}%</td></tr>'
+
+                def _email_body(tpl):
+                    _base = f"""<div style="font-family:'Segoe UI',Arial,sans-serif;max-width:640px;margin:0 auto;background:#F0F4F9;padding:24px;">
+  <div style="background:linear-gradient(135deg,#0B1F3A,#2563EB);border-radius:14px 14px 0 0;padding:28px 32px;">
+    <div style="font-size:11px;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.55);">CONVIN SENSE AUDIT</div>
+    <div style="font-size:22px;font-weight:900;color:#fff;margin:6px 0 4px;line-height:1.2;">{{title}}</div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.7);">{{subtitle}} &nbsp;·&nbsp; {_now_str}</div>
+  </div>
+  <div style="background:#fff;border-radius:0 0 14px 14px;padding:24px 32px;">
+    {{body}}
+    <div style="border-top:1px solid #E2EAF6;margin-top:24px;padding-top:16px;font-size:11px;color:#94a3b8;text-align:center;">
+      Powered by <strong style="color:#2563EB;">Convin Sense Audit</strong> · Auto QA Data Insights · {_now_str}
+    </div>
+  </div>
+</div>"""
+                    _kpi_row = f"""<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0;">
+  <div style="background:#F0F4F9;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:22px;font-weight:900;color:#0B1F3A;">{total_i:,}</div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">Total Audits</div></div>
+  <div style="background:#F0F4F9;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:22px;font-weight:900;color:#2563EB;">{_avg_str}</div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">Avg Score</div></div>
+  <div style="background:#F0F4F9;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:22px;font-weight:900;color:#059669;">{pass_rate_i}%</div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;">Pass Rate</div></div>
+</div>"""
+                    if tpl == "exec_summary":
+                        _b = f"""{_kpi_row}
+<div style="font-size:13px;font-weight:700;color:#0B1F3A;margin:18px 0 8px;">Key Findings</div>
+<ul style="font-size:13px;color:#374151;line-height:1.7;padding-left:18px;margin:0;">{_insights_bullets}</ul>"""
+                        return _base.replace("{title}","Executive Summary").replace("{subtitle}",f"Client: {_cli_label}").replace("{body}",_b)
+                    elif tpl == "perf_report":
+                        _tb = f"""<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#F0F4F9;"><th style="padding:8px 12px;text-align:left;color:#0B1F3A;font-weight:700;">Campaign</th><th style="padding:8px 12px;text-align:center;color:#0B1F3A;font-weight:700;">Avg Score</th><th style="padding:8px 12px;text-align:center;color:#0B1F3A;font-weight:700;">Audits</th></tr></thead><tbody>{_camp_avgs_html or "<tr><td colspan='3' style='padding:12px;text-align:center;color:#94a3b8;'>No campaign data</td></tr>"}</tbody></table>"""
+                        _b = f"""{_kpi_row}{_tb}"""
+                        return _base.replace("{title}","Performance Report").replace("{subtitle}",f"Campaign: {_camp_label}").replace("{body}",_b)
+                    elif tpl == "action_plan":
+                        _b = f"""{_kpi_row}
+<div style="font-size:13px;font-weight:700;color:#0B1F3A;margin:18px 0 8px;">Priority Actions</div>
+<ul style="font-size:13px;color:#374151;line-height:1.7;padding-left:18px;margin:0;">{_action_bullets or "<li>No actions generated yet.</li>"}</ul>"""
+                        return _base.replace("{title}","Action Plan").replace("{subtitle}",f"Client: {_cli_label}").replace("{body}",_b)
+                    elif tpl == "campaign_spot":
+                        _b = f"""{_kpi_row}
+<div style="font-size:13px;font-weight:700;color:#0B1F3A;margin:18px 0 8px;">Campaign Breakdown</div>
+<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#F0F4F9;"><th style="padding:8px 12px;text-align:left;color:#0B1F3A;font-weight:700;">Campaign</th><th style="padding:8px 12px;text-align:center;color:#0B1F3A;font-weight:700;">Avg Score</th><th style="padding:8px 12px;text-align:center;color:#0B1F3A;font-weight:700;">Audits</th></tr></thead><tbody>{_camp_avgs_html or "<tr><td colspan='3' style='padding:12px;text-align:center;color:#94a3b8;'>No campaigns</td></tr>"}</tbody></table>"""
+                        return _base.replace("{title}","Campaign Spotlight").replace("{subtitle}",f"{_now_str}").replace("{body}",_b)
+                    else:  # qa_digest
+                        _b = f"""{_kpi_row}
+<div style="font-size:13px;font-weight:700;color:#0B1F3A;margin:18px 0 8px;">QA Team Performance</div>
+<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#F0F4F9;"><th style="padding:8px 12px;text-align:left;color:#0B1F3A;font-weight:700;">Auditor</th><th style="padding:8px 12px;text-align:center;color:#0B1F3A;font-weight:700;">Avg Score</th><th style="padding:8px 12px;text-align:center;color:#0B1F3A;font-weight:700;">Pass Rate</th></tr></thead><tbody>{_qa_avgs_html or "<tr><td colspan='3' style='padding:12px;text-align:center;color:#94a3b8;'>No QA data</td></tr>"}</tbody></table>"""
+                        return _base.replace("{title}","QA Team Digest").replace("{subtitle}",f"Team Performance · {_now_str}").replace("{body}",_b)
+
+                _preview_html = _email_body(_tpl_key)
+                with st.expander("👁 Preview Email", expanded=False):
+                    import streamlit.components.v1 as _cmp
+                    _cmp.html(_preview_html, height=520, scrolling=True)
+
+                _ec1, _ec2 = st.columns([3, 1])
+                with _ec1:
+                    _send_to_raw = st.text_input("Recipients (comma-separated emails)", placeholder="e.g. ceo@company.com, pm@company.com", key="ins_email_to")
+                with _ec2:
+                    _send_subj = st.text_input("Subject", value=f"Convin Sense Audit Report — {_now_str}", key="ins_email_subj")
+                if st.button("📤 Send Report Email", key="ins_send_email_btn", type="primary", use_container_width=True):
+                    _to_list = [e.strip() for e in _send_to_raw.split(",") if "@" in e.strip()]
+                    if not _to_list:
+                        st.error("Add at least one valid email address.")
+                    else:
+                        from gmail_sender import send_report_email as _sre
+                        _res = _sre({}, _to_list, _send_subj, _email_body(_tpl_key),
+                                    from_email=st.session_state.get("user_email",""))
+                        if _res.get("sent"):
+                            st.success(f"✓ Sent to {len(_res['sent'])} recipient(s): {', '.join(_res['sent'])}")
+                        if _res.get("failed"):
+                            for _f in _res["failed"]:
+                                st.error(f"✗ {_f['email']}: {_f['error']}")
 
     # ══════════════════════════════════════════════════════════════════════════
     # Tab 2 — Performance Rankings
@@ -6111,6 +6309,8 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
     # Helper functions used by Tabs 4 and 5
     def _render_entity_kpi_band(df, label):
         if df is None or df.empty:
+            return
+        if "Bot Score" not in df.columns or "Status" not in df.columns:
             return
         _tot  = len(df)
         _bs   = pd.to_numeric(df["Bot Score"], errors="coerce")
@@ -7605,7 +7805,7 @@ def render_convin_sense():
 .stApp, .stApp > div, section.main > div { background: #F0F4F9 !important; font-family: 'Inter', sans-serif !important; }
 .block-container { background: #F0F4F9 !important; padding-top: 1.5rem !important; }
 
-/* ── Section chip: left-accent pill ── */
+/* ── Section chip: Convin branded pill ── */
 .section-chip {
     display: inline-flex !important;
     align-items: center !important;
@@ -7614,18 +7814,17 @@ def render_convin_sense():
     font-weight: 800 !important;
     letter-spacing: 0.11em !important;
     text-transform: uppercase !important;
-    color: #1E40AF !important;
-    background: #fff !important;
-    border: 1px solid #BFDBFE !important;
-    border-left: 3px solid #2563EB !important;
+    color: #ffffff !important;
+    background: linear-gradient(135deg,#0B1F3A,#2563EB) !important;
+    border: none !important;
     border-radius: 6px !important;
-    padding: 5px 14px 5px 12px !important;
+    padding: 5px 14px !important;
     margin-bottom: 16px !important;
-    box-shadow: 0 1px 4px rgba(37,99,235,0.08) !important;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.28) !important;
     transition: box-shadow 0.2s, transform 0.15s !important;
 }
 .section-chip:hover {
-    box-shadow: 0 4px 12px rgba(37,99,235,0.16) !important;
+    box-shadow: 0 4px 14px rgba(37,99,235,0.38) !important;
     transform: translateY(-1px) !important;
 }
 
