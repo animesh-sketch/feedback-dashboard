@@ -4165,7 +4165,7 @@ def _gen_qa_insights(audit_df):
 
     # Weakest QA-schema parameter (Tier-1 focus)
     if total >= 5:
-        _t1_params = [_p for _t in _QA_SCHEMA["tiers"] if _t["tier"] == 1 for _p in _t["params"]]
+        _t1_params = [_p for _t in _QA_SCHEMA["tiers"] if "TIER 1" in _t.get("label","") for _p in _t["params"]]
         _p_avgs = []
         for _tp in _t1_params:
             _pc = next((c for c in audit_df.columns if _tp["col"].lower() in str(c).lower()), None)
