@@ -79,6 +79,9 @@ if "send_log" not in st.session_state:
 if "current_page" not in st.session_state:
     st.session_state["current_page"] = "Overview"
 
+if "app_mode" not in st.session_state:
+    st.session_state["app_mode"] = "CDL"
+
 if "show_sidebar" not in st.session_state:
     st.session_state["show_sidebar"] = False
 
@@ -1067,77 +1070,6 @@ def _render_period_content(period: str):
 # ─── Overview ─────────────────────────────────────────────────────────────────
 
 def render_overview():
-    # ── Two-window landing cards ──────────────────────────────────────────────
-    st.markdown("""
-<style>
-.landing-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:28px; }
-@media(max-width:720px){ .landing-grid { grid-template-columns:1fr; } }
-.landing-card {
-    border-radius:18px; padding:32px 30px 26px;
-    position:relative; overflow:hidden; min-height:230px;
-    display:flex; flex-direction:column; justify-content:space-between;
-}
-.landing-card-cdl {
-    background:linear-gradient(135deg,#071428 0%,#0d2040 55%,#0d1d3a 100%);
-    border:1px solid rgba(61,130,245,0.22);
-}
-.landing-card-sense {
-    background:linear-gradient(135deg,#180828 0%,#1a0d30 50%,#0d1d3a 100%);
-    border:1px solid rgba(224,54,142,0.28);
-}
-.landing-card::before {
-    content:""; position:absolute; top:-60px; right:-60px;
-    width:260px; height:260px; border-radius:50%; pointer-events:none;
-}
-.landing-card-cdl::before { background:radial-gradient(circle,rgba(61,130,245,0.14) 0%,transparent 68%); }
-.landing-card-sense::before { background:radial-gradient(circle,rgba(224,54,142,0.15) 0%,transparent 68%); }
-.lc-icon { font-size:2rem; margin-bottom:12px; }
-.lc-title { font-size:1.25rem; font-weight:900; color:#e8f0fc; letter-spacing:-0.02em; margin-bottom:5px; }
-.lc-sub   { font-size:0.74rem; font-weight:600; color:rgba(180,210,255,0.6); margin-bottom:14px; }
-.lc-pills { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px; }
-.lc-pill  { font-size:0.64rem; font-weight:600; color:rgba(200,225,255,0.55);
-            background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09);
-            border-radius:99px; padding:3px 10px; white-space:nowrap; }
-</style>
-<div class="landing-grid">
-  <div class="landing-card landing-card-cdl">
-    <div>
-      <div class="lc-icon">📊</div>
-      <div class="lc-title">Convin Data Labs</div>
-      <div class="lc-sub">Insights &amp; Email Intelligence Platform</div>
-      <div class="lc-pills">
-        <span class="lc-pill">📬 Campaign tracking</span>
-        <span class="lc-pill">⭐ CSAT feedback</span>
-        <span class="lc-pill">📧 Email delivery</span>
-        <span class="lc-pill">🏢 Client management</span>
-        <span class="lc-pill">📈 KPI monitoring</span>
-      </div>
-    </div>
-    <div style="font-size:0.7rem;color:rgba(150,190,255,0.5);">Currently viewing ↓</div>
-  </div>
-  <div class="landing-card landing-card-sense" id="sense-landing-card">
-    <div>
-      <div class="lc-icon">🎯</div>
-      <div class="lc-title">Sense Audit</div>
-      <div class="lc-sub">Real-time QA &amp; Bot Intelligence Engine</div>
-      <div class="lc-pills">
-        <span class="lc-pill">🤖 Bot scoring</span>
-        <span class="lc-pill">🧠 Flow intelligence</span>
-        <span class="lc-pill">👤 Auditor leaderboard</span>
-        <span class="lc-pill">📊 Tier-based QA</span>
-        <span class="lc-pill">⚡ Auto-fail detection</span>
-      </div>
-    </div>
-  </div>
-</div>""", unsafe_allow_html=True)
-
-    _lc_left, _lc_right = st.columns(2)
-    with _lc_right:
-        if st.button("🎯 Open Sense Audit →", key="home_open_sense",
-                     use_container_width=True, type="primary"):
-            st.session_state["current_page"] = "Sense Audit"
-            st.rerun()
-
     st.markdown('<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:4px 0 20px;">', unsafe_allow_html=True)
 
     st.markdown("""<div class="page-header">
@@ -6398,9 +6330,14 @@ if not st.session_state["show_sidebar"]:
 
 # ─── Top navigation bar ───────────────────────────────────────────────────────
 
-# Full-width branded header — rendered as HTML above the button row
+_app_mode = st.session_state["app_mode"]
 _current_page = st.session_state["current_page"]
-st.markdown(f"""
+
+st.markdown("""<style>.stApp > header { display: none !important; }</style>""", unsafe_allow_html=True)
+
+if _app_mode == "CDL":
+    # ── CDL header ────────────────────────────────────────────────────────────
+    st.markdown(f"""
 <style>
 @keyframes navGradient {{
     0%   {{ background-position: 0% 50%; }}
@@ -6424,7 +6361,6 @@ st.markdown(f"""
 }}
 </style>
 <div class="cdl-navbar">
-    <!-- Logo + brand -->
     <div style="display:flex;align-items:center;gap:12px;">
         <div style="filter:drop-shadow(0 2px 8px rgba(0,0,0,0.4));flex-shrink:0;">{_logo_img(38, 10)}</div>
         <div>
@@ -6432,13 +6368,7 @@ st.markdown(f"""
             <div style="color:rgba(255,255,255,0.55);font-size:0.58rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;">Insights Dashboard</div>
         </div>
     </div>
-    <!-- User pill -->
-    <div style="
-        background:rgba(0,0,0,0.22);border:1px solid rgba(255,255,255,0.25);
-        border-radius:99px;padding:5px 14px 5px 8px;
-        display:flex;align-items:center;gap:8px;
-        box-shadow:0 2px 12px rgba(0,0,0,0.3);
-    ">
+    <div style="background:rgba(0,0,0,0.22);border:1px solid rgba(255,255,255,0.25);border-radius:99px;padding:5px 14px 5px 8px;display:flex;align-items:center;gap:8px;box-shadow:0 2px 12px rgba(0,0,0,0.3);">
         <div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;color:#fff;border:1px solid rgba(255,255,255,0.3);">
             {(st.session_state.get("user_email","?")[0]).upper()}
         </div>
@@ -6446,14 +6376,10 @@ st.markdown(f"""
             {st.session_state.get("user_email","—")}
         </div>
     </div>
-</div>
-""", unsafe_allow_html=True)
+</div>""", unsafe_allow_html=True)
 
-st.markdown("""
+    st.markdown("""
 <style>
-/* Hide default Streamlit header bar */
-.stApp > header { display: none !important; }
-/* Compact utility nav strip (⚙️ Settings + page buttons) */
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) {
     background: #ffffff !important;
     border-bottom: 1px solid #e8edf8 !important;
@@ -6461,75 +6387,139 @@ div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) {
     margin-bottom: 1.4rem !important;
     box-shadow: 0 1px 6px rgba(210,44,132,0.06) !important;
 }
-/* Active nav button */
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="primary"] {
     background: linear-gradient(108deg, #e0368e, #ff6b78 52%, #3d8ef5) !important;
-    color: #ffffff !important;
-    border: none !important;
+    color: #ffffff !important; border: none !important;
     box-shadow: 0 2px 14px rgba(61,130,245,0.55) !important;
-    font-weight: 700 !important;
-    border-radius: 7px !important;
+    font-weight: 700 !important; border-radius: 7px !important;
 }
-div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="primary"]:hover {
-    filter: brightness(1.1) !important;
-    box-shadow: 0 4px 20px rgba(224,54,142,0.7) !important;
-    transform: translateY(-1px) !important;
-}
-/* Inactive nav button */
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="secondary"] {
     background: transparent !important;
     border: 1px solid rgba(61,130,245,0.22) !important;
-    color: #6699cc !important;
-    border-radius: 7px !important;
+    color: #6699cc !important; border-radius: 7px !important;
 }
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="secondary"]:hover {
     background: rgba(61,130,245,0.07) !important;
     border-color: rgba(61,130,245,0.4) !important;
     color: #e0368e !important;
-    transform: none !important;
 }
-</style>
-""", unsafe_allow_html=True)
+</style>""", unsafe_allow_html=True)
 
-_n0, _n1, _n2, _n3, _n4, _n5, _n_spacer = st.columns([1.0, 1.4, 1.3, 1.7, 1.5, 1.8, 0.3])
-
-with _n0:
-    _sb_label = "✕ Close" if st.session_state["show_sidebar"] else "⚙️ Settings"
-    if st.button(_sb_label, key="nav_settings", use_container_width=True):
-        st.session_state["show_sidebar"] = not st.session_state["show_sidebar"]
-        st.rerun()
-
-_page_btns = {
-    "Overview":        ("📊 Overview",        _n1),
-    "Clients":         ("🏢 Clients",         _n2),
-    "Client Emails":   ("📋 Client Emails",   _n3),
-    "Email Maker":     ("📧 Email Maker",      _n4),
-    "Sense Audit":     ("🎯 Sense Audit",      _n5),
-}
-for _key, (_label, _col) in _page_btns.items():
-    with _col:
-        _active = st.session_state["current_page"] == _key
-        if st.button(
-            _label,
-            key=f"nav_{_key}",
-            use_container_width=True,
-            type="primary" if _active else "secondary",
-        ):
-            st.session_state["current_page"] = _key
+    _n0, _n1, _n2, _n3, _n4, _n_switch, _n_spacer = st.columns([1.0, 1.4, 1.3, 1.7, 1.5, 1.8, 0.3])
+    with _n0:
+        _sb_label = "✕ Close" if st.session_state["show_sidebar"] else "⚙️ Settings"
+        if st.button(_sb_label, key="nav_settings", use_container_width=True):
+            st.session_state["show_sidebar"] = not st.session_state["show_sidebar"]
+            st.rerun()
+    for _key, _label, _col in [
+        ("Overview",      "📊 Overview",      _n1),
+        ("Clients",       "🏢 Clients",       _n2),
+        ("Client Emails", "📋 Client Emails", _n3),
+        ("Email Maker",   "📧 Email Maker",   _n4),
+    ]:
+        with _col:
+            if st.button(_label, key=f"nav_{_key}", use_container_width=True,
+                         type="primary" if _current_page == _key else "secondary"):
+                st.session_state["current_page"] = _key
+                st.rerun()
+    with _n_switch:
+        if st.button("🎯 Sense Audit →", key="nav_switch_to_sense", use_container_width=True, type="secondary"):
+            st.session_state["app_mode"] = "Sense Audit"
+            st.session_state["current_page"] = "Sense Audit"
             st.rerun()
 
-st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-# ─── Route pages ──────────────────────────────────────────────────────────────
+    # ── CDL page routing ──────────────────────────────────────────────────────
+    _page = st.session_state["current_page"]
+    if _page == "Overview":
+        render_overview()
+    elif _page == "Clients":
+        render_clients()
+    elif _page == "Client Emails":
+        render_client_emails()
+    elif _page == "Email Maker":
+        render_email_maker()
+    else:
+        render_overview()
 
-_page = st.session_state["current_page"]
-if _page == "Overview":
-    render_overview()
-elif _page == "Clients":
-    render_clients()
-elif _page == "Client Emails":
-    render_client_emails()
-elif _page == "Email Maker":
-    render_email_maker()
-elif _page == "Sense Audit":
+else:
+    # ── Sense Audit header ────────────────────────────────────────────────────
+    st.markdown(f"""
+<style>
+@keyframes navGradientSenseTop {{
+    0%   {{ background-position: 0% 50%; }}
+    50%  {{ background-position: 100% 50%; }}
+    100% {{ background-position: 0% 50%; }}
+}}
+.sense-navbar {{
+    background: linear-gradient(108deg, #040d1e, #0d1230 40%, #1a0d30 70%, #040d1e);
+    background-size: 300% 300%;
+    animation: navGradientSenseTop 10s ease infinite;
+    padding: 0 28px;
+    height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: -1rem -1rem 0 -1rem;
+    border-bottom: 1px solid rgba(224,54,142,0.3);
+    box-shadow: 0 4px 30px rgba(224,54,142,0.2), 0 1px 0 rgba(255,255,255,0.04);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}}
+</style>
+<div class="sense-navbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+        <div style="filter:drop-shadow(0 2px 8px rgba(0,0,0,0.4));flex-shrink:0;">{_logo_img(38, 10)}</div>
+        <div>
+            <div style="color:#fff;font-weight:800;font-size:0.96rem;letter-spacing:-0.01em;line-height:1.1;text-shadow:0 1px 8px rgba(0,0,0,0.3);">Sense Audit</div>
+            <div style="color:rgba(224,54,142,0.7);font-size:0.58rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;">QA &amp; Bot Intelligence</div>
+        </div>
+    </div>
+    <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(224,54,142,0.25);border-radius:99px;padding:5px 14px 5px 8px;display:flex;align-items:center;gap:8px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(224,54,142,0.2);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;color:#e0368e;border:1px solid rgba(224,54,142,0.3);">
+            {(st.session_state.get("user_email","?")[0]).upper()}
+        </div>
+        <div style="color:rgba(255,255,255,0.85);font-size:0.72rem;font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            {st.session_state.get("user_email","—")}
+        </div>
+    </div>
+</div>""", unsafe_allow_html=True)
+
+    st.markdown("""
+<style>
+div[data-testid="stHorizontalBlock"]:has(button[key="nav_back_to_cdl"]) {
+    background: #06101f !important;
+    border-bottom: 1px solid rgba(224,54,142,0.15) !important;
+    padding: 4px 0 6px !important;
+    margin-bottom: 1.4rem !important;
+}
+div[data-testid="stHorizontalBlock"]:has(button[key="nav_back_to_cdl"]) button[kind="secondary"] {
+    background: transparent !important;
+    border: 1px solid rgba(224,54,142,0.3) !important;
+    color: rgba(224,54,142,0.8) !important;
+    border-radius: 7px !important;
+}
+div[data-testid="stHorizontalBlock"]:has(button[key="nav_back_to_cdl"]) button[kind="secondary"]:hover {
+    background: rgba(224,54,142,0.08) !important;
+    color: #e0368e !important;
+}
+</style>""", unsafe_allow_html=True)
+
+    _sb_col, _back_col, _spacer_col = st.columns([1.0, 2.0, 7.0])
+    with _sb_col:
+        _sb_label = "✕ Close" if st.session_state["show_sidebar"] else "⚙️ Settings"
+        if st.button(_sb_label, key="nav_settings_sense", use_container_width=True, type="secondary"):
+            st.session_state["show_sidebar"] = not st.session_state["show_sidebar"]
+            st.rerun()
+    with _back_col:
+        if st.button("← CDL Dashboard", key="nav_back_to_cdl", use_container_width=True, type="secondary"):
+            st.session_state["app_mode"] = "CDL"
+            st.session_state["current_page"] = "Overview"
+            st.rerun()
+
+    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+
+    # ── Sense Audit page routing ──────────────────────────────────────────────
     render_convin_sense()
