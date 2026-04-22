@@ -4324,10 +4324,10 @@ def _render_sense_scorecard(sheets, legend_map):
             with _ins_cols[0]:
                 st.markdown('<div class="section-chip">💡 Key Insights</div>', unsafe_allow_html=True)
                 _TYPE_CFG = {
-                    "critical": ("#fef2f2", "#dc2626", "#991b1b", "#fee2e2"),
-                    "warning":  ("#fffbeb", "#f59e0b", "#92400e", "#fde68a"),
-                    "success":  ("#f0fdf4", "#16a34a", "#14532d", "#bbf7d0"),
-                    "info":     ("#eff6ff", "#2563eb", "#1e3a8a", "#bfdbfe"),
+                    "critical": ("#fff1f2", "#e11d48", "#9f1239", "#fecdd3"),
+                    "warning":  ("#fffbf0", "#d97706", "#92400e", "#fde68a"),
+                    "success":  ("#ecfdf5", "#059669", "#064e3b", "#a7f3d0"),
+                    "info":     ("#eef2ff", "#4f46e5", "#312e81", "#c7d2fe"),
                 }
                 for _ins in _all_insights:
                     _tcfg = _TYPE_CFG.get(_ins["type"], _TYPE_CFG["info"])
@@ -5234,23 +5234,24 @@ def _render_sense_insights(df, fname, sheets=None):
             pass_rate_i = round(pass_i / total_i * 100, 1) if total_i else 0
             fail_rate_i = round((fail_i + fatal_i) / total_i * 100, 1) if total_i else 0
 
-            # ── KPI Band (clean white cards) ──────────────────────────────────
-            _bc = "#1e7e4e" if (_avg_i or 0) >= 80 else "#b45309" if (_avg_i or 0) >= 60 else "#c0392b"
-            _pr_c = "#1e7e4e" if pass_rate_i >= 80 else "#b45309" if pass_rate_i >= 60 else "#c0392b"
-            def _kpi_card(val, label, color, border_top="#b8975e"):
-                return (f'<div style="background:#fff;border-radius:8px;padding:16px 20px;'
-                        f'border-top:3px solid {border_top};box-shadow:0 1px 4px rgba(0,0,0,0.06);text-align:center;">'
-                        f'<div style="font-size:1.9rem;font-weight:800;color:{color};line-height:1.1;letter-spacing:-0.02em;">{val}</div>'
-                        f'<div style="font-size:0.6rem;font-weight:700;color:#6b7280;letter-spacing:0.1em;text-transform:uppercase;margin-top:6px;">{label}</div>'
+            # ── KPI Band — vibrant soft gradient cards ────────────────────────
+            _bc = "#059669" if (_avg_i or 0) >= 80 else "#d97706" if (_avg_i or 0) >= 60 else "#dc2626"
+            _pr_c = "#059669" if pass_rate_i >= 80 else "#d97706" if pass_rate_i >= 60 else "#dc2626"
+            def _kpi_card(val, label, grad, txt="#fff", shadow="rgba(99,102,241,0.2)"):
+                return (f'<div style="background:{grad};border-radius:14px;padding:18px 16px;'
+                        f'box-shadow:0 4px 16px {shadow};text-align:center;min-height:88px;'
+                        f'display:flex;flex-direction:column;align-items:center;justify-content:center;">'
+                        f'<div style="font-size:2rem;font-weight:900;color:{txt};line-height:1.1;letter-spacing:-0.02em;">{val}</div>'
+                        f'<div style="font-size:0.6rem;font-weight:700;color:{txt};opacity:0.78;letter-spacing:0.1em;text-transform:uppercase;margin-top:6px;">{label}</div>'
                         f'</div>')
             _kc1,_kc2,_kc3,_kc4,_kc5,_kc6 = st.columns(6)
-            _kc1.markdown(_kpi_card(total_i, "Total Audits", "#1e2d3d", "#1e2d3d"), unsafe_allow_html=True)
-            _kc2.markdown(_kpi_card(f"{_avg_i or '—'}%", "Avg Bot Score", _bc), unsafe_allow_html=True)
-            _kc3.markdown(_kpi_card(f"{pass_rate_i}%", "Pass Rate", _pr_c), unsafe_allow_html=True)
-            _kc4.markdown(_kpi_card(pass_i, "Passed", "#1e7e4e", "#1e7e4e"), unsafe_allow_html=True)
-            _kc5.markdown(_kpi_card(review_i, "Needs Review", "#b45309", "#b45309"), unsafe_allow_html=True)
-            _kc6.markdown(_kpi_card(fatal_i, "Auto-Fails", "#c0392b" if fatal_i else "#6b7280", "#c0392b"), unsafe_allow_html=True)
-            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+            _kc1.markdown(_kpi_card(total_i,  "Total Audits",   "linear-gradient(135deg,#4338ca,#6366f1)", shadow="rgba(99,102,241,0.3)"), unsafe_allow_html=True)
+            _kc2.markdown(_kpi_card(f"{_avg_i or '—'}%", "Avg Score", "linear-gradient(135deg,#0891b2,#06b6d4)" if (_avg_i or 0)>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if (_avg_i or 0)>=60 else "linear-gradient(135deg,#dc2626,#ef4444)", shadow="rgba(8,145,178,0.25)"), unsafe_allow_html=True)
+            _kc3.markdown(_kpi_card(f"{pass_rate_i}%", "Pass Rate",  "linear-gradient(135deg,#059669,#10b981)" if pass_rate_i>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if pass_rate_i>=60 else "linear-gradient(135deg,#dc2626,#ef4444)", shadow="rgba(5,150,105,0.25)"), unsafe_allow_html=True)
+            _kc4.markdown(_kpi_card(pass_i,   "Passed",          "linear-gradient(135deg,#059669,#10b981)", shadow="rgba(5,150,105,0.3)"), unsafe_allow_html=True)
+            _kc5.markdown(_kpi_card(review_i, "Needs Review",    "linear-gradient(135deg,#d97706,#f59e0b)", shadow="rgba(217,119,6,0.25)"), unsafe_allow_html=True)
+            _kc6.markdown(_kpi_card(fatal_i,  "Auto-Fails",      "linear-gradient(135deg,#dc2626,#f43f5e)" if fatal_i else "linear-gradient(135deg,#6b7280,#9ca3af)", shadow="rgba(220,38,38,0.25)"), unsafe_allow_html=True)
+            st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
             # ── Status Distribution Bar ───────────────────────────────────────
             _sd_cfg = [("✅ Pass", "#0ebc6e", pass_i), ("🟡 Needs Review", "#f59e0b", review_i),
@@ -5297,10 +5298,10 @@ def _render_sense_insights(df, fname, sheets=None):
 
             # ── Key Insights (sorted: critical → warning → success) ───────────
             _TYPE_CFG2 = {
-                "critical": ("#fef2f2","#dc2626","#991b1b","#fee2e2"),
-                "warning":  ("#fffbeb","#f59e0b","#92400e","#fde68a"),
-                "success":  ("#f0fdf4","#16a34a","#14532d","#bbf7d0"),
-                "info":     ("#eff6ff","#2563eb","#1e3a8a","#bfdbfe"),
+                "critical": ("#fff1f2","#e11d48","#9f1239","#fecdd3"),
+                "warning":  ("#fffbf0","#d97706","#92400e","#fde68a"),
+                "success":  ("#ecfdf5","#059669","#064e3b","#a7f3d0"),
+                "info":     ("#eef2ff","#4f46e5","#312e81","#c7d2fe"),
             }
             _pri_order = {"critical": 0, "warning": 1, "info": 2, "success": 3}
             _sorted_ins = sorted(_qi2.get("insights", []), key=lambda x: _pri_order.get(x.get("type","info"), 2))
@@ -5525,24 +5526,24 @@ def _render_sense_insights(df, fname, sheets=None):
         _fai  = int((_st == "Fail").sum())
         _fat  = int((_st == "Auto-Fail").sum())
         _pr   = round(_pas / _tot * 100, 1) if _tot else 0
-        _bc   = "#1e7e4e" if (_avg or 0) >= 80 else "#b45309" if (_avg or 0) >= 60 else "#c0392b"
-        _pr_c = "#1e7e4e" if _pr >= 80 else "#b45309" if _pr >= 60 else "#c0392b"
-        def _ekc(v, lbl, c, bt="#b8975e"):
-            return (f'<div style="background:#fff;border-radius:8px;padding:14px 16px;border-top:3px solid {bt};'
-                    f'box-shadow:0 1px 4px rgba(0,0,0,0.06);text-align:center;">'
-                    f'<div style="font-size:1.6rem;font-weight:800;color:{c};line-height:1.1;">{v}</div>'
-                    f'<div style="font-size:0.58rem;font-weight:700;color:#6b7280;letter-spacing:0.1em;text-transform:uppercase;margin-top:5px;">{lbl}</div>'
+        def _ekc(v, lbl, grad, shadow="rgba(99,102,241,0.18)"):
+            return (f'<div style="background:{grad};border-radius:12px;padding:14px 12px;'
+                    f'box-shadow:0 3px 12px {shadow};text-align:center;">'
+                    f'<div style="font-size:1.65rem;font-weight:900;color:#fff;line-height:1.1;">{v}</div>'
+                    f'<div style="font-size:0.58rem;font-weight:700;color:rgba(255,255,255,0.78);letter-spacing:0.1em;text-transform:uppercase;margin-top:5px;">{lbl}</div>'
                     f'</div>')
+        _avg_g = "linear-gradient(135deg,#0891b2,#06b6d4)" if (_avg or 0)>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if (_avg or 0)>=60 else "linear-gradient(135deg,#dc2626,#ef4444)"
+        _pr_g  = "linear-gradient(135deg,#059669,#10b981)" if _pr>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if _pr>=60 else "linear-gradient(135deg,#dc2626,#ef4444)"
         if label:
-            st.markdown(f'<div style="font-size:0.68rem;font-weight:700;color:#6b7280;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">{label}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:0.7rem;font-weight:700;color:#4338ca;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;background:linear-gradient(135deg,#eef2ff,#e0e7ff);padding:6px 14px;border-radius:20px;display:inline-block;">{label}</div>', unsafe_allow_html=True)
         _ec1,_ec2,_ec3,_ec4,_ec5,_ec6 = st.columns(6)
-        _ec1.markdown(_ekc(_tot,       "Audits",       "#1e2d3d","#1e2d3d"), unsafe_allow_html=True)
-        _ec2.markdown(_ekc(f"{_avg or '—'}%", "Avg Score",  _bc),  unsafe_allow_html=True)
-        _ec3.markdown(_ekc(f"{_pr}%",  "Pass Rate",    _pr_c,"#1e7e4e"), unsafe_allow_html=True)
-        _ec4.markdown(_ekc(_pas,       "Passed",       "#1e7e4e","#1e7e4e"), unsafe_allow_html=True)
-        _ec5.markdown(_ekc(_rev,       "Needs Review", "#b45309","#b45309"), unsafe_allow_html=True)
-        _ec6.markdown(_ekc(_fat,       "Auto-Fails",   "#c0392b" if _fat else "#6b7280","#c0392b"), unsafe_allow_html=True)
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        _ec1.markdown(_ekc(_tot,  "Audits",       "linear-gradient(135deg,#4338ca,#6366f1)","rgba(99,102,241,0.28)"), unsafe_allow_html=True)
+        _ec2.markdown(_ekc(f"{_avg or '—'}%","Avg Score",_avg_g,"rgba(8,145,178,0.22)"), unsafe_allow_html=True)
+        _ec3.markdown(_ekc(f"{_pr}%","Pass Rate", _pr_g, "rgba(5,150,105,0.22)"), unsafe_allow_html=True)
+        _ec4.markdown(_ekc(_pas,  "Passed",       "linear-gradient(135deg,#059669,#10b981)","rgba(5,150,105,0.28)"), unsafe_allow_html=True)
+        _ec5.markdown(_ekc(_rev,  "Needs Review", "linear-gradient(135deg,#d97706,#f59e0b)","rgba(217,119,6,0.22)"), unsafe_allow_html=True)
+        _ec6.markdown(_ekc(_fat,  "Auto-Fails",   "linear-gradient(135deg,#dc2626,#f43f5e)" if _fat else "linear-gradient(135deg,#6b7280,#9ca3af)","rgba(220,38,38,0.22)"), unsafe_allow_html=True)
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
     def _render_param_weakness(df, key_pfx):
         _all_params = []
@@ -5600,7 +5601,7 @@ def _render_sense_insights(df, fname, sheets=None):
         _pr   = round(_pas  / _tot * 100, 1) if _tot else 0
         _fr   = round((_fai + _fat) / _tot * 100, 1) if _tot else 0
         _tar  = 80.0
-        _TCFG = {"critical":("#fef2f2","#dc2626","#991b1b","#fee2e2"),"warning":("#fffbeb","#f59e0b","#92400e","#fde68a"),"success":("#f0fdf4","#16a34a","#14532d","#bbf7d0"),"info":("#eff6ff","#2563eb","#1e3a8a","#bfdbfe")}
+        _TCFG = {"critical":("#fff1f2","#e11d48","#9f1239","#fecdd3"),"warning":("#fffbf0","#d97706","#92400e","#fde68a"),"success":("#ecfdf5","#059669","#064e3b","#a7f3d0"),"info":("#eef2ff","#4f46e5","#312e81","#c7d2fe")}
         _PCFG = {"high":("#dc2626","🔴","#fef2f2","#fee2e2"),"medium":("#f59e0b","🟡","#fffbeb","#fde68a"),"low":("#16a34a","🟢","#f0fdf4","#bbf7d0")}
 
         if _fat > 0:
@@ -7008,120 +7009,151 @@ def render_convin_sense():
     _has_data = bool(st.session_state.get("sense_sheets"))
     _registry_init()
 
-    # ── Formal / minimal design overrides for the Sense section ───────────────
+    # ── Vibrant / cool / soft UI overrides for the Sense section ─────────────
     st.markdown("""
 <style>
-/* Sense — page background */
-.stApp, .stApp > div, section.main > div { background: #f4f5f7 !important; }
-.block-container { background: #f4f5f7 !important; }
+/* ── Background: soft lavender-white ── */
+.stApp, .stApp > div, section.main > div { background: #f0f2ff !important; }
+.block-container { background: #f0f2ff !important; }
 
-/* Sense — section chip: minimal navy */
+/* ── Section chip: colorful pill ── */
 .section-chip {
     display: inline-flex !important;
     align-items: center !important;
-    gap: 6px !important;
-    font-size: 0.58rem !important;
+    gap: 5px !important;
+    font-size: 0.62rem !important;
     font-weight: 700 !important;
-    letter-spacing: 0.11em !important;
+    letter-spacing: 0.09em !important;
     text-transform: uppercase !important;
-    color: #1e2d3d !important;
-    background: transparent !important;
-    border: none !important;
-    border-left: 3px solid #b8975e !important;
-    border-radius: 0 !important;
-    padding: 2px 10px !important;
-    margin-bottom: 12px !important;
-    box-shadow: none !important;
+    color: #4338ca !important;
+    background: linear-gradient(135deg,#eef2ff,#e0e7ff) !important;
+    border: 1px solid #c7d2fe !important;
+    border-radius: 20px !important;
+    padding: 4px 14px !important;
+    margin-bottom: 14px !important;
+    box-shadow: 0 2px 6px rgba(99,102,241,0.12) !important;
 }
 
-/* Sense — expander header */
+/* ── Tabs: pill-style bar ── */
+.stTabs [data-baseweb="tab-list"] {
+    background: #e8eaff !important;
+    border-radius: 12px !important;
+    padding: 4px !important;
+    border-bottom: none !important;
+    gap: 2px !important;
+}
+.stTabs [data-baseweb="tab"] {
+    font-size: 0.74rem !important;
+    font-weight: 600 !important;
+    color: #4b5563 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 9px !important;
+    padding: 8px 16px !important;
+    transition: background 0.18s, color 0.18s !important;
+}
+.stTabs [aria-selected="true"] {
+    background: #fff !important;
+    color: #4338ca !important;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.18) !important;
+}
+.stTabs [data-baseweb="tab-panel"] { padding-top: 18px !important; }
+
+/* ── Cards / expanders ── */
 .streamlit-expanderHeader {
     font-size: 0.78rem !important;
     font-weight: 600 !important;
-    color: #1e2d3d !important;
+    color: #1e1b4b !important;
     background: #fff !important;
-    border-radius: 6px !important;
+    border-radius: 10px 10px 0 0 !important;
 }
 .streamlit-expanderContent {
     background: #fff !important;
-    border: 1px solid #e4e7ec !important;
+    border: 1px solid #e0e7ff !important;
     border-top: none !important;
-    border-radius: 0 0 6px 6px !important;
+    border-radius: 0 0 10px 10px !important;
 }
 
-/* Sense — tabs: minimal underline style */
-.stTabs [data-baseweb="tab-list"] {
-    background: transparent !important;
-    border-bottom: 2px solid #e4e7ec !important;
-    gap: 0 !important;
-}
-.stTabs [data-baseweb="tab"] {
-    font-size: 0.75rem !important;
-    font-weight: 600 !important;
-    color: #4a5568 !important;
-    background: transparent !important;
-    border: none !important;
-    padding: 10px 18px !important;
-    letter-spacing: 0.02em !important;
-}
-.stTabs [aria-selected="true"] {
-    color: #1e2d3d !important;
-    border-bottom: 2px solid #b8975e !important;
-    background: transparent !important;
-}
-.stTabs [data-baseweb="tab-panel"] {
-    padding-top: 16px !important;
-}
-
-/* Sense — dataframe: alternate row shading */
-.stDataFrame table tbody tr:nth-child(even) td { background: #f9fafb !important; }
+/* ── Dataframe: soft header + alternating rows ── */
 .stDataFrame table thead th {
-    background: #1e2d3d !important;
+    background: linear-gradient(135deg,#4338ca,#6366f1) !important;
     color: #fff !important;
-    font-size: 0.68rem !important;
+    font-size: 0.67rem !important;
     font-weight: 700 !important;
-    letter-spacing: 0.06em !important;
+    letter-spacing: 0.07em !important;
     text-transform: uppercase !important;
     border: none !important;
 }
+.stDataFrame table tbody tr:nth-child(even) td { background: #f5f3ff !important; }
 .stDataFrame table tbody td {
     font-size: 0.77rem !important;
-    color: #1e2d3d !important;
-    border-color: #e4e7ec !important;
+    color: #1e1b4b !important;
+    border-color: #ede9fe !important;
 }
+.stDataFrame table tbody tr:hover td { background: #ede9fe !important; }
 
-/* Sense — selectbox / text input: clean borders */
-.stSelectbox > div > div, .stTextInput > div > div {
-    border: 1px solid #d1d5db !important;
-    border-radius: 6px !important;
+/* ── Inputs: soft rounded ── */
+.stSelectbox > div > div, .stTextInput > div > div, .stDateInput > div > div {
+    border: 1.5px solid #c7d2fe !important;
+    border-radius: 10px !important;
     background: #fff !important;
 }
+.stSelectbox > div > div:focus-within,
+.stTextInput > div > div:focus-within {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important;
+}
 .stSelectbox label, .stTextInput label, .stDateInput label,
-.stRadio label, .stNumberInput label {
+.stRadio label, .stNumberInput label, .stTextArea label {
     font-size: 0.72rem !important;
     font-weight: 600 !important;
-    color: #374151 !important;
-    letter-spacing: 0.02em !important;
+    color: #4b5563 !important;
 }
 
-/* Sense — button: navy primary */
+/* ── Primary button: vibrant indigo gradient ── */
 .stButton > button[kind="primary"] {
-    background: #1e2d3d !important;
+    background: linear-gradient(135deg,#4338ca,#6366f1) !important;
     border: none !important;
     color: #fff !important;
-    font-weight: 600 !important;
-    border-radius: 6px !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
     letter-spacing: 0.04em !important;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.35) !important;
+    transition: box-shadow 0.2s, transform 0.15s !important;
 }
 .stButton > button[kind="primary"]:hover {
-    background: #2d4158 !important;
+    box-shadow: 0 6px 18px rgba(99,102,241,0.45) !important;
+    transform: translateY(-1px) !important;
 }
 .stButton > button[kind="secondary"] {
     background: #fff !important;
-    border: 1px solid #d1d5db !important;
-    color: #1e2d3d !important;
-    border-radius: 6px !important;
+    border: 1.5px solid #c7d2fe !important;
+    color: #4338ca !important;
+    border-radius: 10px !important;
     font-weight: 600 !important;
+}
+
+/* ── Radio: pill toggle ── */
+.stRadio > div[role="radiogroup"] {
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+}
+.stRadio > div[role="radiogroup"] > label {
+    background: #fff !important;
+    border: 1.5px solid #c7d2fe !important;
+    border-radius: 20px !important;
+    padding: 5px 16px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    color: #4b5563 !important;
+    cursor: pointer !important;
+    transition: background 0.15s !important;
+}
+.stRadio > div[role="radiogroup"] > label:has(input:checked) {
+    background: linear-gradient(135deg,#4338ca,#6366f1) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    box-shadow: 0 3px 10px rgba(99,102,241,0.3) !important;
 }
 </style>""", unsafe_allow_html=True)
 
