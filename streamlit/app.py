@@ -3131,6 +3131,64 @@ _SENSE_CACHE     = os.path.join(os.path.dirname(__file__), ".sense_cache.pkl")
 _SENSE_PROTECTED = os.path.join(os.path.dirname(__file__), ".sense_protected.pkl")
 _SENSE_AUDIT_LOG = os.path.join(os.path.dirname(__file__), ".sense_audit_log.pkl")
 
+# ── Client registry ────────────────────────────────────────────────────────────
+_SENSE_CLIENTS = [
+    {"client": "E-Kart",                          "pm": "Ashutosh",  "status": "Active"},
+    {"client": "mPokket",                          "pm": "Sudesha",   "status": "Active"},
+    {"client": "Kotak Securities",                 "pm": "Sudesha",   "status": "Active"},
+    {"client": "ManMatters",                       "pm": "Sudesha",   "status": "Active"},
+    {"client": "Wakefit",                          "pm": "Sudesha",   "status": "Active"},
+    {"client": "Reliance General Insurance",       "pm": "Sudesha",   "status": "Active"},
+    {"client": "Lemonn",                           "pm": "Shivansh",  "status": "Active"},
+    {"client": "Moneyview",                        "pm": "Shivansh",  "status": "Active"},
+    {"client": "Apollo Finvest",                   "pm": "Shivansh",  "status": "Active"},
+    {"client": "Cleartrip - Holiday Travel",       "pm": "Arnab",     "status": "Active"},
+    {"client": "Capital Now",                      "pm": "Arnab",     "status": "Hold"},
+    {"client": "AESL Digital",                     "pm": "Arnab",     "status": "Active"},
+    {"client": "Teamlease",                        "pm": "Arnab",     "status": "Active"},
+    {"client": "Entri App",                        "pm": "Hamza",     "status": "Active"},
+    {"client": "EyeQ India",                       "pm": "Hamza",     "status": "Active"},
+    {"client": "KollegeApply",                     "pm": "Hamza",     "status": "Active"},
+    {"client": "Cleartrip - NPS",                  "pm": "Hamza",     "status": "Active"},
+    {"client": "Cleartrip - Refund",               "pm": "Hamza",     "status": "Active"},
+    {"client": "Oliveboard",                       "pm": "Suyasha",   "status": "Active"},
+    {"client": "Careers360",                       "pm": "Kritik",    "status": "Active"},
+    {"client": "Even Insurance",                   "pm": "Manjusha",  "status": "Active"},
+    {"client": "Credila",                          "pm": "Bhargava",  "status": "Active"},
+    {"client": "JM Financial",                     "pm": "Amith",     "status": "Hold"},
+    {"client": "TrueMeds",                         "pm": "Ashutosh",  "status": "Hold"},
+    {"client": "Ather",                            "pm": "Ashutosh",  "status": "Hold"},
+    {"client": "Mobikwik - Lending Sales",         "pm": "Ashutosh",  "status": "Hold"},
+    {"client": "Agrostar",                         "pm": "Hamza",     "status": "Hold"},
+    {"client": "Nestaway",                         "pm": "Amith",     "status": "Campaigns Over"},
+    {"client": "Shaadi.com",                       "pm": "Bhargava",  "status": "Campaigns Over"},
+    {"client": "Hike Education",                   "pm": "Ashutosh",  "status": "Sales Negotiation"},
+    {"client": "Grip Invest",                      "pm": "Ashutosh",  "status": "Campaigns Over"},
+    {"client": "Guvi",                             "pm": "Sayani",    "status": "Campaigns Over"},
+    {"client": "Habuild",                          "pm": "Arnab",     "status": "Sales Negotiation"},
+    {"client": "FitPass",                          "pm": "Hamza",     "status": "Sales Negotiation"},
+    {"client": "Vyapar",                           "pm": "Arnab",     "status": "Live"},
+    {"client": "BACL - Voicebot use case",         "pm": "Sudesha",   "status": "Live"},
+    {"client": "ABSLI VRM",                        "pm": "Bhargava",  "status": "Live"},
+    {"client": "BACL - Collections",               "pm": "Siddhant",  "status": "Live"},
+    {"client": "Cleartrip - Hotel Confirmation",   "pm": "Utsav",     "status": "Live"},
+    {"client": "PhysicsWallah",                    "pm": "Utsav",     "status": "Live"},
+    {"client": "boAt",                             "pm": "Sudesha",   "status": "Self-Serve Live"},
+    {"client": "Nirvasa Health",                   "pm": "Shivansh",  "status": "Onboarding"},
+    {"client": "Mobikwik",                         "pm": "Raghav",    "status": "Onboarding"},
+    {"client": "Allen - Offline Center",           "pm": "Shubham",   "status": "Onboarding"},
+    {"client": "Allen - Attendance",               "pm": "Shubham",   "status": "Onboarding"},
+    {"client": "Cashify",                          "pm": "Raghav",    "status": "Onboarding"},
+    {"client": "Leap Scholar",                     "pm": "Shivansh",  "status": "Onboarding"},
+    {"client": "Bigul",                            "pm": "Shivansh",  "status": "Onboarding"},
+    {"client": "Ezobooks",                         "pm": "Shubham",   "status": "Onboarding"},
+    {"client": "Miles Education",                  "pm": "Shubham",   "status": "Onboarding"},
+    {"client": "ABSLI PO",                         "pm": "Sudesha",   "status": "Onboarding"},
+    {"client": "AriseAll",                         "pm": "Sudesha",   "status": "Onboarding"},
+]
+_SENSE_CLIENT_MAP = {r["client"]: r for r in _SENSE_CLIENTS}
+_SENSE_CLIENT_NAMES = [""] + [r["client"] for r in _SENSE_CLIENTS]
+
 # ── Convin Sense built-in intelligence parameters ──────────────────────────
 # These 3 params are DEFECT metrics: lower severity = higher (better) score.
 # They are automatically injected into every audit sheet if not already present.
@@ -5516,13 +5574,14 @@ def _render_audit_form(legend_map, fname):
         with _ad2:
             _f_auditor = st.selectbox("Auditor *", ["", "Animesh", "Shubham", "Aman", "Navya", "Alan"], key="f_auditor_sel")
         with _ad3:
-            _f_client     = st.text_input("Client *", placeholder="e.g. Acme Corp")
+            _f_client = st.selectbox("Client *", _SENSE_CLIENT_NAMES, key="f_client_sel")
         with _ad4:
             _f_campaign   = st.text_input("Campaign Name *", placeholder="e.g. Q2 Outreach")
 
         _ld1, _ld2, _ld3, _ld4 = st.columns(4)
         with _ld1:
-            _f_pm_csm     = st.text_input("PM / CSM *", placeholder="e.g. Sneha Kapoor")
+            _auto_pm = _SENSE_CLIENT_MAP.get(_f_client, {}).get("pm", "")
+            _f_pm_csm = st.text_input("PM / CSM *", value=_auto_pm, placeholder="e.g. Sneha Kapoor")
         with _ld2:
             _f_lead_no    = st.text_input("Lead Number", placeholder="e.g. LD-20250422")
         with _ld3:
