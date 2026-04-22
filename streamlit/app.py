@@ -3147,6 +3147,7 @@ def render_quality_engine():
 _SENSE_CACHE     = os.path.join(os.path.dirname(__file__), ".sense_cache.pkl")
 _SENSE_PROTECTED = os.path.join(os.path.dirname(__file__), ".sense_protected.pkl")
 _SENSE_AUDIT_LOG = os.path.join(os.path.dirname(__file__), ".sense_audit_log.pkl")
+_SENSE_REGISTRY  = os.path.join(os.path.dirname(__file__), ".sense_registry.pkl")
 
 # ── Client registry ────────────────────────────────────────────────────────────
 _SENSE_CLIENTS = [
@@ -3414,7 +3415,7 @@ _QA_SCHEMA = {
     "lead_stage_scores": {"Cold": 30, "Warm": 70, "Hot": 90, "Not Interested": 0, "RNR": 10},
     "lead_score_cols":   ["Lead Stage", "Product Interest (0/1/2)", "Follow-up Readiness (0/1/2)", "DM Confirmed (0/1/2)"],
     "auto_cols":         ["Lead Score", "Lead Composite", "Bot Score", "Intelligence Score", "Status", "Fatal?"],
-    "metadata_cols":     ["Audit Date", "Auditor", "Client", "Campaign Name", "PM / CSM", "Lead Number", "Lead Link", "Phone Number", "Conversation Link"],
+    "metadata_cols":     ["Audit Date", "QA", "Client", "Campaign Name", "PM / CSM", "Disposition", "Lead Number", "Lead Link", "Phone Number", "Conversation Link"],
     # Status bands: Bot Score ≥ 80 Pass | 60–79 Needs Review | < 60 Fail | Fatal → Auto-Fail
     "status_bands": [
         {"min": 80,  "label": "Pass",         "color": "#0ebc6e"},
@@ -3593,6 +3594,55 @@ def _audit_log_load():
     return list(_SEED_AUDIT_RECORDS)
 
 
+def _registry_save(data):
+    try:
+        import pickle
+        with open(_SENSE_REGISTRY, "wb") as _f:
+            pickle.dump(data, _f)
+    except Exception:
+        pass
+
+def _registry_load():
+    try:
+        import pickle
+        if os.path.exists(_SENSE_REGISTRY):
+            with open(_SENSE_REGISTRY, "rb") as _f:
+                return pickle.load(_f)
+    except Exception:
+        pass
+    return None
+
+def _registry_init():
+    """Populate session state registry keys from file or defaults on first load."""
+    if st.session_state.get("_registry_initialized"):
+        return
+    _saved = _registry_load()
+    _default_pms = sorted(set(r["pm"] for r in _SENSE_CLIENTS))
+    _default_cms: list = []
+    _default_qas = ["Animesh", "Shubham", "Aman", "Navya", "Alan"]
+    _default_clients = [{"client": r["client"], "pm": r["pm"], "cm": "", "status": r["status"]} for r in _SENSE_CLIENTS]
+    if _saved:
+        st.session_state.setdefault("sense_registry_pms",     _saved.get("pms",     _default_pms))
+        st.session_state.setdefault("sense_registry_cms",     _saved.get("cms",     _default_cms))
+        st.session_state.setdefault("sense_registry_qas",     _saved.get("qas",     _default_qas))
+        st.session_state.setdefault("sense_registry_clients", _saved.get("clients", _default_clients))
+    else:
+        st.session_state.setdefault("sense_registry_pms",     _default_pms)
+        st.session_state.setdefault("sense_registry_cms",     _default_cms)
+        st.session_state.setdefault("sense_registry_qas",     _default_qas)
+        st.session_state.setdefault("sense_registry_clients", _default_clients)
+    st.session_state["_registry_initialized"] = True
+
+def _registry_persist():
+    """Write current session state registry to disk."""
+    _registry_save({
+        "pms":     st.session_state.get("sense_registry_pms", []),
+        "cms":     st.session_state.get("sense_registry_cms", []),
+        "qas":     st.session_state.get("sense_registry_qas", []),
+        "clients": st.session_state.get("sense_registry_clients", []),
+    })
+
+
 # ── Seed demo records — 200 audits, 2 clients, 4 campaigns ────────────────────
 def _mk(auditor, date, client, campaign, pm, agent_tag,
         da, cp, mc, ft, dair, rc, intro, bn, trans, ls, scr, tts, tmpl, pron, disc, nba,
@@ -3627,7 +3677,7 @@ def _mk(auditor, date, client, campaign, pm, agent_tag,
     computed = _compute_qa_score(pv)
     return {
         "Audit Date": date,
-        "Auditor": auditor,
+        "QA": auditor,
         "Client": client,
         "Campaign Name": campaign,
         "PM / CSM": pm,
@@ -3875,9 +3925,9 @@ def _gen_qa_insights(audit_df):
             "detail": f"{pass_count} of {total} audits passed — {round(pass_rate - _target, 1)}pp above the {int(_target)}% target. Performance is on track."})
 
     # Best / worst auditor
-    if "Auditor" in audit_df.columns:
+    if "QA" in audit_df.columns:
         _auditor_stats = []
-        for _aud, _grp in audit_df.groupby("Auditor"):
+        for _aud, _grp in audit_df.groupby("QA"):
             _g_st    = _grp["Status"].astype(str).str.strip()
             _g_fail  = int(_g_st.isin(["Fail", "Auto-Fail"]).sum())
             _g_pass  = int((_g_st == "Pass").sum())
@@ -4002,6 +4052,61 @@ def _render_sense_scorecard(sheets, legend_map):
                    for c in audit_df.columns):
             audit_df[param] = ""
 
+    # ── Global filter bar ─────────────────────────────────────────────────────
+    if True:
+        _sf1, _sf2, _sf3, _sf4, _sf5 = st.columns([2, 2, 2, 1.4, 1.4])
+        with _sf1:
+            _cli_opts_sc = ["All Clients"] + sorted(audit_df["Client"].dropna().astype(str).unique().tolist()) if "Client" in audit_df.columns else ["All Clients"]
+            _sc_cli = st.selectbox("Client", _cli_opts_sc, key="sc_filter_client")
+        with _sf2:
+            _camp_src = audit_df[audit_df["Client"].astype(str)==_sc_cli]["Campaign Name"] if (_sc_cli!="All Clients" and "Client" in audit_df.columns and "Campaign Name" in audit_df.columns) else (audit_df["Campaign Name"] if "Campaign Name" in audit_df.columns else pd.Series(dtype=str))
+            _camp_opts_sc = ["All Campaigns"] + sorted(_camp_src.dropna().astype(str).unique().tolist())
+            _sc_camp = st.selectbox("Campaign", _camp_opts_sc, key="sc_filter_camp")
+        with _sf3:
+            _qa_opts_sc = ["All QA"] + sorted(audit_df["QA"].dropna().astype(str).unique().tolist()) if "QA" in audit_df.columns else ["All QA"]
+            _sc_qa = st.selectbox("QA", _qa_opts_sc, key="sc_filter_qa")
+        with _sf4:
+            _DATE_KW_SC = ("audit date","date","created","submitted","period","time")
+            _sc_dc = next((c for c in audit_df.columns if any(k in str(c).lower() for k in _DATE_KW_SC)), None)
+            if _sc_dc:
+                try:
+                    _sc_dates = pd.to_datetime(audit_df[_sc_dc], errors="coerce").dropna()
+                    _sc_min = _sc_dates.min().date()
+                    _sc_max = _sc_dates.max().date()
+                    _sc_from = st.date_input("From", value=_sc_min, key="sc_filter_from")
+                except Exception:
+                    _sc_from = None
+            else:
+                _sc_from = None
+        with _sf5:
+            if _sc_dc and _sc_from is not None:
+                try:
+                    _sc_to = st.date_input("To", value=_sc_max, key="sc_filter_to")
+                except Exception:
+                    _sc_to = None
+            else:
+                _sc_to = None
+            if st.button("✕ Clear", key="sc_clear_filters", use_container_width=True):
+                for _k in ["sc_filter_client","sc_filter_camp","sc_filter_qa","sc_filter_from","sc_filter_to"]:
+                    st.session_state.pop(_k, None)
+                st.rerun()
+
+        # Apply filters
+        _sc_total_before = len(audit_df)
+        if _sc_cli  != "All Clients"   and "Client"       in audit_df.columns: audit_df = audit_df[audit_df["Client"].astype(str)==_sc_cli]
+        if _sc_camp != "All Campaigns" and "Campaign Name" in audit_df.columns: audit_df = audit_df[audit_df["Campaign Name"].astype(str)==_sc_camp]
+        if _sc_qa   != "All QA"        and "QA"            in audit_df.columns: audit_df = audit_df[audit_df["QA"].astype(str)==_sc_qa]
+        if _sc_dc and _sc_from is not None and _sc_to is not None:
+            try:
+                audit_df["_sc_date_tmp"] = pd.to_datetime(audit_df[_sc_dc], errors="coerce")
+                audit_df = audit_df[(audit_df["_sc_date_tmp"].dt.date >= _sc_from) & (audit_df["_sc_date_tmp"].dt.date <= _sc_to)]
+                audit_df = audit_df.drop(columns=["_sc_date_tmp"])
+            except Exception:
+                pass
+        _active_filters = any([_sc_cli!="All Clients", _sc_camp!="All Campaigns", _sc_qa!="All QA", _sc_from is not None])
+        if _active_filters:
+            st.markdown(f'<div style="font-size:0.7rem;color:#3d8ef5;margin-bottom:8px;background:rgba(61,130,245,0.06);border-radius:6px;padding:5px 12px;">🔍 Showing <strong>{len(audit_df):,}</strong> of <strong>{_sc_total_before:,}</strong> audits</div>', unsafe_allow_html=True)
+
     # ── Detect scored columns ─────────────────────────────────────────────────
     scored_cols = [c for c in audit_df.columns if _match_legend(c, legend_map)]
 
@@ -4089,7 +4194,7 @@ def _render_sense_scorecard(sheets, legend_map):
 
     # ── Page header ───────────────────────────────────────────────────────────
     _src_label      = "Convin.ai QA Schema" if _has_qa_schema else audit_name
-    _auditor_count  = audit_df["Auditor"].nunique() if "Auditor" in audit_df.columns else 0
+    _auditor_count  = audit_df["QA"].nunique() if "QA" in audit_df.columns else 0
     _campaign_count = audit_df["Campaign Name"].nunique() if "Campaign Name" in audit_df.columns else 0
     st.markdown(
         f'<div style="display:flex;align-items:center;justify-content:space-between;'
@@ -4343,6 +4448,75 @@ def _render_sense_scorecard(sheets, legend_map):
             unsafe_allow_html=True,
         )
 
+    # ── Actionable Alerts ─────────────────────────────────────────────────────
+    if _has_qa_schema and len(audit_df) > 0:
+        _alerts = []
+        _bs_all  = pd.to_numeric(audit_df["Bot Score"], errors="coerce")
+        _st_all  = audit_df["Status"].astype(str).str.strip()
+        _fat_all = int((_st_all == "Auto-Fail").sum())
+        _rev_all = int((_st_all == "Needs Review").sum())
+        _pr_all  = round(int((_st_all=="Pass").sum()) / len(audit_df) * 100, 1) if len(audit_df) else 0
+        # Auto-fails alert
+        if _fat_all > 0:
+            _alerts.append(("🚨", "#dc2626", "#fef2f2", f"{_fat_all} Auto-Fail(s) detected", f"Review these {_fat_all} calls immediately — fatal bot disconnections hurt conversion and client trust."))
+        # Pass rate alert
+        if _pr_all < 80:
+            _alerts.append(("⚠️", "#f59e0b", "#fffbeb", f"Pass rate {_pr_all}% is below 80% target", f"{_rev_all} audits in 'Needs Review' (60–79%) are the fastest to push to Pass — prioritise coaching these."))
+        # Weakest client
+        if "Client" in audit_df.columns:
+            _cli_sc = []
+            for _cli, _cg in audit_df.groupby("Client"):
+                _cb = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                if len(_cb) >= 3:
+                    _cli_sc.append((_cli, round(_cb.mean(), 1)))
+            if _cli_sc:
+                _cli_sc.sort(key=lambda x: x[1])
+                _wc = _cli_sc[0]
+                if _wc[1] < 75:
+                    _alerts.append(("📉", "#7c3aed", "#fdf8ff", f"Client at risk: {_wc[0]} ({_wc[1]}% avg)", f"Lowest-scoring client. Run a dedicated coaching sprint and flag issues to the PM."))
+        # Weakest campaign
+        if "Campaign Name" in audit_df.columns:
+            _camp_sc2 = []
+            for _cn2, _cg2 in audit_df.groupby("Campaign Name"):
+                _cb2 = pd.to_numeric(_cg2["Bot Score"], errors="coerce").dropna()
+                if len(_cb2) >= 3:
+                    _camp_sc2.append((_cn2, round(_cb2.mean(), 1)))
+            if _camp_sc2:
+                _camp_sc2.sort(key=lambda x: x[1])
+                _wcamp = _camp_sc2[0]
+                if _wcamp[1] < 75:
+                    _alerts.append(("🎯", "#e0368e", "#fff0f8", f"Weak campaign: {_wcamp[0]} ({_wcamp[1]}% avg)", f"This campaign needs a bot parameter review — check Disposition Accuracy and Context Passing first."))
+        # Weakest param
+        _wp_list = []
+        for _tier2 in _QA_SCHEMA["tiers"]:
+            for _p2 in _tier2["params"]:
+                if _p2["col"] in audit_df.columns:
+                    _pmax2 = max(int(o) for o in _p2["options"] if o != "NA")
+                    _pv2 = audit_df[_p2["col"]].astype(str).str.strip()
+                    _pv2 = _pv2[~_pv2.str.upper().isin(["NA",""])]
+                    _pn2 = pd.to_numeric(_pv2, errors="coerce").dropna()
+                    if len(_pn2):
+                        _wp_list.append((_p2["col"], round(_pn2.mean()/_pmax2*100,1)))
+        if _wp_list:
+            _wp_list.sort(key=lambda x: x[1])
+            _wp = _wp_list[0]
+            if _wp[1] < 70:
+                _alerts.append(("🔧", "#f59e0b", "#fffbeb", f"Weakest parameter: {_wp[0]} ({_wp[1]}% avg)", f"This parameter is dragging down Bot Score. Prioritise bot tuning/retraining for this area."))
+
+        if _alerts:
+            st.markdown('<div class="section-chip">🚦 Action Required</div>', unsafe_allow_html=True)
+            _al_c1, _al_c2 = st.columns(2)
+            for _ai3, (_icon3, _col3, _bg3, _title3, _detail3) in enumerate(_alerts):
+                with (_al_c1 if _ai3 % 2 == 0 else _al_c2):
+                    st.markdown(
+                        f'<div style="background:{_bg3};border-left:4px solid {_col3};border-radius:8px;'
+                        f'padding:11px 14px;margin-bottom:8px;">'
+                        f'<div style="font-size:0.78rem;font-weight:700;color:{_col3};margin-bottom:3px;">{_icon3} {_title3}</div>'
+                        f'<div style="font-size:0.7rem;color:#444;line-height:1.5;">{_detail3}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
     # ── Campaign breakdown (QA schema only) ──────────────────────────────────
     if _has_qa_schema and "Campaign Name" in audit_df.columns:
         _camp_rows_html = ""
@@ -4379,12 +4553,12 @@ def _render_sense_scorecard(sheets, legend_map):
             st.markdown(f'<div style="margin-bottom:1.2rem;">{_camp_rows_html}</div>', unsafe_allow_html=True)
 
     # ── Auditor × Campaign cross-matrix ───────────────────────────────────────
-    if (_has_qa_schema and "Auditor" in audit_df.columns and "Campaign Name" in audit_df.columns):
-        with st.expander("🔀 Auditor × Campaign Score Matrix", expanded=False):
+    if (_has_qa_schema and "QA" in audit_df.columns and "Campaign Name" in audit_df.columns):
+        with st.expander("🔀 QA × Campaign Score Matrix", expanded=False):
             try:
                 _mx = audit_df.copy()
                 _mx["_bs"] = pd.to_numeric(_mx["Bot Score"], errors="coerce")
-                _pivot = _mx.pivot_table(index="Auditor", columns="Campaign Name",
+                _pivot = _mx.pivot_table(index="QA", columns="Campaign Name",
                                          values="_bs", aggfunc="mean").round(1)
                 if not _pivot.empty:
                     st.markdown(
@@ -5140,11 +5314,11 @@ def _render_sense_insights(df, fname, sheets=None):
                             unsafe_allow_html=True,
                         )
 
-            # Auditor performance summary table
-            if "Auditor" in _audit_df_ins.columns:
-                st.markdown('<div class="section-chip">👤 Auditor Performance Summary</div>', unsafe_allow_html=True)
+            # QA performance summary table
+            if "QA" in _audit_df_ins.columns:
+                st.markdown('<div class="section-chip">👤 QA Performance Summary</div>', unsafe_allow_html=True)
                 _aud_rows = []
-                for _aud, _agrp in _audit_df_ins.groupby("Auditor"):
+                for _aud, _agrp in _audit_df_ins.groupby("QA"):
                     _a_bs   = pd.to_numeric(_agrp["Bot Score"], errors="coerce").dropna()
                     _a_st   = _agrp["Status"].astype(str).str.strip()
                     _a_pass = int((_a_st == "Pass").sum())
@@ -5152,7 +5326,7 @@ def _render_sense_insights(df, fname, sheets=None):
                     _a_fail = int((_a_st.isin(["Fail","Auto-Fail"])).sum())
                     _a_avg  = round(_a_bs.mean(), 1) if len(_a_bs) else None
                     _a_pr   = round(_a_pass / len(_agrp) * 100, 1) if len(_agrp) else 0
-                    _aud_rows.append({"Auditor": str(_aud), "Audits": len(_agrp),
+                    _aud_rows.append({"QA": str(_aud), "Audits": len(_agrp),
                                       "Avg Score": f"{_a_avg}%" if _a_avg else "—",
                                       "Pass": _a_pass, "Review": _a_rev,
                                       "Fail/Fatal": _a_fail, "Pass Rate": f"{_a_pr}%"})
@@ -5205,13 +5379,13 @@ def _render_sense_insights(df, fname, sheets=None):
                                         unsafe_allow_html=True)
                             st.line_chart(_agg2[["Avg Bot Score (%)", "Pass Rate (%)"]], use_container_width=True)
 
-                    # Per-auditor trend
-                    if "Auditor" in _audit_df_ins.columns:
-                        with st.expander("👤 Score Trend by Auditor", expanded=True):
+                    # Per-QA trend
+                    if "QA" in _audit_df_ins.columns:
+                        with st.expander("👤 Score Trend by QA", expanded=True):
                             try:
                                 _aud_pt = _td2.pivot_table(
                                     index=pd.Grouper(key="_date", freq=_t_freq),
-                                    columns="Auditor", values="_bs", aggfunc="mean").round(1)
+                                    columns="QA", values="_bs", aggfunc="mean").round(1)
                                 _aud_pt.index.name = _dc2
                                 if not _aud_pt.empty:
                                     st.line_chart(_aud_pt, use_container_width=True)
@@ -5273,9 +5447,9 @@ def _render_sense_insights(df, fname, sheets=None):
             # Filter controls
             _fc1, _fc2, _fc3 = st.columns(3)
             with _fc1:
-                _dd_aud_opts = ["All"] + sorted(_audit_df_ins["Auditor"].dropna().astype(str).unique().tolist()) \
-                               if "Auditor" in _audit_df_ins.columns else ["All"]
-                _dd_aud = st.selectbox("Filter by Auditor", _dd_aud_opts, key="dd_aud_filter")
+                _dd_aud_opts = ["All"] + sorted(_audit_df_ins["QA"].dropna().astype(str).unique().tolist()) \
+                               if "QA" in _audit_df_ins.columns else ["All"]
+                _dd_aud = st.selectbox("Filter by QA", _dd_aud_opts, key="dd_aud_filter")
             with _fc2:
                 _dd_camp_opts = ["All"] + sorted(_audit_df_ins["Campaign Name"].dropna().astype(str).unique().tolist()) \
                                 if "Campaign Name" in _audit_df_ins.columns else ["All"]
@@ -5285,7 +5459,7 @@ def _render_sense_insights(df, fname, sheets=None):
                 _dd_st = st.selectbox("Filter by Status", _dd_st_opts, key="dd_st_filter")
 
             _dd_df = _audit_df_ins.copy()
-            if _dd_aud  != "All": _dd_df = _dd_df[_dd_df.get("Auditor","").astype(str) == _dd_aud]
+            if _dd_aud  != "All": _dd_df = _dd_df[_dd_df.get("QA","").astype(str) == _dd_aud]
             if _dd_camp != "All": _dd_df = _dd_df[_dd_df.get("Campaign Name","").astype(str) == _dd_camp]
             if _dd_st   != "All": _dd_df = _dd_df[_dd_df.get("Status","").astype(str).str.strip() == _dd_st]
 
@@ -5295,18 +5469,18 @@ def _render_sense_insights(df, fname, sheets=None):
                 unsafe_allow_html=True,
             )
 
-            # Auditor × Campaign matrix
-            if ("Auditor" in _dd_df.columns and "Campaign Name" in _dd_df.columns and len(_dd_df) > 0):
-                st.markdown('<div class="section-chip">🔀 Auditor × Campaign Score Matrix</div>',
+            # QA × Campaign matrix
+            if ("QA" in _dd_df.columns and "Campaign Name" in _dd_df.columns and len(_dd_df) > 0):
+                st.markdown('<div class="section-chip">🔀 QA × Campaign Score Matrix</div>',
                             unsafe_allow_html=True)
                 try:
                     _mx2 = _dd_df.copy()
                     _mx2["_bs2"] = pd.to_numeric(_mx2["Bot Score"], errors="coerce")
-                    _pv2 = _mx2.pivot_table(index="Auditor", columns="Campaign Name",
+                    _pv2 = _mx2.pivot_table(index="QA", columns="Campaign Name",
                                             values="_bs2", aggfunc="mean").round(1)
                     if not _pv2.empty:
                         _mx_html = '<table style="width:100%;border-collapse:separate;border-spacing:4px;">'
-                        _mx_html += '<tr><th style="text-align:left;font-size:0.65rem;color:#aabbcc;padding:4px 8px;">Auditor</th>'
+                        _mx_html += '<tr><th style="text-align:left;font-size:0.65rem;color:#aabbcc;padding:4px 8px;">QA</th>'
                         for _cc2 in _pv2.columns:
                             _mx_html += f'<th style="font-size:0.65rem;color:#5588bb;padding:4px 8px;text-align:center;">{_cc2}</th>'
                         _mx_html += '</tr>'
@@ -5361,8 +5535,8 @@ def _render_sense_insights(df, fname, sheets=None):
 
             # Full audit log
             st.markdown('<div class="section-chip">📋 Full Audit Log</div>', unsafe_allow_html=True)
-            _display_cols = ["Audit Date","Auditor","Campaign Name","Agent Tag","Bot Score","Status",
-                             "Lead Stage","Lead Composite","Notes"]
+            _display_cols = ["Audit Date","QA","Client","Campaign Name","Disposition","Agent Tag","Bot Score","Status",
+                             "Lead Stage","Lead Composite","Notes","Improvement Suggestion"]
             _show_cols = [c for c in _display_cols if c in _dd_df.columns]
             if _show_cols:
                 st.dataframe(_dd_df[_show_cols].reset_index(drop=True),
@@ -5574,17 +5748,17 @@ def _render_sense_insights(df, fname, sheets=None):
                     _cb_rows.sort(key=lambda x:float(x["Avg Score"].rstrip("%")) if x["Avg Score"]!="—" else 0, reverse=True)
                     st.dataframe(pd.DataFrame(_cb_rows), use_container_width=True, hide_index=True)
 
-                # Auditor breakdown table
-                if "Auditor" in _cr_df.columns:
-                    st.markdown('<div class="section-chip">👤 Auditor Performance</div>', unsafe_allow_html=True)
+                # QA breakdown table
+                if "QA" in _cr_df.columns:
+                    st.markdown('<div class="section-chip">👤 QA Performance</div>', unsafe_allow_html=True)
                     _ab_rows = []
-                    for _aud, _ag in _cr_df.groupby("Auditor"):
+                    for _aud, _ag in _cr_df.groupby("QA"):
                         _a_bs = pd.to_numeric(_ag["Bot Score"], errors="coerce")
                         _a_st = _ag["Status"].astype(str).str.strip()
                         _a_avg = round(_a_bs.dropna().mean(),1) if _a_bs.dropna().notna().any() else None
                         _a_pr  = round(int((_a_st=="Pass").sum())/len(_ag)*100,1) if len(_ag) else 0
                         _a_fat = int((_a_st=="Auto-Fail").sum())
-                        _ab_rows.append({"Auditor":str(_aud),"Audits":len(_ag),"Avg Score":f"{_a_avg}%" if _a_avg else "—","Pass Rate":f"{_a_pr}%","Auto-Fails":_a_fat})
+                        _ab_rows.append({"QA":str(_aud),"Audits":len(_ag),"Avg Score":f"{_a_avg}%" if _a_avg else "—","Pass Rate":f"{_a_pr}%","Auto-Fails":_a_fat})
                     _ab_rows.sort(key=lambda x:float(x["Avg Score"].rstrip("%")) if x["Avg Score"]!="—" else 0, reverse=True)
                     st.dataframe(pd.DataFrame(_ab_rows), use_container_width=True, hide_index=True)
 
@@ -5611,22 +5785,22 @@ def _render_sense_insights(df, fname, sheets=None):
             with _rca1:
                 _sel_camp_r = st.selectbox("Select Campaign", _camp_opts_r, key="rep_camp_sel")
             with _rca2:
-                if "Auditor" in _audit_df_ins.columns:
-                    _aud_f_opts = ["All Auditors"] + sorted(_audit_df_ins["Auditor"].dropna().astype(str).unique().tolist())
-                    _aud_f = st.selectbox("Auditor", _aud_f_opts, key="rep_camp_aud_f")
+                if "QA" in _audit_df_ins.columns:
+                    _aud_f_opts = ["All QA"] + sorted(_audit_df_ins["QA"].dropna().astype(str).unique().tolist())
+                    _aud_f = st.selectbox("QA", _aud_f_opts, key="rep_camp_aud_f")
                 else:
-                    _aud_f = "All Auditors"
+                    _aud_f = "All QA"
 
             _crp_df = _audit_df_ins.copy()
             if _sel_camp_r != "All Campaigns":
                 _crp_df = _crp_df[_crp_df["Campaign Name"].astype(str) == _sel_camp_r]
-            if _aud_f != "All Auditors" and "Auditor" in _crp_df.columns:
-                _crp_df = _crp_df[_crp_df["Auditor"].astype(str) == _aud_f]
+            if _aud_f != "All QA" and "QA" in _crp_df.columns:
+                _crp_df = _crp_df[_crp_df["QA"].astype(str) == _aud_f]
 
             if _crp_df.empty:
                 st.warning("No audits found for this selection.")
             else:
-                _kpi_label_c = f"{_sel_camp_r}" + (f" · {_aud_f}" if _aud_f != "All Auditors" else "")
+                _kpi_label_c = f"{_sel_camp_r}" + (f" · {_aud_f}" if _aud_f != "All QA" else "")
                 _render_entity_kpi_band(_crp_df, _kpi_label_c)
 
                 # Meta row: client + PM
@@ -5639,18 +5813,18 @@ def _render_sense_insights(df, fname, sheets=None):
                         unsafe_allow_html=True,
                     )
 
-                # Auditor performance within campaign
-                if "Auditor" in _crp_df.columns and _aud_f == "All Auditors":
-                    st.markdown('<div class="section-chip">👤 Auditor Performance (this campaign)</div>', unsafe_allow_html=True)
+                # QA performance within campaign
+                if "QA" in _crp_df.columns and _aud_f == "All QA":
+                    st.markdown('<div class="section-chip">👤 QA Performance (this campaign)</div>', unsafe_allow_html=True)
                     _ca_rows = []
-                    for _aud, _ag in _crp_df.groupby("Auditor"):
+                    for _aud, _ag in _crp_df.groupby("QA"):
                         _ca_bs = pd.to_numeric(_ag["Bot Score"], errors="coerce")
                         _ca_st = _ag["Status"].astype(str).str.strip()
                         _ca_avg = round(_ca_bs.dropna().mean(),1) if _ca_bs.dropna().notna().any() else None
                         _ca_pr  = round(int((_ca_st=="Pass").sum())/len(_ag)*100,1) if len(_ag) else 0
                         _ca_fat = int((_ca_st=="Auto-Fail").sum())
                         _ca_rev = int((_ca_st=="Needs Review").sum())
-                        _ca_rows.append({"Auditor":str(_aud),"Audits":len(_ag),"Avg Score":f"{_ca_avg}%" if _ca_avg else "—","Pass Rate":f"{_ca_pr}%","Needs Review":_ca_rev,"Auto-Fails":_ca_fat})
+                        _ca_rows.append({"QA":str(_aud),"Audits":len(_ag),"Avg Score":f"{_ca_avg}%" if _ca_avg else "—","Pass Rate":f"{_ca_pr}%","Needs Review":_ca_rev,"Auto-Fails":_ca_fat})
                     _ca_rows.sort(key=lambda x:float(x["Avg Score"].rstrip("%")) if x["Avg Score"]!="—" else 0, reverse=True)
                     st.dataframe(pd.DataFrame(_ca_rows), use_container_width=True, hide_index=True)
 
@@ -5793,6 +5967,179 @@ def _render_sense_insights(df, fname, sheets=None):
                     except Exception as e:
                         st.session_state[err_key] = f"AI error: {e}"
                     st.rerun()
+
+
+def _render_registry():
+    """Registry management — add/edit/delete PMs, CMs, QA, Clients, and QA parameters."""
+    _registry_init()
+    st.markdown('<div class="section-chip">🗂️ Registry Management</div>', unsafe_allow_html=True)
+    _reg_tabs = st.tabs(["👤 PM", "👥 CM", "🎯 QA", "🏢 Clients", "⚙️ QA Parameters"])
+
+    # ── PM Registry ────────────────────────────────────────────────────────────
+    with _reg_tabs[0]:
+        _pms = st.session_state.get("sense_registry_pms", [])
+        st.markdown(f'<div style="font-size:0.72rem;color:#5588bb;margin-bottom:8px;">{len(_pms)} PMs registered</div>', unsafe_allow_html=True)
+        if _pms:
+            _pm_html = ""
+            for _i, _pm in enumerate(_pms):
+                _pm_html += (f'<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;'
+                             f'border-bottom:1px solid #edf2fb;">'
+                             f'<span style="font-size:0.75rem;font-weight:600;color:#0d1d3a;flex:1;">{_pm}</span>'
+                             f'</div>')
+            st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:8px;margin-bottom:10px;">{_pm_html}</div>', unsafe_allow_html=True)
+        with st.expander("➕ Add / Remove PM", expanded=False):
+            _pc1, _pc2 = st.columns([3,1])
+            with _pc1:
+                _new_pm = st.text_input("New PM name", placeholder="e.g. Rahul", key="reg_new_pm")
+            with _pc2:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                if st.button("Add PM", key="reg_add_pm", use_container_width=True):
+                    _n = _new_pm.strip()
+                    if _n and _n not in _pms:
+                        _pms.append(_n)
+                        _pms.sort()
+                        st.session_state["sense_registry_pms"] = _pms
+                        _registry_persist()
+                        st.rerun()
+            if _pms:
+                _del_pm = st.selectbox("Remove PM", ["— select —"] + _pms, key="reg_del_pm")
+                if st.button("🗑️ Delete PM", key="reg_del_pm_btn", type="secondary"):
+                    if _del_pm != "— select —":
+                        st.session_state["sense_registry_pms"] = [p for p in _pms if p != _del_pm]
+                        _registry_persist()
+                        st.rerun()
+
+    # ── CM Registry ────────────────────────────────────────────────────────────
+    with _reg_tabs[1]:
+        _cms = st.session_state.get("sense_registry_cms", [])
+        st.markdown(f'<div style="font-size:0.72rem;color:#5588bb;margin-bottom:8px;">{len(_cms)} CMs registered</div>', unsafe_allow_html=True)
+        if _cms:
+            _cm_html = ""
+            for _cm in _cms:
+                _cm_html += (f'<div style="display:flex;align-items:center;padding:5px 10px;'
+                             f'border-bottom:1px solid #edf2fb;">'
+                             f'<span style="font-size:0.75rem;font-weight:600;color:#0d1d3a;flex:1;">{_cm}</span></div>')
+            st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:8px;margin-bottom:10px;">{_cm_html}</div>', unsafe_allow_html=True)
+        with st.expander("➕ Add / Remove CM", expanded=False):
+            _cc1, _cc2 = st.columns([3,1])
+            with _cc1:
+                _new_cm = st.text_input("New CM name", placeholder="e.g. Priya", key="reg_new_cm")
+            with _cc2:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                if st.button("Add CM", key="reg_add_cm", use_container_width=True):
+                    _n = _new_cm.strip()
+                    if _n and _n not in _cms:
+                        _cms.append(_n)
+                        _cms.sort()
+                        st.session_state["sense_registry_cms"] = _cms
+                        _registry_persist()
+                        st.rerun()
+            if _cms:
+                _del_cm = st.selectbox("Remove CM", ["— select —"] + _cms, key="reg_del_cm")
+                if st.button("🗑️ Delete CM", key="reg_del_cm_btn", type="secondary"):
+                    if _del_cm != "— select —":
+                        st.session_state["sense_registry_cms"] = [c for c in _cms if c != _del_cm]
+                        _registry_persist()
+                        st.rerun()
+
+    # ── QA Registry ────────────────────────────────────────────────────────────
+    with _reg_tabs[2]:
+        _qas = st.session_state.get("sense_registry_qas", [])
+        st.markdown(f'<div style="font-size:0.72rem;color:#5588bb;margin-bottom:8px;">{len(_qas)} QA reviewers registered</div>', unsafe_allow_html=True)
+        if _qas:
+            _qa_html = ""
+            for _qa in _qas:
+                _qa_html += (f'<div style="padding:5px 10px;border-bottom:1px solid #edf2fb;">'
+                             f'<span style="font-size:0.75rem;font-weight:600;color:#0d1d3a;">{_qa}</span></div>')
+            st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:8px;margin-bottom:10px;">{_qa_html}</div>', unsafe_allow_html=True)
+        with st.expander("➕ Add / Remove QA", expanded=False):
+            _qc1, _qc2 = st.columns([3,1])
+            with _qc1:
+                _new_qa = st.text_input("New QA name", placeholder="e.g. Rohit", key="reg_new_qa")
+            with _qc2:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                if st.button("Add QA", key="reg_add_qa", use_container_width=True):
+                    _n = _new_qa.strip()
+                    if _n and _n not in _qas:
+                        _qas.append(_n)
+                        st.session_state["sense_registry_qas"] = _qas
+                        _registry_persist()
+                        st.rerun()
+            if _qas:
+                _del_qa = st.selectbox("Remove QA", ["— select —"] + _qas, key="reg_del_qa")
+                if st.button("🗑️ Delete QA", key="reg_del_qa_btn", type="secondary"):
+                    if _del_qa != "— select —":
+                        st.session_state["sense_registry_qas"] = [q for q in _qas if q != _del_qa]
+                        _registry_persist()
+                        st.rerun()
+
+    # ── Client Registry ────────────────────────────────────────────────────────
+    with _reg_tabs[3]:
+        _clients_reg = st.session_state.get("sense_registry_clients", [])
+        _pms_reg     = st.session_state.get("sense_registry_pms", [])
+        _cms_reg     = st.session_state.get("sense_registry_cms", [])
+        _status_opts = ["Active", "Hold", "Live", "Self-Serve Live", "Onboarding", "Campaigns Over", "Sales Negotiation"]
+        st.markdown(f'<div style="font-size:0.72rem;color:#5588bb;margin-bottom:8px;">{len(_clients_reg)} clients registered</div>', unsafe_allow_html=True)
+        if _clients_reg:
+            _cli_df_show = pd.DataFrame([{"Client": c["client"], "PM": c.get("pm",""), "CM": c.get("cm",""), "Status": c.get("status","")} for c in _clients_reg])
+            st.dataframe(_cli_df_show, use_container_width=True, hide_index=True, height=220)
+        with st.expander("➕ Add Client", expanded=False):
+            _clc1, _clc2, _clc3, _clc4 = st.columns(4)
+            with _clc1:
+                _new_cli_name = st.text_input("Client Name *", placeholder="e.g. HDFC Bank", key="reg_new_cli_name")
+            with _clc2:
+                _new_cli_pm = st.selectbox("PM", [""] + _pms_reg, key="reg_new_cli_pm")
+            with _clc3:
+                _new_cli_cm = st.selectbox("CM", [""] + _cms_reg, key="reg_new_cli_cm") if _cms_reg else st.text_input("CM", key="reg_new_cli_cm_txt")
+            with _clc4:
+                _new_cli_status = st.selectbox("Status", _status_opts, key="reg_new_cli_status")
+            if st.button("➕ Add Client", key="reg_add_cli", type="primary"):
+                _n = _new_cli_name.strip()
+                _existing_names = [c["client"] for c in _clients_reg]
+                if _n and _n not in _existing_names:
+                    _clients_reg.append({"client": _n, "pm": _new_cli_pm, "cm": _new_cli_cm if isinstance(_new_cli_cm, str) else "", "status": _new_cli_status})
+                    st.session_state["sense_registry_clients"] = _clients_reg
+                    _registry_persist()
+                    st.rerun()
+                elif _n in _existing_names:
+                    st.warning(f"Client '{_n}' already exists.")
+        with st.expander("✏️ Edit Client", expanded=False):
+            _cli_names_reg = [c["client"] for c in _clients_reg]
+            _edit_cli_sel = st.selectbox("Select client to edit", ["— select —"] + _cli_names_reg, key="reg_edit_cli_sel")
+            if _edit_cli_sel != "— select —":
+                _edit_idx = next((i for i, c in enumerate(_clients_reg) if c["client"] == _edit_cli_sel), None)
+                if _edit_idx is not None:
+                    _ec = _clients_reg[_edit_idx]
+                    _ec1, _ec2, _ec3, _ec4 = st.columns(4)
+                    with _ec1:
+                        _edit_cli_name = st.text_input("Client Name", value=_ec["client"], key="reg_edit_cli_name")
+                    with _ec2:
+                        _edit_pm_opts = [""] + _pms_reg
+                        _edit_pm_idx  = _edit_pm_opts.index(_ec.get("pm","")) if _ec.get("pm","") in _edit_pm_opts else 0
+                        _edit_cli_pm  = st.selectbox("PM", _edit_pm_opts, index=_edit_pm_idx, key="reg_edit_cli_pm")
+                    with _ec3:
+                        _edit_cm_opts = [""] + _cms_reg
+                        _edit_cm_idx  = _edit_cm_opts.index(_ec.get("cm","")) if _ec.get("cm","") in _edit_cm_opts else 0
+                        _edit_cli_cm  = st.selectbox("CM", _edit_cm_opts, index=_edit_cm_idx, key="reg_edit_cli_cm") if _cms_reg else st.text_input("CM", value=_ec.get("cm",""), key="reg_edit_cli_cm_txt")
+                    with _ec4:
+                        _edit_st_idx  = _status_opts.index(_ec.get("status","Active")) if _ec.get("status","Active") in _status_opts else 0
+                        _edit_cli_st  = st.selectbox("Status", _status_opts, index=_edit_st_idx, key="reg_edit_cli_st")
+                    if st.button("💾 Save Changes", key="reg_edit_cli_save", type="primary"):
+                        _clients_reg[_edit_idx] = {"client": _edit_cli_name.strip() or _edit_cli_sel, "pm": _edit_cli_pm, "cm": _edit_cli_cm if isinstance(_edit_cli_cm, str) else "", "status": _edit_cli_st}
+                        st.session_state["sense_registry_clients"] = _clients_reg
+                        _registry_persist()
+                        st.rerun()
+        with st.expander("🗑️ Delete Client", expanded=False):
+            _del_cli_sel = st.selectbox("Select client to delete", ["— select —"] + [c["client"] for c in _clients_reg], key="reg_del_cli_sel")
+            if st.button("🗑️ Delete Client", key="reg_del_cli_btn", type="secondary"):
+                if _del_cli_sel != "— select —":
+                    st.session_state["sense_registry_clients"] = [c for c in _clients_reg if c["client"] != _del_cli_sel]
+                    _registry_persist()
+                    st.rerun()
+
+    # ── QA Parameters ──────────────────────────────────────────────────────────
+    with _reg_tabs[4]:
+        _render_param_manager()
 
 
 def _render_param_manager():
@@ -5999,8 +6346,129 @@ def _render_audit_form(legend_map, fname):
     _tier_html += '</div>'
     st.markdown(_tier_html, unsafe_allow_html=True)
 
+    # ── Bulk Lead Import ─────────────────────────────────────────────────────
+    with st.expander("📥 Bulk Import Leads (Client · Campaign · Lead No · Phone · Links)", expanded=False):
+        st.markdown(
+            '<div style="font-size:0.72rem;color:#5588bb;margin-bottom:8px;">'
+            'Upload a CSV/Excel or paste data with columns: '
+            '<strong>Client, Campaign Name, Lead Number, Phone Number, Lead Link, Conversation Link</strong> '
+            '(all columns are optional except Client &amp; Campaign Name)</div>',
+            unsafe_allow_html=True,
+        )
+        _bulk_tab1, _bulk_tab2 = st.tabs(["📤 Upload File", "📋 Paste CSV"])
+        with _bulk_tab1:
+            _bulk_file = st.file_uploader("Upload CSV or Excel", type=["csv","xlsx","xls"], key="bulk_lead_upload")
+            if _bulk_file:
+                try:
+                    if _bulk_file.name.endswith((".xlsx",".xls")):
+                        _bulk_df = pd.read_excel(_bulk_file)
+                    else:
+                        _bulk_df = pd.read_csv(_bulk_file)
+                    _bulk_df.columns = [str(c).strip() for c in _bulk_df.columns]
+                    st.dataframe(_bulk_df.head(10), use_container_width=True, hide_index=True)
+                    if st.button("➕ Add to Lead Queue", key="bulk_add_file_btn", type="primary"):
+                        _existing_q = st.session_state.get("sense_lead_queue", [])
+                        _new_q = _bulk_df.to_dict("records")
+                        st.session_state["sense_lead_queue"] = _existing_q + _new_q
+                        st.success(f"✅ {len(_new_q)} leads added to queue.")
+                        st.rerun()
+                except Exception as _be:
+                    st.error(f"Error reading file: {_be}")
+        with _bulk_tab2:
+            _paste_help = "Client,Campaign Name,Lead Number,Phone Number,Lead Link,Conversation Link\nHDFC,Q2 Campaign,LD-001,9876543210,https://...,https://..."
+            _pasted = st.text_area("Paste CSV data (with header row)", placeholder=_paste_help, height=120, key="bulk_paste_csv")
+            if st.button("➕ Add Pasted Leads", key="bulk_add_paste_btn", type="primary"):
+                try:
+                    import io as _io
+                    _pasted_df = pd.read_csv(_io.StringIO(_pasted.strip()))
+                    _pasted_df.columns = [str(c).strip() for c in _pasted_df.columns]
+                    _existing_q = st.session_state.get("sense_lead_queue", [])
+                    _new_q = _pasted_df.to_dict("records")
+                    st.session_state["sense_lead_queue"] = _existing_q + _new_q
+                    st.success(f"✅ {len(_new_q)} leads added to queue.")
+                    st.rerun()
+                except Exception as _pe:
+                    st.error(f"Parse error: {_pe}")
+
+        # Show queue
+        _lead_q = st.session_state.get("sense_lead_queue", [])
+        if _lead_q:
+            st.markdown(f'<div style="font-size:0.72rem;color:#3d8ef5;margin-top:8px;font-weight:700;">{len(_lead_q)} leads in queue</div>', unsafe_allow_html=True)
+            _q_df_show = pd.DataFrame(_lead_q)
+            _q_cols_show = [c for c in ["Client","Campaign Name","Lead Number","Phone Number","Lead Link","Conversation Link"] if c in _q_df_show.columns]
+            if _q_cols_show:
+                st.dataframe(_q_df_show[_q_cols_show].head(20), use_container_width=True, hide_index=True, height=180)
+            _qcl1, _qcl2 = st.columns([1,4])
+            with _qcl1:
+                if st.button("🗑️ Clear Queue", key="bulk_clear_queue", type="secondary", use_container_width=True):
+                    st.session_state["sense_lead_queue"] = []
+                    st.rerun()
+
     # ── Parameter manager (outside form) ─────────────────────────────────────
     _render_param_manager()
+
+    # ── AI Suggestion Builder (outside form — AI calls need rerun) ───────────
+    with st.expander("✨ AI Suggestion Builder — draft & improve before submitting", expanded=False):
+        st.markdown(
+            '<div style="font-size:0.72rem;color:#5588bb;margin-bottom:8px;">'
+            'Type an improvement suggestion (bot script, coaching note, fix idea). '
+            'Click <strong>🤖 AI Improve</strong> to have Claude rewrite it as a crisp, actionable recommendation — '
+            'then it auto-fills the Improvement Suggestion field in the audit form below.</div>',
+            unsafe_allow_html=True,
+        )
+        _sug_draft = st.text_area(
+            "Draft suggestion",
+            value=st.session_state.get("_audit_suggestion_draft", ""),
+            placeholder="e.g. 'bot misses DM confirmation — it should ask clearly if the decision maker is available before continuing'",
+            height=80,
+            key="sug_draft_input",
+        )
+        _sug_c1, _sug_c2, _sug_c3 = st.columns([2, 2, 3])
+        with _sug_c1:
+            if st.button("🤖 AI Verify & Improve", key="sug_ai_improve_btn", use_container_width=True, type="primary"):
+                _raw_draft = _sug_draft.strip()
+                if not _raw_draft:
+                    st.warning("Type a suggestion first.")
+                else:
+                    _api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+                    if not _api_key:
+                        st.error("ANTHROPIC_API_KEY not found in secrets.")
+                    else:
+                        try:
+                            import anthropic as _anth
+                            _anth_client = _anth.Anthropic(api_key=_api_key)
+                            with st.spinner("Improving with Claude…"):
+                                _sug_msg = _anth_client.messages.create(
+                                    model="claude-haiku-4-5-20251001",
+                                    max_tokens=300,
+                                    messages=[{"role": "user", "content": (
+                                        "You are a QA lead for a voice-bot team. "
+                                        "Rewrite the following raw suggestion as a single, crisp, actionable improvement recommendation (2-3 sentences max). "
+                                        "Keep it concrete — name the bot behaviour to fix, the desired behaviour, and the expected outcome. "
+                                        "Do NOT add greetings or preamble.\n\n"
+                                        f"Raw suggestion: {_raw_draft}"
+                                    )}],
+                                )
+                            _improved = _sug_msg.content[0].text.strip()
+                            st.session_state["_audit_suggestion_draft"]    = _improved
+                            st.session_state["_audit_suggestion_improved"] = True
+                            st.rerun()
+                        except Exception as _sug_e:
+                            st.error(f"AI error: {_sug_e}")
+        with _sug_c2:
+            if st.button("✕ Clear", key="sug_clear_btn", use_container_width=True):
+                st.session_state.pop("_audit_suggestion_draft", None)
+                st.session_state.pop("_audit_suggestion_improved", None)
+                st.rerun()
+        if st.session_state.get("_audit_suggestion_improved") and st.session_state.get("_audit_suggestion_draft"):
+            st.markdown(
+                f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid #0ebc6e;'
+                f'border-radius:8px;padding:10px 14px;margin-top:8px;">'
+                f'<div style="font-size:0.65rem;font-weight:700;color:#14532d;margin-bottom:4px;">✅ AI-Improved — will auto-fill below</div>'
+                f'<div style="font-size:0.78rem;color:#166534;line-height:1.6;">{st.session_state["_audit_suggestion_draft"]}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
     # ── Audit form ────────────────────────────────────────────────────────────
     st.markdown("""
@@ -6040,6 +6508,22 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
     st.markdown('<div class="section-chip">✍️ New QA Audit — Convin.ai Standard Sheet</div>', unsafe_allow_html=True)
 
     with st.form("qa_audit_form_v2", clear_on_submit=True):
+        # ── Queue selector ────────────────────────────────────────────────────
+        _lead_q_form = st.session_state.get("sense_lead_queue", [])
+        if _lead_q_form:
+            _q_labels = ["— type manually —"] + [
+                f"{r.get('Client','?')} · {r.get('Campaign Name','?')} · {r.get('Lead Number', r.get('Phone Number','#'+str(i+1)))}"
+                for i, r in enumerate(_lead_q_form)
+            ]
+            _q_sel = st.selectbox("📋 Pick lead from queue (auto-fills fields)", _q_labels, key="f_queue_sel")
+            _q_idx = _q_labels.index(_q_sel) - 1 if _q_sel != "— type manually —" else -1
+            _q_rec = _lead_q_form[_q_idx] if _q_idx >= 0 else {}
+            if _q_idx >= 0:
+                st.markdown(f'<div style="font-size:0.65rem;color:#0ebc6e;margin-bottom:6px;">✅ Pre-filling from queue record {_q_idx+1}</div>', unsafe_allow_html=True)
+        else:
+            _q_rec = {}
+            _q_idx = -1
+
         # ── Audit & Lead details ──────────────────────────────────────────────
         st.markdown(
             '<div style="font-size:0.68rem;font-weight:700;color:#2a5080;letter-spacing:0.08em;'
@@ -6050,29 +6534,39 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
         with _ad1:
             _f_audit_date = st.date_input("Audit Date *", value=pd.Timestamp.now().date())
         with _ad2:
-            _f_auditor = st.selectbox("Auditor *", ["", "Animesh", "Shubham", "Aman", "Navya", "Alan"], key="f_auditor_sel")
+            _registry_init()
+            _reg_qas_form = [""] + st.session_state.get("sense_registry_qas", ["Animesh", "Shubham", "Aman", "Navya", "Alan"])
+            _f_auditor = st.selectbox("QA *", _reg_qas_form, key="f_auditor_sel")
         with _ad3:
-            _f_client = st.selectbox("Client *", _SENSE_CLIENT_NAMES, key="f_client_sel")
+            _registry_init()
+            _reg_clients_form = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
+            _q_client_val = str(_q_rec.get("Client","")).strip()
+            _q_client_idx = _reg_clients_form.index(_q_client_val) if _q_client_val in _reg_clients_form else 0
+            _f_client = st.selectbox("Client *", _reg_clients_form, index=_q_client_idx, key="f_client_sel")
         with _ad4:
-            _f_campaign   = st.text_input("Campaign Name *", placeholder="e.g. Q2 Outreach")
+            _f_campaign   = st.text_input("Campaign Name *", value=str(_q_rec.get("Campaign Name","")).strip(), placeholder="e.g. Q2 Outreach")
 
         _ld1, _ld2, _ld3, _ld4 = st.columns(4)
         with _ld1:
-            _auto_pm  = _SENSE_CLIENT_MAP.get(_f_client, {}).get("pm", "")
-            _pm_opts  = [""] + sorted(set(r["pm"] for r in _SENSE_CLIENTS))
+            _reg_client_map_form = {c["client"]: c for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)}
+            _auto_pm  = _reg_client_map_form.get(_f_client, {}).get("pm", "") or _SENSE_CLIENT_MAP.get(_f_client, {}).get("pm", "")
+            _pm_opts  = [""] + st.session_state.get("sense_registry_pms", sorted(set(r["pm"] for r in _SENSE_CLIENTS)))
             _pm_idx   = _pm_opts.index(_auto_pm) if _auto_pm in _pm_opts else 0
             _f_pm_csm = st.selectbox("PM / CSM *", _pm_opts, index=_pm_idx, key="f_pm_csm_sel")
         with _ld2:
-            _f_lead_no    = st.text_input("Lead Number", placeholder="e.g. LD-20250422")
+            _f_lead_no    = st.text_input("Lead Number", value=str(_q_rec.get("Lead Number","")).strip(), placeholder="e.g. LD-20250422")
         with _ld3:
-            _f_phone      = st.text_input("Phone Number", placeholder="+91-XXXXXXXXXX")
+            _f_phone      = st.text_input("Phone Number", value=str(_q_rec.get("Phone Number","")).strip(), placeholder="+91-XXXXXXXXXX")
         with _ld4:
-            _f_conv_link  = st.text_input("Conversation Link", placeholder="https://...")
+            _f_conv_link  = st.text_input("Conversation Link", value=str(_q_rec.get("Conversation Link","")).strip(), placeholder="https://...")
 
-        _ll1, _ll2 = st.columns(2)
+        _ll1, _ll2, _ll3 = st.columns(3)
         with _ll1:
-            _f_lead_link  = st.text_input("Lead Link", placeholder="https://...")
+            _f_lead_link  = st.text_input("Lead Link", value=str(_q_rec.get("Lead Link","")).strip(), placeholder="https://...")
         with _ll2:
+            _disp_opts = ["— select —", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
+            _f_disposition = st.selectbox("Disposition *", _disp_opts, key="f_disposition_sel")
+        with _ll3:
             st.empty()
 
         st.markdown(
@@ -6163,13 +6657,20 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             _f_dm = st.selectbox("DM Confirmed (0/1/2) *", ["— select —", "0", "1", "2"], key="af_ls_dm")
 
         _f_notes = st.text_area("Reviewer Notes", placeholder="Optional observations…", height=56)
+        _f_suggestion = st.text_area(
+            "💡 Improvement Suggestion",
+            value=st.session_state.get("_audit_suggestion_draft", ""),
+            placeholder="Describe what the bot could improve — use the ✨ AI Suggestion Builder above to draft & refine this automatically.",
+            height=72,
+            key="f_suggestion_field",
+        )
         _sub     = st.form_submit_button("✅ Submit Audit  — Auto-Score", use_container_width=True, type="primary")
 
         if _sub:
             # Mandatory validation
             _errs = []
             if not _f_auditor.strip():
-                _errs.append("Auditor name is required")
+                _errs.append("QA name is required")
             if not _f_client.strip():
                 _errs.append("Client is required")
             if not _f_campaign.strip():
@@ -6182,6 +6683,8 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                 # NA is accepted as "not applicable" — no error
             if _f_lead_stage == "— select —":
                 _errs.append("Lead Stage must be selected")
+            if _f_disposition == "— select —":
+                _errs.append("Disposition must be selected")
             for _fn, _fv in [("Product Interest", _f_pi), ("Follow-up Readiness", _f_fr), ("DM Confirmed", _f_dm)]:
                 if _fv == "— select —":
                     _errs.append(f"'{_fn}' must be selected")
@@ -6202,12 +6705,13 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
 
                 _rec = {
                     "Audit Date":         str(_f_audit_date),
-                    "Auditor":            _f_auditor.strip(),
+                    "QA":                 _f_auditor.strip(),
                     "Client":             _f_client.strip(),
                     "Campaign Name":      _f_campaign.strip(),
                     "PM / CSM":           _f_pm_csm.strip(),
                     "Lead Number":        _f_lead_no.strip(),
                     "Lead Link":          _f_lead_link.strip(),
+                    "Disposition":        _f_disposition if _f_disposition != "— select —" else "",
                     "Phone Number":       _f_phone.strip(),
                     "Conversation Link":  _f_conv_link.strip(),
                     **_full_pv,
@@ -6217,7 +6721,8 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                     "Intelligence Score":  _computed["Intelligence Score"],
                     "Status":              _computed["Status"],
                     "Fatal?":              _computed["Fatal?"],
-                    "Notes":              _f_notes,
+                    "Notes":               _f_notes,
+                    "Improvement Suggestion": _f_suggestion,
                 }
                 audit_log = st.session_state.get("sense_audit_log", [])
                 audit_log.append(_rec)
@@ -6226,6 +6731,15 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
 
                 # Store last result for display below
                 st.session_state["qa_last_result"] = _computed
+
+                # Clear AI suggestion draft after use
+                st.session_state.pop("_audit_suggestion_draft", None)
+                st.session_state.pop("_audit_suggestion_improved", None)
+
+                # Remove used queue item
+                if _q_idx >= 0 and _lead_q_form:
+                    _lead_q_form.pop(_q_idx)
+                    st.session_state["sense_lead_queue"] = _lead_q_form
 
                 st.rerun()
 
@@ -6273,7 +6787,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
         _lc3.metric("Pass ≥80%",      f"{_pass_ct}  ({round(_pass_ct/_n*100,1)}%)")
         _lc4.metric("Needs Review",   f"{_review_ct}  ({round(_review_ct/_n*100,1)}%)")
         _lc5.metric("Auto-Fail",      f"{_fatal_ct}  ({round(_fatal_ct/_n*100,1)}%)")
-        _lc6.metric("Auditors",       len(set(r.get("Auditor","") for r in audit_log)))
+        _lc6.metric("QA Count",        len(set(r.get("QA","") for r in audit_log)))
 
         _log_df = pd.DataFrame(audit_log[::-1])
         st.dataframe(_log_df, use_container_width=True, height=280, hide_index=True)
@@ -6527,6 +7041,7 @@ def _render_legend_page():
 
 def render_convin_sense():
     _has_data = bool(st.session_state.get("sense_sheets"))
+    _registry_init()
 
     st.markdown("""
 <style>
@@ -6854,7 +7369,7 @@ def render_convin_sense():
         lock = " 🔒" if _is_protected_sheet(name) else ""
         return f"{icon}  {name}{lock}"
 
-    _tab_labels = ["📊  Scorecard", "✍️  New Audit", "📖  Legend"] + [_tab_label(s) for s in sheets] + ["🤖  Insights"]
+    _tab_labels = ["📊  Scorecard", "✍️  New Audit", "📖  Legend"] + [_tab_label(s) for s in sheets] + ["🗂️  Registry", "🤖  Insights"]
     _tabs = st.tabs(_tab_labels)
 
     with _tabs[0]:
@@ -6869,6 +7384,9 @@ def render_convin_sense():
     for i, (sheet_name, df) in enumerate(sheets.items()):
         with _tabs[i + 3]:
             _render_sense_sheet(df, sheet_name, fname, sheets=sheets)
+
+    with _tabs[-2]:
+        _render_registry()
 
     with _tabs[-1]:
         _primary_df = next(iter(sheets.values()))
