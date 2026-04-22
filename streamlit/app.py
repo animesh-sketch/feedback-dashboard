@@ -3407,7 +3407,7 @@ _QA_SCHEMA = {
     "lead_stage_scores": {"Cold": 30, "Warm": 70, "Hot": 90, "Not Interested": 0, "RNR": 10},
     "lead_score_cols":   ["Lead Stage", "Product Interest (0/1/2)", "Follow-up Readiness (0/1/2)", "DM Confirmed (0/1/2)"],
     "auto_cols":         ["Lead Score", "Lead Composite", "Bot Score", "Intelligence Score", "Status", "Fatal?"],
-    "metadata_cols":     ["Audit Date", "QA", "Client", "Campaign Name", "PM / CSM", "Disposition", "Lead Number", "Lead Link", "Phone Number", "Conversation Link"],
+    "metadata_cols":     ["Audit Date", "QA", "Client", "Campaign Name", "PM / CSM", "Bot Name", "Disposition", "Lead Number", "Lead Link", "Phone Number", "Conversation Link"],
     # Status bands: Bot Score ≥ 80 Pass | 60–79 Needs Review | < 60 Fail | Fatal → Auto-Fail
     "status_bands": [
         {"min": 80,  "label": "Pass",         "color": "#0ebc6e"},
@@ -7049,13 +7049,15 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
         with _ld4:
             _f_conv_link  = st.text_input("Conversation Link", value=_qv(_q_rec,"Conversation Link"), placeholder="https://...")
 
-        _ll1, _ll2, _ll3 = st.columns(3)
+        _ll1, _ll2, _ll3, _ll4 = st.columns(4)
         with _ll1:
             _f_lead_link  = st.text_input("Lead Link", value=_qv(_q_rec,"Lead Link"), placeholder="https://...")
         with _ll2:
             _disp_opts = ["— select —", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
             _f_disposition = st.selectbox("Disposition *", _disp_opts, key="f_disposition_sel")
         with _ll3:
+            _f_bot_name = st.text_input("Bot Name *", value=_qv(_q_rec, "Bot Name"), placeholder="e.g. Convin-LeadBot-v2")
+        with _ll4:
             st.empty()
 
         st.markdown(
@@ -7164,6 +7166,8 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                 _errs.append("Client is required")
             if not _f_campaign.strip():
                 _errs.append("Campaign Name is required")
+            if not _f_bot_name.strip():
+                _errs.append("Bot Name is required")
             if not _f_pm_csm.strip():
                 _errs.append("PM / CSM is required")
             for _col, _val in _pv.items():
@@ -7198,6 +7202,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                     "Client":             _f_client.strip(),
                     "Campaign Name":      _f_campaign.strip(),
                     "PM / CSM":           _f_pm_csm.strip(),
+                    "Bot Name":           _f_bot_name.strip(),
                     "Lead Number":        _f_lead_no.strip(),
                     "Lead Link":          _f_lead_link.strip(),
                     "Disposition":        _f_disposition if _f_disposition != "— select —" else "",
