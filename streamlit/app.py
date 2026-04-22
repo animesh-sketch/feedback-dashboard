@@ -4409,7 +4409,7 @@ def _render_sense_scorecard(sheets, legend_map):
         st.markdown(
             '<div style="font-size:0.71rem;color:#5588bb;margin-bottom:10px;">'
             'Weights control how much each parameter influences the overall score. '
-            '🧠 Intelligence params are pre-set (Flow Issue=1.5×, Bot Restart=1.2×, Bot Repetition=1.0×) but adjustable.</div>',
+            'Built-in tier params have pre-set weights but are adjustable here.</div>',
             unsafe_allow_html=True,
         )
         _w_cols = st.columns(min(len(scored_cols), 4))
@@ -4417,9 +4417,10 @@ def _render_sense_scorecard(sheets, legend_map):
             _bcfg  = _builtin_cfg(col)
             _def_w = float(_bcfg["weight"]) if _bcfg else float(_DEFAULT_PARAM_WEIGHT)
             with _w_cols[wi % len(_w_cols)]:
+                _w_val = max(0.0, float(st.session_state.get(f"sense_w_{col}", _def_w)))
                 _new_w = st.number_input(
-                    str(col), min_value=0.1, max_value=5.0,
-                    value=float(st.session_state.get(f"sense_w_{col}", _def_w)),
+                    str(col), min_value=0.0, max_value=5.0,
+                    value=_w_val,
                     step=0.1, key=f"sense_w_{col}", format="%.1f",
                 )
                 _custom_weights[col] = _new_w
