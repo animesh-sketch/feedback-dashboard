@@ -1070,162 +1070,85 @@ def _render_period_content(period: str):
 # ─── Home landing portal ──────────────────────────────────────────────────────
 
 def render_home():
-    st.markdown(f"""
+    st.markdown("""
 <style>
-.home-portal {{
-    min-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-}}
-.home-logo-row {{
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 10px;
-    justify-content: center;
-}}
-.home-tagline {{
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: rgba(180,210,255,0.45);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    text-align: center;
-    margin-bottom: 48px;
-}}
-.portal-grid {{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    width: 100%;
-    max-width: 860px;
-    margin: 0 auto;
-}}
-@media(max-width:680px){{ .portal-grid {{ grid-template-columns: 1fr; }} }}
-.portal-card {{
-    border-radius: 22px;
-    padding: 38px 34px 32px;
-    position: relative;
-    overflow: hidden;
-    min-height: 280px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
-}}
-.portal-card:hover {{ transform: translateY(-4px); }}
-.portal-card-cdl {{
-    background: linear-gradient(135deg, #071428 0%, #0d2040 55%, #0d1d3a 100%);
-    border: 1px solid rgba(61,130,245,0.28);
-    box-shadow: 0 8px 40px rgba(61,130,245,0.12);
-}}
-.portal-card-cdl:hover {{ box-shadow: 0 16px 56px rgba(61,130,245,0.28); border-color: rgba(61,130,245,0.5); }}
-.portal-card-sense {{
-    background: linear-gradient(135deg, #0a0618 0%, #130826 55%, #0d1430 100%);
-    border: 1px solid rgba(224,54,142,0.28);
-    box-shadow: 0 8px 40px rgba(224,54,142,0.1);
-}}
-.portal-card-sense:hover {{ box-shadow: 0 16px 56px rgba(224,54,142,0.25); border-color: rgba(224,54,142,0.5); }}
-.portal-card::before {{
-    content: ""; position: absolute;
-    top: -80px; right: -80px;
-    width: 300px; height: 300px;
-    border-radius: 50%; pointer-events: none;
-}}
-.portal-card-cdl::before {{ background: radial-gradient(circle, rgba(61,130,245,0.13) 0%, transparent 68%); }}
-.portal-card-sense::before {{ background: radial-gradient(circle, rgba(224,54,142,0.14) 0%, transparent 68%); }}
-.pc-badge {{
-    display: inline-flex; align-items: center; gap: 6px;
-    border-radius: 99px; padding: 4px 12px;
-    font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em;
-    text-transform: uppercase; margin-bottom: 20px;
-}}
-.pc-badge-cdl {{ background: rgba(61,130,245,0.12); border: 1px solid rgba(61,130,245,0.3); color: #3d8ef5; }}
-.pc-badge-sense {{ background: rgba(224,54,142,0.12); border: 1px solid rgba(224,54,142,0.3); color: #e0368e; }}
-.pc-icon {{ font-size: 2.4rem; margin-bottom: 14px; }}
-.pc-title {{ font-size: 1.45rem; font-weight: 900; color: #e8f0fc; letter-spacing: -0.025em; margin-bottom: 6px; }}
-.pc-sub {{ font-size: 0.76rem; color: rgba(180,210,255,0.55); line-height: 1.6; margin-bottom: 20px; }}
-.pc-pills {{ display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 24px; }}
-.pc-pill {{
-    font-size: 0.63rem; font-weight: 600; color: rgba(200,225,255,0.5);
-    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
-    border-radius: 99px; padding: 3px 10px; white-space: nowrap;
-}}
-.pc-cta-cdl {{
-    display: inline-block; padding: 11px 22px; border-radius: 10px; font-size: 0.78rem;
-    font-weight: 700; color: #fff; text-align: center;
-    background: linear-gradient(108deg, #3d8ef5, #6ab0ff);
-    box-shadow: 0 3px 14px rgba(61,130,245,0.45);
-}}
-.pc-cta-sense {{
-    display: inline-block; padding: 11px 22px; border-radius: 10px; font-size: 0.78rem;
-    font-weight: 700; color: #fff; text-align: center;
-    background: linear-gradient(108deg, #e0368e, #ff6b78);
-    box-shadow: 0 3px 14px rgba(224,54,142,0.45);
-}}
-</style>
-<div class="home-portal">
-  <div class="home-logo-row">
-    {_logo_img(48, 12)}
-    <div style="font-size:1.8rem;font-weight:900;color:#e8f0fc;letter-spacing:-0.03em;">Convin</div>
+.portal-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:860px; margin:0 auto 0; }
+.portal-card {
+    border-radius:22px; padding:38px 34px 28px; position:relative;
+    overflow:hidden; min-height:280px; display:flex; flex-direction:column;
+    justify-content:space-between;
+}
+.portal-card-cdl  { background:linear-gradient(135deg,#071428 0%,#0d2040 55%,#0d1d3a 100%); border:1px solid rgba(61,130,245,0.28); box-shadow:0 8px 40px rgba(61,130,245,0.12); }
+.portal-card-sense{ background:linear-gradient(135deg,#0a0618 0%,#130826 55%,#0d1430 100%); border:1px solid rgba(224,54,142,0.28); box-shadow:0 8px 40px rgba(224,54,142,0.10); }
+.portal-card::before { content:""; position:absolute; top:-80px; right:-80px; width:300px; height:300px; border-radius:50%; pointer-events:none; }
+.portal-card-cdl::before  { background:radial-gradient(circle,rgba(61,130,245,0.13) 0%,transparent 68%); }
+.portal-card-sense::before{ background:radial-gradient(circle,rgba(224,54,142,0.14) 0%,transparent 68%); }
+.pc-badge { display:inline-flex; align-items:center; gap:6px; border-radius:99px; padding:4px 12px; font-size:0.6rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:20px; }
+.pc-badge-cdl  { background:rgba(61,130,245,0.12); border:1px solid rgba(61,130,245,0.3); color:#3d8ef5; }
+.pc-badge-sense{ background:rgba(224,54,142,0.12); border:1px solid rgba(224,54,142,0.3); color:#e0368e; }
+.pc-icon  { font-size:2.4rem; margin-bottom:14px; }
+.pc-title { font-size:1.45rem; font-weight:900; color:#e8f0fc; letter-spacing:-0.025em; margin-bottom:6px; }
+.pc-sub   { font-size:0.76rem; color:rgba(180,210,255,0.55); line-height:1.6; margin-bottom:20px; }
+.pc-pills { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:24px; }
+.pc-pill  { font-size:0.63rem; font-weight:600; color:rgba(200,225,255,0.5); background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:99px; padding:3px 10px; white-space:nowrap; }
+</style>""", unsafe_allow_html=True)
+
+    _logo_html = _logo_img(52, 12)
+    st.markdown(f"""
+<div style="text-align:center;padding:48px 20px 36px;">
+  <div style="display:inline-flex;align-items:center;gap:14px;margin-bottom:10px;">
+    {_logo_html}
+    <span style="font-size:1.9rem;font-weight:900;color:#e8f0fc;letter-spacing:-0.03em;">Convin</span>
   </div>
-  <div class="home-tagline">Select a workspace to continue</div>
-  <div class="portal-grid">
-
-    <!-- CDL card -->
-    <div class="portal-card portal-card-cdl">
-      <div>
-        <div class="pc-badge pc-badge-cdl">📊 Insights Platform</div>
-        <div class="pc-icon">📊</div>
-        <div class="pc-title">Convin Data Labs</div>
-        <div class="pc-sub">Insights report feedback, email campaigns, client management and KPI tracking.</div>
-        <div class="pc-pills">
-          <span class="pc-pill">📬 Campaign tracking</span>
-          <span class="pc-pill">⭐ CSAT feedback</span>
-          <span class="pc-pill">📧 Email delivery</span>
-          <span class="pc-pill">🏢 Client management</span>
-          <span class="pc-pill">📈 KPI monitoring</span>
-        </div>
-      </div>
-      <div class="pc-cta-cdl">Open CDL Dashboard →</div>
-    </div>
-
-    <!-- Sense Audit card -->
-    <div class="portal-card portal-card-sense">
-      <div>
-        <div class="pc-badge pc-badge-sense">🎯 QA Intelligence</div>
-        <div class="pc-icon">🎯</div>
-        <div class="pc-title">Sense Audit</div>
-        <div class="pc-sub">Real-time QA scoring, bot intelligence, auditor leaderboards and tier-based failure analysis.</div>
-        <div class="pc-pills">
-          <span class="pc-pill">🤖 Bot scoring</span>
-          <span class="pc-pill">🧠 Flow intelligence</span>
-          <span class="pc-pill">👤 Auditor leaderboard</span>
-          <span class="pc-pill">📊 Tier-based QA</span>
-          <span class="pc-pill">⚡ Auto-fail detection</span>
-        </div>
-      </div>
-      <div class="pc-cta-sense">Open Sense Audit →</div>
-    </div>
-
+  <div style="font-size:0.78rem;font-weight:600;color:rgba(180,210,255,0.4);letter-spacing:0.14em;text-transform:uppercase;margin-top:6px;">
+    Select a workspace to continue
   </div>
 </div>""", unsafe_allow_html=True)
 
-    # Streamlit buttons overlaid — placed below the HTML cards
     _col_cdl, _col_sense = st.columns(2)
+
     with _col_cdl:
-        if st.button("Open CDL Dashboard", key="home_enter_cdl", use_container_width=True, type="primary"):
+        st.markdown("""
+<div class="portal-card portal-card-cdl">
+  <div>
+    <div class="pc-badge pc-badge-cdl">📊 Insights Platform</div>
+    <div class="pc-icon">📊</div>
+    <div class="pc-title">Convin Data Labs</div>
+    <div class="pc-sub">Insights report feedback, email campaigns, client management and KPI tracking.</div>
+    <div class="pc-pills">
+      <span class="pc-pill">📬 Campaign tracking</span>
+      <span class="pc-pill">⭐ CSAT feedback</span>
+      <span class="pc-pill">📧 Email delivery</span>
+      <span class="pc-pill">🏢 Client management</span>
+      <span class="pc-pill">📈 KPI monitoring</span>
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
+        if st.button("Open CDL Dashboard →", key="home_enter_cdl", use_container_width=True, type="primary"):
             st.session_state["app_mode"] = "CDL"
             st.session_state["current_page"] = "Overview"
             st.rerun()
+
     with _col_sense:
-        if st.button("Open Sense Audit", key="home_enter_sense", use_container_width=True, type="primary"):
-            st.session_state["app_mode"] = "Sense Audit"
-            st.session_state["current_page"] = "Sense Audit"
+        st.markdown("""
+<div class="portal-card portal-card-sense">
+  <div>
+    <div class="pc-badge pc-badge-sense">🎯 QA Intelligence</div>
+    <div class="pc-icon">🎯</div>
+    <div class="pc-title">Audit</div>
+    <div class="pc-sub">Real-time QA scoring, bot intelligence, auditor leaderboards and tier-based failure analysis.</div>
+    <div class="pc-pills">
+      <span class="pc-pill">🤖 Bot scoring</span>
+      <span class="pc-pill">🧠 Flow intelligence</span>
+      <span class="pc-pill">👤 Auditor leaderboard</span>
+      <span class="pc-pill">📊 Tier-based QA</span>
+      <span class="pc-pill">⚡ Auto-fail detection</span>
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
+        if st.button("Open Audit →", key="home_enter_sense", use_container_width=True, type="primary"):
+            st.session_state["app_mode"] = "Audit"
+            st.session_state["current_page"] = "Audit"
             st.rerun()
 
 
@@ -3666,18 +3589,7 @@ def _audit_log_load():
     return list(_SEED_AUDIT_RECORDS)
 
 
-# ── Seed demo records (25 audits — "Animesh test" as auditor + client) ─────────
-# Bot Score formula: Σ(score×weight) / (Σweight×2) × 100  (total weight=1.0 → tw=2.0)
-# Profiles pre-computed:
-#   P100: all 2s                              → 100.0  Pass
-#   P88:  DA=1                                →  88.0  Pass
-#   P90:  CP=1                                →  90.5  Pass
-#   P84:  DA=1,FT=1                           →  84.0  Pass
-#   P78:  DA=1,CP=1                           →  78.5  Needs Review
-#   P73:  DA=1,CP=1,MC=1                      →  73.5  Needs Review
-#   P66:  DA=0,CP=1                           →  66.5  Needs Review
-#   P53:  DA=0,CP=1,MC=1,FT=1,RC=0,Intro=1   →  53.0  Fail
-#   P0:   Abrupt Disconnection=Fatal          →   0.0  Auto-Fail
+# ── Seed demo records — 200 audits, 2 clients, 4 campaigns ────────────────────
 def _mk(auditor, date, client, campaign, pm, agent_tag,
         da, cp, mc, ft, dair, rc, intro, bn, trans, ls, scr, tts, tmpl, pron, disc, nba,
         fi, brc, br,
@@ -3730,88 +3642,84 @@ def _mk(auditor, date, client, campaign, pm, agent_tag,
     }
 
 
-_SEED_AUDIT_RECORDS = [
-    # ── Animesh test audits (Pass) ─────────────────────────────────────────────
-    _mk("Animesh test","2026-04-22","Animesh test","Q2 Lead Gen","Animesh test","001",
-        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
-        "Hot",2,2,2,"Perfect audit — all params maxed"),
-    _mk("Animesh test","2026-04-21","Animesh test","Q2 Lead Gen","Animesh test","002",
-        1,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
-        "Hot",2,2,2),
-    _mk("Animesh test","2026-04-20","Animesh test","Summer Outreach","Animesh test","003",
-        2,1,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","Minor","No","None",
-        "Warm",2,2,1),
-    _mk("Animesh test","2026-04-19","Animesh test","Summer Outreach","Animesh test","004",
-        2,2,2,1,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
-        "Hot",2,1,2),
-    _mk("Animesh test","2026-04-18","Animesh test","Cold Re-engage","Animesh test","005",
-        2,2,1,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","1–2 times",
-        "Warm",1,2,2),
-    # ── Animesh test audits (Needs Review) ────────────────────────────────────
-    _mk("Animesh test","2026-04-17","Animesh test","Cold Re-engage","Animesh test","006",
-        1,1,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","Minor","Once","None",
-        "Cold",1,1,1,"Context handoff had some gaps"),
-    _mk("Animesh test","2026-04-15","Animesh test","Q2 Lead Gen","Animesh test","007",
-        1,1,1,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","1–2 times",
-        "Warm",2,1,1),
-    _mk("Animesh test","2026-04-13","Animesh test","Summer Outreach","Animesh test","008",
-        0,1,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","Minor","No","None",
-        "Cold",1,1,0),
-    # ── Priya QA audits ────────────────────────────────────────────────────────
-    _mk("Priya QA","2026-04-22","Animesh test","Q2 Lead Gen","Priya QA","009",
-        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
-        "Hot",2,2,2),
-    _mk("Priya QA","2026-04-21","Animesh test","Q2 Lead Gen","Priya QA","010",
-        2,1,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
-        "Hot",2,2,1),
-    _mk("Priya QA","2026-04-20","Animesh test","Summer Outreach","Priya QA","011",
-        2,2,2,2,1,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
-        "Warm",2,1,2),
-    _mk("Priya QA","2026-04-18","Animesh test","Cold Re-engage","Priya QA","012",
-        1,1,2,1,2,"2",2,"2","2",2,"2","2","2","2","0","2","Minor","Once","None",
-        "Warm",1,1,1,"Slight delay in follow-up"),
-    _mk("Priya QA","2026-04-16","Animesh test","Q2 Lead Gen","Priya QA","013",
-        0,1,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","Minor","No","None",
-        "Cold",0,1,0,"Disposition mismatch noted"),
-    _mk("Priya QA","2026-04-14","Animesh test","Summer Outreach","Priya QA","014",
-        0,0,1,1,2,"0",1,"2","2",1,"2","2","2","2","0","2","Major","No","1–2 times",
-        "Not Interested",0,0,0,"Multiple critical failures"),
-    _mk("Priya QA","2026-04-11","Animesh test","Cold Re-engage","Priya QA","015",
-        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
-        "Hot",2,2,2),
-    # ── Rahul QA audits ────────────────────────────────────────────────────────
-    _mk("Rahul QA","2026-04-22","Animesh test","Q2 Lead Gen","Rahul QA","016",
-        1,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
-        "Hot",2,2,2),
-    _mk("Rahul QA","2026-04-20","Animesh test","Summer Outreach","Rahul QA","017",
-        2,2,1,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","1–2 times",
-        "Warm",2,1,1),
-    _mk("Rahul QA","2026-04-18","Animesh test","Cold Re-engage","Rahul QA","018",
-        1,1,1,1,2,"2",2,"2","2",2,"2","2","2","2","0","2","Minor","No","None",
-        "Cold",1,1,0),
-    _mk("Rahul QA","2026-04-16","Animesh test","Q2 Lead Gen","Rahul QA","019",
-        0,0,0,1,1,"0",1,"2","2",2,"2","2","2","2","0","2","Major","Once","3–5 times",
-        "RNR",0,0,0,"Bot failed to maintain context entirely"),
-    _mk("Rahul QA","2026-04-14","Animesh test","Summer Outreach","Rahul QA","020",
-        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","Fatal","2","None","No","None",
-        "Hot",2,2,2,"Auto-fail: abrupt disconnection"),
-    _mk("Rahul QA","2026-04-09","Animesh test","Q2 Lead Gen","Rahul QA","021",
-        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
-        "Warm",2,2,1),
-    # ── Sneha QA audits ────────────────────────────────────────────────────────
-    _mk("Sneha QA","2026-04-21","Animesh test","Summer Outreach","Sneha QA","022",
-        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","0","2","None","No","None",
-        "Hot",2,2,2),
-    _mk("Sneha QA","2026-04-17","Animesh test","Cold Re-engage","Sneha QA","023",
-        1,2,2,2,2,"2",1,"2","2",2,"2","2","2","2","0","2","None","No","None",
-        "Warm",1,2,2),
-    _mk("Sneha QA","2026-04-13","Animesh test","Q2 Lead Gen","Sneha QA","024",
-        0,1,1,1,2,"2",2,"2","2",1,"2","2","2","2","0","2","Minor","No","1–2 times",
-        "Cold",0,1,0,"Several tier-1 issues"),
-    _mk("Sneha QA","2026-04-07","Animesh test","Summer Outreach","Sneha QA","025",
-        2,2,2,2,2,"2",2,"2","2",2,"2","2","2","2","Fatal","2","None","No","None",
-        "Warm",2,2,1,"Auto-fail: call dropped mid-conversation"),
-]
+def _gen_seed_records():
+    import random as _r
+    _r.seed(42)
+    from datetime import date as _date, timedelta as _td
+
+    _auditors  = ["Animesh", "Shubham", "Aman", "Navya", "Alan"]
+    _campaigns = [
+        ("BACL",    "BACL Q2 Lead Gen",        "Sudesha"),
+        ("BACL",    "BACL Collections",         "Sudesha"),
+        ("mPokket", "mPokket Loan Outreach",    "Sudesha"),
+        ("mPokket", "mPokket Re-engagement",    "Sudesha"),
+    ]
+    _leads     = ["Hot", "Warm", "Cold", "Not Interested", "RNR"]
+    _lead_w    = [0.18, 0.30, 0.28, 0.14, 0.10]
+    _fi_opts   = ["None", "None", "None", "Minor", "Minor", "Major"]
+    _brc_opts  = ["No", "No", "No", "Once", "Once", "3–5 times"]
+    _br_opts   = ["None", "None", "None", "1–2 times", "1–2 times", "3–5 times"]
+
+    _start = _date(2026, 3, 1)
+    _days  = 52
+    _recs  = []
+
+    for i in range(200):
+        _aud = _auditors[i % len(_auditors)]
+        _cl, _camp, _pm = _campaigns[i % len(_campaigns)]
+        _day = _start + _td(days=_r.randint(0, _days))
+        _tag = f"{(i+1):03d}"
+        _lead = _r.choices(_leads, _lead_w)[0]
+
+        # Quality profile: 55% pass, 30% needs-review, 10% fail, 5% auto-fail
+        _profile = _r.choices(["pass","review","fail","autofail"],
+                               weights=[55, 30, 10, 5])[0]
+        if _profile == "pass":
+            da,cp,mc,ft = _r.choices([2],[1])[0], 2, 2, 2
+            disc = "0"
+        elif _profile == "review":
+            da  = _r.choice([0, 1])
+            cp  = _r.choice([1, 2])
+            mc  = _r.choice([1, 2])
+            ft  = _r.choice([1, 2])
+            disc = "0"
+        elif _profile == "fail":
+            da  = _r.choice([0, 0, 1])
+            cp  = _r.choice([0, 1])
+            mc  = _r.choice([0, 1])
+            ft  = _r.choice([0, 1])
+            disc = "0"
+        else:
+            da, cp, mc, ft = 2, 2, 2, 2
+            disc = "Fatal"
+
+        dair = _r.choice([2, 2, 1])
+        rc   = _r.choice(["2", "2", "1", "0"])
+        intro= _r.choice([2, 2, 1])
+        bn   = "2"
+        trans= _r.choice(["2", "2", "1"])
+        ls   = _r.choice([2, 2, 1])
+        scr  = "2"
+        tts  = _r.choice(["2", "1"])
+        tmpl = "2"
+        pron = _r.choice(["2", "2", "1"])
+        nba  = _r.choice(["2", "2", "1"])
+        fi   = _r.choice(_fi_opts)
+        brc  = _r.choice(_brc_opts)
+        br   = _r.choice(_br_opts)
+        pi   = _r.choice([2, 2, 1, 0])
+        fr   = _r.choice([2, 2, 1, 0])
+        dm   = _r.choice([2, 2, 1])
+
+        _recs.append(_mk(
+            _aud, str(_day), _cl, _camp, _pm, _tag,
+            da, cp, mc, ft, dair, rc, intro, bn, trans, ls,
+            scr, tts, tmpl, pron, disc, nba,
+            fi, brc, br, _lead, pi, fr, dm
+        ))
+    return _recs
+
+_SEED_AUDIT_RECORDS = _gen_seed_records()
 
 def _parse_legend(legend_df):
     """Extract {parameter: [score_options]} from a legend sheet."""
@@ -5107,7 +5015,7 @@ def _render_sense_insights(df, fname, sheets=None):
 
     # Use audit_df as AI sheet if no other sheets uploaded
     if not _all_sheets and _audit_df_ins is not None:
-        _all_sheets = {"Sense Audit": _audit_df_ins}
+        _all_sheets = {"Audit": _audit_df_ins}
     elif not _all_sheets:
         _all_sheets = {"Data": df} if df is not None and not (hasattr(df, "empty") and df.empty) else {}
 
@@ -5473,8 +5381,8 @@ def _render_sense_insights(df, fname, sheets=None):
 
         _ai_sheet_names = list(_all_sheets.keys())
         if not _ai_sheet_names:
-            _ai_sheet_names = ["Sense Audit"]
-            _all_sheets = {"Sense Audit": _audit_df_ins} if _audit_df_ins is not None else {}
+            _ai_sheet_names = ["Audit"]
+            _all_sheets = {"Audit": _audit_df_ins} if _audit_df_ins is not None else {}
         if len(_ai_sheet_names) > 1:
             _sel = st.selectbox("Analyse sheet", _ai_sheet_names, key="sense_ai_sheet_pick")
             _ai_df = _all_sheets.get(_sel, _audit_df_ins if _audit_df_ins is not None else pd.DataFrame())
@@ -6592,9 +6500,9 @@ div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind
                 st.session_state["current_page"] = _key
                 st.rerun()
     with _n_switch:
-        if st.button("🎯 Sense Audit →", key="nav_switch_to_sense", use_container_width=True, type="secondary"):
-            st.session_state["app_mode"] = "Sense Audit"
-            st.session_state["current_page"] = "Sense Audit"
+        if st.button("🎯 Audit →", key="nav_switch_to_sense", use_container_width=True, type="secondary"):
+            st.session_state["app_mode"] = "Audit"
+            st.session_state["current_page"] = "Audit"
             st.rerun()
 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
@@ -6642,7 +6550,7 @@ else:
     <div style="display:flex;align-items:center;gap:12px;">
         <div style="filter:drop-shadow(0 2px 8px rgba(0,0,0,0.4));flex-shrink:0;">{_logo_img(38, 10)}</div>
         <div>
-            <div style="color:#fff;font-weight:800;font-size:0.96rem;letter-spacing:-0.01em;line-height:1.1;text-shadow:0 1px 8px rgba(0,0,0,0.3);">Sense Audit</div>
+            <div style="color:#fff;font-weight:800;font-size:0.96rem;letter-spacing:-0.01em;line-height:1.1;text-shadow:0 1px 8px rgba(0,0,0,0.3);">Audit</div>
             <div style="color:rgba(224,54,142,0.7);font-size:0.58rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;">QA &amp; Bot Intelligence</div>
         </div>
     </div>
