@@ -4065,6 +4065,7 @@ def _render_sense_scorecard(sheets, legend_map):
         with _sf3:
             _qa_opts_sc = ["All QA"] + sorted(audit_df["QA"].dropna().astype(str).unique().tolist()) if "QA" in audit_df.columns else ["All QA"]
             _sc_qa = st.selectbox("QA", _qa_opts_sc, key="sc_filter_qa")
+        _sc_min = _sc_max = _sc_dc = None
         with _sf4:
             _DATE_KW_SC = ("audit date","date","created","submitted","period","time")
             _sc_dc = next((c for c in audit_df.columns if any(k in str(c).lower() for k in _DATE_KW_SC)), None)
@@ -4079,7 +4080,7 @@ def _render_sense_scorecard(sheets, legend_map):
             else:
                 _sc_from = None
         with _sf5:
-            if _sc_dc and _sc_from is not None:
+            if _sc_dc and _sc_from is not None and _sc_max is not None:
                 try:
                     _sc_to = st.date_input("To", value=_sc_max, key="sc_filter_to")
                 except Exception:
@@ -6139,13 +6140,14 @@ def _render_registry():
 
     # ── QA Parameters ──────────────────────────────────────────────────────────
     with _reg_tabs[4]:
-        _render_param_manager()
+        _render_param_manager(key_sfx="_reg")
 
 
-def _render_param_manager():
+def _render_param_manager(key_sfx=""):
     """Parameter manager: view/edit weights, add custom params, auto-generate legend."""
     if "sense_custom_audit_params" not in st.session_state:
         st.session_state["sense_custom_audit_params"] = []
+    _ks = key_sfx  # short alias for unique widget keys
 
     with st.expander("⚙️ Parameter Manager — Add / Edit Parameters & Weights", expanded=False):
         st.markdown("""
@@ -6205,14 +6207,14 @@ def _render_param_manager():
         st.markdown('<div style="font-size:0.7rem;font-weight:700;color:#0ebc6e;margin-bottom:8px;">➕ Add Custom Parameter</div>', unsafe_allow_html=True)
         _pc1, _pc2, _pc3, _pc4 = st.columns([3, 1.5, 1.5, 1])
         with _pc1:
-            _new_name = st.text_input("Parameter Name", placeholder="e.g. Empathy Score", key="pm_new_name")
+            _new_name = st.text_input("Parameter Name", placeholder="e.g. Empathy Score", key=f"pm_new_name{_ks}")
         with _pc2:
-            _new_type = st.selectbox("Scoring Type", ["0 / 1 / 2", "0 / 1", "Pass / Fail", "Custom"], key="pm_new_type")
+            _new_type = st.selectbox("Scoring Type", ["0 / 1 / 2", "0 / 1", "Pass / Fail", "Custom"], key=f"pm_new_type{_ks}")
         with _pc3:
-            _new_weight = st.number_input("Weight", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key="pm_new_weight")
+            _new_weight = st.number_input("Weight", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key=f"pm_new_weight{_ks}")
         with _pc4:
             st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-            _add_btn = st.button("Add", key="pm_add_param", use_container_width=True, type="primary")
+            _add_btn = st.button("Add", key=f"pm_add_param{_ks}", use_container_width=True, type="primary")
 
         _type_map = {
             "0 / 1 / 2":   ["0", "1", "2"],
@@ -6237,9 +6239,9 @@ def _render_param_manager():
         if st.session_state["sense_custom_audit_params"]:
             st.markdown('<div style="font-size:0.68rem;color:#5588bb;margin-top:10px;">Remove custom parameter:</div>', unsafe_allow_html=True)
             _del_opts = ["—"] + [p["name"] for p in st.session_state["sense_custom_audit_params"]]
-            _del_sel = st.selectbox("", _del_opts, key="pm_del_sel", label_visibility="collapsed")
+            _del_sel = st.selectbox("", _del_opts, key=f"pm_del_sel{_ks}", label_visibility="collapsed")
             if _del_sel != "—":
-                if st.button(f"🗑 Remove '{_del_sel}'", key="pm_del_btn"):
+                if st.button(f"🗑 Remove '{_del_sel}'", key=f"pm_del_btn{_ks}"):
                     st.session_state["sense_custom_audit_params"] = [
                         p for p in st.session_state["sense_custom_audit_params"] if p["name"] != _del_sel
                     ]
@@ -6272,7 +6274,7 @@ def _render_param_manager():
             for _cp in st.session_state["sense_custom_audit_params"]:
                 _leg_csv_lines.append(f'"{_cp["name"]}","Custom","{_cp["weight"]}×","{", ".join(_cp["options"] + ["NA"])}"')
             st.download_button("⬇ Download Legend CSV", "\n".join(_leg_csv_lines).encode(),
-                               "audit_legend.csv", "text/csv", key="pm_dl_legend")
+                               "audit_legend.csv", "text/csv", key=f"pm_dl_legend{_ks}")
 
 
 def _render_audit_form(legend_map, fname):
@@ -6509,6 +6511,9 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
 
     with st.form("qa_audit_form_v2", clear_on_submit=True):
         # ── Queue selector ────────────────────────────────────────────────────
+        def _qv(rec, key):
+            v = rec.get(key, "")
+            return "" if (v is None or (isinstance(v, float) and v != v) or str(v).strip() in ("nan","None","")) else str(v).strip()
         _lead_q_form = st.session_state.get("sense_lead_queue", [])
         if _lead_q_form:
             _q_labels = ["— type manually —"] + [
@@ -6540,11 +6545,11 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
         with _ad3:
             _registry_init()
             _reg_clients_form = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
-            _q_client_val = str(_q_rec.get("Client","")).strip()
+            _q_client_val = _qv(_q_rec, "Client")
             _q_client_idx = _reg_clients_form.index(_q_client_val) if _q_client_val in _reg_clients_form else 0
             _f_client = st.selectbox("Client *", _reg_clients_form, index=_q_client_idx, key="f_client_sel")
         with _ad4:
-            _f_campaign   = st.text_input("Campaign Name *", value=str(_q_rec.get("Campaign Name","")).strip(), placeholder="e.g. Q2 Outreach")
+            _f_campaign   = st.text_input("Campaign Name *", value=_qv(_q_rec,"Campaign Name"), placeholder="e.g. Q2 Outreach")
 
         _ld1, _ld2, _ld3, _ld4 = st.columns(4)
         with _ld1:
@@ -6554,15 +6559,15 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             _pm_idx   = _pm_opts.index(_auto_pm) if _auto_pm in _pm_opts else 0
             _f_pm_csm = st.selectbox("PM / CSM *", _pm_opts, index=_pm_idx, key="f_pm_csm_sel")
         with _ld2:
-            _f_lead_no    = st.text_input("Lead Number", value=str(_q_rec.get("Lead Number","")).strip(), placeholder="e.g. LD-20250422")
+            _f_lead_no    = st.text_input("Lead Number", value=_qv(_q_rec,"Lead Number"), placeholder="e.g. LD-20250422")
         with _ld3:
-            _f_phone      = st.text_input("Phone Number", value=str(_q_rec.get("Phone Number","")).strip(), placeholder="+91-XXXXXXXXXX")
+            _f_phone      = st.text_input("Phone Number", value=_qv(_q_rec,"Phone Number"), placeholder="+91-XXXXXXXXXX")
         with _ld4:
-            _f_conv_link  = st.text_input("Conversation Link", value=str(_q_rec.get("Conversation Link","")).strip(), placeholder="https://...")
+            _f_conv_link  = st.text_input("Conversation Link", value=_qv(_q_rec,"Conversation Link"), placeholder="https://...")
 
         _ll1, _ll2, _ll3 = st.columns(3)
         with _ll1:
-            _f_lead_link  = st.text_input("Lead Link", value=str(_q_rec.get("Lead Link","")).strip(), placeholder="https://...")
+            _f_lead_link  = st.text_input("Lead Link", value=_qv(_q_rec,"Lead Link"), placeholder="https://...")
         with _ll2:
             _disp_opts = ["— select —", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
             _f_disposition = st.selectbox("Disposition *", _disp_opts, key="f_disposition_sel")
