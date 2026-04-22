@@ -1216,7 +1216,7 @@ def render_overview():
             for r in _ov_recent5
         )
         st.markdown(
-            f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.15);border-radius:12px;'
+            f'<div style="background:#fff;border:1px solid rgba(61,130,245,0.15);border-radius:12px;'
             f'padding:4px 0;margin-bottom:1.4rem;">'
             f'<div style="padding:10px 14px 6px;color:#2a5080;font-size:0.7rem;font-weight:700;'
             f'letter-spacing:0.08em;text-transform:uppercase;">Recent Campaigns</div>'
@@ -4210,8 +4210,8 @@ def _render_sense_scorecard(sheets, legend_map):
         f'{f" &nbsp;·&nbsp; <strong>{_campaign_count}</strong> campaigns" if _campaign_count else ""}'
         f'</div>'
         f'</div>'
-        f'<div style="font-size:0.67rem;color:#aabbcc;background:#f5f9ff;'
-        f'border:1px solid rgba(61,130,245,0.12);border-radius:8px;padding:4px 10px;">'
+        f'<div style="font-size:0.67rem;color:#aabbcc;background:#fff;'
+        f'border:1px solid #e4e7ec;border-radius:8px;padding:4px 10px;">'
         f'{pd.Timestamp.now().strftime("%d %b %Y  %H:%M")}</div>'
         f'</div>',
         unsafe_allow_html=True,
@@ -4244,7 +4244,7 @@ def _render_sense_scorecard(sheets, legend_map):
 
         st.markdown(f"""
 <div style="display:grid;grid-template-columns:190px 1fr;gap:16px;margin-bottom:1.4rem;align-items:stretch;">
-  <div style="background:#fff;border:1px solid rgba(61,130,245,0.12);border-radius:14px;
+  <div style="background:#fff;border:1px solid #e4e7ec;border-radius:14px;
     padding:18px 12px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
     {_gauge_svg}
     <div style="margin-top:8px;background:{_sc_col}18;border:1px solid {_sc_col}55;
@@ -4252,39 +4252,39 @@ def _render_sense_scorecard(sheets, legend_map):
     <div style="font-size:0.62rem;color:#aabbcc;margin-top:6px;">{total_rows:,} total audits</div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-    <div style="background:#fff;border:1px solid rgba(61,130,245,0.1);border-left:3px solid #3d8ef5;border-radius:10px;padding:13px 14px;">
+    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid #3d8ef5;border-radius:10px;padding:13px 14px;">
       <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3d8ef5;margin-bottom:4px;">Total Audits</div>
       <div style="font-size:1.65rem;font-weight:900;color:#3d8ef5;line-height:1;">{total_rows:,}</div>
       <div style="font-size:0.62rem;color:#aabbcc;margin-top:3px;">{_auditor_count} auditor{"s" if _auditor_count != 1 else ""}</div>
     </div>
-    <div style="background:#fff;border:1px solid rgba(61,130,245,0.1);border-left:3px solid #0ebc6e;border-radius:10px;padding:13px 14px;">
+    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid #0ebc6e;border-radius:10px;padding:13px 14px;">
       <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#0ebc6e;margin-bottom:4px;">Pass ≥80%</div>
       <div style="font-size:1.65rem;font-weight:900;color:#0ebc6e;line-height:1;">{pass_count:,}</div>
-      <div style="height:4px;background:#edf2fb;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{pass_rate or 0}%;height:100%;background:#0ebc6e;border-radius:2px;"></div></div>
+      <div style="height:4px;background:#f0f2f5;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{pass_rate or 0}%;height:100%;background:#0ebc6e;border-radius:2px;"></div></div>
       <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">{pass_rate}% pass rate</div>
     </div>
-    <div style="background:#fff;border:1px solid rgba(61,130,245,0.1);border-left:3px solid #f59e0b;border-radius:10px;padding:13px 14px;">
+    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid #f59e0b;border-radius:10px;padding:13px 14px;">
       <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f59e0b;margin-bottom:4px;">Needs Review</div>
       <div style="font-size:1.65rem;font-weight:900;color:#f59e0b;line-height:1;">{review_count:,}</div>
-      <div style="height:4px;background:#edf2fb;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{_rr}%;height:100%;background:#f59e0b;border-radius:2px;"></div></div>
+      <div style="height:4px;background:#f0f2f5;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{_rr}%;height:100%;background:#f59e0b;border-radius:2px;"></div></div>
       <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">60–79% range</div>
     </div>
-    <div style="background:#fff;border:1px solid rgba(61,130,245,0.1);border-left:3px solid #dc2626;border-radius:10px;padding:13px 14px;">
+    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid #dc2626;border-radius:10px;padding:13px 14px;">
       <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#dc2626;margin-bottom:4px;">Fail &lt;60%</div>
       <div style="font-size:1.65rem;font-weight:900;color:#dc2626;line-height:1;">{fail_count:,}</div>
-      <div style="height:4px;background:#edf2fb;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{_fr2}%;height:100%;background:#dc2626;border-radius:2px;"></div></div>
+      <div style="height:4px;background:#f0f2f5;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{_fr2}%;height:100%;background:#dc2626;border-radius:2px;"></div></div>
       <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">{_fr2}% of total</div>
     </div>
-    <div style="background:#fff;border:1px solid rgba(61,130,245,0.1);border-left:3px solid {_fc};border-radius:10px;padding:13px 14px;">
+    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid {_fc};border-radius:10px;padding:13px 14px;">
       <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{_fc};margin-bottom:4px;">Auto-Fail</div>
       <div style="font-size:1.65rem;font-weight:900;color:{_fc};line-height:1;">{fatal_count:,}</div>
-      <div style="height:4px;background:#edf2fb;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{_afr}%;height:100%;background:{_fc};border-radius:2px;"></div></div>
+      <div style="height:4px;background:#f0f2f5;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{_afr}%;height:100%;background:{_fc};border-radius:2px;"></div></div>
       <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">Fatal trigger</div>
     </div>
-    <div style="background:#fff;border:1px solid rgba(61,130,245,0.1);border-left:3px solid {_compl_c};border-radius:10px;padding:13px 14px;">
+    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid {_compl_c};border-radius:10px;padding:13px 14px;">
       <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{_compl_c};margin-bottom:4px;">Completion</div>
       <div style="font-size:1.65rem;font-weight:900;color:{_compl_c};line-height:1;">{completion_pct}%</div>
-      <div style="height:4px;background:#edf2fb;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{completion_pct}%;height:100%;background:{_compl_c};border-radius:2px;"></div></div>
+      <div style="height:4px;background:#f0f2f5;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{completion_pct}%;height:100%;background:{_compl_c};border-radius:2px;"></div></div>
       <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">{scored_rows:,} scored</div>
     </div>
   </div>
@@ -4382,7 +4382,7 @@ def _render_sense_scorecard(sheets, legend_map):
                 f'<div style="font-size:1.8rem;font-weight:900;color:{kpi["color"]};">{kpi["count"]:,}</div>'
                 f'<div style="font-size:0.78rem;color:#5588bb;">issues detected</div>'
                 f'</div>'
-                f'<div style="height:6px;background:#edf2fb;border-radius:3px;margin-top:8px;overflow:hidden;">'
+                f'<div style="height:6px;background:#f0f2f5;border-radius:3px;margin-top:8px;overflow:hidden;">'
                 f'<div style="width:{min(kpi["pct"],100)}%;height:100%;background:{kpi["color"]};border-radius:3px;"></div>'
                 f'</div>'
                 f'<div style="font-size:0.65rem;color:{"#dc2626" if _alert else "#5588bb"};margin-top:4px;font-weight:{"700" if _alert else "400"};">'
@@ -4441,7 +4441,7 @@ def _render_sense_scorecard(sheets, legend_map):
                 f'text-transform:uppercase;margin-bottom:4px;">{_tier["label"]}</div>'
                 f'<div style="font-size:0.62rem;color:#aabbcc;margin-bottom:8px;">{_tier["weight_pct"]}% of score</div>'
                 f'<div style="font-size:1.9rem;font-weight:900;color:{_tc};">{"—" if _tier_avg is None else f"{_tier_avg}%"}</div>'
-                f'<div style="height:5px;background:#edf2fb;border-radius:3px;margin-top:6px;overflow:hidden;">'
+                f'<div style="height:5px;background:#f0f2f5;border-radius:3px;margin-top:6px;overflow:hidden;">'
                 f'<div style="width:{_tier_avg or 0}%;height:100%;background:{_tc};border-radius:3px;"></div></div>'
                 f'</div>'
             )
@@ -4545,7 +4545,7 @@ def _render_sense_scorecard(sheets, legend_map):
                 f'<span style="background:#f59e0b18;border:1px solid #f59e0b44;border-radius:4px;padding:1px 7px;font-size:0.6rem;font-weight:700;color:#f59e0b;">{_creview}R</span>'
                 f'<span style="background:#dc262618;border:1px solid #dc262644;border-radius:4px;padding:1px 7px;font-size:0.6rem;font-weight:700;color:#dc2626;">{_cfail}F</span>'
                 f'</div>'
-                f'<div style="width:130px;height:7px;background:#edf2fb;border-radius:4px;overflow:hidden;">'
+                f'<div style="width:130px;height:7px;background:#f0f2f5;border-radius:4px;overflow:hidden;">'
                 f'<div style="width:{min(_cavg,100)}%;height:100%;background:{_cc};border-radius:4px;"></div></div>'
                 f'<div style="width:46px;text-align:right;font-size:0.83rem;font-weight:800;color:{_cc};">{_cavg}%</div>'
                 f'<div style="width:56px;text-align:right;font-size:0.65rem;color:#aabbcc;">{len(_cgrp)} audits</div>'
@@ -4573,7 +4573,7 @@ def _render_sense_scorecard(sheets, legend_map):
                     # Colour-coded table
                     def _cell_color(v):
                         if pd.isna(v):
-                            return "background:#f5f9ff;color:#aabbcc;"
+                            return "background:#fff;color:#aabbcc;"
                         c = "#0ebc6e" if v >= 80 else "#f59e0b" if v >= 60 else "#dc2626"
                         return f"background:{c}18;color:{c};font-weight:700;"
                     _cells_html = '<table style="width:100%;border-collapse:separate;border-spacing:4px;">'
@@ -4619,14 +4619,14 @@ def _render_sense_scorecard(sheets, legend_map):
                         _ls_html += (
                             f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
                             f'<div style="width:110px;font-size:0.73rem;color:#0d1d3a;font-weight:600;flex-shrink:0;">{_ls_name}</div>'
-                            f'<div style="flex:1;height:16px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                            f'<div style="flex:1;height:16px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
                             f'<div style="width:{_lspct}%;height:100%;background:{_lsc};border-radius:3px;"></div></div>'
                             f'<div style="width:75px;text-align:right;font-size:0.71rem;color:#5588bb;flex-shrink:0;">'
                             f'{_lsv:,} ({_lspct}%)</div>'
                             f'</div>'
                         )
                     st.markdown(
-                        f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.1);'
+                        f'<div style="background:#fff;border:1px solid #e4e7ec;'
                         f'border-radius:10px;padding:12px 16px;">{_ls_html}</div>',
                         unsafe_allow_html=True,
                     )
@@ -4667,7 +4667,7 @@ def _render_sense_scorecard(sheets, legend_map):
                         f'</div>'
                     )
                     st.markdown(
-                        f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.1);'
+                        f'<div style="background:#fff;border:1px solid #e4e7ec;'
                         f'border-radius:10px;padding:12px 16px;">{_lk_html}</div>',
                         unsafe_allow_html=True,
                     )
@@ -4723,7 +4723,7 @@ def _render_sense_scorecard(sheets, legend_map):
                             f'border-radius:8px;margin-bottom:5px;">'
                             f'<div style="flex:1;font-size:0.73rem;font-weight:600;color:#0d1d3a;">{_pfr["param"]}</div>'
                             f'<div style="font-size:0.65rem;color:#aabbcc;width:90px;text-align:center;">{_pfr["tier"]}</div>'
-                            f'<div style="width:140px;height:9px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                            f'<div style="width:140px;height:9px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
                             f'<div style="width:{min(_pfr["fail_pct"],100)}%;height:100%;background:{_pfc};border-radius:3px;"></div></div>'
                             f'<div style="width:55px;text-align:right;font-size:0.73rem;font-weight:700;color:{_pfc};">{_pfr["fail_pct"]}%</div>'
                             f'<div style="width:60px;text-align:right;font-size:0.65rem;color:#5588bb;">avg {_pfr["avg"]}%</div>'
@@ -4746,14 +4746,14 @@ def _render_sense_scorecard(sheets, legend_map):
             f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
             f'<div style="width:200px;font-size:0.73rem;color:#0d1d3a;font-weight:500;'
             f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">{col}{_tag}</div>'
-            f'<div style="flex:1;height:14px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+            f'<div style="flex:1;height:14px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
             f'<div style="width:{_pct}%;height:100%;background:{_col_c};border-radius:3px;"></div></div>'
             f'<div style="width:90px;text-align:right;font-size:0.7rem;color:#5588bb;flex-shrink:0;">'
             f'w={_w:.1f} &nbsp;<span style="color:#aabbcc;">({_pct}%)</span></div>'
             f'</div>'
         )
     st.markdown(
-        f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:10px;'
+        f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:10px;'
         f'padding:14px 18px;margin-bottom:1.2rem;">{_weight_html}</div>',
         unsafe_allow_html=True,
     )
@@ -4801,7 +4801,7 @@ def _render_sense_scorecard(sheets, legend_map):
                     f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
                     f'<div style="width:130px;font-size:0.73rem;color:#0d1d3a;font-weight:500;'
                     f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">{val}</div>'
-                    f'<div style="flex:1;height:16px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                    f'<div style="flex:1;height:16px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
                     f'<div style="width:{pct}%;height:100%;background:{_bar_c};border-radius:3px;"></div></div>'
                     f'<div style="width:80px;text-align:right;font-size:0.71rem;color:#5588bb;flex-shrink:0;">'
                     f'{cnt:,} <span style="color:#aabbcc;">({pct}%)</span></div>'
@@ -4812,14 +4812,14 @@ def _render_sense_scorecard(sheets, legend_map):
                 bars_html += (
                     f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;opacity:0.45;">'
                     f'<div style="width:130px;font-size:0.71rem;color:#aabbcc;flex-shrink:0;">— not scored</div>'
-                    f'<div style="flex:1;height:16px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                    f'<div style="flex:1;height:16px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
                     f'<div style="width:{_bp}%;height:100%;background:#cbd5e0;border-radius:3px;"></div></div>'
                     f'<div style="width:80px;text-align:right;font-size:0.71rem;color:#aabbcc;flex-shrink:0;">'
                     f'{blank_count:,} ({_bp}%)</div></div>'
                 )
 
             st.markdown(
-                f'<div style="background:#fff;border:1px solid rgba(61,130,245,0.1);'
+                f'<div style="background:#fff;border:1px solid #e4e7ec;'
                 f'border-left:3px solid {col_color};border-radius:10px;padding:14px 18px;margin-bottom:8px;">'
                 f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
                 f'<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:{col_color};">'
@@ -4897,7 +4897,7 @@ def _render_sense_scorecard(sheets, legend_map):
                     f'padding:1px 7px;font-size:0.6rem;font-weight:700;color:#dc2626;">{_fl} Fail</span>'
                     f'</div>'
                     f'</div>'
-                    f'<div style="width:150px;height:9px;background:#edf2fb;border-radius:5px;overflow:hidden;flex-shrink:0;">'
+                    f'<div style="width:150px;height:9px;background:#f0f2f5;border-radius:5px;overflow:hidden;flex-shrink:0;">'
                     f'<div style="width:{min(_sc,100)}%;height:100%;background:{_gc};border-radius:5px;"></div></div>'
                     f'<div style="width:50px;text-align:right;font-size:0.88rem;font-weight:900;color:{_gc};flex-shrink:0;">{_sc}%</div>'
                     f'<div style="width:52px;text-align:right;font-size:0.65rem;color:#aabbcc;flex-shrink:0;">{_ar["Audits"]} audits</div>'
@@ -5234,39 +5234,23 @@ def _render_sense_insights(df, fname, sheets=None):
             pass_rate_i = round(pass_i / total_i * 100, 1) if total_i else 0
             fail_rate_i = round((fail_i + fatal_i) / total_i * 100, 1) if total_i else 0
 
-            # ── KPI Band ──────────────────────────────────────────────────────
-            _bc = "#0ebc6e" if (_avg_i or 0) >= 80 else "#f59e0b" if (_avg_i or 0) >= 60 else "#dc2626"
-            _pr_c = "#0ebc6e" if pass_rate_i >= 80 else "#f59e0b" if pass_rate_i >= 60 else "#dc2626"
-            st.markdown(f"""
-<div style="background:linear-gradient(135deg,#0d1d3a 0%,#1a2d50 100%);border-radius:16px;
-  padding:22px 28px;margin-bottom:1.4rem;border:1px solid rgba(61,130,245,0.15);">
-  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;">
-    <div style="text-align:center;border-right:1px solid rgba(255,255,255,0.08);padding-right:8px;">
-      <div style="font-size:2.1rem;font-weight:900;color:#fff;line-height:1;">{total_i}</div>
-      <div style="font-size:0.6rem;color:#93c5fd;letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;">Total Audits</div>
-    </div>
-    <div style="text-align:center;border-right:1px solid rgba(255,255,255,0.08);padding-right:8px;">
-      <div style="font-size:2.1rem;font-weight:900;color:{_bc};line-height:1;">{_avg_i or "—"}%</div>
-      <div style="font-size:0.6rem;color:#93c5fd;letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;">Avg Bot Score</div>
-    </div>
-    <div style="text-align:center;border-right:1px solid rgba(255,255,255,0.08);padding-right:8px;">
-      <div style="font-size:2.1rem;font-weight:900;color:{_pr_c};line-height:1;">{pass_rate_i}%</div>
-      <div style="font-size:0.6rem;color:#93c5fd;letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;">Pass Rate</div>
-    </div>
-    <div style="text-align:center;border-right:1px solid rgba(255,255,255,0.08);padding-right:8px;">
-      <div style="font-size:2.1rem;font-weight:900;color:#0ebc6e;line-height:1;">{pass_i}</div>
-      <div style="font-size:0.6rem;color:#93c5fd;letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;">Passed</div>
-    </div>
-    <div style="text-align:center;border-right:1px solid rgba(255,255,255,0.08);padding-right:8px;">
-      <div style="font-size:2.1rem;font-weight:900;color:#f59e0b;line-height:1;">{review_i}</div>
-      <div style="font-size:0.6rem;color:#93c5fd;letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;">Needs Review</div>
-    </div>
-    <div style="text-align:center;">
-      <div style="font-size:2.1rem;font-weight:900;color:{"#dc2626" if fatal_i else "#6ee7b7"};line-height:1;">{fatal_i}</div>
-      <div style="font-size:0.6rem;color:#93c5fd;letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;">Auto-Fails</div>
-    </div>
-  </div>
-</div>""", unsafe_allow_html=True)
+            # ── KPI Band (clean white cards) ──────────────────────────────────
+            _bc = "#1e7e4e" if (_avg_i or 0) >= 80 else "#b45309" if (_avg_i or 0) >= 60 else "#c0392b"
+            _pr_c = "#1e7e4e" if pass_rate_i >= 80 else "#b45309" if pass_rate_i >= 60 else "#c0392b"
+            def _kpi_card(val, label, color, border_top="#b8975e"):
+                return (f'<div style="background:#fff;border-radius:8px;padding:16px 20px;'
+                        f'border-top:3px solid {border_top};box-shadow:0 1px 4px rgba(0,0,0,0.06);text-align:center;">'
+                        f'<div style="font-size:1.9rem;font-weight:800;color:{color};line-height:1.1;letter-spacing:-0.02em;">{val}</div>'
+                        f'<div style="font-size:0.6rem;font-weight:700;color:#6b7280;letter-spacing:0.1em;text-transform:uppercase;margin-top:6px;">{label}</div>'
+                        f'</div>')
+            _kc1,_kc2,_kc3,_kc4,_kc5,_kc6 = st.columns(6)
+            _kc1.markdown(_kpi_card(total_i, "Total Audits", "#1e2d3d", "#1e2d3d"), unsafe_allow_html=True)
+            _kc2.markdown(_kpi_card(f"{_avg_i or '—'}%", "Avg Bot Score", _bc), unsafe_allow_html=True)
+            _kc3.markdown(_kpi_card(f"{pass_rate_i}%", "Pass Rate", _pr_c), unsafe_allow_html=True)
+            _kc4.markdown(_kpi_card(pass_i, "Passed", "#1e7e4e", "#1e7e4e"), unsafe_allow_html=True)
+            _kc5.markdown(_kpi_card(review_i, "Needs Review", "#b45309", "#b45309"), unsafe_allow_html=True)
+            _kc6.markdown(_kpi_card(fatal_i, "Auto-Fails", "#c0392b" if fatal_i else "#6b7280", "#c0392b"), unsafe_allow_html=True)
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
             # ── Status Distribution Bar ───────────────────────────────────────
             _sd_cfg = [("✅ Pass", "#0ebc6e", pass_i), ("🟡 Needs Review", "#f59e0b", review_i),
@@ -5277,7 +5261,7 @@ def _render_sense_insights(df, fname, sheets=None):
                 _sd_html += (
                     f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">'
                     f'<div style="width:110px;font-size:0.71rem;font-weight:600;color:#0d1d3a;flex-shrink:0;">{_sn}</div>'
-                    f'<div style="flex:1;height:14px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                    f'<div style="flex:1;height:14px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
                     f'<div style="width:{_sp}%;height:100%;background:{_sc};border-radius:3px;"></div></div>'
                     f'<div style="width:80px;text-align:right;font-size:0.7rem;font-weight:700;color:{_sc};flex-shrink:0;">{_sv:,} ({_sp}%)</div>'
                     f'</div>'
@@ -5285,7 +5269,7 @@ def _render_sense_insights(df, fname, sheets=None):
             _ov_l, _ov_r = st.columns([3, 2])
             with _ov_l:
                 st.markdown('<div class="section-chip">📊 Status Distribution</div>', unsafe_allow_html=True)
-                st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:10px;padding:14px 18px;margin-bottom:1rem;">{_sd_html}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:14px 18px;margin-bottom:1rem;">{_sd_html}</div>', unsafe_allow_html=True)
 
             # ── Disposition Breakdown ─────────────────────────────────────────
             with _ov_r:
@@ -5305,11 +5289,11 @@ def _render_sense_insights(df, fname, sheets=None):
                             _dc = _disp_colors.get(str(_dn), "#5588bb")
                             _dh += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
                                     f'<div style="width:100px;font-size:0.67rem;color:#0d1d3a;font-weight:600;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_dn}</div>'
-                                    f'<div style="flex:1;height:12px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                                    f'<div style="flex:1;height:12px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
                                     f'<div style="width:{_dp}%;height:100%;background:{_dc};border-radius:3px;"></div></div>'
                                     f'<div style="width:50px;text-align:right;font-size:0.67rem;font-weight:700;color:{_dc};flex-shrink:0;">{_dp}%</div>'
                                     f'</div>')
-                        st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:10px;padding:12px 16px;margin-bottom:1rem;">{_dh}</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:12px 16px;margin-bottom:1rem;">{_dh}</div>', unsafe_allow_html=True)
 
             # ── Key Insights (sorted: critical → warning → success) ───────────
             _TYPE_CFG2 = {
@@ -5541,20 +5525,24 @@ def _render_sense_insights(df, fname, sheets=None):
         _fai  = int((_st == "Fail").sum())
         _fat  = int((_st == "Auto-Fail").sum())
         _pr   = round(_pas / _tot * 100, 1) if _tot else 0
-        _fr   = round((_fai + _fat) / _tot * 100, 1) if _tot else 0
-        _bc   = "#0ebc6e" if (_avg or 0) >= 80 else "#f59e0b" if (_avg or 0) >= 60 else "#dc2626"
-        st.markdown(f"""
-<div style="background:linear-gradient(120deg,#0d1d3a,#1a2d50);border-radius:14px;padding:18px 22px;margin-bottom:1.2rem;">
-  <div style="font-size:0.65rem;font-weight:700;color:#93c5fd;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">{label}</div>
-  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;">
-    <div style="text-align:center;"><div style="font-size:1.7rem;font-weight:900;color:#fff;">{_tot}</div><div style="font-size:0.58rem;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">Audits</div></div>
-    <div style="text-align:center;"><div style="font-size:1.7rem;font-weight:900;color:{_bc};">{_avg or "—"}%</div><div style="font-size:0.58rem;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">Avg Score</div></div>
-    <div style="text-align:center;"><div style="font-size:1.7rem;font-weight:900;color:#0ebc6e;">{_pr}%</div><div style="font-size:0.58rem;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">Pass Rate</div></div>
-    <div style="text-align:center;"><div style="font-size:1.7rem;font-weight:900;color:#f59e0b;">{_rev}</div><div style="font-size:0.58rem;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">Review</div></div>
-    <div style="text-align:center;"><div style="font-size:1.7rem;font-weight:900;color:#ef4444;">{_fai}</div><div style="font-size:0.58rem;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">Fails</div></div>
-    <div style="text-align:center;"><div style="font-size:1.7rem;font-weight:900;color:{"#dc2626" if _fat else "#6ee7b7"};">{_fat}</div><div style="font-size:0.58rem;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">Auto-Fails</div></div>
-  </div>
-</div>""", unsafe_allow_html=True)
+        _bc   = "#1e7e4e" if (_avg or 0) >= 80 else "#b45309" if (_avg or 0) >= 60 else "#c0392b"
+        _pr_c = "#1e7e4e" if _pr >= 80 else "#b45309" if _pr >= 60 else "#c0392b"
+        def _ekc(v, lbl, c, bt="#b8975e"):
+            return (f'<div style="background:#fff;border-radius:8px;padding:14px 16px;border-top:3px solid {bt};'
+                    f'box-shadow:0 1px 4px rgba(0,0,0,0.06);text-align:center;">'
+                    f'<div style="font-size:1.6rem;font-weight:800;color:{c};line-height:1.1;">{v}</div>'
+                    f'<div style="font-size:0.58rem;font-weight:700;color:#6b7280;letter-spacing:0.1em;text-transform:uppercase;margin-top:5px;">{lbl}</div>'
+                    f'</div>')
+        if label:
+            st.markdown(f'<div style="font-size:0.68rem;font-weight:700;color:#6b7280;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">{label}</div>', unsafe_allow_html=True)
+        _ec1,_ec2,_ec3,_ec4,_ec5,_ec6 = st.columns(6)
+        _ec1.markdown(_ekc(_tot,       "Audits",       "#1e2d3d","#1e2d3d"), unsafe_allow_html=True)
+        _ec2.markdown(_ekc(f"{_avg or '—'}%", "Avg Score",  _bc),  unsafe_allow_html=True)
+        _ec3.markdown(_ekc(f"{_pr}%",  "Pass Rate",    _pr_c,"#1e7e4e"), unsafe_allow_html=True)
+        _ec4.markdown(_ekc(_pas,       "Passed",       "#1e7e4e","#1e7e4e"), unsafe_allow_html=True)
+        _ec5.markdown(_ekc(_rev,       "Needs Review", "#b45309","#b45309"), unsafe_allow_html=True)
+        _ec6.markdown(_ekc(_fat,       "Auto-Fails",   "#c0392b" if _fat else "#6b7280","#c0392b"), unsafe_allow_html=True)
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
     def _render_param_weakness(df, key_pfx):
         _all_params = []
@@ -5589,13 +5577,13 @@ def _render_sense_insights(df, fname, sheets=None):
                 f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
                 f'<div style="width:180px;font-size:0.7rem;color:#0d1d3a;font-weight:600;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
                 f'{"⚠️ " if _pr["avg_pct"] < 60 else ""}{_pr["param"]}</div>'
-                f'<div style="flex:1;height:16px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                f'<div style="flex:1;height:16px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
                 f'<div style="width:{_pr["avg_pct"]}%;height:100%;background:{_bar_fill};border-radius:3px;"></div></div>'
                 f'<div style="width:48px;text-align:right;font-size:0.7rem;font-weight:700;color:{_badge_color};flex-shrink:0;">{_pr["avg_pct"]}%</div>'
                 f'<div style="width:50px;font-size:0.6rem;color:#aabbcc;flex-shrink:0;text-align:right;">n={_pr["n"]}</div>'
                 f'</div>'
             )
-        st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:10px;padding:14px 18px;margin-bottom:1rem;">{_pw_html}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:14px 18px;margin-bottom:1rem;">{_pw_html}</div>', unsafe_allow_html=True)
 
     def _render_entity_insights(df, entity_type, entity_name):
         insights, actions = [], []
@@ -5711,13 +5699,13 @@ def _render_sense_insights(df, fname, sheets=None):
                         _ip_html += (
                             f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
                             f'<div style="width:80px;font-size:0.67rem;color:#0d1d3a;font-weight:600;flex-shrink:0;">{_ov}</div>'
-                            f'<div style="flex:1;height:12px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                            f'<div style="flex:1;height:12px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
                             f'<div style="width:{_op}%;height:100%;background:{_oc2};border-radius:3px;"></div></div>'
                             f'<div style="width:44px;text-align:right;font-size:0.67rem;font-weight:700;color:{_oc2};flex-shrink:0;">{_op}%</div>'
                             f'</div>'
                         )
                 if _ip_html:
-                    st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:10px;padding:12px 16px;">{_ip_html}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:12px 16px;">{_ip_html}</div>', unsafe_allow_html=True)
 
             # Score bucket distribution
             st.markdown('<div class="section-chip">📊 Score Distribution</div>', unsafe_allow_html=True)
@@ -5733,12 +5721,12 @@ def _render_sense_insights(df, fname, sheets=None):
                     _bk4_html += (
                         f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">'
                         f'<div style="width:160px;font-size:0.7rem;color:#0d1d3a;font-weight:600;flex-shrink:0;">{_bl4}</div>'
-                        f'<div style="flex:1;height:14px;background:#edf2fb;border-radius:3px;overflow:hidden;">'
+                        f'<div style="flex:1;height:14px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
                         f'<div style="width:{_pct4}%;height:100%;background:{_bc4};border-radius:3px;"></div></div>'
                         f'<div style="width:80px;text-align:right;font-size:0.7rem;font-weight:700;color:{_bc4};flex-shrink:0;">{_cnt4:,} ({_pct4}%)</div>'
                         f'</div>'
                     )
-                st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.1);border-radius:10px;padding:14px 18px;">{_bk4_html}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:14px 18px;">{_bk4_html}</div>', unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════════
     # Tab 5 — Reports (Client · Campaign · Full Log · AI)
@@ -5959,7 +5947,7 @@ def _render_registry():
                              f'border-bottom:1px solid #edf2fb;">'
                              f'<span style="font-size:0.75rem;font-weight:600;color:#0d1d3a;flex:1;">{_pm}</span>'
                              f'</div>')
-            st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:8px;margin-bottom:10px;">{_pm_html}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:8px;margin-bottom:10px;">{_pm_html}</div>', unsafe_allow_html=True)
         with st.expander("➕ Add / Remove PM", expanded=False):
             _pc1, _pc2 = st.columns([3,1])
             with _pc1:
@@ -5992,7 +5980,7 @@ def _render_registry():
                 _cm_html += (f'<div style="display:flex;align-items:center;padding:5px 10px;'
                              f'border-bottom:1px solid #edf2fb;">'
                              f'<span style="font-size:0.75rem;font-weight:600;color:#0d1d3a;flex:1;">{_cm}</span></div>')
-            st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:8px;margin-bottom:10px;">{_cm_html}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:8px;margin-bottom:10px;">{_cm_html}</div>', unsafe_allow_html=True)
         with st.expander("➕ Add / Remove CM", expanded=False):
             _cc1, _cc2 = st.columns([3,1])
             with _cc1:
@@ -6024,7 +6012,7 @@ def _render_registry():
             for _qa in _qas:
                 _qa_html += (f'<div style="padding:5px 10px;border-bottom:1px solid #edf2fb;">'
                              f'<span style="font-size:0.75rem;font-weight:600;color:#0d1d3a;">{_qa}</span></div>')
-            st.markdown(f'<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:8px;margin-bottom:10px;">{_qa_html}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:8px;margin-bottom:10px;">{_qa_html}</div>', unsafe_allow_html=True)
         with st.expander("➕ Add / Remove QA", expanded=False):
             _qc1, _qc2 = st.columns([3,1])
             with _qc1:
@@ -6799,8 +6787,8 @@ def _render_legend_page():
         '<div style="font-size:0.72rem;color:#5588bb;margin-top:2px;">'
         'Complete reference for all QA parameters, weights, scoring options and definitions</div>'
         '</div>'
-        f'<div style="font-size:0.65rem;color:#aabbcc;background:#f5f9ff;'
-        f'border:1px solid rgba(61,130,245,0.12);border-radius:8px;padding:4px 10px;">'
+        f'<div style="font-size:0.65rem;color:#aabbcc;background:#fff;'
+        f'border:1px solid #e4e7ec;border-radius:8px;padding:4px 10px;">'
         f'Last updated · {pd.Timestamp.now().strftime("%d %b %Y")}</div>'
         '</div>',
         unsafe_allow_html=True,
@@ -6869,7 +6857,7 @@ def _render_legend_page():
 
         # Table — shared columns for tier params + intelligence row
         _tbl = (
-            '<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:12px;overflow:hidden;margin-bottom:0.8rem;">'
+            '<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;overflow:hidden;margin-bottom:0.8rem;">'
             '<div style="display:grid;grid-template-columns:2rem 1fr 0.55fr 0.55fr 2.8fr;'
             'gap:0;padding:8px 16px;background:rgba(61,130,245,0.06);'
             'font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5588bb;">'
@@ -6982,7 +6970,7 @@ def _render_legend_page():
     # ── Scoring formula ───────────────────────────────────────────────────────
     st.markdown('<div class="section-chip">🔢 Scoring Formulas</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div style="background:#f5f9ff;border:1px solid rgba(61,130,245,0.12);border-radius:12px;padding:20px 24px;margin-bottom:1rem;">'
+        '<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:20px 24px;margin-bottom:1rem;">'
         '<div style="display:flex;flex-direction:column;gap:14px;">'
 
         '<div><div style="font-size:0.68rem;font-weight:700;color:#3d8ef5;text-transform:uppercase;'
@@ -7019,6 +7007,123 @@ def _render_legend_page():
 def render_convin_sense():
     _has_data = bool(st.session_state.get("sense_sheets"))
     _registry_init()
+
+    # ── Formal / minimal design overrides for the Sense section ───────────────
+    st.markdown("""
+<style>
+/* Sense — page background */
+.stApp, .stApp > div, section.main > div { background: #f4f5f7 !important; }
+.block-container { background: #f4f5f7 !important; }
+
+/* Sense — section chip: minimal navy */
+.section-chip {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 0.58rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.11em !important;
+    text-transform: uppercase !important;
+    color: #1e2d3d !important;
+    background: transparent !important;
+    border: none !important;
+    border-left: 3px solid #b8975e !important;
+    border-radius: 0 !important;
+    padding: 2px 10px !important;
+    margin-bottom: 12px !important;
+    box-shadow: none !important;
+}
+
+/* Sense — expander header */
+.streamlit-expanderHeader {
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    color: #1e2d3d !important;
+    background: #fff !important;
+    border-radius: 6px !important;
+}
+.streamlit-expanderContent {
+    background: #fff !important;
+    border: 1px solid #e4e7ec !important;
+    border-top: none !important;
+    border-radius: 0 0 6px 6px !important;
+}
+
+/* Sense — tabs: minimal underline style */
+.stTabs [data-baseweb="tab-list"] {
+    background: transparent !important;
+    border-bottom: 2px solid #e4e7ec !important;
+    gap: 0 !important;
+}
+.stTabs [data-baseweb="tab"] {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    color: #4a5568 !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 10px 18px !important;
+    letter-spacing: 0.02em !important;
+}
+.stTabs [aria-selected="true"] {
+    color: #1e2d3d !important;
+    border-bottom: 2px solid #b8975e !important;
+    background: transparent !important;
+}
+.stTabs [data-baseweb="tab-panel"] {
+    padding-top: 16px !important;
+}
+
+/* Sense — dataframe: alternate row shading */
+.stDataFrame table tbody tr:nth-child(even) td { background: #f9fafb !important; }
+.stDataFrame table thead th {
+    background: #1e2d3d !important;
+    color: #fff !important;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    border: none !important;
+}
+.stDataFrame table tbody td {
+    font-size: 0.77rem !important;
+    color: #1e2d3d !important;
+    border-color: #e4e7ec !important;
+}
+
+/* Sense — selectbox / text input: clean borders */
+.stSelectbox > div > div, .stTextInput > div > div {
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    background: #fff !important;
+}
+.stSelectbox label, .stTextInput label, .stDateInput label,
+.stRadio label, .stNumberInput label {
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    color: #374151 !important;
+    letter-spacing: 0.02em !important;
+}
+
+/* Sense — button: navy primary */
+.stButton > button[kind="primary"] {
+    background: #1e2d3d !important;
+    border: none !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    letter-spacing: 0.04em !important;
+}
+.stButton > button[kind="primary"]:hover {
+    background: #2d4158 !important;
+}
+.stButton > button[kind="secondary"] {
+    background: #fff !important;
+    border: 1px solid #d1d5db !important;
+    color: #1e2d3d !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+}
+</style>""", unsafe_allow_html=True)
 
     st.markdown("""
 <style>
