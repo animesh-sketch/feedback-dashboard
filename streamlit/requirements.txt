@@ -6,3 +6,4 @@ pypdfium2>=4.0.0
 requests>=2.28.0
 supabase>=2.3.0
 openpyxl>=3.1.0
+plotly>=5.18.0

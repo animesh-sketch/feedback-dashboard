@@ -20,6 +20,7 @@ def _logo_img(size: int = 34, br: int = 8) -> str:
 
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit.components.v1 as components
 import base64
 import io
@@ -5459,11 +5460,30 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
         else:
             if not sheets:
                 st.markdown(
-                    '<div style="background:rgba(61,130,245,0.08);border:1px solid rgba(61,130,245,0.2);'
-                    'border-radius:8px;padding:9px 16px;margin-bottom:12px;font-size:0.73rem;color:#3d8ef5;">'
+                    '<div style="background:rgba(37,99,235,0.07);border:1px solid rgba(37,99,235,0.18);'
+                    'border-radius:8px;padding:9px 16px;margin-bottom:14px;font-size:0.73rem;color:#2563EB;">'
                     '📊 <strong>Demo data</strong> — showing 25 seed audits across 4 auditors & 3 campaigns.</div>',
                     unsafe_allow_html=True,
                 )
+
+            # ── Shared Plotly layout ──────────────────────────────────────────
+            def _plotly_layout(title="", yaxis_title="", xaxis_title=""):
+                return dict(
+                    title=dict(text=title, font=dict(family="Inter,sans-serif", size=14, color="#0B1F3A"), x=0, xanchor="left"),
+                    font=dict(family="Inter,sans-serif", size=11, color="#475569"),
+                    plot_bgcolor="#FFFFFF",
+                    paper_bgcolor="#FFFFFF",
+                    hovermode="x unified",
+                    hoverlabel=dict(bgcolor="#0B1F3A", font_color="#FFFFFF", font_size=12, font_family="Inter,sans-serif", bordercolor="#2563EB"),
+                    xaxis=dict(title=xaxis_title, showgrid=False, zeroline=False, tickfont=dict(size=10, color="#94a3b8"), linecolor="#E2EAF6", tickcolor="#E2EAF6"),
+                    yaxis=dict(title=yaxis_title, showgrid=True, gridcolor="#F1F5F9", zeroline=False, tickfont=dict(size=10, color="#94a3b8"), ticksuffix="%", range=[0, 105]),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=11), bgcolor="rgba(0,0,0,0)", borderwidth=0),
+                    margin=dict(l=10, r=10, t=48, b=10),
+                    height=320,
+                )
+
+            _CONVIN_COLORS = ["#2563EB","#059669","#d97706","#dc2626","#7c3aed","#0891b2","#b45309","#be185d"]
+
             _DATE_KW2 = ("audit date","date","time","month","week","day","period","created","submitted")
             _dc2 = next((c for c in _audit_df_ins.columns if any(k in str(c).lower() for k in _DATE_KW2)), None)
             if _dc2 is None:
@@ -5476,73 +5496,174 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     _td2 = _td2.dropna(subset=["_date", "_bs"]).sort_values("_date")
                     _td2["_pass"] = (_td2["Status"].astype(str).str.strip() == "Pass").astype(int)
 
-                    _tr_c1, _tr_c2 = st.columns([4, 1])
+                    _tr_c1, _tr_c2 = st.columns([5, 1])
                     with _tr_c2:
-                        _t_period = st.selectbox("Period", ["Daily", "Weekly", "Monthly"],
+                        _t_period = st.selectbox("Granularity", ["Daily", "Weekly", "Monthly"],
                                                   index=1, key="insights_trend_period")
                     _t_freq = {"Daily": "D", "Weekly": "W", "Monthly": "M"}[_t_period]
 
-                    with _tr_c1:
-                        # Avg score over time
-                        _agg2 = (_td2.set_index("_date")[["_bs", "_pass"]]
-                                 .resample(_t_freq).agg({"_bs": "mean", "_pass": "mean"})
-                                 .dropna(how="all").round(2))
-                        _agg2.index.name = _dc2
-                        _agg2 = _agg2.rename(columns={"_bs": "Avg Bot Score (%)", "_pass": "Pass Rate (0-1)"})
-                        _agg2["Pass Rate (%)"] = (_agg2["Pass Rate (0-1)"] * 100).round(1)
-                        _agg2.drop(columns=["Pass Rate (0-1)"], inplace=True)
-                        if not _agg2.empty:
-                            st.markdown('<div class="section-chip">📈 Score & Pass Rate Over Time</div>',
-                                        unsafe_allow_html=True)
-                            st.line_chart(_agg2[["Avg Bot Score (%)", "Pass Rate (%)"]], use_container_width=True)
+                    # ── 1. Score & Pass Rate over time ────────────────────────
+                    _agg2 = (_td2.set_index("_date")[["_bs", "_pass"]]
+                             .resample(_t_freq).agg({"_bs": "mean", "_pass": "mean"})
+                             .dropna(how="all").round(2))
+                    _agg2["pass_pct"] = (_agg2["_pass"] * 100).round(1)
 
-                    # Per-QA trend
+                    if not _agg2.empty:
+                        _dates = _agg2.index.strftime("%d %b %Y" if _t_period == "Daily" else ("%d %b" if _t_period == "Weekly" else "%b %Y"))
+                        _fig1 = go.Figure()
+                        # Avg Bot Score — filled area
+                        _fig1.add_trace(go.Scatter(
+                            x=_dates, y=_agg2["_bs"].tolist(),
+                            name="Avg Bot Score", mode="lines+markers",
+                            line=dict(color="#2563EB", width=2.5, shape="spline"),
+                            marker=dict(size=6, color="#2563EB", line=dict(width=1.5, color="#fff")),
+                            fill="tozeroy", fillcolor="rgba(37,99,235,0.08)",
+                            hovertemplate="<b>%{y:.1f}%</b><extra>Avg Bot Score</extra>",
+                        ))
+                        # Pass Rate — filled area
+                        _fig1.add_trace(go.Scatter(
+                            x=_dates, y=_agg2["pass_pct"].tolist(),
+                            name="Pass Rate", mode="lines+markers",
+                            line=dict(color="#059669", width=2.5, shape="spline", dash="dot"),
+                            marker=dict(size=6, color="#059669", line=dict(width=1.5, color="#fff")),
+                            fill="tozeroy", fillcolor="rgba(5,150,105,0.06)",
+                            hovertemplate="<b>%{y:.1f}%</b><extra>Pass Rate</extra>",
+                        ))
+                        # Reference line at 80%
+                        _fig1.add_hline(y=80, line_dash="dash", line_color="rgba(217,119,6,0.45)",
+                                        annotation_text="Target 80%", annotation_position="top right",
+                                        annotation_font=dict(size=10, color="#d97706"))
+                        _fig1.update_layout(**_plotly_layout("📈  Score & Pass Rate Over Time", "Score / Rate (%)", _dc2))
+                        with _tr_c1:
+                            st.plotly_chart(_fig1, use_container_width=True, config={"displayModeBar": False})
+
+                    st.divider()
+
+                    # ── 2. Per-QA score trend + Per-campaign in columns ───────
+                    _c_qa, _c_camp = st.columns(2)
+
                     if "QA" in _audit_df_ins.columns:
-                        with st.expander("👤 Score Trend by QA", expanded=True):
+                        with _c_qa:
+                            st.markdown('<div class="section-chip">👤 Score Trend by QA</div>', unsafe_allow_html=True)
                             try:
                                 _aud_pt = _td2.pivot_table(
                                     index=pd.Grouper(key="_date", freq=_t_freq),
                                     columns="QA", values="_bs", aggfunc="mean").round(1)
-                                _aud_pt.index.name = _dc2
                                 if not _aud_pt.empty:
-                                    st.line_chart(_aud_pt, use_container_width=True)
+                                    _fig2 = go.Figure()
+                                    _dts2 = _aud_pt.index.strftime("%d %b" if _t_period in ("Daily","Weekly") else "%b %Y")
+                                    for _ci, _agent in enumerate(_aud_pt.columns):
+                                        _col = _CONVIN_COLORS[_ci % len(_CONVIN_COLORS)]
+                                        _fig2.add_trace(go.Scatter(
+                                            x=_dts2, y=_aud_pt[_agent].tolist(),
+                                            name=str(_agent), mode="lines+markers",
+                                            line=dict(color=_col, width=2, shape="spline"),
+                                            marker=dict(size=5, color=_col, line=dict(width=1, color="#fff")),
+                                            hovertemplate=f"<b>%{{y:.1f}}%</b><extra>{_agent}</extra>",
+                                        ))
+                                    _lay2 = _plotly_layout("", "Avg Bot Score (%)", _dc2)
+                                    _lay2["height"] = 260
+                                    _lay2["margin"] = dict(l=10, r=10, t=18, b=10)
+                                    _fig2.update_layout(**_lay2)
+                                    st.plotly_chart(_fig2, use_container_width=True, config={"displayModeBar": False})
                             except Exception:
-                                pass
+                                st.info("Not enough data for QA trend.")
 
-                    # Per-campaign trend
                     if "Campaign Name" in _audit_df_ins.columns:
-                        with st.expander("🎯 Score Trend by Campaign", expanded=False):
+                        with _c_camp:
+                            st.markdown('<div class="section-chip">🎯 Score Trend by Campaign</div>', unsafe_allow_html=True)
                             try:
                                 _camp_pt = _td2.pivot_table(
                                     index=pd.Grouper(key="_date", freq=_t_freq),
                                     columns="Campaign Name", values="_bs", aggfunc="mean").round(1)
-                                _camp_pt.index.name = _dc2
                                 if not _camp_pt.empty:
-                                    st.line_chart(_camp_pt, use_container_width=True)
+                                    _fig3 = go.Figure()
+                                    _dts3 = _camp_pt.index.strftime("%d %b" if _t_period in ("Daily","Weekly") else "%b %Y")
+                                    for _ci, _camp in enumerate(_camp_pt.columns):
+                                        _col = _CONVIN_COLORS[_ci % len(_CONVIN_COLORS)]
+                                        _fig3.add_trace(go.Scatter(
+                                            x=_dts3, y=_camp_pt[_camp].tolist(),
+                                            name=str(_camp), mode="lines+markers",
+                                            line=dict(color=_col, width=2, shape="spline"),
+                                            marker=dict(size=5, color=_col, line=dict(width=1, color="#fff")),
+                                            hovertemplate=f"<b>%{{y:.1f}}%</b><extra>{_camp}</extra>",
+                                        ))
+                                    _lay3 = _plotly_layout("", "Avg Bot Score (%)", _dc2)
+                                    _lay3["height"] = 260
+                                    _lay3["margin"] = dict(l=10, r=10, t=18, b=10)
+                                    _fig3.update_layout(**_lay3)
+                                    st.plotly_chart(_fig3, use_container_width=True, config={"displayModeBar": False})
                             except Exception:
-                                pass
+                                st.info("Not enough data for campaign trend.")
 
-                    # Status distribution over time (stacked bar via dataframe)
-                    with st.expander("📊 Status Distribution Over Time", expanded=False):
+                    st.divider()
+
+                    # ── 3. Status distribution (stacked bar) + Volume side by side
+                    _c_st, _c_vol = st.columns(2)
+
+                    with _c_st:
+                        st.markdown('<div class="section-chip">📊 Status Distribution Over Time</div>', unsafe_allow_html=True)
                         try:
-                            _status_pt = _td2.groupby([pd.Grouper(key="_date", freq=_t_freq),
-                                                        "Status"]).size().unstack(fill_value=0)
-                            _status_pt.index = _status_pt.index.strftime("%Y-%m-%d")
+                            _status_pt = (_td2.groupby([pd.Grouper(key="_date", freq=_t_freq), "Status"])
+                                          .size().unstack(fill_value=0))
+                            _dts4 = _status_pt.index.strftime("%d %b" if _t_period in ("Daily","Weekly") else "%b %Y")
+                            _STATUS_COLORS = {"Pass":"#059669","Needs Review":"#d97706","Fail":"#ef4444","Auto-Fail":"#dc2626"}
+                            _fig4 = go.Figure()
+                            for _stat in _status_pt.columns:
+                                _sc = _STATUS_COLORS.get(str(_stat), "#94a3b8")
+                                _fig4.add_trace(go.Bar(
+                                    x=_dts4, y=_status_pt[_stat].tolist(),
+                                    name=str(_stat), marker_color=_sc,
+                                    hovertemplate=f"<b>%{{y}}</b> {_stat}<extra></extra>",
+                                ))
+                            _lay4 = dict(
+                                barmode="stack",
+                                plot_bgcolor="#fff", paper_bgcolor="#fff",
+                                font=dict(family="Inter,sans-serif", size=11, color="#475569"),
+                                hovermode="x unified",
+                                hoverlabel=dict(bgcolor="#0B1F3A", font_color="#fff", font_size=12),
+                                legend=dict(orientation="h", y=1.04, x=0, font=dict(size=10)),
+                                xaxis=dict(showgrid=False, tickfont=dict(size=10, color="#94a3b8")),
+                                yaxis=dict(showgrid=True, gridcolor="#F1F5F9", tickfont=dict(size=10, color="#94a3b8"), title="Count"),
+                                margin=dict(l=10, r=10, t=36, b=10), height=260,
+                            )
+                            _fig4.update_layout(**_lay4)
                             if not _status_pt.empty:
-                                st.dataframe(_status_pt, use_container_width=True)
-                                st.bar_chart(_status_pt, use_container_width=True)
+                                st.plotly_chart(_fig4, use_container_width=True, config={"displayModeBar": False})
                         except Exception:
                             pass
 
-                    # Volume trend
-                    with st.expander("📋 Audit Volume Over Time", expanded=False):
+                    with _c_vol:
+                        st.markdown('<div class="section-chip">📋 Audit Volume Over Time</div>', unsafe_allow_html=True)
                         try:
-                            _vol = _td2.resample(_t_freq, on="_date").size().rename("Audit Count")
-                            _vol.index.name = _dc2
+                            _vol = _td2.resample(_t_freq, on="_date").size()
+                            _dts5 = _vol.index.strftime("%d %b" if _t_period in ("Daily","Weekly") else "%b %Y")
+                            _fig5 = go.Figure()
+                            _fig5.add_trace(go.Bar(
+                                x=_dts5, y=_vol.tolist(),
+                                name="Audits",
+                                marker=dict(
+                                    color=_vol.tolist(),
+                                    colorscale=[[0,"#DBEAFE"],[0.5,"#60A5FA"],[1,"#1D4ED8"]],
+                                    showscale=False,
+                                ),
+                                hovertemplate="<b>%{y} audits</b><extra></extra>",
+                            ))
+                            _lay5 = dict(
+                                plot_bgcolor="#fff", paper_bgcolor="#fff",
+                                font=dict(family="Inter,sans-serif", size=11, color="#475569"),
+                                hovermode="x",
+                                hoverlabel=dict(bgcolor="#0B1F3A", font_color="#fff", font_size=12),
+                                xaxis=dict(showgrid=False, tickfont=dict(size=10, color="#94a3b8")),
+                                yaxis=dict(showgrid=True, gridcolor="#F1F5F9", tickfont=dict(size=10, color="#94a3b8"), title="# Audits"),
+                                margin=dict(l=10, r=10, t=36, b=10), height=260,
+                            )
+                            _fig5.update_layout(**_lay5)
                             if not _vol.empty:
-                                st.bar_chart(_vol, use_container_width=True)
+                                st.plotly_chart(_fig5, use_container_width=True, config={"displayModeBar": False})
                         except Exception:
                             pass
+
                 except Exception:
                     st.info("Unable to compute trends — check date column format.")
 
