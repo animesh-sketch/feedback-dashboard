@@ -5514,7 +5514,7 @@ def _render_audit_form(legend_map, fname):
         with _ad1:
             _f_audit_date = st.date_input("Audit Date *", value=pd.Timestamp.now().date())
         with _ad2:
-            _f_auditor    = st.text_input("Auditor *", placeholder="e.g. Rahul Singh")
+            _f_auditor = st.selectbox("Auditor *", ["", "Animesh", "Shubham", "Aman", "Navya", "Alan"], key="f_auditor_sel")
         with _ad3:
             _f_client     = st.text_input("Client *", placeholder="e.g. Acme Corp")
         with _ad4:
