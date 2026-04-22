@@ -3995,6 +3995,117 @@ def _gen_qa_insights(audit_df):
                 "title": f"⭐ {_pct90}% of Audits Scored 90%+",
                 "detail": f"{_above90} high-performing conversations — extract these as training examples for low-scoring agents."})
 
+    # Score consistency (standard deviation)
+    if _avg is not None and len(_bs.dropna()) >= 5:
+        _std = round(float(_bs.dropna().std()), 1)
+        if _std > 15:
+            insights.append({"type": "warning",
+                "title": f"📉 High Score Variance (σ = {_std})",
+                "detail": f"Wide spread in bot scores indicates inconsistent training or uneven campaign difficulty. Target σ < 10 for a stable, predictable bot."})
+            actions.append({"priority": "medium", "category": "Training",
+                "action": "Segment audits by campaign and QA, then identify which sub-groups have the highest variance — pinpoint outlier conversations.",
+                "impact": "Reducing score variance improves coaching predictability and overall pass-rate stability."})
+        elif _std < 8:
+            insights.append({"type": "success",
+                "title": f"📐 Consistent Performance (σ = {_std})",
+                "detail": f"Low variance means the bot behaves predictably across conversations — a strong signal of stable training and script quality."})
+
+    # Best campaign (counterpart to weakest)
+    if "Campaign Name" in audit_df.columns:
+        _camp_stats2 = []
+        for _cn2, _cgrp2 in audit_df.groupby("Campaign Name"):
+            _cbs2 = pd.to_numeric(_cgrp2["Bot Score"], errors="coerce").dropna()
+            if len(_cbs2) >= 3:
+                _camp_stats2.append({"name": str(_cn2), "avg": round(_cbs2.mean(), 1), "total": len(_cgrp2)})
+        if _camp_stats2:
+            _bc2 = max(_camp_stats2, key=lambda x: x["avg"])
+            if _bc2["avg"] >= 80:
+                insights.append({"type": "success",
+                    "title": f"🚀 Best Campaign: {_bc2['name']}",
+                    "detail": f"Avg {_bc2['avg']}% across {_bc2['total']} audits — top-performing campaign. Use its script and flows as a reference template."})
+
+    # First-half vs second-half score trend
+    if _avg is not None and total >= 10:
+        _mid = total // 2
+        _first_h = round(float(_bs.iloc[:_mid].dropna().mean()), 1) if len(_bs.iloc[:_mid].dropna()) else None
+        _last_h  = round(float(_bs.iloc[_mid:].dropna().mean()), 1) if len(_bs.iloc[_mid:].dropna()) else None
+        if _first_h is not None and _last_h is not None:
+            _diff = round(_last_h - _first_h, 1)
+            if _diff >= 5:
+                insights.append({"type": "success",
+                    "title": f"📈 Positive Trend (+{_diff}% over dataset)",
+                    "detail": f"Second-half avg {_last_h}% vs first-half {_first_h}% — improving trajectory. Bot updates or coaching cycles are showing results."})
+            elif _diff <= -5:
+                insights.append({"type": "warning",
+                    "title": f"📉 Declining Trend ({_diff}% over dataset)",
+                    "detail": f"Second-half avg {_last_h}% vs first-half {_first_h}% — performance is slipping. Check for recent script changes or new campaign launches."})
+                actions.append({"priority": "high", "category": "Investigation",
+                    "action": "Compare latest 20% of audits against earlier batches — identify specific parameter drops that coincide with the decline.",
+                    "impact": "Early detection of drift prevents a campaign-wide score degradation from compounding."})
+
+    # Tier-1 critical parameter deep-dive (Flow Issue, Bot Restarted, Bot Repetition)
+    _t1_alert_params = [
+        ("Flow Issue",                   "0", "🔍", "flow disruptions — bot exited the intended script path"),
+        ("Bot Restarted Conversation",   "0", "🔁", "conversation restarts — bot lost context mid-call"),
+        ("Bot Repetition",               "0", "🔄", "repetitive bot responses — duplicate script loops detected"),
+    ]
+    for _tpn, _best_val, _icon, _desc in _t1_alert_params:
+        _tc = next((c for c in audit_df.columns if _tpn.lower() in str(c).lower()), None)
+        if _tc:
+            _tv = audit_df[_tc].replace("", None).dropna().astype(str).str.strip()
+            _t_issues = int((_tv != _best_val).sum())
+            _t_pct    = round(_t_issues / total * 100, 1) if total else 0
+            if _t_pct > 10:
+                insights.append({"type": "critical" if _t_pct > 30 else "warning",
+                    "title": f"{_icon} {_tpn}: {_t_pct}% Issue Rate ({_t_issues} calls)",
+                    "detail": f"{_t_issues} conversations had {_desc}. This is a Tier-1 Critical parameter — direct impact on overall bot score."})
+                actions.append({"priority": "high" if _t_pct > 30 else "medium", "category": "Bot Quality",
+                    "action": f"Pull the {_t_issues} '{_tpn}' flagged conversations, identify the common trigger node, and apply a targeted script fix.",
+                    "impact": f"Fixing {_tpn} issues in {_t_pct}% of calls can recover significant weighted score points (Tier-1 weight ~11–9%)."})
+
+    # Disposition × score correlation
+    if "Disposition" in audit_df.columns and _avg is not None:
+        _disp_scores = []
+        for _dn, _dg in audit_df.groupby("Disposition"):
+            _dns = pd.to_numeric(_dg["Bot Score"], errors="coerce").dropna()
+            if len(_dns) >= 3:
+                _disp_scores.append({"disp": str(_dn), "avg": round(float(_dns.mean()), 1), "n": len(_dns)})
+        if _disp_scores:
+            _worst_d = min(_disp_scores, key=lambda x: x["avg"])
+            _best_d  = max(_disp_scores, key=lambda x: x["avg"])
+            if _worst_d["avg"] < _avg - 8:
+                insights.append({"type": "info",
+                    "title": f"🔗 Lowest Score on '{_worst_d['disp']}' calls ({_worst_d['avg']}%)",
+                    "detail": f"Calls ending as '{_worst_d['disp']}' average {_worst_d['avg']}% — {round(_avg - _worst_d['avg'], 1)}pp below overall mean. Bot may be under-scripted for this outcome."})
+                actions.append({"priority": "medium", "category": "Script",
+                    "action": f"Review the conversation flow for calls ending as '{_worst_d['disp']}' — likely missing handling for objections or redirects.",
+                    "impact": f"Improving score on this disposition segment by 10pp directly raises the overall average."})
+            if _best_d["avg"] >= _avg + 8:
+                insights.append({"type": "success",
+                    "title": f"💎 Highest Score on '{_best_d['disp']}' calls ({_best_d['avg']}%)",
+                    "detail": f"Calls ending as '{_best_d['disp']}' average {_best_d['avg']}% — {round(_best_d['avg'] - _avg, 1)}pp above overall mean. Model the bot behaviour from these interactions."})
+
+    # Weakest QA-schema parameter (Tier-1 focus)
+    if total >= 5:
+        _t1_params = [_p for _t in _QA_SCHEMA["tiers"] if _t["tier"] == 1 for _p in _t["params"]]
+        _p_avgs = []
+        for _tp in _t1_params:
+            _pc = next((c for c in audit_df.columns if _tp["col"].lower() in str(c).lower()), None)
+            if _pc:
+                _pv = pd.to_numeric(audit_df[_pc], errors="coerce").dropna()
+                if len(_pv):
+                    _pmax = max(int(o) for o in _tp.get("options", ["0","1","2"]) if str(o).lstrip("-").isdigit()) or 2
+                    _p_avgs.append({"col": _tp["col"], "pct": round(float(_pv.mean()) / _pmax * 100, 1)})
+        if _p_avgs:
+            _weakest_p = min(_p_avgs, key=lambda x: x["pct"])
+            if _weakest_p["pct"] < 65:
+                insights.append({"type": "critical" if _weakest_p["pct"] < 50 else "warning",
+                    "title": f"🎯 Weakest Tier-1 Param: {_weakest_p['col']} ({_weakest_p['pct']}%)",
+                    "detail": f"'{_weakest_p['col']}' scores only {_weakest_p['pct']}% on average — the single biggest drag on weighted bot score. This is a Tier-1 Critical parameter."})
+                actions.append({"priority": "high", "category": "Bot Quality",
+                    "action": f"Prioritise a dedicated sprint on '{_weakest_p['col']}' — review its scoring criteria, add more training examples, and test with edge-case conversations.",
+                    "impact": f"Raising '{_weakest_p['col']}' by 20pp would be the highest-ROI improvement available given its Tier-1 weighting."})
+
     return {"insights": insights, "actions": actions}
 
 
@@ -5524,20 +5635,65 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
             _pri_order = {"critical": 0, "warning": 1, "info": 2, "success": 3}
             _sorted_ins = sorted(_qi2.get("insights", []), key=lambda x: _pri_order.get(x.get("type","info"), 2))
             if _sorted_ins:
-                st.markdown('<div class="section-chip">💡 Key Insights</div>', unsafe_allow_html=True)
-                _ic1, _ic2 = st.columns(2)
-                for _ii, _ins in enumerate(_sorted_ins):
-                    _tcfg2 = _TYPE_CFG2.get(_ins["type"], _TYPE_CFG2["info"])
-                    with (_ic1 if _ii % 2 == 0 else _ic2):
-                        st.markdown(
-                            f'<div style="background:{_tcfg2[0]};border:1px solid {_tcfg2[3]};'
-                            f'border-left:4px solid {_tcfg2[1]};border-radius:10px;'
-                            f'padding:12px 16px;margin-bottom:8px;">'
-                            f'<div style="font-size:0.78rem;font-weight:700;color:{_tcfg2[2]};margin-bottom:4px;">{_ins["title"]}</div>'
-                            f'<div style="font-size:0.71rem;color:{_tcfg2[2]};opacity:0.88;line-height:1.5;">{_ins["detail"]}</div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
+                st.markdown('<div class="section-chip">💡 Key Insights & Callouts</div>', unsafe_allow_html=True)
+
+                # ── Hero callouts — critical alerts rendered full-width ──────
+                _criticals = [i for i in _sorted_ins if i.get("type") == "critical"]
+                _rest_ins  = [i for i in _sorted_ins if i.get("type") != "critical"]
+                for _crit in _criticals:
+                    st.markdown(
+                        f'<div style="background:linear-gradient(135deg,#7F1D1D 0%,#991B1B 100%);'
+                        f'border-radius:14px;padding:18px 22px;margin-bottom:10px;'
+                        f'box-shadow:0 4px 18px rgba(220,38,38,0.28);'
+                        f'display:flex;align-items:flex-start;gap:16px;">'
+                        f'<div style="font-size:2rem;line-height:1;flex-shrink:0;margin-top:2px;">🚨</div>'
+                        f'<div>'
+                        f'<div style="font-size:0.85rem;font-weight:800;color:#FECDD3;letter-spacing:0.02em;margin-bottom:5px;">{_crit["title"]}</div>'
+                        f'<div style="font-size:0.74rem;color:rgba(254,205,211,0.88);line-height:1.55;">{_crit["detail"]}</div>'
+                        f'</div>'
+                        f'<div style="margin-left:auto;flex-shrink:0;background:#dc2626;border-radius:20px;'
+                        f'padding:3px 11px;font-size:0.58rem;font-weight:800;color:#fff;letter-spacing:0.1em;'
+                        f'text-transform:uppercase;align-self:flex-start;white-space:nowrap;">CRITICAL</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                # ── Warning callouts — prominent single-col strips ───────────
+                _warnings = [i for i in _rest_ins if i.get("type") == "warning"]
+                _non_warn = [i for i in _rest_ins if i.get("type") != "warning"]
+                if _warnings:
+                    _wc_l, _wc_r = st.columns(2)
+                    for _wi, _wi_ins in enumerate(_warnings):
+                        _wc = _TYPE_CFG2["warning"]
+                        with (_wc_l if _wi % 2 == 0 else _wc_r):
+                            st.markdown(
+                                f'<div style="background:{_wc[0]};border:1px solid {_wc[3]};'
+                                f'border-left:5px solid {_wc[1]};border-radius:10px;'
+                                f'padding:13px 16px;margin-bottom:8px;">'
+                                f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+                                f'<span style="font-size:0.62rem;font-weight:800;letter-spacing:0.10em;text-transform:uppercase;'
+                                f'color:{_wc[1]};background:{_wc[3]};padding:2px 8px;border-radius:10px;">WARNING</span>'
+                                f'<span style="font-size:0.78rem;font-weight:700;color:{_wc[2]};">{_wi_ins["title"]}</span></div>'
+                                f'<div style="font-size:0.71rem;color:{_wc[2]};opacity:0.88;line-height:1.5;padding-left:2px;">{_wi_ins["detail"]}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+
+                # ── Success + Info callouts — 2-col grid ────────────────────
+                if _non_warn:
+                    _ic1, _ic2 = st.columns(2)
+                    for _ii, _ins in enumerate(_non_warn):
+                        _tcfg2 = _TYPE_CFG2.get(_ins["type"], _TYPE_CFG2["info"])
+                        with (_ic1 if _ii % 2 == 0 else _ic2):
+                            st.markdown(
+                                f'<div style="background:{_tcfg2[0]};border:1px solid {_tcfg2[3]};'
+                                f'border-left:4px solid {_tcfg2[1]};border-radius:10px;'
+                                f'padding:12px 16px;margin-bottom:8px;">'
+                                f'<div style="font-size:0.78rem;font-weight:700;color:{_tcfg2[2]};margin-bottom:4px;">{_ins["title"]}</div>'
+                                f'<div style="font-size:0.71rem;color:{_tcfg2[2]};opacity:0.88;line-height:1.5;">{_ins["detail"]}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
 
             # ── Priority Actions ──────────────────────────────────────────────
             _PRI_CFG2 = {
@@ -5548,24 +5704,47 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
             _sorted_acts = sorted(_qi2.get("actions",[]), key=lambda x: {"high":0,"medium":1,"low":2}.get(x.get("priority","low"),2))
             if _sorted_acts:
                 st.markdown('<div class="section-chip">🎯 Priority Actions</div>', unsafe_allow_html=True)
-                _ac1, _ac2 = st.columns(2)
-                for _ai2, _act in enumerate(_sorted_acts):
-                    _pcfg2 = _PRI_CFG2.get(_act["priority"], _PRI_CFG2["low"])
-                    with (_ac1 if _ai2 % 2 == 0 else _ac2):
-                        st.markdown(
-                            f'<div style="background:{_pcfg2[2]};border:1px solid {_pcfg2[3]};'
-                            f'border-left:4px solid {_pcfg2[0]};border-radius:10px;'
-                            f'padding:12px 15px;margin-bottom:8px;">'
-                            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'
-                            f'<span>{_pcfg2[1]}</span>'
-                            f'<span style="font-size:0.62rem;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:{_pcfg2[0]};">'
-                            f'{_act["priority"].upper()} · {_act["category"]}</span></div>'
-                            f'<div style="font-size:0.73rem;font-weight:600;color:#0B1F3A;margin-bottom:5px;line-height:1.4;">{_act["action"]}</div>'
-                            f'<div style="font-size:0.65rem;color:#475569;line-height:1.4;border-top:1px solid {_pcfg2[0]}22;padding-top:5px;">'
-                            f'Impact: {_act["impact"]}</div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
+                # Numbered action list — high-priority items get accent treatment
+                _high_acts = [a for a in _sorted_acts if a.get("priority") == "high"]
+                _other_acts = [a for a in _sorted_acts if a.get("priority") != "high"]
+                for _ai_n, _act in enumerate(_high_acts, 1):
+                    _pcfg2 = _PRI_CFG2["high"]
+                    st.markdown(
+                        f'<div style="background:linear-gradient(135deg,#0B1F3A,#1e3a5f);'
+                        f'border-radius:12px;padding:14px 18px;margin-bottom:8px;'
+                        f'box-shadow:0 3px 12px rgba(11,31,58,0.18);display:flex;align-items:flex-start;gap:14px;">'
+                        f'<div style="background:#dc2626;color:#fff;border-radius:50%;width:28px;height:28px;'
+                        f'display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:900;flex-shrink:0;">{_ai_n}</div>'
+                        f'<div style="flex:1;">'
+                        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                        f'<span style="font-size:0.58rem;font-weight:800;letter-spacing:0.10em;text-transform:uppercase;'
+                        f'color:#FECDD3;background:#dc2626;padding:2px 9px;border-radius:10px;">HIGH · {_act["category"]}</span>'
+                        f'</div>'
+                        f'<div style="font-size:0.74rem;font-weight:700;color:#F1F5F9;margin-bottom:6px;line-height:1.45;">{_act["action"]}</div>'
+                        f'<div style="font-size:0.66rem;color:#94a3b8;line-height:1.4;border-top:1px solid rgba(255,255,255,0.1);padding-top:5px;">'
+                        f'💥 Impact: {_act["impact"]}</div>'
+                        f'</div></div>',
+                        unsafe_allow_html=True,
+                    )
+                if _other_acts:
+                    _ac1, _ac2 = st.columns(2)
+                    for _ai2, _act in enumerate(_other_acts):
+                        _pcfg2 = _PRI_CFG2.get(_act["priority"], _PRI_CFG2["low"])
+                        with (_ac1 if _ai2 % 2 == 0 else _ac2):
+                            st.markdown(
+                                f'<div style="background:{_pcfg2[2]};border:1px solid {_pcfg2[3]};'
+                                f'border-left:4px solid {_pcfg2[0]};border-radius:10px;'
+                                f'padding:12px 15px;margin-bottom:8px;">'
+                                f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'
+                                f'<span>{_pcfg2[1]}</span>'
+                                f'<span style="font-size:0.62rem;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:{_pcfg2[0]};">'
+                                f'{_act["priority"].upper()} · {_act["category"]}</span></div>'
+                                f'<div style="font-size:0.73rem;font-weight:600;color:#0B1F3A;margin-bottom:5px;line-height:1.4;">{_act["action"]}</div>'
+                                f'<div style="font-size:0.65rem;color:#475569;line-height:1.4;border-top:1px solid {_pcfg2[0]}22;padding-top:5px;">'
+                                f'Impact: {_act["impact"]}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
 
     # ══════════════════════════════════════════════════════════════════════════
     # Tab 2 — Performance Rankings
