@@ -5327,11 +5327,198 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                                     f'</div>')
                         st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:12px 16px;margin-bottom:1rem;">{_dh}</div>', unsafe_allow_html=True)
 
+            # ── What Went Right / What Went Wrong ────────────────────────────
+            # Compute per-parameter averages across ALL tier params
+            _param_avgs = []
+            for _tier in _QA_SCHEMA["tiers"]:
+                for _p in _tier["params"]:
+                    if _p["col"] not in _audit_df_ins.columns:
+                        continue
+                    _pmax_v = [int(o) for o in _p["options"] if str(o).lstrip("-").isdigit()]
+                    _pmax = max(_pmax_v) if _pmax_v else 2
+                    _pvals = pd.to_numeric(
+                        _audit_df_ins[_p["col"]].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":""}),
+                        errors="coerce").dropna()
+                    if len(_pvals) == 0:
+                        continue
+                    _pavg = round(_pvals.mean() / _pmax * 100, 1)
+                    _param_avgs.append({"col": _p["col"], "pct": _pavg, "tier": _tier["label"], "color": _tier["color"], "n": len(_pvals)})
+
+            _went_right = [p for p in _param_avgs if p["pct"] >= 80]
+            _went_wrong = [p for p in _param_avgs if p["pct"] < 70]
+            _went_right.sort(key=lambda x: -x["pct"])
+            _went_wrong.sort(key=lambda x: x["pct"])
+
+            _wrL, _wwR = st.columns(2)
+            with _wrL:
+                st.markdown(
+                    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
+                    '<div style="background:linear-gradient(135deg,#059669,#10b981);border-radius:8px;'
+                    'padding:4px 12px;font-size:0.62rem;font-weight:800;color:#fff;letter-spacing:0.1em;text-transform:uppercase;">✅ What Went Right</div>'
+                    f'<div style="font-size:0.65rem;color:#64748b;">{len(_went_right)} param{"s" if len(_went_right)!=1 else ""} performing well</div>'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+                if _went_right:
+                    _wr_html = ""
+                    for _wrp in _went_right[:8]:
+                        _t_short = _wrp["tier"].split("·")[-1].strip()
+                        _wr_html += (
+                            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                            f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;'
+                            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wrp["col"]}</div>'
+                            f'<div style="flex:1;height:10px;background:#D1FAE5;border-radius:5px;overflow:hidden;">'
+                            f'<div style="width:{_wrp["pct"]}%;height:100%;background:linear-gradient(90deg,#059669,#34D399);border-radius:5px;"></div></div>'
+                            f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:#059669;flex-shrink:0;text-align:right;">{_wrp["pct"]}%</div>'
+                            f'</div>'
+                        )
+                    st.markdown(f'<div style="background:#fff;border:1px solid #D1FAE5;border-left:3px solid #059669;border-radius:10px;padding:14px 16px;">{_wr_html}</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown('<div style="background:#F8FAFF;border:1px solid #DBEAFE;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#64748b;text-align:center;">No parameters above 80% yet</div>', unsafe_allow_html=True)
+
+            with _wwR:
+                st.markdown(
+                    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
+                    '<div style="background:linear-gradient(135deg,#dc2626,#f43f5e);border-radius:8px;'
+                    'padding:4px 12px;font-size:0.62rem;font-weight:800;color:#fff;letter-spacing:0.1em;text-transform:uppercase;">⚠️ What Went Wrong</div>'
+                    f'<div style="font-size:0.65rem;color:#64748b;">{len(_went_wrong)} param{"s" if len(_went_wrong)!=1 else ""} need attention</div>'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+                if _went_wrong:
+                    _ww_html = ""
+                    for _wwp in _went_wrong[:8]:
+                        _urgency = "#dc2626" if _wwp["pct"] < 50 else "#d97706"
+                        _bg_bar  = "#FEE2E2" if _wwp["pct"] < 50 else "#FEF3C7"
+                        _ww_html += (
+                            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                            f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;'
+                            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wwp["col"]}</div>'
+                            f'<div style="flex:1;height:10px;background:{_bg_bar};border-radius:5px;overflow:hidden;">'
+                            f'<div style="width:{_wwp["pct"]}%;height:100%;background:{_urgency};border-radius:5px;"></div></div>'
+                            f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:{_urgency};flex-shrink:0;text-align:right;">{_wwp["pct"]}%</div>'
+                            f'</div>'
+                        )
+                    st.markdown(f'<div style="background:#fff;border:1px solid #FEE2E2;border-left:3px solid #dc2626;border-radius:10px;padding:14px 16px;">{_ww_html}</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#059669;text-align:center;">🎉 All parameters performing well!</div>', unsafe_allow_html=True)
+
+            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+
+            # ── Top 5 Best Calls Handled ──────────────────────────────────────
+            st.markdown('<div class="section-chip">🏅 Top 5 Best Calls Handled</div>', unsafe_allow_html=True)
+            _bs_col = pd.to_numeric(_audit_df_ins["Bot Score"], errors="coerce")
+            _top5_df = _audit_df_ins.copy()
+            _top5_df["_bs_num"] = _bs_col
+            _top5_df = _top5_df.dropna(subset=["_bs_num"]).sort_values("_bs_num", ascending=False).head(5)
+            if not _top5_df.empty:
+                _top5_html = ""
+                _medal = ["🥇","🥈","🥉","4️⃣","5️⃣"]
+                for _ri, (_, _row) in enumerate(_top5_df.iterrows()):
+                    _sc  = float(_row["_bs_num"])
+                    _sta = str(_row.get("Status","—")).strip()
+                    _qa  = str(_row.get("QA","—")).strip() if "QA" in _row.index else "—"
+                    _cam = str(_row.get("Campaign Name","—")).strip() if "Campaign Name" in _row.index else "—"
+                    _ld  = str(_row.get("Lead Number", _row.get("Lead", _row.get("Phone Number","—")))).strip()
+                    _ld  = _ld[:18] if _ld != "—" else f"#{_ri+1}"
+                    _sc_c = "#059669" if _sc >= 80 else "#d97706"
+                    # Key strong params (scored 2 out of 2)
+                    _strong = [p["col"] for p in [q for t in _QA_SCHEMA["tiers"] for q in t["params"]]
+                               if p["col"] in _row.index and str(_row[p["col"]]).strip() == "2"][:3]
+                    _strong_chips = "".join(
+                        f'<span style="background:#EBF5FF;border:1px solid #BFDBFE;border-radius:4px;'
+                        f'padding:1px 6px;font-size:0.58rem;font-weight:700;color:#2563EB;margin-right:3px;">{s}</span>'
+                        for s in _strong
+                    )
+                    _top5_html += (
+                        f'<div style="display:grid;grid-template-columns:2rem 2.5rem 1fr 1fr 1fr auto;'
+                        f'align-items:center;gap:10px;padding:10px 16px;'
+                        f'border-top:{"none" if _ri==0 else "1px solid #F1F5F9"};">'
+                        f'<div style="font-size:1.1rem;text-align:center;">{_medal[_ri]}</div>'
+                        f'<div style="background:linear-gradient(135deg,#0B1F3A,#2563EB);border-radius:8px;'
+                        f'padding:4px 0;text-align:center;font-size:0.85rem;font-weight:900;color:#fff;">{int(_sc)}</div>'
+                        f'<div>'
+                        f'<div style="font-size:0.73rem;font-weight:700;color:#0B1F3A;">{_ld}</div>'
+                        f'<div style="font-size:0.62rem;color:#64748b;margin-top:1px;">{_cam[:22] if _cam!="—" else ""}</div>'
+                        f'</div>'
+                        f'<div style="font-size:0.69rem;color:#475569;">👤 {_qa[:16]}</div>'
+                        f'<div style="display:flex;flex-wrap:wrap;gap:2px;">{_strong_chips if _strong_chips else "<span style=\"font-size:0.62rem;color:#94a3b8;\">—</span>"}</div>'
+                        f'<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:6px;'
+                        f'padding:2px 8px;font-size:0.65rem;font-weight:700;color:#059669;white-space:nowrap;">{_sta}</div>'
+                        f'</div>'
+                    )
+                st.markdown(
+                    f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:12px;overflow:hidden;'
+                    f'box-shadow:0 2px 8px rgba(11,31,58,0.06);">'
+                    f'<div style="background:linear-gradient(135deg,#0B1F3A,#1D4ED8);padding:10px 16px;'
+                    f'display:grid;grid-template-columns:2rem 2.5rem 1fr 1fr 1fr auto;gap:10px;align-items:center;">'
+                    f'<div style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;">#</div>'
+                    f'<div style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;">Score</div>'
+                    f'<div style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;">Lead / ID</div>'
+                    f'<div style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;">QA</div>'
+                    f'<div style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;">Strong Params</div>'
+                    f'<div style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;">Status</div>'
+                    f'</div>'
+                    f'{_top5_html}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+
+            # ── Parameter-wise Insights (ALL parameters) ─────────────────────
+            st.markdown('<div class="section-chip">🔬 Parameter-wise Performance — All Tiers</div>', unsafe_allow_html=True)
+            _tier_cols = st.columns(len(_QA_SCHEMA["tiers"]))
+            for _tc_i, _tier_g in enumerate(_QA_SCHEMA["tiers"]):
+                with _tier_cols[_tc_i]:
+                    _tclr = _tier_g["color"]
+                    _tier_rows_html = ""
+                    _has_any = False
+                    for _pp in _tier_g["params"]:
+                        _pmx_v = [int(o) for o in _pp["options"] if str(o).lstrip("-").isdigit()]
+                        _pmx = max(_pmx_v) if _pmx_v else 2
+                        if _pp["col"] not in _audit_df_ins.columns:
+                            _bar_pct = None
+                        else:
+                            _pv2 = pd.to_numeric(
+                                _audit_df_ins[_pp["col"]].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":""}),
+                                errors="coerce").dropna()
+                            _bar_pct = round(_pv2.mean() / _pmx * 100, 1) if len(_pv2) else None
+                        if _bar_pct is None:
+                            continue
+                        _has_any = True
+                        _bclr = "#059669" if _bar_pct >= 80 else "#d97706" if _bar_pct >= 60 else "#dc2626"
+                        _icon = "✅" if _bar_pct >= 80 else "⚠️" if _bar_pct >= 60 else "🔴"
+                        _tier_rows_html += (
+                            f'<div style="margin-bottom:8px;">'
+                            f'<div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
+                            f'<div style="font-size:0.67rem;font-weight:600;color:#0B1F3A;'
+                            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;">'
+                            f'{_icon} {_pp["col"]}</div>'
+                            f'<div style="font-size:0.67rem;font-weight:800;color:{_bclr};flex-shrink:0;margin-left:4px;">{_bar_pct}%</div>'
+                            f'</div>'
+                            f'<div style="height:8px;background:#F1F5F9;border-radius:4px;overflow:hidden;">'
+                            f'<div style="width:{_bar_pct}%;height:100%;background:linear-gradient(90deg,{_tclr},{_bclr});border-radius:4px;"></div>'
+                            f'</div>'
+                            f'</div>'
+                        )
+                    if _has_any:
+                        st.markdown(
+                            f'<div style="background:#fff;border:1px solid #E2EAF6;border-top:3px solid {_tclr};'
+                            f'border-radius:10px;padding:14px 16px;min-height:120px;">'
+                            f'<div style="font-size:0.61rem;font-weight:800;color:{_tclr};letter-spacing:0.1em;'
+                            f'text-transform:uppercase;margin-bottom:12px;">{_tier_g["label"]}</div>'
+                            f'{_tier_rows_html}</div>',
+                            unsafe_allow_html=True,
+                        )
+
+            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+
             # ── Key Insights (sorted: critical → warning → success) ───────────
             _TYPE_CFG2 = {
-                "critical": ("#fff1f2","#e11d48","#9f1239","#fecdd3"),
-                "warning":  ("#fffbf0","#d97706","#92400e","#fde68a"),
-                "success":  ("#ecfdf5","#059669","#064e3b","#a7f3d0"),
+                "critical": ("#FFF1F2","#dc2626","#7F1D1D","#FECDD3"),
+                "warning":  ("#FFFBEB","#D97706","#78350F","#FDE68A"),
+                "success":  ("#ECFDF5","#059669","#064E3B","#A7F3D0"),
                 "info":     ("#EBF5FF","#2563EB","#0B1F3A","#BFDBFE"),
             }
             _pri_order = {"critical": 0, "warning": 1, "info": 2, "success": 3}
@@ -5347,16 +5534,16 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                             f'border-left:4px solid {_tcfg2[1]};border-radius:10px;'
                             f'padding:12px 16px;margin-bottom:8px;">'
                             f'<div style="font-size:0.78rem;font-weight:700;color:{_tcfg2[2]};margin-bottom:4px;">{_ins["title"]}</div>'
-                            f'<div style="font-size:0.71rem;color:{_tcfg2[2]};opacity:0.85;line-height:1.5;">{_ins["detail"]}</div>'
+                            f'<div style="font-size:0.71rem;color:{_tcfg2[2]};opacity:0.88;line-height:1.5;">{_ins["detail"]}</div>'
                             f'</div>',
                             unsafe_allow_html=True,
                         )
 
-            # ── Action Items (high priority first) ───────────────────────────
+            # ── Priority Actions ──────────────────────────────────────────────
             _PRI_CFG2 = {
-                "high":   ("#dc2626","🔴","#fef2f2","#fee2e2"),
-                "medium": ("#f59e0b","🟡","#fffbeb","#fde68a"),
-                "low":    ("#16a34a","🟢","#f0fdf4","#bbf7d0"),
+                "high":   ("#dc2626","🔴","#FFF1F2","#FECDD3"),
+                "medium": ("#D97706","🟡","#FFFBEB","#FDE68A"),
+                "low":    ("#059669","🟢","#ECFDF5","#A7F3D0"),
             }
             _sorted_acts = sorted(_qi2.get("actions",[]), key=lambda x: {"high":0,"medium":1,"low":2}.get(x.get("priority","low"),2))
             if _sorted_acts:
@@ -5371,10 +5558,10 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                             f'padding:12px 15px;margin-bottom:8px;">'
                             f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'
                             f'<span>{_pcfg2[1]}</span>'
-                            f'<span style="font-size:0.63rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:{_pcfg2[0]};">'
+                            f'<span style="font-size:0.62rem;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:{_pcfg2[0]};">'
                             f'{_act["priority"].upper()} · {_act["category"]}</span></div>'
-                            f'<div style="font-size:0.73rem;font-weight:600;color:#0d1d3a;margin-bottom:5px;line-height:1.4;">{_act["action"]}</div>'
-                            f'<div style="font-size:0.65rem;color:#5588bb;line-height:1.4;border-top:1px solid {_pcfg2[0]}22;padding-top:5px;">'
+                            f'<div style="font-size:0.73rem;font-weight:600;color:#0B1F3A;margin-bottom:5px;line-height:1.4;">{_act["action"]}</div>'
+                            f'<div style="font-size:0.65rem;color:#475569;line-height:1.4;border-top:1px solid {_pcfg2[0]}22;padding-top:5px;">'
                             f'Impact: {_act["impact"]}</div>'
                             f'</div>',
                             unsafe_allow_html=True,
