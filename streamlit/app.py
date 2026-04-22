@@ -5237,20 +5237,26 @@ def _render_sense_insights(df, fname, sheets=None):
             # ── KPI Band — vibrant soft gradient cards ────────────────────────
             _bc = "#059669" if (_avg_i or 0) >= 80 else "#d97706" if (_avg_i or 0) >= 60 else "#dc2626"
             _pr_c = "#059669" if pass_rate_i >= 80 else "#d97706" if pass_rate_i >= 60 else "#dc2626"
-            def _kpi_card(val, label, grad, txt="#fff", shadow="rgba(37,99,235,0.2)"):
-                return (f'<div style="background:{grad};border-radius:14px;padding:18px 16px;'
-                        f'box-shadow:0 4px 16px {shadow};text-align:center;min-height:88px;'
-                        f'display:flex;flex-direction:column;align-items:center;justify-content:center;">'
-                        f'<div style="font-size:2rem;font-weight:900;color:{txt};line-height:1.1;letter-spacing:-0.02em;">{val}</div>'
-                        f'<div style="font-size:0.6rem;font-weight:700;color:{txt};opacity:0.78;letter-spacing:0.1em;text-transform:uppercase;margin-top:6px;">{label}</div>'
-                        f'</div>')
+            def _kpi_card(val, label, grad, txt="#fff", shadow="rgba(37,99,235,0.2)", accent=None):
+                ac = accent or grad
+                return (f'<div style="background:#fff;border-radius:14px;padding:0;'
+                        f'box-shadow:0 2px 10px rgba(11,31,58,0.08);overflow:hidden;'
+                        f'transition:box-shadow 0.2s,transform 0.2s;cursor:default;'
+                        f'border:1px solid #E2EAF6;" '
+                        f'onmouseover="this.style.boxShadow=\'0 8px 24px {shadow}\';this.style.transform=\'translateY(-3px)\'" '
+                        f'onmouseout="this.style.boxShadow=\'0 2px 10px rgba(11,31,58,0.08)\';this.style.transform=\'translateY(0)\'">'
+                        f'<div style="height:4px;background:{grad};"></div>'
+                        f'<div style="padding:16px 14px 14px;text-align:center;">'
+                        f'<div style="font-size:1.9rem;font-weight:900;color:#0B1F3A;line-height:1.05;letter-spacing:-0.03em;">{val}</div>'
+                        f'<div style="font-size:0.59rem;font-weight:700;color:#64748b;letter-spacing:0.10em;text-transform:uppercase;margin-top:5px;">{label}</div>'
+                        f'</div></div>')
             _kc1,_kc2,_kc3,_kc4,_kc5,_kc6 = st.columns(6)
-            _kc1.markdown(_kpi_card(total_i,  "Total Audits",   "linear-gradient(135deg,#0B1F3A,#2563EB)", shadow="rgba(37,99,235,0.3)"), unsafe_allow_html=True)
-            _kc2.markdown(_kpi_card(f"{_avg_i or '—'}%", "Avg Score", "linear-gradient(135deg,#0891b2,#06b6d4)" if (_avg_i or 0)>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if (_avg_i or 0)>=60 else "linear-gradient(135deg,#dc2626,#ef4444)", shadow="rgba(8,145,178,0.25)"), unsafe_allow_html=True)
-            _kc3.markdown(_kpi_card(f"{pass_rate_i}%", "Pass Rate",  "linear-gradient(135deg,#059669,#10b981)" if pass_rate_i>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if pass_rate_i>=60 else "linear-gradient(135deg,#dc2626,#ef4444)", shadow="rgba(5,150,105,0.25)"), unsafe_allow_html=True)
-            _kc4.markdown(_kpi_card(pass_i,   "Passed",          "linear-gradient(135deg,#059669,#10b981)", shadow="rgba(5,150,105,0.3)"), unsafe_allow_html=True)
-            _kc5.markdown(_kpi_card(review_i, "Needs Review",    "linear-gradient(135deg,#d97706,#f59e0b)", shadow="rgba(217,119,6,0.25)"), unsafe_allow_html=True)
-            _kc6.markdown(_kpi_card(fatal_i,  "Auto-Fails",      "linear-gradient(135deg,#dc2626,#f43f5e)" if fatal_i else "linear-gradient(135deg,#6b7280,#9ca3af)", shadow="rgba(220,38,38,0.25)"), unsafe_allow_html=True)
+            _kc1.markdown(_kpi_card(total_i,  "Total Audits",   "linear-gradient(135deg,#0B1F3A,#2563EB)", shadow="rgba(37,99,235,0.22)"), unsafe_allow_html=True)
+            _kc2.markdown(_kpi_card(f"{_avg_i or '—'}%", "Avg Score", "linear-gradient(135deg,#0891b2,#06b6d4)" if (_avg_i or 0)>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if (_avg_i or 0)>=60 else "linear-gradient(135deg,#dc2626,#ef4444)", shadow="rgba(8,145,178,0.2)"), unsafe_allow_html=True)
+            _kc3.markdown(_kpi_card(f"{pass_rate_i}%", "Pass Rate",  "linear-gradient(135deg,#059669,#10b981)" if pass_rate_i>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if pass_rate_i>=60 else "linear-gradient(135deg,#dc2626,#ef4444)", shadow="rgba(5,150,105,0.2)"), unsafe_allow_html=True)
+            _kc4.markdown(_kpi_card(pass_i,   "Passed",          "linear-gradient(135deg,#059669,#10b981)", shadow="rgba(5,150,105,0.22)"), unsafe_allow_html=True)
+            _kc5.markdown(_kpi_card(review_i, "Needs Review",    "linear-gradient(135deg,#d97706,#f59e0b)", shadow="rgba(217,119,6,0.22)"), unsafe_allow_html=True)
+            _kc6.markdown(_kpi_card(fatal_i,  "Auto-Fails",      "linear-gradient(135deg,#dc2626,#f43f5e)" if fatal_i else "linear-gradient(135deg,#6b7280,#9ca3af)", shadow="rgba(220,38,38,0.22)"), unsafe_allow_html=True)
             st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
             # ── Status Distribution Bar ───────────────────────────────────────
@@ -5526,16 +5532,21 @@ def _render_sense_insights(df, fname, sheets=None):
         _fai  = int((_st == "Fail").sum())
         _fat  = int((_st == "Auto-Fail").sum())
         _pr   = round(_pas / _tot * 100, 1) if _tot else 0
-        def _ekc(v, lbl, grad, shadow="rgba(99,102,241,0.18)"):
-            return (f'<div style="background:{grad};border-radius:12px;padding:14px 12px;'
-                    f'box-shadow:0 3px 12px {shadow};text-align:center;">'
-                    f'<div style="font-size:1.65rem;font-weight:900;color:#fff;line-height:1.1;">{v}</div>'
-                    f'<div style="font-size:0.58rem;font-weight:700;color:rgba(255,255,255,0.78);letter-spacing:0.1em;text-transform:uppercase;margin-top:5px;">{lbl}</div>'
-                    f'</div>')
+        def _ekc(v, lbl, grad, shadow="rgba(37,99,235,0.18)"):
+            return (f'<div style="background:#fff;border-radius:12px;overflow:hidden;'
+                    f'box-shadow:0 2px 8px rgba(11,31,58,0.08);border:1px solid #E2EAF6;'
+                    f'transition:box-shadow 0.2s,transform 0.2s;cursor:default;" '
+                    f'onmouseover="this.style.boxShadow=\'0 6px 18px {shadow}\';this.style.transform=\'translateY(-2px)\'" '
+                    f'onmouseout="this.style.boxShadow=\'0 2px 8px rgba(11,31,58,0.08)\';this.style.transform=\'translateY(0)\'">'
+                    f'<div style="height:3px;background:{grad};"></div>'
+                    f'<div style="padding:12px 10px;text-align:center;">'
+                    f'<div style="font-size:1.6rem;font-weight:900;color:#0B1F3A;line-height:1.05;letter-spacing:-0.02em;">{v}</div>'
+                    f'<div style="font-size:0.57rem;font-weight:700;color:#64748b;letter-spacing:0.10em;text-transform:uppercase;margin-top:4px;">{lbl}</div>'
+                    f'</div></div>')
         _avg_g = "linear-gradient(135deg,#0891b2,#06b6d4)" if (_avg or 0)>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if (_avg or 0)>=60 else "linear-gradient(135deg,#dc2626,#ef4444)"
         _pr_g  = "linear-gradient(135deg,#059669,#10b981)" if _pr>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if _pr>=60 else "linear-gradient(135deg,#dc2626,#ef4444)"
         if label:
-            st.markdown(f'<div style="font-size:0.7rem;font-weight:700;color:#2563EB;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;background:linear-gradient(135deg,#EBF5FF,#DBEAFE);padding:6px 14px;border-radius:20px;display:inline-block;">{label}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:0.61rem;font-weight:800;color:#1E40AF;letter-spacing:0.11em;text-transform:uppercase;margin-bottom:10px;background:#fff;border:1px solid #BFDBFE;border-left:3px solid #2563EB;padding:5px 14px 5px 12px;border-radius:6px;display:inline-block;box-shadow:0 1px 4px rgba(37,99,235,0.08);">{label}</div>', unsafe_allow_html=True)
         _ec1,_ec2,_ec3,_ec4,_ec5,_ec6 = st.columns(6)
         _ec1.markdown(_ekc(_tot,  "Audits",       "linear-gradient(135deg,#0B1F3A,#2563EB)","rgba(37,99,235,0.28)"), unsafe_allow_html=True)
         _ec2.markdown(_ekc(f"{_avg or '—'}%","Avg Score",_avg_g,"rgba(8,145,178,0.22)"), unsafe_allow_html=True)
@@ -7009,94 +7020,138 @@ def render_convin_sense():
     _has_data = bool(st.session_state.get("sense_sheets"))
     _registry_init()
 
-    # ── Convin brand UI overrides ─────────────────────────────────────────────
+    # ── Convin premium brand UI ────────────────────────────────────────────────
     st.markdown("""
 <style>
-/* ── Background: Convin light grey ── */
-.stApp, .stApp > div, section.main > div { background: #F5F7FA !important; }
-.block-container { background: #F5F7FA !important; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-/* ── Section chip: Convin blue pill ── */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes pulseBlue {
+  0%,100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.25); }
+  50%      { box-shadow: 0 0 0 6px rgba(37,99,235,0); }
+}
+
+/* ── Base ── */
+.stApp, .stApp > div, section.main > div { background: #F0F4F9 !important; font-family: 'Inter', sans-serif !important; }
+.block-container { background: #F0F4F9 !important; padding-top: 1.5rem !important; }
+
+/* ── Section chip: left-accent pill ── */
 .section-chip {
     display: inline-flex !important;
     align-items: center !important;
-    gap: 5px !important;
-    font-size: 0.62rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.09em !important;
+    gap: 6px !important;
+    font-size: 0.61rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.11em !important;
     text-transform: uppercase !important;
-    color: #2563EB !important;
-    background: linear-gradient(135deg,#EBF5FF,#DBEAFE) !important;
+    color: #1E40AF !important;
+    background: #fff !important;
     border: 1px solid #BFDBFE !important;
-    border-radius: 20px !important;
-    padding: 4px 14px !important;
-    margin-bottom: 14px !important;
-    box-shadow: 0 2px 6px rgba(37,99,235,0.10) !important;
+    border-left: 3px solid #2563EB !important;
+    border-radius: 6px !important;
+    padding: 5px 14px 5px 12px !important;
+    margin-bottom: 16px !important;
+    box-shadow: 0 1px 4px rgba(37,99,235,0.08) !important;
+    transition: box-shadow 0.2s, transform 0.15s !important;
+}
+.section-chip:hover {
+    box-shadow: 0 4px 12px rgba(37,99,235,0.16) !important;
+    transform: translateY(-1px) !important;
 }
 
-/* ── Tabs: pill-style bar ── */
+/* ── Tabs: premium glass pill bar ── */
 .stTabs [data-baseweb="tab-list"] {
-    background: #DBEAFE !important;
-    border-radius: 12px !important;
-    padding: 4px !important;
+    background: #fff !important;
+    border-radius: 14px !important;
+    padding: 5px !important;
     border-bottom: none !important;
-    gap: 2px !important;
+    gap: 3px !important;
+    box-shadow: 0 2px 10px rgba(11,31,58,0.08), inset 0 1px 0 rgba(255,255,255,0.8) !important;
 }
 .stTabs [data-baseweb="tab"] {
-    font-size: 0.74rem !important;
+    font-size: 0.75rem !important;
     font-weight: 600 !important;
-    color: #4b5563 !important;
+    color: #64748b !important;
     background: transparent !important;
     border: none !important;
-    border-radius: 9px !important;
-    padding: 8px 16px !important;
-    transition: background 0.18s, color 0.18s !important;
+    border-radius: 10px !important;
+    padding: 9px 18px !important;
+    transition: all 0.2s ease !important;
+    letter-spacing: 0.01em !important;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    background: #F0F4F9 !important;
+    color: #0B1F3A !important;
 }
 .stTabs [aria-selected="true"] {
-    background: #fff !important;
-    color: #2563EB !important;
-    box-shadow: 0 2px 8px rgba(37,99,235,0.18) !important;
-}
-.stTabs [data-baseweb="tab-panel"] { padding-top: 18px !important; }
-
-/* ── Cards / expanders ── */
-.streamlit-expanderHeader {
-    font-size: 0.78rem !important;
-    font-weight: 600 !important;
-    color: #0B1F3A !important;
-    background: #fff !important;
-    border-radius: 10px 10px 0 0 !important;
-}
-.streamlit-expanderContent {
-    background: #fff !important;
-    border: 1px solid #DBEAFE !important;
-    border-top: none !important;
-    border-radius: 0 0 10px 10px !important;
-}
-
-/* ── Dataframe: Convin blue header + alternating rows ── */
-.stDataFrame table thead th {
     background: linear-gradient(135deg,#0B1F3A,#2563EB) !important;
     color: #fff !important;
-    font-size: 0.67rem !important;
+    box-shadow: 0 3px 10px rgba(37,99,235,0.32) !important;
     font-weight: 700 !important;
-    letter-spacing: 0.07em !important;
+}
+.stTabs [data-baseweb="tab-panel"] { padding-top: 20px !important; }
+
+/* ── Expanders: elevated card ── */
+.streamlit-expanderHeader {
+    font-size: 0.79rem !important;
+    font-weight: 700 !important;
+    color: #0B1F3A !important;
+    background: #fff !important;
+    border-radius: 12px 12px 0 0 !important;
+    padding: 14px 18px !important;
+    border-left: 3px solid #2563EB !important;
+    transition: background 0.15s !important;
+}
+.streamlit-expanderHeader:hover { background: #F8FAFF !important; }
+.streamlit-expanderContent {
+    background: #fff !important;
+    border: 1px solid #E2EAF6 !important;
+    border-top: none !important;
+    border-radius: 0 0 12px 12px !important;
+    padding: 16px 18px !important;
+    animation: fadeUp 0.2s ease !important;
+}
+
+/* ── Dataframe: premium header + hover rows ── */
+.stDataFrame table { border-collapse: separate !important; border-spacing: 0 !important; border-radius: 10px !important; overflow: hidden !important; box-shadow: 0 2px 8px rgba(11,31,58,0.08) !important; }
+.stDataFrame table thead th {
+    background: linear-gradient(135deg,#0B1F3A 0%,#1D4ED8 100%) !important;
+    color: #fff !important;
+    font-size: 0.66rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.08em !important;
     text-transform: uppercase !important;
     border: none !important;
+    padding: 10px 14px !important;
 }
-.stDataFrame table tbody tr:nth-child(even) td { background: #EFF6FF !important; }
+.stDataFrame table tbody tr:nth-child(even) td { background: #F8FBFF !important; }
+.stDataFrame table tbody tr:nth-child(odd) td  { background: #fff !important; }
 .stDataFrame table tbody td {
     font-size: 0.77rem !important;
-    color: #0B1F3A !important;
-    border-color: #DBEAFE !important;
+    color: #1E293B !important;
+    border-color: #E8F0FB !important;
+    padding: 9px 14px !important;
+    transition: background 0.15s !important;
 }
-.stDataFrame table tbody tr:hover td { background: #DBEAFE !important; }
+.stDataFrame table tbody tr:hover td {
+    background: #EFF6FF !important;
+    color: #0B1F3A !important;
+}
 
-/* ── Inputs: soft rounded ── */
+/* ── Inputs: refined ── */
 .stSelectbox > div > div, .stTextInput > div > div, .stDateInput > div > div {
-    border: 1.5px solid #BFDBFE !important;
+    border: 1.5px solid #CBD5E8 !important;
     border-radius: 10px !important;
     background: #fff !important;
+    transition: border-color 0.18s, box-shadow 0.18s !important;
+    box-shadow: 0 1px 3px rgba(11,31,58,0.06) !important;
 }
 .stSelectbox > div > div:focus-within,
 .stTextInput > div > div:focus-within {
@@ -7105,56 +7160,122 @@ def render_convin_sense():
 }
 .stSelectbox label, .stTextInput label, .stDateInput label,
 .stRadio label, .stNumberInput label, .stTextArea label {
-    font-size: 0.72rem !important;
+    font-size: 0.71rem !important;
     font-weight: 600 !important;
-    color: #4b5563 !important;
+    color: #475569 !important;
+    letter-spacing: 0.02em !important;
 }
 
-/* ── Primary button: Convin blue ── */
+/* ── All buttons ── */
+.stButton > button {
+    border-radius: 10px !important;
+    font-size: 0.77rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.03em !important;
+    transition: all 0.2s ease !important;
+    padding: 9px 22px !important;
+}
 .stButton > button[kind="primary"] {
-    background: linear-gradient(135deg,#0B1F3A,#2563EB) !important;
+    background: linear-gradient(135deg,#0B1F3A 0%,#2563EB 100%) !important;
     border: none !important;
     color: #fff !important;
-    font-weight: 700 !important;
-    border-radius: 10px !important;
-    letter-spacing: 0.04em !important;
-    box-shadow: 0 4px 12px rgba(37,99,235,0.30) !important;
-    transition: box-shadow 0.2s, transform 0.15s !important;
+    box-shadow: 0 4px 14px rgba(37,99,235,0.35) !important;
 }
 .stButton > button[kind="primary"]:hover {
-    box-shadow: 0 6px 18px rgba(37,99,235,0.42) !important;
-    transform: translateY(-1px) !important;
+    box-shadow: 0 8px 22px rgba(37,99,235,0.48) !important;
+    transform: translateY(-2px) !important;
 }
+.stButton > button[kind="primary"]:active { transform: translateY(0) !important; }
 .stButton > button[kind="secondary"] {
     background: #fff !important;
     border: 1.5px solid #BFDBFE !important;
     color: #2563EB !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
+    box-shadow: 0 1px 4px rgba(37,99,235,0.10) !important;
+}
+.stButton > button[kind="secondary"]:hover {
+    background: #EFF6FF !important;
+    border-color: #2563EB !important;
+    box-shadow: 0 3px 10px rgba(37,99,235,0.18) !important;
+    transform: translateY(-1px) !important;
+}
+.stButton > button:not([kind]) {
+    background: #fff !important;
+    border: 1.5px solid #CBD5E8 !important;
+    color: #374151 !important;
+}
+.stButton > button:not([kind]):hover {
+    border-color: #2563EB !important;
+    color: #2563EB !important;
+    background: #EFF6FF !important;
+    transform: translateY(-1px) !important;
 }
 
-/* ── Radio: pill toggle ── */
+/* ── Radio: elevated pill toggle ── */
 .stRadio > div[role="radiogroup"] {
-    gap: 6px !important;
+    gap: 8px !important;
     flex-wrap: wrap !important;
 }
 .stRadio > div[role="radiogroup"] > label {
     background: #fff !important;
-    border: 1.5px solid #BFDBFE !important;
-    border-radius: 20px !important;
-    padding: 5px 16px !important;
+    border: 1.5px solid #CBD5E8 !important;
+    border-radius: 24px !important;
+    padding: 6px 18px !important;
     font-size: 0.75rem !important;
     font-weight: 600 !important;
-    color: #4b5563 !important;
+    color: #475569 !important;
     cursor: pointer !important;
-    transition: background 0.15s !important;
+    transition: all 0.18s ease !important;
+    box-shadow: 0 1px 3px rgba(11,31,58,0.06) !important;
+}
+.stRadio > div[role="radiogroup"] > label:hover {
+    border-color: #93C5FD !important;
+    color: #1D4ED8 !important;
+    background: #F0F7FF !important;
 }
 .stRadio > div[role="radiogroup"] > label:has(input:checked) {
     background: linear-gradient(135deg,#0B1F3A,#2563EB) !important;
     border-color: transparent !important;
     color: #fff !important;
-    box-shadow: 0 3px 10px rgba(37,99,235,0.28) !important;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.32) !important;
+    animation: pulseBlue 1.8s ease-in-out !important;
 }
+
+/* ── Metric widgets ── */
+[data-testid="metric-container"] {
+    background: #fff !important;
+    border: 1px solid #E2EAF6 !important;
+    border-radius: 14px !important;
+    padding: 16px 20px !important;
+    box-shadow: 0 2px 8px rgba(11,31,58,0.07) !important;
+    transition: box-shadow 0.2s, transform 0.2s !important;
+    border-left: 3px solid #2563EB !important;
+}
+[data-testid="metric-container"]:hover {
+    box-shadow: 0 6px 20px rgba(37,99,235,0.14) !important;
+    transform: translateY(-2px) !important;
+}
+[data-testid="metric-container"] label {
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    color: #64748b !important;
+}
+[data-testid="stMetricValue"] {
+    font-size: 1.85rem !important;
+    font-weight: 900 !important;
+    color: #0B1F3A !important;
+    letter-spacing: -0.03em !important;
+}
+
+/* ── Dividers ── */
+hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 18px 0 !important; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F0F4F9; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: #BFDBFE; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2563EB; }
 </style>""", unsafe_allow_html=True)
 
     st.markdown("""
