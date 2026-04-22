@@ -1072,37 +1072,112 @@ def _render_period_content(period: str):
 def render_home():
     st.markdown("""
 <style>
-.portal-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:860px; margin:0 auto 0; }
-.portal-card {
-    border-radius:22px; padding:38px 34px 28px; position:relative;
-    overflow:hidden; min-height:280px; display:flex; flex-direction:column;
-    justify-content:space-between;
+@keyframes portalFadeUp {
+    from { opacity:0; transform:translateY(22px); }
+    to   { opacity:1; transform:translateY(0); }
 }
-.portal-card-cdl  { background:linear-gradient(135deg,#071428 0%,#0d2040 55%,#0d1d3a 100%); border:1px solid rgba(61,130,245,0.28); box-shadow:0 8px 40px rgba(61,130,245,0.12); }
-.portal-card-sense{ background:linear-gradient(135deg,#0a0618 0%,#130826 55%,#0d1430 100%); border:1px solid rgba(37,99,235,0.28); box-shadow:0 8px 40px rgba(37,99,235,0.10); }
-.portal-card::before { content:""; position:absolute; top:-80px; right:-80px; width:300px; height:300px; border-radius:50%; pointer-events:none; }
-.portal-card-cdl::before  { background:radial-gradient(circle,rgba(61,130,245,0.13) 0%,transparent 68%); }
-.portal-card-sense::before{ background:radial-gradient(circle,rgba(37,99,235,0.14) 0%,transparent 68%); }
-.pc-badge { display:inline-flex; align-items:center; gap:6px; border-radius:99px; padding:4px 12px; font-size:0.6rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:20px; }
-.pc-badge-cdl  { background:rgba(61,130,245,0.12); border:1px solid rgba(61,130,245,0.3); color:#2563EB; }
-.pc-badge-sense{ background:rgba(37,99,235,0.12); border:1px solid rgba(37,99,235,0.3); color:#2563EB; }
-.pc-icon  { font-size:2.4rem; margin-bottom:14px; }
-.pc-title { font-size:1.45rem; font-weight:900; color:#e8f0fc; letter-spacing:-0.025em; margin-bottom:6px; }
-.pc-sub   { font-size:0.76rem; color:rgba(180,210,255,0.55); line-height:1.6; margin-bottom:20px; }
-.pc-pills { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:24px; }
-.pc-pill  { font-size:0.63rem; font-weight:600; color:rgba(200,225,255,0.5); background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:99px; padding:3px 10px; white-space:nowrap; }
+@keyframes portalOrb {
+    0%,100% { transform:translate(0,0) scale(1); }
+    50%      { transform:translate(12px,-12px) scale(1.08); }
+}
+.portal-hero {
+    text-align:center;
+    padding:56px 20px 44px;
+    animation: portalFadeUp 0.55s ease both;
+}
+.portal-wordmark {
+    display:inline-flex; align-items:center; gap:12px; margin-bottom:16px;
+}
+.portal-wordmark-text {
+    font-size:2.2rem; font-weight:900; color:#0B1F3A;
+    letter-spacing:-0.04em; line-height:1;
+}
+.portal-tagline-main {
+    font-size:1.05rem; font-weight:500; color:#475569;
+    margin-bottom:6px; letter-spacing:-0.01em;
+}
+.portal-tagline-main strong { color:#0B1F3A; font-weight:700; }
+.portal-sub-label {
+    font-size:0.65rem; font-weight:700; letter-spacing:0.18em;
+    text-transform:uppercase; color:#94a3b8; margin-top:4px;
+}
+
+.portal-grid { display:grid; grid-template-columns:1fr 1fr; gap:22px; max-width:900px; margin:0 auto; }
+
+.portal-card {
+    border-radius:20px; padding:32px 28px 24px; position:relative;
+    overflow:hidden; display:flex; flex-direction:column; gap:0;
+    transition: transform 0.22s, box-shadow 0.22s;
+    animation: portalFadeUp 0.55s ease both;
+}
+.portal-card:hover { transform:translateY(-4px); }
+.portal-card-cdl {
+    background:linear-gradient(145deg,#061224 0%,#0B1F3A 60%,#0d2655 100%);
+    border:1px solid rgba(37,99,235,0.32);
+    box-shadow:0 8px 40px rgba(11,31,58,0.35), 0 0 0 1px rgba(37,99,235,0.08);
+}
+.portal-card-cdl:hover { box-shadow:0 16px 60px rgba(37,99,235,0.28), 0 0 0 1px rgba(37,99,235,0.2); }
+.portal-card-sense {
+    background:linear-gradient(145deg,#061224 0%,#091d40 60%,#0d2655 100%);
+    border:1px solid rgba(96,165,250,0.28);
+    box-shadow:0 8px 40px rgba(11,31,58,0.35), 0 0 0 1px rgba(96,165,250,0.06);
+}
+.portal-card-sense:hover { box-shadow:0 16px 60px rgba(37,99,235,0.24), 0 0 0 1px rgba(96,165,250,0.2); }
+
+/* Orb glow */
+.portal-card::before {
+    content:""; position:absolute; top:-100px; right:-80px;
+    width:320px; height:320px; border-radius:50%; pointer-events:none;
+    animation: portalOrb 7s ease-in-out infinite;
+}
+.portal-card-cdl::before  { background:radial-gradient(circle, rgba(37,99,235,0.16) 0%, transparent 65%); }
+.portal-card-sense::before { background:radial-gradient(circle, rgba(96,165,250,0.14) 0%, transparent 65%); }
+
+.pc-badge {
+    display:inline-flex; align-items:center; gap:6px; border-radius:99px;
+    padding:4px 14px; font-size:0.58rem; font-weight:700;
+    letter-spacing:0.12em; text-transform:uppercase; margin-bottom:18px;
+}
+.pc-badge-cdl   { background:rgba(37,99,235,0.14); border:1px solid rgba(37,99,235,0.35); color:#60A5FA; }
+.pc-badge-sense { background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.32); color:#93C5FD; }
+
+.pc-title {
+    font-size:1.5rem; font-weight:900; color:#F1F5F9;
+    letter-spacing:-0.03em; line-height:1.15; margin-bottom:4px;
+}
+.pc-tagline {
+    font-size:0.82rem; font-weight:600;
+    letter-spacing:-0.01em; margin-bottom:12px;
+}
+.pc-tagline-cdl   { color:#60A5FA; }
+.pc-tagline-sense { color:#93C5FD; }
+.pc-divider {
+    height:1px; margin:14px 0;
+    background:linear-gradient(90deg,rgba(255,255,255,0.1),transparent);
+}
+.pc-desc {
+    font-size:0.73rem; color:rgba(186,210,240,0.62);
+    line-height:1.65; margin-bottom:18px;
+}
+.pc-pills { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:4px; }
+.pc-pill {
+    font-size:0.62rem; font-weight:600; color:rgba(186,210,240,0.55);
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.10);
+    border-radius:99px; padding:3px 10px; white-space:nowrap;
+}
 </style>""", unsafe_allow_html=True)
 
     _logo_html = _logo_img(52, 12)
     st.markdown(f"""
-<div style="text-align:center;padding:48px 20px 36px;">
-  <div style="display:inline-flex;align-items:center;gap:14px;margin-bottom:10px;">
+<div class="portal-hero">
+  <div class="portal-wordmark">
     {_logo_html}
-    <span style="font-size:1.9rem;font-weight:900;color:#e8f0fc;letter-spacing:-0.03em;">Convin</span>
+    <span class="portal-wordmark-text">Convin</span>
   </div>
-  <div style="font-size:0.78rem;font-weight:600;color:rgba(180,210,255,0.4);letter-spacing:0.14em;text-transform:uppercase;margin-top:6px;">
-    Select a workspace to continue
+  <div class="portal-tagline-main">
+    <strong>One platform.</strong> Complete conversation intelligence.
   </div>
+  <div class="portal-sub-label">Select a workspace to continue</div>
 </div>""", unsafe_allow_html=True)
 
     _col_cdl, _col_sense = st.columns(2)
@@ -1110,18 +1185,20 @@ def render_home():
     with _col_cdl:
         st.markdown("""
 <div class="portal-card portal-card-cdl">
-  <div>
-    <div class="pc-badge pc-badge-cdl">📊 Insights Platform</div>
-    <div class="pc-icon">📊</div>
-    <div class="pc-title">Convin Data Labs</div>
-    <div class="pc-sub">Insights report feedback, email campaigns, client management and KPI tracking.</div>
-    <div class="pc-pills">
-      <span class="pc-pill">📬 Campaign tracking</span>
-      <span class="pc-pill">⭐ CSAT feedback</span>
-      <span class="pc-pill">📧 Email delivery</span>
-      <span class="pc-pill">🏢 Client management</span>
-      <span class="pc-pill">📈 KPI monitoring</span>
-    </div>
+  <div class="pc-badge pc-badge-cdl">📊 Insights Platform</div>
+  <div class="pc-title">Convin Data Labs</div>
+  <div class="pc-tagline pc-tagline-cdl">Track every insight. Own every relationship.</div>
+  <div class="pc-divider"></div>
+  <div class="pc-desc">
+    Centralised insights report feedback, stakeholder email campaigns,
+    client management and real-time KPI tracking — all in one place.
+  </div>
+  <div class="pc-pills">
+    <span class="pc-pill">📬 Campaign tracking</span>
+    <span class="pc-pill">⭐ CSAT feedback</span>
+    <span class="pc-pill">📧 Email delivery</span>
+    <span class="pc-pill">🏢 Client management</span>
+    <span class="pc-pill">📈 KPI monitoring</span>
   </div>
 </div>""", unsafe_allow_html=True)
         if st.button("Open CDL Dashboard →", key="home_enter_cdl", use_container_width=True, type="primary"):
@@ -1132,21 +1209,23 @@ def render_home():
     with _col_sense:
         st.markdown("""
 <div class="portal-card portal-card-sense">
-  <div>
-    <div class="pc-badge pc-badge-sense">🎯 QA Intelligence</div>
-    <div class="pc-icon">🎯</div>
-    <div class="pc-title">Audit</div>
-    <div class="pc-sub">Real-time QA scoring, bot intelligence, auditor leaderboards and tier-based failure analysis.</div>
-    <div class="pc-pills">
-      <span class="pc-pill">🤖 Bot scoring</span>
-      <span class="pc-pill">🧠 Flow intelligence</span>
-      <span class="pc-pill">👤 Auditor leaderboard</span>
-      <span class="pc-pill">📊 Tier-based QA</span>
-      <span class="pc-pill">⚡ Auto-fail detection</span>
-    </div>
+  <div class="pc-badge pc-badge-sense">🎯 Auto QA · Bot Intelligence</div>
+  <div class="pc-title">Convin Sense Audit</div>
+  <div class="pc-tagline pc-tagline-sense">Auto-score every call. Never miss a failure.</div>
+  <div class="pc-divider"></div>
+  <div class="pc-desc">
+    Automated QA scoring, bot failure intelligence, tier-based parameter analysis,
+    auditor leaderboards and priority action plans — powered by Convin Sense.
+  </div>
+  <div class="pc-pills">
+    <span class="pc-pill">🤖 Auto QA scoring</span>
+    <span class="pc-pill">🧠 Bot intelligence</span>
+    <span class="pc-pill">👤 Auditor leaderboard</span>
+    <span class="pc-pill">📊 Tier-based QA</span>
+    <span class="pc-pill">⚡ Auto-fail detection</span>
   </div>
 </div>""", unsafe_allow_html=True)
-        if st.button("Open Audit →", key="home_enter_sense", use_container_width=True, type="primary"):
+        if st.button("Open Sense Audit →", key="home_enter_sense", use_container_width=True, type="primary"):
             st.session_state["app_mode"] = "Audit"
             st.session_state["current_page"] = "Audit"
             st.rerun()
