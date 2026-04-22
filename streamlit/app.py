@@ -5237,7 +5237,7 @@ def _render_sense_insights(df, fname, sheets=None):
             # ── KPI Band — vibrant soft gradient cards ────────────────────────
             _bc = "#059669" if (_avg_i or 0) >= 80 else "#d97706" if (_avg_i or 0) >= 60 else "#dc2626"
             _pr_c = "#059669" if pass_rate_i >= 80 else "#d97706" if pass_rate_i >= 60 else "#dc2626"
-            def _kpi_card(val, label, grad, txt="#fff", shadow="rgba(99,102,241,0.2)"):
+            def _kpi_card(val, label, grad, txt="#fff", shadow="rgba(37,99,235,0.2)"):
                 return (f'<div style="background:{grad};border-radius:14px;padding:18px 16px;'
                         f'box-shadow:0 4px 16px {shadow};text-align:center;min-height:88px;'
                         f'display:flex;flex-direction:column;align-items:center;justify-content:center;">'
@@ -5245,7 +5245,7 @@ def _render_sense_insights(df, fname, sheets=None):
                         f'<div style="font-size:0.6rem;font-weight:700;color:{txt};opacity:0.78;letter-spacing:0.1em;text-transform:uppercase;margin-top:6px;">{label}</div>'
                         f'</div>')
             _kc1,_kc2,_kc3,_kc4,_kc5,_kc6 = st.columns(6)
-            _kc1.markdown(_kpi_card(total_i,  "Total Audits",   "linear-gradient(135deg,#4338ca,#6366f1)", shadow="rgba(99,102,241,0.3)"), unsafe_allow_html=True)
+            _kc1.markdown(_kpi_card(total_i,  "Total Audits",   "linear-gradient(135deg,#0B1F3A,#2563EB)", shadow="rgba(37,99,235,0.3)"), unsafe_allow_html=True)
             _kc2.markdown(_kpi_card(f"{_avg_i or '—'}%", "Avg Score", "linear-gradient(135deg,#0891b2,#06b6d4)" if (_avg_i or 0)>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if (_avg_i or 0)>=60 else "linear-gradient(135deg,#dc2626,#ef4444)", shadow="rgba(8,145,178,0.25)"), unsafe_allow_html=True)
             _kc3.markdown(_kpi_card(f"{pass_rate_i}%", "Pass Rate",  "linear-gradient(135deg,#059669,#10b981)" if pass_rate_i>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if pass_rate_i>=60 else "linear-gradient(135deg,#dc2626,#ef4444)", shadow="rgba(5,150,105,0.25)"), unsafe_allow_html=True)
             _kc4.markdown(_kpi_card(pass_i,   "Passed",          "linear-gradient(135deg,#059669,#10b981)", shadow="rgba(5,150,105,0.3)"), unsafe_allow_html=True)
@@ -5301,7 +5301,7 @@ def _render_sense_insights(df, fname, sheets=None):
                 "critical": ("#fff1f2","#e11d48","#9f1239","#fecdd3"),
                 "warning":  ("#fffbf0","#d97706","#92400e","#fde68a"),
                 "success":  ("#ecfdf5","#059669","#064e3b","#a7f3d0"),
-                "info":     ("#eef2ff","#4f46e5","#312e81","#c7d2fe"),
+                "info":     ("#EBF5FF","#2563EB","#0B1F3A","#BFDBFE"),
             }
             _pri_order = {"critical": 0, "warning": 1, "info": 2, "success": 3}
             _sorted_ins = sorted(_qi2.get("insights", []), key=lambda x: _pri_order.get(x.get("type","info"), 2))
@@ -5535,9 +5535,9 @@ def _render_sense_insights(df, fname, sheets=None):
         _avg_g = "linear-gradient(135deg,#0891b2,#06b6d4)" if (_avg or 0)>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if (_avg or 0)>=60 else "linear-gradient(135deg,#dc2626,#ef4444)"
         _pr_g  = "linear-gradient(135deg,#059669,#10b981)" if _pr>=80 else "linear-gradient(135deg,#d97706,#f59e0b)" if _pr>=60 else "linear-gradient(135deg,#dc2626,#ef4444)"
         if label:
-            st.markdown(f'<div style="font-size:0.7rem;font-weight:700;color:#4338ca;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;background:linear-gradient(135deg,#eef2ff,#e0e7ff);padding:6px 14px;border-radius:20px;display:inline-block;">{label}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:0.7rem;font-weight:700;color:#2563EB;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;background:linear-gradient(135deg,#EBF5FF,#DBEAFE);padding:6px 14px;border-radius:20px;display:inline-block;">{label}</div>', unsafe_allow_html=True)
         _ec1,_ec2,_ec3,_ec4,_ec5,_ec6 = st.columns(6)
-        _ec1.markdown(_ekc(_tot,  "Audits",       "linear-gradient(135deg,#4338ca,#6366f1)","rgba(99,102,241,0.28)"), unsafe_allow_html=True)
+        _ec1.markdown(_ekc(_tot,  "Audits",       "linear-gradient(135deg,#0B1F3A,#2563EB)","rgba(37,99,235,0.28)"), unsafe_allow_html=True)
         _ec2.markdown(_ekc(f"{_avg or '—'}%","Avg Score",_avg_g,"rgba(8,145,178,0.22)"), unsafe_allow_html=True)
         _ec3.markdown(_ekc(f"{_pr}%","Pass Rate", _pr_g, "rgba(5,150,105,0.22)"), unsafe_allow_html=True)
         _ec4.markdown(_ekc(_pas,  "Passed",       "linear-gradient(135deg,#059669,#10b981)","rgba(5,150,105,0.28)"), unsafe_allow_html=True)
@@ -7009,14 +7009,14 @@ def render_convin_sense():
     _has_data = bool(st.session_state.get("sense_sheets"))
     _registry_init()
 
-    # ── Vibrant / cool / soft UI overrides for the Sense section ─────────────
+    # ── Convin brand UI overrides ─────────────────────────────────────────────
     st.markdown("""
 <style>
-/* ── Background: soft lavender-white ── */
-.stApp, .stApp > div, section.main > div { background: #f0f2ff !important; }
-.block-container { background: #f0f2ff !important; }
+/* ── Background: Convin light grey ── */
+.stApp, .stApp > div, section.main > div { background: #F5F7FA !important; }
+.block-container { background: #F5F7FA !important; }
 
-/* ── Section chip: colorful pill ── */
+/* ── Section chip: Convin blue pill ── */
 .section-chip {
     display: inline-flex !important;
     align-items: center !important;
@@ -7025,18 +7025,18 @@ def render_convin_sense():
     font-weight: 700 !important;
     letter-spacing: 0.09em !important;
     text-transform: uppercase !important;
-    color: #4338ca !important;
-    background: linear-gradient(135deg,#eef2ff,#e0e7ff) !important;
-    border: 1px solid #c7d2fe !important;
+    color: #2563EB !important;
+    background: linear-gradient(135deg,#EBF5FF,#DBEAFE) !important;
+    border: 1px solid #BFDBFE !important;
     border-radius: 20px !important;
     padding: 4px 14px !important;
     margin-bottom: 14px !important;
-    box-shadow: 0 2px 6px rgba(99,102,241,0.12) !important;
+    box-shadow: 0 2px 6px rgba(37,99,235,0.10) !important;
 }
 
 /* ── Tabs: pill-style bar ── */
 .stTabs [data-baseweb="tab-list"] {
-    background: #e8eaff !important;
+    background: #DBEAFE !important;
     border-radius: 12px !important;
     padding: 4px !important;
     border-bottom: none !important;
@@ -7054,8 +7054,8 @@ def render_convin_sense():
 }
 .stTabs [aria-selected="true"] {
     background: #fff !important;
-    color: #4338ca !important;
-    box-shadow: 0 2px 8px rgba(99,102,241,0.18) !important;
+    color: #2563EB !important;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.18) !important;
 }
 .stTabs [data-baseweb="tab-panel"] { padding-top: 18px !important; }
 
@@ -7063,20 +7063,20 @@ def render_convin_sense():
 .streamlit-expanderHeader {
     font-size: 0.78rem !important;
     font-weight: 600 !important;
-    color: #1e1b4b !important;
+    color: #0B1F3A !important;
     background: #fff !important;
     border-radius: 10px 10px 0 0 !important;
 }
 .streamlit-expanderContent {
     background: #fff !important;
-    border: 1px solid #e0e7ff !important;
+    border: 1px solid #DBEAFE !important;
     border-top: none !important;
     border-radius: 0 0 10px 10px !important;
 }
 
-/* ── Dataframe: soft header + alternating rows ── */
+/* ── Dataframe: Convin blue header + alternating rows ── */
 .stDataFrame table thead th {
-    background: linear-gradient(135deg,#4338ca,#6366f1) !important;
+    background: linear-gradient(135deg,#0B1F3A,#2563EB) !important;
     color: #fff !important;
     font-size: 0.67rem !important;
     font-weight: 700 !important;
@@ -7084,24 +7084,24 @@ def render_convin_sense():
     text-transform: uppercase !important;
     border: none !important;
 }
-.stDataFrame table tbody tr:nth-child(even) td { background: #f5f3ff !important; }
+.stDataFrame table tbody tr:nth-child(even) td { background: #EFF6FF !important; }
 .stDataFrame table tbody td {
     font-size: 0.77rem !important;
-    color: #1e1b4b !important;
-    border-color: #ede9fe !important;
+    color: #0B1F3A !important;
+    border-color: #DBEAFE !important;
 }
-.stDataFrame table tbody tr:hover td { background: #ede9fe !important; }
+.stDataFrame table tbody tr:hover td { background: #DBEAFE !important; }
 
 /* ── Inputs: soft rounded ── */
 .stSelectbox > div > div, .stTextInput > div > div, .stDateInput > div > div {
-    border: 1.5px solid #c7d2fe !important;
+    border: 1.5px solid #BFDBFE !important;
     border-radius: 10px !important;
     background: #fff !important;
 }
 .stSelectbox > div > div:focus-within,
 .stTextInput > div > div:focus-within {
-    border-color: #6366f1 !important;
-    box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important;
+    border-color: #2563EB !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12) !important;
 }
 .stSelectbox label, .stTextInput label, .stDateInput label,
 .stRadio label, .stNumberInput label, .stTextArea label {
@@ -7110,25 +7110,25 @@ def render_convin_sense():
     color: #4b5563 !important;
 }
 
-/* ── Primary button: vibrant indigo gradient ── */
+/* ── Primary button: Convin blue ── */
 .stButton > button[kind="primary"] {
-    background: linear-gradient(135deg,#4338ca,#6366f1) !important;
+    background: linear-gradient(135deg,#0B1F3A,#2563EB) !important;
     border: none !important;
     color: #fff !important;
     font-weight: 700 !important;
     border-radius: 10px !important;
     letter-spacing: 0.04em !important;
-    box-shadow: 0 4px 12px rgba(99,102,241,0.35) !important;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.30) !important;
     transition: box-shadow 0.2s, transform 0.15s !important;
 }
 .stButton > button[kind="primary"]:hover {
-    box-shadow: 0 6px 18px rgba(99,102,241,0.45) !important;
+    box-shadow: 0 6px 18px rgba(37,99,235,0.42) !important;
     transform: translateY(-1px) !important;
 }
 .stButton > button[kind="secondary"] {
     background: #fff !important;
-    border: 1.5px solid #c7d2fe !important;
-    color: #4338ca !important;
+    border: 1.5px solid #BFDBFE !important;
+    color: #2563EB !important;
     border-radius: 10px !important;
     font-weight: 600 !important;
 }
@@ -7140,7 +7140,7 @@ def render_convin_sense():
 }
 .stRadio > div[role="radiogroup"] > label {
     background: #fff !important;
-    border: 1.5px solid #c7d2fe !important;
+    border: 1.5px solid #BFDBFE !important;
     border-radius: 20px !important;
     padding: 5px 16px !important;
     font-size: 0.75rem !important;
@@ -7150,10 +7150,10 @@ def render_convin_sense():
     transition: background 0.15s !important;
 }
 .stRadio > div[role="radiogroup"] > label:has(input:checked) {
-    background: linear-gradient(135deg,#4338ca,#6366f1) !important;
+    background: linear-gradient(135deg,#0B1F3A,#2563EB) !important;
     border-color: transparent !important;
     color: #fff !important;
-    box-shadow: 0 3px 10px rgba(99,102,241,0.3) !important;
+    box-shadow: 0 3px 10px rgba(37,99,235,0.28) !important;
 }
 </style>""", unsafe_allow_html=True)
 
