@@ -5587,7 +5587,8 @@ def _render_sense_insights(df, fname, sheets=None):
         _all_params = []
         for _tier in _QA_SCHEMA["tiers"]:
             for _p in _tier["params"]:
-                _pmax = max(int(o) for o in _p["options"] if o != "NA")
+                _pmax_vals = [int(o) for o in _p["options"] if o not in ("NA",) and str(o).lstrip("-").isdigit()]
+                _pmax = max(_pmax_vals) if _pmax_vals else 2
                 _all_params.append({"col": _p["col"], "max": _pmax, "weight": _p["weight"], "tier": _tier["label"], "color": _tier["color"]})
         _param_rows = []
         for _pp in _all_params:
@@ -5655,7 +5656,8 @@ def _render_sense_insights(df, fname, sheets=None):
         _all_params = []
         for _tier in _QA_SCHEMA["tiers"]:
             for _p in _tier["params"]:
-                _pmax = max(int(o) for o in _p["options"] if o != "NA")
+                _pmax_vals = [int(o) for o in _p["options"] if o not in ("NA",) and str(o).lstrip("-").isdigit()]
+                _pmax = max(_pmax_vals) if _pmax_vals else 2
                 if _p["col"] in df.columns:
                     _vals = df[_p["col"]].astype(str).str.strip()
                     _vals = _vals[~_vals.str.upper().isin(["NA",""])]
