@@ -4012,15 +4012,29 @@ def _render_sense_scorecard(sheets, legend_map):
     # ── Merge built-in Convin Sense params into legend map ────────────────────
     legend_map = _merge_builtin_params(legend_map)
 
-    # ── Find audit sheet (prefer edited version from session state) ────────────
+    # ── Find audit sheet (prefer name match, then column-content fallback) ──────
     audit_df   = None
     audit_name = None
+    _AUDIT_NAME_KW = ("audit", "qa", "review", "score")
+    _AUDIT_COL_KW  = {"Bot Score", "Status", "QA", "Campaign Name"}
     for k, v in sheets.items():
-        if any(kw in k.lower() for kw in ("audit", "qa", "review", "score")):
+        if any(kw in k.lower() for kw in _AUDIT_NAME_KW):
             _safe_k  = k.replace(" ", "_").lower()
             audit_df = st.session_state.get(f"sense_audit_edits_{_safe_k}", v).copy()
             audit_name = k
             break
+    if audit_df is None:
+        # Fallback: pick the sheet whose columns best match known audit columns
+        _best_k, _best_v, _best_score = None, None, 0
+        for k, v in sheets.items():
+            if hasattr(v, "columns"):
+                _sc = len(_AUDIT_COL_KW & set(str(c).strip() for c in v.columns))
+                if _sc > _best_score:
+                    _best_score, _best_k, _best_v = _sc, k, v
+        if _best_k and _best_score > 0:
+            _safe_k  = _best_k.replace(" ", "_").lower()
+            audit_df = st.session_state.get(f"sense_audit_edits_{_safe_k}", _best_v).copy()
+            audit_name = _best_k
 
     # ── Merge form-submitted audit log into audit_df ──────────────────────────
     _form_log = st.session_state.get("sense_audit_log")
@@ -5167,8 +5181,9 @@ def _render_sense_sheet(df, sheet_name, fname, sheets=None):
         )
 
 
-def _render_sense_insights(df, fname, sheets=None):
+def _render_sense_insights(df, fname, sheets=None, legend_map=None):
     """Comprehensive Insights Dashboard — rule-based analytics + AI deep-dive."""
+    legend_map = _merge_builtin_params(legend_map or {})
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
     # ── Build audit_df — always seeds from form log / seed records ────────────
@@ -5180,10 +5195,22 @@ def _render_sense_insights(df, fname, sheets=None):
 
     _audit_df_ins = None
     _all_sheets   = sheets or {}
+    _AUDIT_NAME_KW_I = ("audit", "qa", "review", "score")
+    _AUDIT_COL_KW_I  = {"Bot Score", "Status", "QA", "Campaign Name"}
     for _sk, _sv in _all_sheets.items():
-        if any(kw in _sk.lower() for kw in ("audit", "qa", "review", "score")):
+        if any(kw in _sk.lower() for kw in _AUDIT_NAME_KW_I):
             _audit_df_ins = _sv.copy()
             break
+    if _audit_df_ins is None:
+        # Fallback: pick sheet whose columns best match known audit columns
+        _bi_k, _bi_v, _bi_sc = None, None, 0
+        for _sk, _sv in _all_sheets.items():
+            if hasattr(_sv, "columns"):
+                _s = len(_AUDIT_COL_KW_I & set(str(c).strip() for c in _sv.columns))
+                if _s > _bi_sc:
+                    _bi_sc, _bi_k, _bi_v = _s, _sk, _sv
+        if _bi_k and _bi_sc > 0:
+            _audit_df_ins = _bi_v.copy()
 
     if _form_log_ins:
         _log_df_ins = pd.DataFrame(_form_log_ins)
@@ -5558,11 +5585,23 @@ def _render_sense_insights(df, fname, sheets=None):
 
     def _render_param_weakness(df, key_pfx):
         _all_params = []
+        _seen_cols = set()
         for _tier in _QA_SCHEMA["tiers"]:
             for _p in _tier["params"]:
                 _pmax_vals = [int(o) for o in _p["options"] if o not in ("NA",) and str(o).lstrip("-").isdigit()]
                 _pmax = max(_pmax_vals) if _pmax_vals else 2
                 _all_params.append({"col": _p["col"], "max": _pmax, "weight": _p["weight"], "tier": _tier["label"], "color": _tier["color"]})
+                _seen_cols.add(_p["col"].lower())
+        # Add any Legend params not already in QA schema
+        for _lp, _lopts in legend_map.items():
+            if _lp.lower() in _seen_cols:
+                continue
+            # Skip metadata / identity columns
+            if any(kw in _lp.lower() for kw in ("date","name","id","phone","link","status","score","qa","client","campaign","pm","csm","lead","disposition","conversation")):
+                continue
+            _lmax_vals = [int(o) for o in _lopts if str(o).lstrip("-").isdigit()]
+            _lmax = max(_lmax_vals) if _lmax_vals else 1
+            _all_params.append({"col": _lp, "max": _lmax, "weight": 1.0, "tier": "Legend", "color": "#2563EB"})
         _param_rows = []
         for _pp in _all_params:
             if _pp["col"] not in df.columns:
@@ -7679,7 +7718,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         with _tabs_empty[2]:
             _render_legend_page()
         with _tabs_empty[3]:
-            _render_sense_insights(pd.DataFrame(), "Seed Data", {})
+            _render_sense_insights(pd.DataFrame(), "Seed Data", {}, legend_map=_legend_map_pre)
         return
 
     # ── File info bar ─────────────────────────────────────────────────────────
@@ -7761,8 +7800,12 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         _render_registry()
 
     with _tabs[-1]:
-        _primary_df = next(iter(sheets.values()))
-        _render_sense_insights(_primary_df, fname, sheets)
+        # Prefer the Audit sheet as the primary df; fall back to first sheet
+        _primary_df = next(
+            (v for k, v in sheets.items() if any(kw in k.lower() for kw in ("audit","qa","review","score"))),
+            next(iter(sheets.values()))
+        )
+        _render_sense_insights(_primary_df, fname, sheets, legend_map=_legend_map)
 
 
 if not st.session_state["show_sidebar"]:
