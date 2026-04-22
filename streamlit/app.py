@@ -16,7 +16,7 @@ def _logo_img(size: int = 34, br: int = 8) -> str:
                 f'width="{size}" height="{size}" '
                 f'style="border-radius:{br}px;display:block;flex-shrink:0;" />')
     except Exception:
-        return f'<div style="width:{size}px;height:{size}px;border-radius:{br}px;background:linear-gradient(135deg,#e0368e,#3d8ef5);display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:900;color:#fff;">CDL</div>'
+        return f'<div style="width:{size}px;height:{size}px;border-radius:{br}px;background:linear-gradient(135deg,#0B1F3A,#2563EB);display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:900;color:#fff;">CDL</div>'
 
 import streamlit as st
 import pandas as pd
@@ -137,10 +137,10 @@ html, body, [class*="css"] {{ font-family: 'Inter', -apple-system, sans-serif; }
 </style>
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 16px;">
   <div style="background:#071428;border-radius:24px;padding:56px 48px;max-width:460px;width:100%;
-              text-align:center;box-shadow:0 0 60px rgba(224,54,142,0.3),0 4px 32px rgba(0,0,0,0.6);border:1px solid rgba(224,54,142,0.2);">
+              text-align:center;box-shadow:0 0 60px rgba(37,99,235,0.3),0 4px 32px rgba(0,0,0,0.6);border:1px solid rgba(37,99,235,0.2);">
     <div style="font-size:52px;margin-bottom:20px;">✅</div>
     <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
-                background:linear-gradient(108deg,#e0368e,#ff6b78 52%,#3d8ef5);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;">Feedback received</div>
+                background:linear-gradient(135deg,#0B1F3A,#2563EB);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;">Feedback received</div>
     <div style="font-size:26px;font-weight:700;color:#e8f0fc;margin-bottom:10px;">Thank you!</div>
     <div style="font-size:15px;color:#6699cc;line-height:1.65;margin-bottom:28px;">
       You rated this report <strong style="color:#e0ecf8;">{_r} out of 5 stars</strong>.<br>
@@ -186,27 +186,26 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-    --brand-primary:   #e0368e;
-    --brand-dark:      #c4267a;
-    --brand-deep:      #b5206f;
-    --brand-navy:      #8a1855;
-    --brand-bright:    #3d8ef5;
-    --brand-pink:      #e0368e;
-    --brand-coral:     #ff6b78;
-    --neutral-black:   #0d1d3a;
+    --brand-primary:   #2563EB;
+    --brand-dark:      #1D4ED8;
+    --brand-deep:      #1e40af;
+    --brand-navy:      #0B1F3A;
+    --brand-bright:    #60A5FA;
+    --brand-accent:    #38BDF8;
+    --neutral-black:   #0B1F3A;
     --neutral-body:    #1e3a5f;
-    --neutral-secondary: #3a6699;
-    --neutral-outline: rgba(61,130,245,0.25);
-    --neutral-smoke:   rgba(61,130,245,0.06);
-    --bg-page:         #e8f4ff;
+    --neutral-secondary: #475569;
+    --neutral-outline: rgba(37,99,235,0.22);
+    --neutral-smoke:   rgba(37,99,235,0.06);
+    --bg-page:         #F0F4F9;
     --bg-card:         #ffffff;
-    --bg-card-2:       #f0f7ff;
-    --bg-blue-xl:      rgba(61,130,245,0.06);
-    --bg-blue-shade:   rgba(61,130,245,0.18);
-    --gradient-blue:   linear-gradient(108deg, #e0368e, #ff6b78 52%, #3d8ef5);
-    --gradient-brand:  linear-gradient(108deg, #e0368e, #ff6b78 52%, #3d8ef5);
-    --glow-pink:       0 0 24px rgba(61,130,245,0.3);
-    --glow-strong:     0 0 40px rgba(61,130,245,0.35), 0 0 80px rgba(61,142,245,0.15);
+    --bg-card-2:       #EBF3FF;
+    --bg-blue-xl:      rgba(37,99,235,0.06);
+    --bg-blue-shade:   rgba(37,99,235,0.15);
+    --gradient-blue:   linear-gradient(135deg, #0B1F3A, #2563EB);
+    --gradient-brand:  linear-gradient(135deg, #0B1F3A, #2563EB);
+    --glow-blue:       0 0 24px rgba(37,99,235,0.28);
+    --glow-strong:     0 0 40px rgba(37,99,235,0.3), 0 0 80px rgba(96,165,250,0.12);
 }
 
 html, body, [class*="css"] {
@@ -230,11 +229,11 @@ header    { visibility: hidden; }
 }
 
 /* ── Sidebar ── */
-section[data-testid="stSidebar"] { background: #cde4ff !important; border-right: 1px solid rgba(61,130,245,0.25) !important; }
-section[data-testid="stSidebar"] > div { background: #cde4ff !important; }
-section[data-testid="stSidebar"] label { color: #1e3a5f !important; font-size: 0.86rem !important; font-weight: 500 !important; }
-section[data-testid="stSidebar"] p { color: #1e3a5f !important; }
-section[data-testid="stSidebar"] span { color: #1e3a5f !important; }
+section[data-testid="stSidebar"] { background: #E8F0FB !important; border-right: 1px solid rgba(37,99,235,0.2) !important; }
+section[data-testid="stSidebar"] > div { background: #E8F0FB !important; }
+section[data-testid="stSidebar"] label { color: #0B1F3A !important; font-size: 0.86rem !important; font-weight: 500 !important; }
+section[data-testid="stSidebar"] p { color: #0B1F3A !important; }
+section[data-testid="stSidebar"] span { color: #0B1F3A !important; }
 section[data-testid="stSidebar"] .stRadio > div { gap: 2px !important; }
 section[data-testid="stSidebar"] .stRadio label {
     padding: 8px 10px !important;
@@ -242,41 +241,41 @@ section[data-testid="stSidebar"] .stRadio label {
     transition: background 0.15s !important;
 }
 section[data-testid="stSidebar"] .stRadio label:has(input:checked) {
-    background: rgba(61,130,245,0.15) !important;
+    background: rgba(37,99,235,0.12) !important;
     color: var(--brand-primary) !important;
     border-left: 3px solid var(--brand-primary) !important;
 }
-section[data-testid="stSidebar"] hr { border-color: rgba(61,130,245,0.15) !important; }
+section[data-testid="stSidebar"] hr { border-color: rgba(37,99,235,0.15) !important; }
 
 /* ── Inputs & textareas ── */
 [data-testid="stTextInput"] input,
 [data-testid="stTextArea"] textarea {
-    background: #f0f8ff !important;
-    border: 1.5px solid rgba(61,130,245,0.25) !important;
+    background: #F7FAFF !important;
+    border: 1.5px solid rgba(37,99,235,0.22) !important;
     border-radius: 10px !important;
-    color: #0d1d3a !important;
+    color: #0B1F3A !important;
     font-size: 0.84rem !important;
     transition: border-color 0.2s, box-shadow 0.2s !important;
 }
 [data-testid="stTextInput"] input::placeholder,
-[data-testid="stTextArea"] textarea::placeholder { color: #8aabcc !important; }
+[data-testid="stTextArea"] textarea::placeholder { color: #94a3b8 !important; }
 [data-testid="stTextInput"] input:focus,
 [data-testid="stTextArea"] textarea:focus {
     border-color: var(--brand-primary) !important;
-    box-shadow: 0 0 0 3px rgba(61,130,245,0.18), var(--glow-pink) !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15), var(--glow-blue) !important;
     outline: none !important;
 }
 [data-testid="stSelectbox"] > div > div {
-    background: #f0f8ff !important;
-    border: 1.5px solid rgba(61,130,245,0.25) !important;
+    background: #F7FAFF !important;
+    border: 1.5px solid rgba(37,99,235,0.22) !important;
     border-radius: 10px !important;
-    color: #0d1d3a !important;
+    color: #0B1F3A !important;
 }
 [data-testid="stMultiSelect"] > div > div {
-    background: #f0f8ff !important;
-    border: 1.5px solid rgba(61,130,245,0.25) !important;
+    background: #F7FAFF !important;
+    border: 1.5px solid rgba(37,99,235,0.22) !important;
     border-radius: 10px !important;
-    color: #0d1d3a !important;
+    color: #0B1F3A !important;
 }
 
 /* ── Buttons ── */
@@ -289,41 +288,41 @@ section[data-testid="stSidebar"] hr { border-color: rgba(61,130,245,0.15) !impor
     border: none !important;
 }
 .stButton > button[kind="primary"] {
-    background: linear-gradient(108deg, #e0368e, #ff6b78 52%, #3d8ef5) !important;
+    background: linear-gradient(135deg, #0B1F3A, #2563EB) !important;
     color: #fff !important;
-    box-shadow: 0 2px 14px rgba(61,130,245,0.5) !important;
+    box-shadow: 0 2px 14px rgba(37,99,235,0.4) !important;
 }
 .stButton > button[kind="primary"]:hover {
     filter: brightness(1.1) !important;
-    box-shadow: 0 4px 24px rgba(61,130,245,0.7), 0 0 40px rgba(224,54,142,0.2) !important;
+    box-shadow: 0 4px 24px rgba(37,99,235,0.6), 0 0 40px rgba(96,165,250,0.2) !important;
     transform: translateY(-2px) !important;
 }
 .stButton > button[kind="secondary"] {
-    background: rgba(61,130,245,0.06) !important;
-    border: 1px solid rgba(61,130,245,0.25) !important;
-    color: #3a6699 !important;
+    background: rgba(37,99,235,0.06) !important;
+    border: 1px solid rgba(37,99,235,0.22) !important;
+    color: #2563EB !important;
 }
 .stButton > button[kind="secondary"]:hover {
-    background: rgba(61,130,245,0.07) !important;
-    border-color: rgba(224,54,142,0.4) !important;
-    color: #e0368e !important;
+    background: rgba(37,99,235,0.10) !important;
+    border-color: rgba(37,99,235,0.45) !important;
+    color: #1D4ED8 !important;
     transform: translateY(-1px) !important;
 }
 
 /* ── Download button ── */
 [data-testid="stDownloadButton"] button {
-    background: rgba(61,130,245,0.07) !important;
-    border: 1px solid rgba(61,130,245,0.3) !important;
+    background: rgba(37,99,235,0.07) !important;
+    border: 1px solid rgba(37,99,235,0.28) !important;
     border-radius: 8px !important;
-    color: #e0368e !important;
+    color: #2563EB !important;
     font-size: 0.82rem !important;
     font-weight: 600 !important;
     transition: all 0.2s ease !important;
 }
 [data-testid="stDownloadButton"] button:hover {
-    background: rgba(61,130,245,0.18) !important;
-    border-color: rgba(61,130,245,0.55) !important;
-    box-shadow: 0 0 16px rgba(224,54,142,0.3) !important;
+    background: rgba(37,99,235,0.14) !important;
+    border-color: rgba(37,99,235,0.5) !important;
+    box-shadow: 0 0 16px rgba(37,99,235,0.25) !important;
     transform: translateY(-1px) !important;
 }
 
@@ -423,9 +422,9 @@ label { color: #3a6699 !important; font-size: 0.8rem !important; font-weight: 50
     border-radius: 16px 16px 0 0;
     background: rgba(61,130,245,0.3);
 }
-.metric-card.accent-blue::before   { background: var(--gradient-blue); box-shadow: 0 2px 12px rgba(224,54,142,0.6); }
+.metric-card.accent-blue::before   { background: var(--gradient-blue); box-shadow: 0 2px 12px rgba(37,99,235,0.5); }
 .metric-card.accent-green::before  { background: linear-gradient(90deg, #0ebc6e, #42ba78); box-shadow: 0 2px 12px rgba(14,188,110,0.5); }
-.metric-card.accent-red::before    { background: linear-gradient(90deg, #e72b3b, #ff6b78); box-shadow: 0 2px 12px rgba(231,43,59,0.5); }
+.metric-card.accent-red::before    { background: linear-gradient(90deg, #e72b3b, #60A5FA); box-shadow: 0 2px 12px rgba(231,43,59,0.5); }
 .metric-card.accent-amber::before  { background: linear-gradient(90deg, #d97706, #fbbf24); box-shadow: 0 2px 12px rgba(217,119,6,0.5); }
 
 .metric-label {
@@ -466,14 +465,14 @@ label { color: #3a6699 !important; font-size: 0.8rem !important; font-weight: 50
     animation: cardEntry 0.5s ease both;
 }
 .csat-score-side { text-align: center; padding-right: 2rem; border-right: 1px solid rgba(61,130,245,0.15); }
-.csat-number { font-size: 3.2rem; font-weight: 800; background: var(--gradient-brand); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.05em; line-height: 1; filter: drop-shadow(0 0 12px rgba(224,54,142,0.4)); }
+.csat-number { font-size: 3.2rem; font-weight: 800; background: var(--gradient-brand); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.05em; line-height: 1; filter: drop-shadow(0 0 12px rgba(37,99,235,0.35)); }
 .csat-stars { color: #ffaa00; font-size: 1.1rem; margin: 10px 0 6px; letter-spacing: 3px; text-shadow: 0 0 10px rgba(255,170,0,0.5); }
 .csat-count { font-size: 0.7rem; color: #7a99bb; }
 .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 11px; }
 .bar-row:last-child { margin-bottom: 0; }
 .bar-star  { font-size: 0.67rem; color: #7a99bb; width: 18px; text-align: right; flex-shrink: 0; }
 .bar-track { flex: 1; height: 6px; background: rgba(61,130,245,0.12); border-radius: 99px; overflow: hidden; }
-.bar-fill  { height: 100%; border-radius: 99px; background: var(--gradient-blue); box-shadow: 0 0 8px rgba(224,54,142,0.4); animation: barSlide 1s ease both; }
+.bar-fill  { height: 100%; border-radius: 99px; background: linear-gradient(90deg,#2563EB,#60A5FA); box-shadow: 0 0 8px rgba(37,99,235,0.3); animation: barSlide 1s ease both; }
 .bar-pct   { font-size: 0.67rem; color: #3a6699; width: 30px; text-align: right; flex-shrink: 0; }
 .bar-count { font-size: 0.64rem; color: #7a99bb; width: 14px; flex-shrink: 0; }
 .resp-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(61,130,245,0.12); }
@@ -499,12 +498,12 @@ label { color: #3a6699 !important; font-size: 0.8rem !important; font-weight: 50
 .page-header-icon {
     width: 42px; height: 42px;
     border-radius: 12px;
-    background: rgba(224,54,142,0.1);
+    background: rgba(37,99,235,0.10);
     display: flex; align-items: center; justify-content: center;
     font-size: 1.2rem;
     flex-shrink: 0;
-    border: 1px solid rgba(61,130,245,0.3);
-    box-shadow: 0 0 16px rgba(224,54,142,0.2);
+    border: 1px solid rgba(37,99,235,0.28);
+    box-shadow: 0 0 16px rgba(37,99,235,0.18);
 }
 .page-header-text { flex: 1; }
 .page-title {
@@ -530,20 +529,20 @@ label { color: #3a6699 !important; font-size: 0.8rem !important; font-weight: 50
     animation: cardEntry 0.5s ease both;
 }
 .client-repo-card:hover {
-    box-shadow: 0 8px 40px rgba(61,130,245,0.26), 0 0 60px rgba(61,142,245,0.08);
-    border-color: rgba(224,54,142,0.4);
+    box-shadow: 0 8px 40px rgba(37,99,235,0.22), 0 0 60px rgba(96,165,250,0.08);
+    border-color: rgba(37,99,235,0.4);
     transform: translateY(-3px);
 }
 .tag-chip {
     display: inline-block;
-    background: rgba(224,54,142,0.1);
-    color: #e0368e;
+    background: rgba(37,99,235,0.10);
+    color: #2563EB;
     font-size: 0.61rem;
     font-weight: 700;
     padding: 3px 10px;
     border-radius: 99px;
     margin: 2px 3px 0 0;
-    border: 1px solid rgba(224,54,142,0.2);
+    border: 1px solid rgba(37,99,235,0.22);
     letter-spacing: 0.02em;
 }
 
@@ -578,8 +577,8 @@ label { color: #3a6699 !important; font-size: 0.8rem !important; font-weight: 50
     transition: box-shadow 0.25s, border-color 0.25s, transform 0.2s;
 }
 .draft-card:hover {
-    box-shadow: 0 8px 36px rgba(224,54,142,0.2);
-    border-color: rgba(61,130,245,0.4);
+    box-shadow: 0 8px 36px rgba(37,99,235,0.18);
+    border-color: rgba(37,99,235,0.4);
     transform: translateY(-2px);
 }
 .client-card {
@@ -593,14 +592,14 @@ label { color: #3a6699 !important; font-size: 0.8rem !important; font-weight: 50
 .client-name { color: #0d1d3a; font-weight: 600; font-size: 0.9rem; }
 .email-pill {
     display: inline-block;
-    background: rgba(224,54,142,0.1);
+    background: rgba(37,99,235,0.08);
     color: var(--brand-primary);
     font-size: 0.7rem;
     font-weight: 500;
     padding: 3px 10px;
     border-radius: 6px;
     margin: 3px 3px 0 0;
-    border: 1px solid rgba(61,130,245,0.26);
+    border: 1px solid rgba(37,99,235,0.24);
 }
 
 /* ── Section labels ── */
@@ -613,12 +612,12 @@ label { color: #3a6699 !important; font-size: 0.8rem !important; font-weight: 50
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--brand-primary);
-    background: rgba(224,54,142,0.1);
-    border: 1px solid rgba(61,130,245,0.3);
+    background: rgba(37,99,235,0.08);
+    border: 1px solid rgba(37,99,235,0.28);
     border-radius: 6px;
     padding: 3px 10px;
     margin-bottom: 14px;
-    box-shadow: 0 0 12px rgba(61,130,245,0.18);
+    box-shadow: 0 0 10px rgba(37,99,235,0.12);
 }
 
 /* ── Client avatar ── */
@@ -628,7 +627,7 @@ label { color: #3a6699 !important; font-size: 0.8rem !important; font-weight: 50
     display: flex; align-items: center; justify-content: center;
     font-size: 0.82rem; font-weight: 800;
     flex-shrink: 0;
-    box-shadow: 0 4px 16px rgba(61,130,245,0.12), 0 0 20px rgba(224,54,142,0.15);
+    box-shadow: 0 4px 16px rgba(37,99,235,0.18), 0 0 20px rgba(11,31,58,0.12);
 }
 
 /* ── Template card ── */
@@ -669,25 +668,25 @@ label { color: #3a6699 !important; font-size: 0.8rem !important; font-weight: 50
 
 /* ── Nav strip ── */
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) {
-    background: #daeeff !important;
-    border-bottom: 1px solid rgba(61,130,245,0.2) !important;
-    box-shadow: 0 1px 20px rgba(61,130,245,0.08) !important;
+    background: #E2ECFB !important;
+    border-bottom: 1px solid rgba(37,99,235,0.18) !important;
+    box-shadow: 0 1px 20px rgba(37,99,235,0.07) !important;
 }
 
 /* ── Tab overrides ── */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
     border-bottom-color: rgba(61,130,245,0.18) !important;
 }
-[data-baseweb="tab"] { color: #3a6699 !important; }
+[data-baseweb="tab"] { color: #475569 !important; }
 [aria-selected="true"][data-baseweb="tab"] {
-    color: #e0368e !important;
-    border-bottom-color: #e0368e !important;
+    color: #2563EB !important;
+    border-bottom-color: #2563EB !important;
 }
 
 /* ── Streamlit overrides ── */
 p, .stMarkdown p { color: #1e3a5f !important; }
-h1, h2, h3 { color: #0d1d3a !important; }
-[data-testid="stMetricValue"] { color: #0d1d3a !important; }
+h1, h2, h3 { color: #0B1F3A !important; }
+[data-testid="stMetricValue"] { color: #0B1F3A !important; }
 
 /* ── Live badge ── */
 .live-dot {
@@ -735,9 +734,9 @@ def _render_login_page():
         margin-bottom: 1.6rem;
         filter: drop-shadow(0 8px 24px rgba(61,130,245,0.35));
     }}
-    .login-brand {{ font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #e0368e; margin-bottom: 6px; }}
+    .login-brand {{ font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #2563EB; margin-bottom: 6px; }}
     .login-title {{ font-size: 1.5rem; font-weight: 800; color: #0d1d3a; margin-bottom: 0.3rem; letter-spacing: -0.03em; line-height: 1.2; }}
-    .login-divider {{ width: 40px; height: 3px; background: linear-gradient(90deg, #e0368e, #ff6b78 52%, #3d8ef5); border-radius: 2px; margin: 12px auto 20px; box-shadow: 0 0 10px rgba(61,130,245,0.3); }}
+    .login-divider {{ width: 40px; height: 3px; background: linear-gradient(90deg, #0B1F3A, #2563EB); border-radius: 2px; margin: 12px auto 20px; box-shadow: 0 0 10px rgba(61,130,245,0.3); }}
     .login-sub {{ font-size: 0.83rem; color: #2a5080; margin-bottom: 2rem; }}
     </style>
     <div class="login-wrap">
@@ -775,7 +774,7 @@ with st.sidebar:
             """ + _logo_img(36, 10) + """
             <div>
                 <div style="color:#e0ecf8;font-weight:700;font-size:0.9rem;letter-spacing:-0.01em;line-height:1.2;">Convin Data Labs</div>
-                <div style="color:#e0368e;font-size:0.6rem;margin-top:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">Settings</div>
+                <div style="color:#2563EB;font-size:0.6rem;margin-top:2px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">Settings</div>
             </div>
         </div>
     </div>
@@ -863,7 +862,7 @@ def _email_table_html(rows: list) -> str:
     headers = ["Email", "DL Report Name", "Del", "Open", "Click", "Resp", "Score", "Date"]
     hrow = f'<tr>{"".join(f"<th {th}>{h}</th>" for h in headers)}</tr>'
     brows = "".join(
-        f"""<tr style="transition:background 0.15s;" onmouseover="this.style.background='rgba(224,54,142,0.05)'" onmouseout="this.style.background='transparent'">
+        f"""<tr style="transition:background 0.15s;" onmouseover="this.style.background='rgba(37,99,235,0.05)'" onmouseout="this.style.background='transparent'">
           <td style="font-size:0.72rem;padding:9px 12px;border-bottom:1px solid rgba(61,130,245,0.06);color:#c8c8e8;">{r['email']}</td>
           <td style="font-size:0.67rem;padding:9px 12px;border-bottom:1px solid rgba(61,130,245,0.06);color:#5588bb;white-space:nowrap;">{r['campaign']}</td>
           <td {tc}>{dbadge(r['delivered'])}</td>
@@ -1003,7 +1002,7 @@ def _render_period_content(period: str):
         items = "".join(
             f'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;'
             f'border-bottom:1px solid rgba(61,130,245,0.06);">'
-            f'<div style="width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#e0368e,#3d8ef5);flex-shrink:0;box-shadow:0 0 6px rgba(61,130,245,0.55);"></div>'
+            f'<div style="width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#0B1F3A,#2563EB);flex-shrink:0;box-shadow:0 0 6px rgba(61,130,245,0.55);"></div>'
             f'<div style="flex:1;min-width:0;">'
             f'<div style="font-size:0.79rem;font-weight:600;color:#c8daee;white-space:nowrap;'
             f'overflow:hidden;text-overflow:ellipsis;">{r["email"]}</div>'
@@ -1080,13 +1079,13 @@ def render_home():
     justify-content:space-between;
 }
 .portal-card-cdl  { background:linear-gradient(135deg,#071428 0%,#0d2040 55%,#0d1d3a 100%); border:1px solid rgba(61,130,245,0.28); box-shadow:0 8px 40px rgba(61,130,245,0.12); }
-.portal-card-sense{ background:linear-gradient(135deg,#0a0618 0%,#130826 55%,#0d1430 100%); border:1px solid rgba(224,54,142,0.28); box-shadow:0 8px 40px rgba(224,54,142,0.10); }
+.portal-card-sense{ background:linear-gradient(135deg,#0a0618 0%,#130826 55%,#0d1430 100%); border:1px solid rgba(37,99,235,0.28); box-shadow:0 8px 40px rgba(37,99,235,0.10); }
 .portal-card::before { content:""; position:absolute; top:-80px; right:-80px; width:300px; height:300px; border-radius:50%; pointer-events:none; }
 .portal-card-cdl::before  { background:radial-gradient(circle,rgba(61,130,245,0.13) 0%,transparent 68%); }
-.portal-card-sense::before{ background:radial-gradient(circle,rgba(224,54,142,0.14) 0%,transparent 68%); }
+.portal-card-sense::before{ background:radial-gradient(circle,rgba(37,99,235,0.14) 0%,transparent 68%); }
 .pc-badge { display:inline-flex; align-items:center; gap:6px; border-radius:99px; padding:4px 12px; font-size:0.6rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:20px; }
-.pc-badge-cdl  { background:rgba(61,130,245,0.12); border:1px solid rgba(61,130,245,0.3); color:#3d8ef5; }
-.pc-badge-sense{ background:rgba(224,54,142,0.12); border:1px solid rgba(224,54,142,0.3); color:#e0368e; }
+.pc-badge-cdl  { background:rgba(61,130,245,0.12); border:1px solid rgba(61,130,245,0.3); color:#2563EB; }
+.pc-badge-sense{ background:rgba(37,99,235,0.12); border:1px solid rgba(37,99,235,0.3); color:#2563EB; }
 .pc-icon  { font-size:2.4rem; margin-bottom:14px; }
 .pc-title { font-size:1.45rem; font-weight:900; color:#e8f0fc; letter-spacing:-0.025em; margin-bottom:6px; }
 .pc-sub   { font-size:0.76rem; color:rgba(180,210,255,0.55); line-height:1.6; margin-bottom:20px; }
@@ -1176,21 +1175,21 @@ def render_overview():
 
     st.markdown('<div class="section-chip">📬 Client Activity (Last 30 Days)</div>', unsafe_allow_html=True)
     st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.2rem;">
-        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+        <div class="stat-card" style="border-top:2px solid #2563EB;">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Clients</div>
             <div style="background:var(--gradient-brand);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.6rem;font-weight:800;">{len(_ov_clients)}</div>
         </div>
-        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+        <div class="stat-card" style="border-top:2px solid #2563EB;">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Campaigns Sent</div>
-            <div style="color:#3d8ef5;font-size:1.6rem;font-weight:800;">{len(_ov_sent)}</div>
+            <div style="color:#2563EB;font-size:1.6rem;font-weight:800;">{len(_ov_sent)}</div>
         </div>
         <div class="stat-card" style="border-top:2px solid #0ebc6e;">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Emails Delivered</div>
             <div style="color:#0ebc6e;font-size:1.6rem;font-weight:800;">{_ov_delivered}</div>
         </div>
-        <div class="stat-card" style="border-top:2px solid #e0368e;">
+        <div class="stat-card" style="border-top:2px solid #2563EB;">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Clients Reached</div>
-            <div style="color:#e0368e;font-size:1.6rem;font-weight:800;">{_ov_unique_cl}</div>
+            <div style="color:#2563EB;font-size:1.6rem;font-weight:800;">{_ov_unique_cl}</div>
         </div>
         <div class="stat-card" style="border-top:2px solid {'#dc2626' if _ov_failed else '#0ebc6e'};">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Delivery Rate</div>
@@ -1204,7 +1203,7 @@ def render_overview():
         rows_html = "".join(
             f'<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;'
             f'border-bottom:1px solid rgba(61,130,245,0.07);">'
-            f'<div style="width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#e0368e,#3d8ef5);flex-shrink:0;"></div>'
+            f'<div style="width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#0B1F3A,#2563EB);flex-shrink:0;"></div>'
             f'<div style="flex:1;min-width:0;">'
             f'<div style="font-size:0.8rem;font-weight:600;color:#0d1d3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
             f'{r.get("subject","(no subject)")}</div>'
@@ -1652,13 +1651,13 @@ def render_clients():
         at_risk_n = sum(1 for c in all_clients if c.get("status") == "At Risk")
 
         st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
-            <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div class="stat-card" style="border-top:2px solid #2563EB;">
                 <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Clients</div>
                 <div style="background:var(--gradient-brand);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(all_clients)}</div>
             </div>
-            <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div class="stat-card" style="border-top:2px solid #2563EB;">
                 <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Email Addresses</div>
-                <div style="color:#3d8ef5;font-size:1.8rem;font-weight:800;">{total_em}</div>
+                <div style="color:#2563EB;font-size:1.8rem;font-weight:800;">{total_em}</div>
             </div>
             <div class="stat-card" style="border-top:2px solid #0ebc6e;">
                 <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Active</div>
@@ -1718,7 +1717,7 @@ def render_clients():
                 em_count = len(c.get("emails", []))
                 row_bg     = "#e8f0ff" if is_sel else "#fff"
                 row_border = "rgba(61,130,245,0.55)" if is_sel else "rgba(61,130,245,0.15)"
-                row_lborder = "3px solid #3d8ef5" if is_sel else "3px solid transparent"
+                row_lborder = "3px solid #2563EB" if is_sel else "3px solid transparent"
                 st.markdown(
                     f'<div style="background:{row_bg};border:1px solid {row_border};'
                     f'border-left:{row_lborder};border-radius:10px;padding:10px 14px;'
@@ -1817,17 +1816,17 @@ def render_clients():
         total_addrs = sum(len(c.get("emails", [])) for c in all_clients)
 
         st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
-            <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div class="stat-card" style="border-top:2px solid #2563EB;">
                 <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Clients</div>
                 <div style="background:var(--gradient-brand);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(all_clients)}</div>
             </div>
-            <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+            <div class="stat-card" style="border-top:2px solid #2563EB;">
                 <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Email Addresses</div>
-                <div style="color:#3d8ef5;font-size:1.8rem;font-weight:800;">{total_addrs}</div>
+                <div style="color:#2563EB;font-size:1.8rem;font-weight:800;">{total_addrs}</div>
             </div>
-            <div class="stat-card" style="border-top:2px solid #e0368e;">
+            <div class="stat-card" style="border-top:2px solid #2563EB;">
                 <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Sends (30d)</div>
-                <div style="color:#e0368e;font-size:1.8rem;font-weight:800;">{total_recent}</div>
+                <div style="color:#2563EB;font-size:1.8rem;font-weight:800;">{total_recent}</div>
             </div>
             <div class="stat-card" style="border-top:2px solid #0ebc6e;">
                 <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Clients Emailed (30d)</div>
@@ -1981,17 +1980,17 @@ def render_client_emails():
     clients_emailed_30d = len({r.get("client","") for r in recent_sends if r.get("client","")})
 
     st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
-        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+        <div class="stat-card" style="border-top:2px solid #2563EB;">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Clients</div>
             <div style="background:var(--gradient-brand);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(all_clients)}</div>
         </div>
-        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+        <div class="stat-card" style="border-top:2px solid #2563EB;">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Email Addresses</div>
-            <div style="color:#3d8ef5;font-size:1.8rem;font-weight:800;">{total_addrs}</div>
+            <div style="color:#2563EB;font-size:1.8rem;font-weight:800;">{total_addrs}</div>
         </div>
-        <div class="stat-card" style="border-top:2px solid #e0368e;">
+        <div class="stat-card" style="border-top:2px solid #2563EB;">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Sends (30d)</div>
-            <div style="color:#e0368e;font-size:1.8rem;font-weight:800;">{total_recent}</div>
+            <div style="color:#2563EB;font-size:1.8rem;font-weight:800;">{total_recent}</div>
         </div>
         <div class="stat-card" style="border-top:2px solid #0ebc6e;">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Clients Emailed (30d)</div>
@@ -2810,7 +2809,7 @@ def render_sent():
     total_failed  = sum(len(r.get("failed", [])) for r in records)
 
     st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
-        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+        <div class="stat-card" style="border-top:2px solid #2563EB;">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Total Sends</div>
             <div style="background:var(--gradient-brand);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;">{len(records)}</div>
         </div>
@@ -2818,9 +2817,9 @@ def render_sent():
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Emails Delivered</div>
             <div style="color:#0ebc6e;font-size:1.8rem;font-weight:800;">{total_sent}</div>
         </div>
-        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+        <div class="stat-card" style="border-top:2px solid #2563EB;">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Unique Recipients</div>
-            <div style="color:#3d8ef5;font-size:1.8rem;font-weight:800;">{unique_emails}</div>
+            <div style="color:#2563EB;font-size:1.8rem;font-weight:800;">{unique_emails}</div>
         </div>
         <div class="stat-card" style="border-top:2px solid {'#e72b3b' if total_failed else '#94a3b8'};">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Failed</div>
@@ -2862,7 +2861,7 @@ def render_sent():
         _has_f    = bool(_fail)
         _rid      = rec.get("id", "")
 
-        top_color = "#e72b3b" if _has_f else "#3d8ef5"
+        top_color = "#e72b3b" if _has_f else "#2563EB"
 
         test_badge = (
             '<span style="background:rgba(245,158,11,0.15);color:#fbbf24;font-size:0.6rem;font-weight:700;'
@@ -2906,8 +2905,8 @@ def render_sent():
         rating_val = f"{_avg_r:.1f}★ ({len(_ratings)})" if _avg_r else "—"
         tracking_html = (
             f'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">'
-            + _stat_pill("👁", "Opens",   _opens,    "#3d8ef5")
-            + _stat_pill("👆", "Clicks",  _clicks,   "#3d8ef5")
+            + _stat_pill("👁", "Opens",   _opens,    "#2563EB")
+            + _stat_pill("👆", "Clicks",  _clicks,   "#2563EB")
             + _stat_pill("⭐", "Rating",  rating_val, "#d97706")
             + f'</div>'
         )
@@ -4224,7 +4223,7 @@ def _render_sense_scorecard(sheets, legend_map):
                 pass
         _active_filters = any([_sc_cli!="All Clients", _sc_camp!="All Campaigns", _sc_qa!="All QA", _sc_from is not None])
         if _active_filters:
-            st.markdown(f'<div style="font-size:0.7rem;color:#3d8ef5;margin-bottom:8px;background:rgba(61,130,245,0.06);border-radius:6px;padding:5px 12px;">🔍 Showing <strong>{len(audit_df):,}</strong> of <strong>{_sc_total_before:,}</strong> audits</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:0.7rem;color:#2563EB;margin-bottom:8px;background:rgba(61,130,245,0.06);border-radius:6px;padding:5px 12px;">🔍 Showing <strong>{len(audit_df):,}</strong> of <strong>{_sc_total_before:,}</strong> audits</div>', unsafe_allow_html=True)
 
     # ── Detect scored columns ─────────────────────────────────────────────────
     scored_cols = [c for c in audit_df.columns if _match_legend(c, legend_map)]
@@ -4369,9 +4368,9 @@ def _render_sense_scorecard(sheets, legend_map):
     <div style="font-size:0.62rem;color:#aabbcc;margin-top:6px;">{total_rows:,} total audits</div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid #3d8ef5;border-radius:10px;padding:13px 14px;">
-      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3d8ef5;margin-bottom:4px;">Total Audits</div>
-      <div style="font-size:1.65rem;font-weight:900;color:#3d8ef5;line-height:1;">{total_rows:,}</div>
+    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid #2563EB;border-radius:10px;padding:13px 14px;">
+      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563EB;margin-bottom:4px;">Total Audits</div>
+      <div style="font-size:1.65rem;font-weight:900;color:#2563EB;line-height:1;">{total_rows:,}</div>
       <div style="font-size:0.62rem;color:#aabbcc;margin-top:3px;">{_auditor_count} auditor{"s" if _auditor_count != 1 else ""}</div>
     </div>
     <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid #0ebc6e;border-radius:10px;padding:13px 14px;">
@@ -4408,9 +4407,9 @@ def _render_sense_scorecard(sheets, legend_map):
 </div>""", unsafe_allow_html=True)
     else:
         st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1rem;">
-          <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+          <div class="stat-card" style="border-top:2px solid #2563EB;">
             <div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">Total Rows</div>
-            <div style="color:#3d8ef5;font-size:1.7rem;font-weight:800;">{total_rows:,}</div>
+            <div style="color:#2563EB;font-size:1.7rem;font-weight:800;">{total_rows:,}</div>
           </div>
           <div class="stat-card" style="border-top:2px solid #0ebc6e;">
             <div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">Fully Scored</div>
@@ -4605,7 +4604,7 @@ def _render_sense_scorecard(sheets, legend_map):
                 _camp_sc2.sort(key=lambda x: x[1])
                 _wcamp = _camp_sc2[0]
                 if _wcamp[1] < 75:
-                    _alerts.append(("🎯", "#e0368e", "#fff0f8", f"Weak campaign: {_wcamp[0]} ({_wcamp[1]}% avg)", f"This campaign needs a bot parameter review — check Disposition Accuracy and Context Passing first."))
+                    _alerts.append(("🎯", "#2563EB", "#fff0f8", f"Weak campaign: {_wcamp[0]} ({_wcamp[1]}% avg)", f"This campaign needs a bot parameter review — check Disposition Accuracy and Context Passing first."))
         # Weakest param
         _wp_list = []
         for _tier2 in _QA_SCHEMA["tiers"]:
@@ -4725,7 +4724,7 @@ def _render_sense_scorecard(sheets, legend_map):
                     )
                     _ls_vc  = audit_df["Lead Stage"].replace("", None).dropna().value_counts()
                     _ls_order = list(_QA_SCHEMA.get("lead_stage_opts", [])) or _ls_vc.index.tolist()
-                    _LS_COLORS = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#3d8ef5",
+                    _LS_COLORS = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB",
                                   "Not Interested": "#aabbcc", "RNR": "#7c3aed", "": "#edf2fb"}
                     _ls_html = ""
                     for _ls_name in _ls_order:
@@ -4733,7 +4732,7 @@ def _render_sense_scorecard(sheets, legend_map):
                             continue
                         _lsv  = int(_ls_vc[_ls_name])
                         _lspct = round(_lsv / total * 100, 1)
-                        _lsc  = _LS_COLORS.get(_ls_name, "#3d8ef5")
+                        _lsc  = _LS_COLORS.get(_ls_name, "#2563EB")
                         _ls_html += (
                             f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
                             f'<div style="width:110px;font-size:0.73rem;color:#0d1d3a;font-weight:600;flex-shrink:0;">{_ls_name}</div>'
@@ -4759,8 +4758,8 @@ def _render_sense_scorecard(sheets, legend_map):
                     _fr    = pd.to_numeric(audit_df.get("Follow-up Readiness (0/1/2)", pd.Series(dtype=float)), errors="coerce").dropna()
                     _dm    = pd.to_numeric(audit_df.get("DM Confirmed (0/1/2)", pd.Series(dtype=float)), errors="coerce").dropna()
                     _lead_kpis = []
-                    if len(_lcomp): _lead_kpis.append(("Lead Composite", round(_lcomp.mean(),1), "%", "#e0368e"))
-                    if len(_pi):    _lead_kpis.append(("Product Interest", round(_pi.mean(),2),  "/2", "#3d8ef5"))
+                    if len(_lcomp): _lead_kpis.append(("Lead Composite", round(_lcomp.mean(),1), "%", "#2563EB"))
+                    if len(_pi):    _lead_kpis.append(("Product Interest", round(_pi.mean(),2),  "/2", "#2563EB"))
                     if len(_fr):    _lead_kpis.append(("Follow-up Readiness", round(_fr.mean(),2), "/2", "#0ebc6e"))
                     if len(_dm):    _lead_kpis.append(("DM Confirmed",  round(_dm.mean(),2),  "/2", "#f59e0b"))
                     _lk_html = ""
@@ -4776,11 +4775,11 @@ def _render_sense_scorecard(sheets, legend_map):
                     _warm = int((audit_df["Lead Stage"] == "Warm").sum())
                     _qualif_pct = round((_hot + _warm) / total * 100, 1) if total else 0
                     _lk_html += (
-                        f'<div style="margin-top:8px;background:#e0368e18;border:1px solid #e0368e44;'
+                        f'<div style="margin-top:8px;background:#2563EB18;border:1px solid #2563EB44;'
                         f'border-radius:8px;padding:8px 12px;text-align:center;">'
-                        f'<div style="font-size:0.65rem;font-weight:700;color:#e0368e;letter-spacing:0.08em;'
+                        f'<div style="font-size:0.65rem;font-weight:700;color:#2563EB;letter-spacing:0.08em;'
                         f'text-transform:uppercase;margin-bottom:3px;">Qualified Leads (Hot+Warm)</div>'
-                        f'<div style="font-size:1.5rem;font-weight:900;color:#e0368e;">{_qualif_pct}%</div>'
+                        f'<div style="font-size:1.5rem;font-weight:900;color:#2563EB;">{_qualif_pct}%</div>'
                         f'<div style="font-size:0.62rem;color:#5588bb;">{_hot+_warm} of {total} conversations</div>'
                         f'</div>'
                     )
@@ -4825,7 +4824,7 @@ def _render_sense_scorecard(sheets, legend_map):
                                     break
                             _param_fail_rates.append({"param": _pcol, "avg": _mean_s,
                                                       "fail_pct": _fail_p, "tier": _tier_l,
-                                                      "color": _bcfg["color"] if _bcfg else "#3d8ef5"})
+                                                      "color": _bcfg["color"] if _bcfg else "#2563EB"})
                 _param_fail_rates.sort(key=lambda x: x["fail_pct"], reverse=True)
                 if _param_fail_rates:
                     st.markdown(
@@ -4858,7 +4857,7 @@ def _render_sense_scorecard(sheets, legend_map):
         _w   = _custom_weights.get(col, _DEFAULT_PARAM_WEIGHT)
         _pct = round(_w / total_weight * 100, 1) if total_weight else 0
         _bcfg = _builtin_cfg(col)
-        _col_c = _bcfg["color"] if _bcfg else "#3d8ef5"
+        _col_c = _bcfg["color"] if _bcfg else "#2563EB"
         _tag  = " 🧠" if _bcfg else ""
         _weight_html += (
             f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
@@ -4878,7 +4877,7 @@ def _render_sense_scorecard(sheets, legend_map):
 
     # ── Per-parameter score distribution ──────────────────────────────────────
     st.markdown('<div class="section-chip">🎯 Score Distribution by Parameter</div>', unsafe_allow_html=True)
-    _PARAM_COLORS = ["#e0368e","#3d8ef5","#0ebc6e","#f59e0b","#7c3aed","#06b6d4","#ef4444","#84cc16"]
+    _PARAM_COLORS = ["#2563EB","#2563EB","#0ebc6e","#f59e0b","#7c3aed","#06b6d4","#ef4444","#84cc16"]
 
     # Split: intelligence params first, then others
     _intel_cols  = [c for c in scored_cols if _builtin_cfg(c)]
@@ -5159,13 +5158,13 @@ def _render_sense_sheet(df, sheet_name, fname, sheets=None):
     # ── KPI strip (accurate for both audit and non-audit) ────────────────────
     _display_df = working_df if _is_audit else df
     st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1rem;">
-        <div class="stat-card" style="border-top:2px solid #3d8ef5;">
+        <div class="stat-card" style="border-top:2px solid #2563EB;">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Rows</div>
-            <div style="color:#3d8ef5;font-size:1.5rem;font-weight:800;">{len(_display_df):,}</div>
+            <div style="color:#2563EB;font-size:1.5rem;font-weight:800;">{len(_display_df):,}</div>
         </div>
-        <div class="stat-card" style="border-top:2px solid #e0368e;">
+        <div class="stat-card" style="border-top:2px solid #2563EB;">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Total Columns</div>
-            <div style="color:#e0368e;font-size:1.5rem;font-weight:800;">{len(_display_df.columns)}</div>
+            <div style="color:#2563EB;font-size:1.5rem;font-weight:800;">{len(_display_df.columns)}</div>
         </div>
         <div class="stat-card" style="border-top:2px solid #7c3aed;">
             <div style="color:#2a5080;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">{"Scored Params" if _is_audit else "Numeric Cols"}</div>
@@ -5184,11 +5183,11 @@ def _render_sense_sheet(df, sheet_name, fname, sheets=None):
             _rows_html = ""
             for param, opts in legend_map.items():
                 _bcfg = _builtin_cfg(param)
-                _tag  = f'<span style="background:rgba(224,54,142,0.1);border:1px solid rgba(224,54,142,0.3);border-radius:4px;padding:1px 6px;font-size:0.6rem;color:#e0368e;margin-left:6px;">🧠 Intelligence</span>' if _bcfg else ""
+                _tag  = f'<span style="background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.3);border-radius:4px;padding:1px 6px;font-size:0.6rem;color:#2563EB;margin-left:6px;">🧠 Intelligence</span>' if _bcfg else ""
                 _desc = f'<div style="font-size:0.65rem;color:#7a99bb;margin-top:2px;">{_bcfg["description"]}</div>' if _bcfg else ""
                 _chips = "".join(
                     f'<span style="background:rgba(61,130,245,0.08);border:1px solid rgba(61,130,245,0.2);'
-                    f'border-radius:6px;padding:2px 9px;font-size:0.7rem;color:#3d8ef5;">{o}</span>'
+                    f'border-radius:6px;padding:2px 9px;font-size:0.7rem;color:#2563EB;">{o}</span>'
                     for o in opts
                 )
                 _rows_html += (
@@ -5255,8 +5254,8 @@ def _render_sense_sheet(df, sheet_name, fname, sheets=None):
             _protected = _is_protected_sheet(sheet_name)
             if _protected:
                 st.markdown(
-                    '<div style="text-align:center;font-size:0.7rem;color:#e0368e;padding:6px 0;'
-                    'border:1px solid rgba(224,54,142,0.25);border-radius:6px;">🔒 Protected</div>',
+                    '<div style="text-align:center;font-size:0.7rem;color:#2563EB;padding:6px 0;'
+                    'border:1px solid rgba(37,99,235,0.25);border-radius:6px;">🔒 Protected</div>',
                     unsafe_allow_html=True,
                 )
             else:
@@ -5354,7 +5353,7 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
             if not sheets:
                 st.markdown(
                     '<div style="background:rgba(61,130,245,0.08);border:1px solid rgba(61,130,245,0.2);'
-                    'border-radius:8px;padding:9px 16px;margin-bottom:12px;font-size:0.73rem;color:#3d8ef5;">'
+                    'border-radius:8px;padding:9px 16px;margin-bottom:12px;font-size:0.73rem;color:#2563EB;">'
                     '📊 <strong>Demo data</strong> — showing seed audits. Upload a file or submit audits via ✍️ New Audit to see your own data.</div>',
                     unsafe_allow_html=True,
                 )
@@ -5423,7 +5422,7 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     if len(_disp_counts):
                         st.markdown('<div class="section-chip">📋 Disposition Mix</div>', unsafe_allow_html=True)
                         _disp_total = _disp_counts.sum()
-                        _disp_colors = {"Interested":"#0ebc6e","Converted":"#16a34a","Warm Follow-up":"#3d8ef5",
+                        _disp_colors = {"Interested":"#0ebc6e","Converted":"#16a34a","Warm Follow-up":"#2563EB",
                                         "Not Interested":"#f59e0b","DNC":"#dc2626","Wrong Number":"#ef4444",
                                         "Language Barrier":"#7c3aed","Voicemail / No Answer":"#6b7280","Other":"#aabbcc"}
                         _dh = ""
@@ -6669,8 +6668,8 @@ def _render_param_manager(key_sfx=""):
                 _rows += (
                     f'<tr><td>{_p["col"]}</td>'
                     f'<td><span class="pm-tier-chip" style="background:{_tc}18;color:{_tc};">{_tlabel}</span></td>'
-                    f'<td style="font-weight:700;color:#3d8ef5;">{_wt_pct}</td>'
-                    f'<td style="color:#7a99bb;">{_opts} · <span style="color:#e0368e;">NA</span></td></tr>'
+                    f'<td style="font-weight:700;color:#2563EB;">{_wt_pct}</td>'
+                    f'<td style="color:#7a99bb;">{_opts} · <span style="color:#2563EB;">NA</span></td></tr>'
                 )
         # Custom params
         for _cp in st.session_state["sense_custom_audit_params"]:
@@ -6679,7 +6678,7 @@ def _render_param_manager(key_sfx=""):
                 f'<tr style="background:#fffbf5;"><td>⭐ {_cp["name"]}</td>'
                 f'<td><span class="pm-tier-chip" style="background:#0ebc6e18;color:#0ebc6e;">Custom</span></td>'
                 f'<td style="font-weight:700;color:#0ebc6e;">{_cp["weight"]}×</td>'
-                f'<td style="color:#7a99bb;">{_opts} · <span style="color:#e0368e;">NA</span></td></tr>'
+                f'<td style="color:#7a99bb;">{_opts} · <span style="color:#2563EB;">NA</span></td></tr>'
             )
         st.markdown(
             f'<table class="pm-table"><thead><tr>'
@@ -6774,9 +6773,9 @@ def _render_audit_form(legend_map, fname):
   <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;
     background:rgba(61,142,245,0.12);border-radius:50%;"></div>
   <div style="position:absolute;bottom:-30px;left:40%;width:180px;height:180px;
-    background:rgba(224,54,142,0.07);border-radius:50%;"></div>
+    background:rgba(37,99,235,0.07);border-radius:50%;"></div>
   <div style="display:flex;align-items:flex-start;gap:16px;position:relative;">
-    <div style="background:linear-gradient(135deg,#e0368e,#3d8ef5);border-radius:10px;
+    <div style="background:linear-gradient(135deg,#0B1F3A,#2563EB);border-radius:10px;
       padding:10px;flex-shrink:0;font-size:1.3rem;">🚀</div>
     <div>
       <div style="font-size:1rem;font-weight:900;color:#fff;letter-spacing:-0.01em;margin-bottom:4px;">
@@ -6811,11 +6810,11 @@ def _render_audit_form(legend_map, fname):
         _ip_badge = ""
         if _ip:
             _ip_badge = (
-                f'<div style="margin-top:7px;padding-top:7px;border-top:1px dashed rgba(224,54,142,0.25);">'
-                f'<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(224,54,142,0.08);'
-                f'border:1px solid rgba(224,54,142,0.22);border-radius:5px;padding:2px 8px;">'
+                f'<div style="margin-top:7px;padding-top:7px;border-top:1px dashed rgba(37,99,235,0.25);">'
+                f'<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(37,99,235,0.08);'
+                f'border:1px solid rgba(37,99,235,0.22);border-radius:5px;padding:2px 8px;">'
                 f'<span style="font-size:0.68rem;">🧠</span>'
-                f'<span style="font-size:0.62rem;font-weight:700;color:#e0368e;">{_ip["icon"]} {_ip["col"]}</span>'
+                f'<span style="font-size:0.62rem;font-weight:700;color:#2563EB;">{_ip["icon"]} {_ip["col"]}</span>'
                 f'</span>'
                 f'<span style="font-size:0.58rem;color:#aabbcc;margin-left:5px;">{" · ".join(_ip["options"])}</span>'
                 f'</div>'
@@ -6879,7 +6878,7 @@ def _render_audit_form(legend_map, fname):
         # Show queue
         _lead_q = st.session_state.get("sense_lead_queue", [])
         if _lead_q:
-            st.markdown(f'<div style="font-size:0.72rem;color:#3d8ef5;margin-top:8px;font-weight:700;">{len(_lead_q)} leads in queue</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:0.72rem;color:#2563EB;margin-top:8px;font-weight:700;">{len(_lead_q)} leads in queue</div>', unsafe_allow_html=True)
             _q_df_show = pd.DataFrame(_lead_q)
             _q_cols_show = [c for c in ["Client","Campaign Name","Lead Number","Phone Number","Lead Link","Conversation Link"] if c in _q_df_show.columns]
             if _q_cols_show:
@@ -6983,7 +6982,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {
     border-color: rgba(61,130,245,0.5) !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) {
-    background: linear-gradient(108deg,#3d8ef5,#e0368e) !important;
+    background: linear-gradient(135deg,#0B1F3A,#2563EB) !important;
     border-color: transparent !important;
     color: #fff !important;
 }
@@ -7073,8 +7072,8 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
 
             # Tier header
             _ip_badge_inline = (
-                f' <span style="background:rgba(224,54,142,0.12);border:1px solid rgba(224,54,142,0.3);'
-                f'border-radius:4px;padding:1px 7px;font-size:0.58rem;font-weight:700;color:#e0368e;">'
+                f' <span style="background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.3);'
+                f'border-radius:4px;padding:1px 7px;font-size:0.58rem;font-weight:700;color:#2563EB;">'
                 f'🧠 +{_ip["icon"]} {_ip["col"]}</span>'
             ) if _ip else ""
             st.markdown(
@@ -7107,10 +7106,10 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             if _ip:
                 st.markdown(
                     f'<div style="display:flex;align-items:center;gap:6px;margin:6px 0 4px;">'
-                    f'<div style="flex:1;height:1px;background:rgba(224,54,142,0.15);"></div>'
-                    f'<span style="font-size:0.62rem;font-weight:700;color:#e0368e;white-space:nowrap;">'
+                    f'<div style="flex:1;height:1px;background:rgba(37,99,235,0.15);"></div>'
+                    f'<span style="font-size:0.62rem;font-weight:700;color:#2563EB;white-space:nowrap;">'
                     f'🧠 Sense Intelligence</span>'
-                    f'<div style="flex:1;height:1px;background:rgba(224,54,142,0.15);"></div>'
+                    f'<div style="flex:1;height:1px;background:rgba(37,99,235,0.15);"></div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -7134,7 +7133,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
         )
         st.markdown(
             '<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
-            'text-transform:uppercase;color:#3d8ef5;margin-bottom:6px;">Lead Scoring</div>',
+            'text-transform:uppercase;color:#2563EB;margin-bottom:6px;">Lead Scoring</div>',
             unsafe_allow_html=True,
         )
         _ls1, _ls2, _ls3, _ls4 = st.columns(4)
@@ -7256,7 +7255,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             f'<div><div style="font-size:1.4rem;font-weight:800;color:#7c3aed;">'
             f'{"—" if _isc == "" else f"{_isc}%"}</div>'
             f'<div style="font-size:0.62rem;color:#5588bb;">Intelligence Score</div></div>'
-            f'<div><div style="font-size:1.4rem;font-weight:800;color:#3d8ef5;">{_lr.get("Lead Composite","—")}</div>'
+            f'<div><div style="font-size:1.4rem;font-weight:800;color:#2563EB;">{_lr.get("Lead Composite","—")}</div>'
             f'<div style="font-size:0.62rem;color:#5588bb;">Lead Composite</div></div>'
             f'<div><div style="font-size:1.4rem;font-weight:800;color:{"#dc2626" if _lr["Fatal?"]=="YES" else "#0ebc6e"};">{_lr["Fatal?"]}</div>'
             f'<div style="font-size:0.62rem;color:#5588bb;">Fatal?</div></div>'
@@ -7356,7 +7355,7 @@ def _render_legend_page():
     )
 
     # ── Tier parameter tables ─────────────────────────────────────────────────
-    _ROW_COLORS = {"0/1/2": "#3d8ef5", "0/2": "#f59e0b", "0/Fatal": "#dc2626", "Fatal": "#7f1d1d"}
+    _ROW_COLORS = {"0/1/2": "#2563EB", "0/2": "#f59e0b", "0/Fatal": "#dc2626", "Fatal": "#7f1d1d"}
 
     for _tier_idx, _tier in enumerate(_QA_SCHEMA["tiers"], 1):
         _ip = None  # intelligence params are now standard tier params
@@ -7388,7 +7387,7 @@ def _render_legend_page():
 
         for _pi, _p in enumerate(_tier_params, 1):
             _opts_str = "/".join(_p["options"])
-            _opts_c   = _ROW_COLORS.get(_opts_str, "#3d8ef5")
+            _opts_c   = _ROW_COLORS.get(_opts_str, "#2563EB")
             _w_pct    = f'{int(_p["weight"]*100)}%' if _p["weight"] > 0 else ("FATAL" if _p.get("fatal") else "—")
             _w_c      = "#dc2626" if _p.get("fatal") else "#0d1d3a"
             _bg       = "#fff" if _pi % 2 == 1 else "#f9fbff"
@@ -7450,7 +7449,7 @@ def _render_legend_page():
 
     # ── Lead stage colour key ─────────────────────────────────────────────────
     st.markdown('<div class="section-chip">🏷️ Lead Stage Reference</div>', unsafe_allow_html=True)
-    _lead_colors = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#3d8ef5", "Not Interested": "#6b7280", "RNR": "#9ca3af"}
+    _lead_colors = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB", "Not Interested": "#6b7280", "RNR": "#9ca3af"}
     _lead_html = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.2rem;">'
     for _stage, _lc in _lead_colors.items():
         _ls = _QA_SCHEMA["lead_stage_scores"].get(_stage, 0)
@@ -7470,7 +7469,7 @@ def _render_legend_page():
         '<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:20px 24px;margin-bottom:1rem;">'
         '<div style="display:flex;flex-direction:column;gap:14px;">'
 
-        '<div><div style="font-size:0.68rem;font-weight:700;color:#3d8ef5;text-transform:uppercase;'
+        '<div><div style="font-size:0.68rem;font-weight:700;color:#2563EB;text-transform:uppercase;'
         'letter-spacing:0.08em;margin-bottom:4px;">Bot Score</div>'
         '<div style="font-family:monospace;font-size:0.82rem;color:#0d1d3a;background:#fff;'
         'border:1px solid rgba(61,130,245,0.15);border-radius:6px;padding:8px 14px;">'
@@ -8052,20 +8051,20 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         st.markdown("""
 <div class="sense-hero-full">
   <div class="sense-hero-orb2"></div>
-  <div class="sense-badge"><span class="dot"></span>Convin &nbsp;·&nbsp; Sense Audit</div>
+  <div class="sense-badge"><span class="dot"></span>Convin Sense Audit &nbsp;·&nbsp; Auto QA Data Insights</div>
   <div class="sense-headline">
-    Not just analytics.<br>Not just QA.<br>
-    This is <span class="grad">real-time conversation intelligence.</span>
+    Automated QA scoring.<br>Deep bot intelligence.<br>
+    <span class="grad">Convin Sense Audit.</span>
   </div>
   <div class="sense-body">
-    <strong>Sense Audit thinks — it doesn't just report.</strong><br>
-    Upload your audit data and instantly unlock bot failure patterns,
-    QA leaderboards, score trends, and prioritised action plans —
-    all in one beautifully crafted dashboard.
+    <strong>Auto QA Data Insights — powered by Convin Sense.</strong><br>
+    Upload your audit data and instantly unlock automated QA scores, bot failure patterns,
+    agent leaderboards, score trends, and prioritised action plans —
+    all in one beautifully crafted dashboard built for conversation intelligence teams.
   </div>
   <div class="sense-features">
+    <div class="sense-feat"><span class="fi">🤖</span> Auto QA scoring &amp; bot intelligence</div>
     <div class="sense-feat"><span class="fi">🔍</span> Instant flow-issue detection</div>
-    <div class="sense-feat"><span class="fi">🤖</span> Bot failure intelligence</div>
     <div class="sense-feat"><span class="fi">🏆</span> Agent &amp; campaign leaderboards</div>
     <div class="sense-feat"><span class="fi">📈</span> Score trends &amp; pass-rate tracking</div>
     <div class="sense-feat"><span class="fi">⚡</span> Auto-prioritised action plans</div>
@@ -8074,8 +8073,8 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
   <div class="sense-divider"></div>
   <div class="sense-tagline">
     <span class="arrow">↓</span>
-    <strong>Drop your file below to begin.</strong>
-    &nbsp; Supports CSV, Excel, JSON — results in seconds.
+    <strong>Drop your audit file below to begin.</strong>
+    &nbsp; Supports CSV, Excel, JSON — insights in seconds.
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -8175,7 +8174,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         st.markdown(
             f'<div style="font-size:0.78rem;color:#5588bb;padding:6px 0;">'
             f'📄 <strong>{fname}</strong> &nbsp;·&nbsp; {len(sheets)} sheet{"s" if len(sheets)>1 else ""}'
-            f' &nbsp;·&nbsp; {_total_rows:,} total rows &nbsp;·&nbsp; <span style="color:#3d8ef5;">{_sheet_names}</span></div>',
+            f' &nbsp;·&nbsp; {_total_rows:,} total rows &nbsp;·&nbsp; <span style="color:#2563EB;">{_sheet_names}</span></div>',
             unsafe_allow_html=True,
         )
     with col_clear:
@@ -8282,7 +8281,7 @@ elif _app_mode == "CDL":
     100% {{ background-position: 0% 50%; }}
 }}
 .cdl-navbar {{
-    background: linear-gradient(108deg, #e0368e, #ff6b78 35%, #3d8ef5 65%, #e0368e);
+    background: linear-gradient(135deg, #0B1F3A, #2563EB);
     background-size: 300% 300%;
     animation: navGradient 8s ease infinite;
     padding: 0 28px;
@@ -8325,7 +8324,7 @@ div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) {
     box-shadow: 0 1px 6px rgba(210,44,132,0.06) !important;
 }
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="primary"] {
-    background: linear-gradient(108deg, #e0368e, #ff6b78 52%, #3d8ef5) !important;
+    background: linear-gradient(135deg, #0B1F3A, #2563EB) !important;
     color: #ffffff !important; border: none !important;
     box-shadow: 0 2px 14px rgba(61,130,245,0.55) !important;
     font-weight: 700 !important; border-radius: 7px !important;
@@ -8338,7 +8337,7 @@ div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_settings"]) button[kind="secondary"]:hover {
     background: rgba(61,130,245,0.07) !important;
     border-color: rgba(61,130,245,0.4) !important;
-    color: #e0368e !important;
+    color: #2563EB !important;
 }
 </style>""", unsafe_allow_html=True)
 
@@ -8403,8 +8402,8 @@ else:
     align-items: center;
     justify-content: space-between;
     margin: -1rem -1rem 0 -1rem;
-    border-bottom: 1px solid rgba(224,54,142,0.3);
-    box-shadow: 0 4px 30px rgba(224,54,142,0.2), 0 1px 0 rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(37,99,235,0.3);
+    box-shadow: 0 4px 30px rgba(37,99,235,0.2), 0 1px 0 rgba(255,255,255,0.04);
     position: sticky;
     top: 0;
     z-index: 1000;
@@ -8415,11 +8414,11 @@ else:
         <div style="filter:drop-shadow(0 2px 8px rgba(0,0,0,0.4));flex-shrink:0;">{_logo_img(38, 10)}</div>
         <div>
             <div style="color:#fff;font-weight:800;font-size:0.96rem;letter-spacing:-0.01em;line-height:1.1;text-shadow:0 1px 8px rgba(0,0,0,0.3);">Audit</div>
-            <div style="color:rgba(224,54,142,0.7);font-size:0.58rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;">QA &amp; Bot Intelligence</div>
+            <div style="color:rgba(37,99,235,0.7);font-size:0.58rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;">QA &amp; Bot Intelligence</div>
         </div>
     </div>
-    <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(224,54,142,0.25);border-radius:99px;padding:5px 14px 5px 8px;display:flex;align-items:center;gap:8px;">
-        <div style="width:26px;height:26px;border-radius:50%;background:rgba(224,54,142,0.2);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;color:#e0368e;border:1px solid rgba(224,54,142,0.3);">
+    <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(37,99,235,0.25);border-radius:99px;padding:5px 14px 5px 8px;display:flex;align-items:center;gap:8px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(37,99,235,0.2);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;color:#2563EB;border:1px solid rgba(37,99,235,0.3);">
             {(st.session_state.get("user_email","?")[0]).upper()}
         </div>
         <div style="color:rgba(255,255,255,0.85);font-size:0.72rem;font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
@@ -8432,19 +8431,19 @@ else:
 <style>
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_back_to_cdl"]) {
     background: #06101f !important;
-    border-bottom: 1px solid rgba(224,54,142,0.15) !important;
+    border-bottom: 1px solid rgba(37,99,235,0.15) !important;
     padding: 4px 0 6px !important;
     margin-bottom: 1.4rem !important;
 }
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_back_to_cdl"]) button[kind="secondary"] {
     background: transparent !important;
-    border: 1px solid rgba(224,54,142,0.3) !important;
-    color: rgba(224,54,142,0.8) !important;
+    border: 1px solid rgba(37,99,235,0.3) !important;
+    color: rgba(37,99,235,0.8) !important;
     border-radius: 7px !important;
 }
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_back_to_cdl"]) button[kind="secondary"]:hover {
-    background: rgba(224,54,142,0.08) !important;
-    color: #e0368e !important;
+    background: rgba(37,99,235,0.08) !important;
+    color: #2563EB !important;
 }
 </style>""", unsafe_allow_html=True)
 
