@@ -3208,33 +3208,36 @@ _SENSE_CLIENTS = [
 _SENSE_CLIENT_MAP = {r["client"]: r for r in _SENSE_CLIENTS}
 _SENSE_CLIENT_NAMES = [""] + [r["client"] for r in _SENSE_CLIENTS]
 
-# ── Convin Sense built-in intelligence parameters ──────────────────────────
-# These 3 params are DEFECT metrics: lower severity = higher (better) score.
-# They are automatically injected into every audit sheet if not already present.
+# ── Convin Sense built-in tier parameters (formerly "intelligence") ──────────
+# Now scored 0–2 like all tier params: 2 = best, 0 = worst.
+# Automatically injected into every audit sheet if not already present.
 _SENSE_BUILTIN_PARAMS = {
     "Flow Issue": {
-        "description": "Measures conversation breakdown / logical gaps",
-        "options":     ["None", "Minor", "Major", "Critical"],
-        "inverted":    True,   # None=best, Critical=worst
-        "weight":      1.5,
-        "color":       "#ef4444",
+        "description": "Conversation flow quality — logical gaps / breakdowns",
+        "options":     ["0", "1", "2"],
+        "inverted":    False,  # 2=No issue (best), 0=Critical flow breakdown (worst)
+        "weight":      0.11,
+        "color":       "#dc2626",
         "icon":        "🔍",
+        "guide":       "2 = No flow issue  |  1 = Minor gap or hiccup  |  0 = Major / critical flow breakdown",
     },
     "Bot Restarted Conversation": {
-        "description": "Tracks forced restarts / resets",
-        "options":     ["No", "Once", "Multiple"],
-        "inverted":    True,
-        "weight":      1.2,
-        "color":       "#f59e0b",
+        "description": "Bot forced a conversation restart",
+        "options":     ["0", "1", "2"],
+        "inverted":    False,  # 2=No restart (best), 0=Multiple restarts (worst)
+        "weight":      0.09,
+        "color":       "#d97706",
         "icon":        "🔁",
+        "guide":       "2 = No restart  |  1 = Restarted once  |  0 = Multiple restarts",
     },
     "Bot Repetition": {
-        "description": "Captures redundant or looping responses",
-        "options":     ["None", "1–2 times", "3–5 times", "5+ times"],
-        "inverted":    True,
-        "weight":      1.0,
+        "description": "Bot repeated same message / looped responses",
+        "options":     ["0", "1", "2"],
+        "inverted":    False,  # 2=No repetition (best), 0=Severe repetition (worst)
+        "weight":      0.07,
         "color":       "#7c3aed",
         "icon":        "🔄",
+        "guide":       "2 = No repetition  |  1 = 1–2 repetitions  |  0 = 3+ repetitions",
     },
 }
 _DEFAULT_PARAM_WEIGHT = 1.0   # weight for any legend param not listed above
@@ -3244,33 +3247,47 @@ _QA_SCHEMA = {
     "tiers": [
         {
             "label": "TIER 1 · CRITICAL",
-            "weight_pct": 61,
+            "weight_pct": 63,
             "color": "#dc2626",
             "params": [
                 {
                     "col": "Disposition Accuracy",
-                    "weight": 0.24,
+                    "weight": 0.18,
                     "options": ["0", "1", "2"],
                     "fatal": False,
                     "guide": "2 = Correctly reflects outcome, lead status & entities  |  1 = Minor mismatch  |  0 = Does not align with conversation outcome",
                 },
                 {
                     "col": "Context Passing",
-                    "weight": 0.19,
+                    "weight": 0.13,
                     "options": ["0", "1", "2"],
                     "fatal": False,
                     "guide": "2 = Context maintained across all turns / channels  |  1 = Context passed but some info lost  |  0 = Context not maintained; repetitive/irrelevant questions",
                 },
                 {
+                    "col": "Flow Issue",
+                    "weight": 0.11,
+                    "options": ["0", "1", "2"],
+                    "fatal": False,
+                    "guide": "2 = No flow issue  |  1 = Minor gap or hiccup  |  0 = Major / critical flow breakdown",
+                },
+                {
+                    "col": "Bot Restarted Conversation",
+                    "weight": 0.09,
+                    "options": ["0", "1", "2"],
+                    "fatal": False,
+                    "guide": "2 = No restart  |  1 = Restarted once  |  0 = Multiple restarts",
+                },
+                {
                     "col": "Message Content",
-                    "weight": 0.10,
+                    "weight": 0.07,
                     "options": ["0", "1", "2"],
                     "fatal": False,
                     "guide": "2 = Bot fully understood intent and responded appropriately  |  1 = Partially understood  |  0 = Bot misunderstood or ignored customer intent",
                 },
                 {
                     "col": "Follow-up in Specified Time",
-                    "weight": 0.08,
+                    "weight": 0.05,
                     "options": ["0", "1", "2"],
                     "fatal": False,
                     "guide": "2 = Follow-up within SLA  |  1 = Completed but exceeded SLA timeline  |  0 = No follow-up attempt made",
@@ -3279,40 +3296,47 @@ _QA_SCHEMA = {
         },
         {
             "label": "TIER 2 · IMPORTANT",
-            "weight_pct": 28,
+            "weight_pct": 29,
             "color": "#f59e0b",
             "params": [
                 {
-                    "col": "Dead Air/Blank Space",
+                    "col": "Bot Repetition",
                     "weight": 0.07,
+                    "options": ["0", "1", "2"],
+                    "fatal": False,
+                    "guide": "2 = No repetition  |  1 = 1–2 repetitions  |  0 = 3+ repetitions (loop)",
+                },
+                {
+                    "col": "Dead Air/Blank Space",
+                    "weight": 0.06,
                     "options": ["0", "1", "2"],
                     "fatal": False,
                     "guide": "2 = No silence/awkward pauses  |  1 = Short acceptable silence 4–5s  |  0 = Long silence >5s; call appeared stuck",
                 },
                 {
                     "col": "Repeated Calls",
-                    "weight": 0.07,
+                    "weight": 0.05,
                     "options": ["0", "2"],
                     "fatal": False,
                     "guide": "2 = No unnecessary repeat calls  |  0 = Multiple calls placed to customer within short duration",
                 },
                 {
                     "col": "Introduction",
-                    "weight": 0.06,
+                    "weight": 0.05,
                     "options": ["0", "1", "2"],
                     "fatal": False,
                     "guide": "2 = Bot introduced itself, company name & purpose  |  1 = Present but key details missing  |  0 = No introduction provided",
                 },
                 {
                     "col": "Background Noise",
-                    "weight": 0.04,
+                    "weight": 0.03,
                     "options": ["0", "2"],
                     "fatal": False,
                     "guide": "2 = Audio clear, no background noise  |  0 = Background noise affected clarity",
                 },
                 {
                     "col": "Transcription Issues",
-                    "weight": 0.04,
+                    "weight": 0.03,
                     "options": ["0", "2"],
                     "fatal": False,
                     "guide": "2 = Transcription accurate and complete  |  0 = Inaccuracies impacted audit reliability",
@@ -3321,26 +3345,26 @@ _QA_SCHEMA = {
         },
         {
             "label": "TIER 3 · QUALITY",
-            "weight_pct": 11,
-            "color": "#3d8ef5",
+            "weight_pct": 8,
+            "color": "#2563EB",
             "params": [
                 {
                     "col": "Language Switch",
-                    "weight": 0.03,
+                    "weight": 0.02,
                     "options": ["0", "1", "2"],
                     "fatal": False,
                     "guide": "2 = Switched language correctly per customer preference  |  1 = No switch required  |  0 = Failed to switch despite customer indication",
                 },
                 {
                     "col": "Script Issue in Transcript",
-                    "weight": 0.03,
+                    "weight": 0.02,
                     "options": ["0", "2"],
                     "fatal": False,
                     "guide": "2 = Approved script followed correctly  |  0 = Bot deviated from script / used incorrect phrasing",
                 },
                 {
                     "col": "TTS Issues (Voice)",
-                    "weight": 0.03,
+                    "weight": 0.02,
                     "options": ["0", "2"],
                     "fatal": False,
                     "guide": "2 = No voice quality issues  |  0 = Tempo inconsistency, sudden voice change, giggles, or volume issues",
@@ -3376,42 +3400,9 @@ _QA_SCHEMA = {
             ],
         },
     ],
-    # Convin Sense intelligence parameters — scored on 0–2 scale, inverted
-    "intelligence": [
-        {
-            "col":       "Flow Issue",
-            "weight":    1.5,
-            "options":   ["None", "Minor", "Major", "Critical"],
-            "score_map": {"None": 2, "Minor": 1, "Major": 0, "Critical": 0},
-            "inverted":  True,
-            "color":     "#ef4444",
-            "icon":      "🔍",
-            "desc":      "Measures conversation breakdown / logical gaps",
-            "guide":     "None = No flow issue (2)  |  Minor = Small gap (1)  |  Major = Significant breakdown (0)  |  Critical = Complete failure (0)",
-        },
-        {
-            "col":       "Bot Restarted Conversation",
-            "weight":    1.2,
-            "options":   ["No", "Once", "Multiple"],
-            "score_map": {"No": 2, "Once": 1, "Multiple": 0},
-            "inverted":  True,
-            "color":     "#f59e0b",
-            "icon":      "🔁",
-            "desc":      "Tracks forced restarts / resets",
-            "guide":     "No = No restart (2)  |  Once = Restarted once (1)  |  Multiple = Restarted multiple times (0)",
-        },
-        {
-            "col":       "Bot Repetition",
-            "weight":    1.0,
-            "options":   ["None", "1–2 times", "3–5 times", "5+ times"],
-            "score_map": {"None": 2, "1–2 times": 1, "3–5 times": 0, "5+ times": 0},
-            "inverted":  True,
-            "color":     "#7c3aed",
-            "icon":      "🔄",
-            "desc":      "Captures redundant or looping responses",
-            "guide":     "None = No repetition (2)  |  1–2 times = Acceptable (1)  |  3–5 times = Issue (0)  |  5+ times = Severe (0)",
-        },
-    ],
+    # Intelligence list is now empty — Flow Issue, Bot Restarted Conversation,
+    # and Bot Repetition are standard tier params (Tier 1 / Tier 2).
+    "intelligence": [],
     "lead_stage_opts":   ["Cold", "Warm", "Hot", "Not Interested", "RNR"],
     "lead_stage_scores": {"Cold": 30, "Warm": 70, "Hot": 90, "Not Interested": 0, "RNR": 10},
     "lead_score_cols":   ["Lead Stage", "Product Interest (0/1/2)", "Follow-up Readiness (0/1/2)", "DM Confirmed (0/1/2)"],
@@ -4806,10 +4797,15 @@ def _render_sense_scorecard(sheets, legend_map):
             for val in _ordered:
                 cnt = int(vc.get(val, 0))
                 pct = round(cnt / total_rows * 100, 1)
-                # colour the bar: for inverted params first option is green, last is red
+                # Colour the bar by value rank.
+                # Non-inverted (standard): higher option index = better → last index is green
+                # Inverted: first option index = best (legacy string-keyed params)
                 if _bcfg and opts:
                     _rank_i = opts.index(val) if val in opts else len(opts) // 2
-                    _bar_c  = ["#0ebc6e","#84cc16","#f59e0b","#ef4444"][min(_rank_i, 3)]
+                    _grad   = ["#0ebc6e","#84cc16","#f59e0b","#ef4444"]
+                    if not _bcfg.get("inverted", True):
+                        _grad = list(reversed(_grad))  # 0=red, 2=green for numeric params
+                    _bar_c  = _grad[min(_rank_i, 3)]
                 else:
                     _bar_c  = col_color
                 bars_html += (
@@ -6309,14 +6305,6 @@ def _render_param_manager(key_sfx=""):
                     f'<td style="font-weight:700;color:#3d8ef5;">{_wt_pct}</td>'
                     f'<td style="color:#7a99bb;">{_opts} · <span style="color:#e0368e;">NA</span></td></tr>'
                 )
-        for _ip in _QA_SCHEMA["intelligence"]:
-            _opts = " · ".join(_ip["options"])
-            _rows += (
-                f'<tr><td>{_ip["icon"]} {_ip["col"]}</td>'
-                f'<td><span class="pm-tier-chip" style="background:rgba(224,54,142,0.1);color:#e0368e;">🧠 Intelligence</span></td>'
-                f'<td style="font-weight:700;color:#e0368e;">{_ip["weight"]}×</td>'
-                f'<td style="color:#7a99bb;">{_opts} · <span style="color:#e0368e;">NA</span></td></tr>'
-            )
         # Custom params
         for _cp in st.session_state["sense_custom_audit_params"]:
             _opts = " · ".join(_cp.get("options", ["0","1","2"]))
@@ -6386,9 +6374,6 @@ def _render_param_manager(key_sfx=""):
                 for _p in _tier["params"]:
                     _opts_str = ", ".join(_p["options"] + ["NA"])
                     _leg_rows += f'<tr><td>{_p["col"]}</td><td>{_tier["label"]}</td><td>{int(_p["weight"]*100)}%</td><td>{_opts_str}</td></tr>'
-            for _ip in _QA_SCHEMA["intelligence"]:
-                _opts_str = ", ".join(_ip["options"] + ["NA"])
-                _leg_rows += f'<tr><td>{_ip["icon"]} {_ip["col"]}</td><td>Intelligence</td><td>{_ip["weight"]}×</td><td>{_opts_str}</td></tr>'
             for _cp in st.session_state["sense_custom_audit_params"]:
                 _opts_str = ", ".join(_cp["options"] + ["NA"])
                 _leg_rows += f'<tr><td>⭐ {_cp["name"]}</td><td>Custom</td><td>{_cp["weight"]}×</td><td>{_opts_str}</td></tr>'
@@ -6969,51 +6954,43 @@ def _render_legend_page():
     # ── Quick-stats strip ─────────────────────────────────────────────────────
     _all_params = [p for tier in _QA_SCHEMA["tiers"] for p in tier["params"]]
     _scored_w   = sum(p["weight"] for p in _all_params if p["weight"] > 0)
+    _t1_params  = len(_QA_SCHEMA["tiers"][0]["params"])
+    _t2_params  = len(_QA_SCHEMA["tiers"][1]["params"])
+    _t3_params  = len(_QA_SCHEMA["tiers"][2]["params"])
     st.markdown(
         f'<div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.4rem;">'
-        f'<div class="stat-card" style="border-top:2px solid #dc2626;">'
+        f'<div class="stat-card" style="border-top:2px solid #0B1F3A;">'
         f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Total Parameters</div>'
-        f'<div style="color:#dc2626;font-size:1.6rem;font-weight:800;">{len(_all_params) + len(_QA_SCHEMA["intelligence"])}</div>'
+        f'<div style="color:#0B1F3A;font-size:1.6rem;font-weight:800;">{len(_all_params)}</div>'
+        f'</div>'
+        f'<div class="stat-card" style="border-top:2px solid #dc2626;">'
+        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Tier 1 · Critical</div>'
+        f'<div style="color:#dc2626;font-size:1.6rem;font-weight:800;">{_t1_params} <span style="font-size:0.9rem;font-weight:600;">({_QA_SCHEMA["tiers"][0]["weight_pct"]}%)</span></div>'
         f'</div>'
         f'<div class="stat-card" style="border-top:2px solid #f59e0b;">'
-        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">QA Tiers</div>'
-        f'<div style="color:#f59e0b;font-size:1.6rem;font-weight:800;">{len(_QA_SCHEMA["tiers"])}</div>'
+        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Tier 2 · Important</div>'
+        f'<div style="color:#f59e0b;font-size:1.6rem;font-weight:800;">{_t2_params} <span style="font-size:0.9rem;font-weight:600;">({_QA_SCHEMA["tiers"][1]["weight_pct"]}%)</span></div>'
         f'</div>'
-        f'<div class="stat-card" style="border-top:2px solid #3d8ef5;">'
-        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Intelligence Params</div>'
-        f'<div style="color:#3d8ef5;font-size:1.6rem;font-weight:800;">{len(_QA_SCHEMA["intelligence"])}</div>'
+        f'<div class="stat-card" style="border-top:2px solid #2563EB;">'
+        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Tier 3 · Quality</div>'
+        f'<div style="color:#2563EB;font-size:1.6rem;font-weight:800;">{_t3_params} <span style="font-size:0.9rem;font-weight:600;">({_QA_SCHEMA["tiers"][2]["weight_pct"]}%)</span></div>'
         f'</div>'
-        f'<div class="stat-card" style="border-top:2px solid #0ebc6e;">'
-        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Total Weight</div>'
-        f'<div style="color:#0ebc6e;font-size:1.6rem;font-weight:800;">{round(_scored_w*100)}%</div>'
-        f'</div>'
-        f'<div class="stat-card" style="border-top:2px solid #7c3aed;">'
+        f'<div class="stat-card" style="border-top:2px solid #059669;">'
         f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Pass Threshold</div>'
-        f'<div style="color:#7c3aed;font-size:1.6rem;font-weight:800;">≥ 80%</div>'
+        f'<div style="color:#059669;font-size:1.6rem;font-weight:800;">≥ 80%</div>'
         f'</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
 
-    # ── Tier parameter tables (intelligence param embedded per tier) ─────────
+    # ── Tier parameter tables ─────────────────────────────────────────────────
     _ROW_COLORS = {"0/1/2": "#3d8ef5", "0/2": "#f59e0b", "0/Fatal": "#dc2626", "Fatal": "#7f1d1d"}
 
-    for _tier_idx, (_tier, _ip) in enumerate(
-        zip(_QA_SCHEMA["tiers"],
-            _QA_SCHEMA["intelligence"] + [None] * max(0, len(_QA_SCHEMA["tiers"]) - len(_QA_SCHEMA["intelligence"]))),
-        1
-    ):
+    for _tier_idx, _tier in enumerate(_QA_SCHEMA["tiers"], 1):
+        _ip = None  # intelligence params are now standard tier params
         _tc = _tier["color"]
         _tier_params = _tier["params"]
-
-        # Tier header with intelligence badge
         _ip_hdr = ""
-        if _ip:
-            _ip_hdr = (
-                f' &nbsp;<span style="background:rgba(224,54,142,0.1);border:1px solid rgba(224,54,142,0.3);'
-                f'border-radius:5px;padding:2px 9px;font-size:0.6rem;font-weight:700;color:#e0368e;">'
-                f'🧠 {_ip["icon"]} {_ip["col"]}</span>'
-            )
         st.markdown(
             f'<div style="display:flex;align-items:center;gap:12px;margin:1.2rem 0 0.6rem;flex-wrap:wrap;">'
             f'<div style="background:{_tc};color:#fff;font-size:0.62rem;font-weight:800;'
@@ -7070,30 +7047,6 @@ def _render_legend_page():
                 f'</div>'
             )
 
-        # Intelligence row appended to this tier
-        if _ip:
-            _ic = _ip["color"]
-            _score_chips = "".join(
-                f'<span style="background:{_ic}18;border:1px solid {_ic}55;border-radius:5px;'
-                f'padding:1px 6px;font-size:0.63rem;font-weight:700;color:{_ic};margin-right:3px;">'
-                f'{opt}→{_ip["score_map"][opt]}</span>'
-                for opt in _ip["options"]
-            )
-            _guide_ip = _ip.get("guide", _ip.get("desc", ""))
-            _tbl += (
-                f'<div style="display:grid;grid-template-columns:2rem 1fr 0.55fr 0.55fr 2.8fr;'
-                f'gap:0;padding:10px 16px;background:rgba(224,54,142,0.04);'
-                f'border-top:2px dashed rgba(224,54,142,0.2);align-items:start;">'
-                f'<div style="font-size:0.68rem;color:#e0368e;font-weight:700;">🧠</div>'
-                f'<div style="font-size:0.78rem;font-weight:700;color:{_ic};">'
-                f'{_ip["icon"]} {_ip["col"]}'
-                f'<div style="font-size:0.6rem;font-weight:500;color:#aabbcc;margin-top:1px;">Convin Sense Intelligence · {_ip["weight"]}× weight</div>'
-                f'</div>'
-                f'<div style="font-size:0.75rem;font-weight:800;color:{_ic};">{_ip["weight"]}×</div>'
-                f'<div style="display:flex;flex-wrap:wrap;gap:3px;padding-top:2px;">{_score_chips}</div>'
-                f'<div style="font-size:0.7rem;color:#5588bb;line-height:1.55;">{_guide_ip}</div>'
-                f'</div>'
-            )
 
         _tbl += '</div>'
         st.markdown(_tbl, unsafe_allow_html=True)
