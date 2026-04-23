@@ -5242,6 +5242,147 @@ def _render_sense_scorecard(sheets, legend_map):
                         st.session_state.pop(_cp_ai_key, None)
                         st.rerun()
 
+            # ── Call Drop Stage Dashboard ──────────────────────────────────
+            st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+            st.markdown(
+                '<div style="font-size:0.72rem;font-weight:800;color:#0B1F3A;letter-spacing:0.08em;'
+                'text-transform:uppercase;margin-bottom:10px;border-bottom:2px solid #E2EAF6;padding-bottom:6px;">'
+                '📉 Call Drop Stage Analysis</div>',
+                unsafe_allow_html=True,
+            )
+            # Tier 1 params (critical stage 1 of conversation flow)
+            _t1_cols = [p["col"] for t in _QA_SCHEMA["tiers"] if "TIER 1" in t["label"] for p in t["params"]]
+            _t2_cols = [p["col"] for t in _QA_SCHEMA["tiers"] if "TIER 2" in t["label"] for p in t["params"]]
+            _t3_cols = [p["col"] for t in _QA_SCHEMA["tiers"] if "TIER 3" in t["label"] for p in t["params"]]
+
+            def _tier_fail(df, cols):
+                """Rows where at least one param in cols scored 0 (fail)."""
+                present = [c for c in cols if c in df.columns]
+                if not present: return 0
+                mask = df[present].apply(lambda c: pd.to_numeric(c, errors="coerce") == 0).any(axis=1)
+                return int(mask.sum())
+
+            _total_calls_cd = len(audit_df)
+            _auto_fail_cd   = int((audit_df["Status"].astype(str).str.strip() == "Auto-Fail").sum()) if "Status" in audit_df.columns else 0
+            _t1_fail = _tier_fail(audit_df, _t1_cols)
+            _t2_fail = _tier_fail(audit_df, _t2_cols)
+            _t3_fail = _tier_fail(audit_df, _t3_cols)
+
+            _drop_stages = [
+                ("Stage 1 — Critical Flow",   _t1_fail,     "#dc2626", "Tier 1 params (Disposition, Context, Flow Issue)"),
+                ("Stage 2 — Quality Issues",  _t2_fail,     "#f59e0b", "Tier 2 params (Repetition, Dead Air, Introduction)"),
+                ("Stage 3 — Edge Cases",      _t3_fail,     "#2563EB", "Tier 3 params (Language, Tone, Latency)"),
+                ("Auto-Fail — Abrupt Drop",   _auto_fail_cd,"#7f1d1d", "Abrupt Disconnection or Fatal param triggered"),
+            ]
+            _ds_c1, _ds_c2 = st.columns([2, 1])
+            with _ds_c1:
+                for _dsl, _dsn, _dsc, _dsd in _drop_stages:
+                    _dsp = round(_dsn / _total_calls_cd * 100, 1) if _total_calls_cd else 0
+                    st.markdown(
+                        f'<div style="margin-bottom:10px;">'
+                        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'
+                        f'<div style="font-size:0.72rem;font-weight:700;color:#0B1F3A;">{_dsl}</div>'
+                        f'<div style="font-size:0.72rem;font-weight:900;color:{_dsc};">{_dsn} calls &nbsp;({_dsp}%)</div>'
+                        f'</div>'
+                        f'<div style="height:8px;background:#f0f2f5;border-radius:4px;overflow:hidden;">'
+                        f'<div style="width:{_dsp}%;height:100%;background:{_dsc};border-radius:4px;"></div></div>'
+                        f'<div style="font-size:0.62rem;color:#94a3b8;margin-top:2px;">{_dsd}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+            with _ds_c2:
+                _worst_stage = max(_drop_stages, key=lambda x: x[1])
+                _clean_calls = _total_calls_cd - max(_t1_fail, _t2_fail, _t3_fail, _auto_fail_cd)
+                st.markdown(
+                    f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:16px;text-align:center;">'
+                    f'<div style="font-size:0.65rem;font-weight:700;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Highest Drop Point</div>'
+                    f'<div style="font-size:1.1rem;font-weight:900;color:{_worst_stage[2]};line-height:1.2;margin-bottom:4px;">{_worst_stage[0].split("—")[0].strip()}</div>'
+                    f'<div style="font-size:1.6rem;font-weight:900;color:{_worst_stage[2]};">{_worst_stage[1]}</div>'
+                    f'<div style="font-size:0.65rem;color:#94a3b8;">calls affected</div>'
+                    f'<div style="height:1px;background:#f0f2f5;margin:10px 0;"></div>'
+                    f'<div style="font-size:0.65rem;font-weight:700;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Clean Calls</div>'
+                    f'<div style="font-size:1.4rem;font-weight:900;color:#059669;">{max(0,_clean_calls)}</div>'
+                    f'<div style="font-size:0.65rem;color:#94a3b8;">no stage failures</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+            # ── Per-Call Details Table ─────────────────────────────────────
+            st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+            st.markdown(
+                '<div style="font-size:0.72rem;font-weight:800;color:#0B1F3A;letter-spacing:0.08em;'
+                'text-transform:uppercase;margin-bottom:10px;border-bottom:2px solid #E2EAF6;padding-bottom:6px;">'
+                '🔎 Per-Call Custom Parameter Details</div>',
+                unsafe_allow_html=True,
+            )
+            # Build per-call rows
+            _id_col  = next((c for c in ["Lead Number", "Phone Number", "Lead Link"] if c in audit_df.columns), None)
+            _qa_col  = "QA" if "QA" in audit_df.columns else None
+            _sc_col  = "Bot Score" if "Bot Score" in audit_df.columns else None
+            _st_col  = "Status" if "Status" in audit_df.columns else None
+            _dt_col  = next((c for c in audit_df.columns if "audit date" in c.lower() or c.lower() == "date"), None)
+            _disp_col = "Disposition" if "Disposition" in audit_df.columns else None
+
+            # Table header
+            _cp_names = [cp["name"] for cp in _custom_params_in_data]
+            _th_cells = "".join(
+                f'<th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:800;color:#0B1F3A;'
+                f'white-space:nowrap;background:#F0F4F9;">{h}</th>'
+                for h in (
+                    (["Date"] if _dt_col else []) +
+                    (["Lead / ID"] if _id_col else []) +
+                    (["QA"] if _qa_col else []) +
+                    (["Score", "Status"] if _sc_col else []) +
+                    (["Disposition"] if _disp_col else []) +
+                    _cp_names
+                )
+            )
+            _tbl = f'<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr>{_th_cells}</tr></thead><tbody>'
+
+            _status_colors = {"Pass":"#059669","Needs Review":"#d97706","Fail":"#dc2626","Auto-Fail":"#7f1d1d"}
+            _yn_bg = {"yes":"#ecfdf5","no":"#fef2f2","na":"#f8fafc"}
+            _yn_c  = {"yes":"#059669","no":"#dc2626","na":"#94a3b8"}
+
+            for _ri, (_, _row) in enumerate(audit_df.iterrows()):
+                _bg = "#fff" if _ri % 2 == 0 else "#fafafa"
+                _cells = ""
+                if _dt_col:
+                    _cells += f'<td style="padding:6px 10px;color:#475569;white-space:nowrap;">{str(_row.get(_dt_col,"—"))[:10]}</td>'
+                if _id_col:
+                    _lid = str(_row.get(_id_col,"—")).strip()[:20]
+                    _ll  = str(_row.get("Lead Link","")).strip()
+                    _lnk = f'<a href="{_ll}" style="color:#2563EB;font-weight:600;">{_lid}</a>' if _ll.startswith("http") else f'<span style="font-weight:600;color:#0B1F3A;">{_lid}</span>'
+                    _cells += f'<td style="padding:6px 10px;white-space:nowrap;">{_lnk}</td>'
+                if _qa_col:
+                    _cells += f'<td style="padding:6px 10px;color:#475569;">{str(_row.get(_qa_col,"—")).strip()[:16]}</td>'
+                if _sc_col:
+                    _bs_v = pd.to_numeric(_row.get(_sc_col, None), errors="coerce")
+                    _bs_c = "#059669" if (_bs_v or 0) >= 80 else "#d97706" if (_bs_v or 0) >= 60 else "#dc2626"
+                    _cells += f'<td style="padding:6px 10px;font-weight:800;color:{_bs_c};text-align:center;">{int(_bs_v) if pd.notna(_bs_v) else "—"}%</td>'
+                    _st_v = str(_row.get(_st_col,"—")).strip()
+                    _st_c = _status_colors.get(_st_v, "#475569")
+                    _cells += f'<td style="padding:6px 10px;text-align:center;"><span style="background:{_st_c}20;color:{_st_c};font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;">{_st_v}</span></td>'
+                if _disp_col:
+                    _cells += f'<td style="padding:6px 10px;color:#475569;">{str(_row.get(_disp_col,"—")).strip()[:18]}</td>'
+                for _cpn in _cp_names:
+                    _cpval  = str(_row.get(_cpn, "—")).strip().lower()
+                    _cpcmt  = str(_row.get(f"{_cpn} Comment", "")).strip()
+                    _cbg    = _yn_bg.get(_cpval, "#f8fafc")
+                    _ccc    = _yn_c.get(_cpval, "#475569")
+                    _cmt_tip = f' title="{_cpcmt}"' if _cpcmt else ""
+                    _cmt_dot = ' <span style="color:#7c3aed;font-size:9px;" title="has comment">●</span>' if _cpcmt else ""
+                    _cells += (f'<td style="padding:6px 10px;text-align:center;background:{_cbg};">'
+                               f'<span style="color:{_ccc};font-weight:700;font-size:11px;"{_cmt_tip}>'
+                               f'{_cpval.upper() if _cpval in ("yes","no","na") else _cpval}</span>{_cmt_dot}</td>')
+                _tbl += f'<tr style="border-bottom:1px solid #F0F4F9;background:{_bg};">{_cells}</tr>'
+
+            _tbl += '</tbody></table></div>'
+            st.markdown(_tbl, unsafe_allow_html=True)
+            st.markdown(
+                f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:6px;">🔵 dot = has remark · hover cell to read · {len(audit_df)} calls shown</div>',
+                unsafe_allow_html=True,
+            )
+
     # ── Top-5 Weakest Parameters (QA schema only) ─────────────────────────────
     if _has_qa_schema and scored_cols:
         with st.expander("🔍 Parameter Weakness Analysis", expanded=False):
