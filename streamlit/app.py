@@ -7673,11 +7673,19 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                 key="f_correct_disp",
             )
 
-        _f_correct_disp_text = st.text_input(
-            "Correct Disposition (leave blank if correct)",
-            placeholder="e.g. Not Interested, Warm Follow-up…",
-            key="f_correct_disp_text",
-        )
+        _cd_col1, _cd_col2 = st.columns([3, 1])
+        with _cd_col1:
+            _f_correct_disp_text = st.text_input(
+                "Correct Disposition (leave blank if correct)",
+                placeholder="e.g. Not Interested, Warm Follow-up…",
+                key="f_correct_disp_text",
+            )
+        with _cd_col2:
+            _f_call_drop_stage = st.selectbox(
+                "Call Drop Stage",
+                ["NA", "1st", "2nd", "3rd", "4th"],
+                key="f_call_drop_stage",
+            )
 
         st.markdown(
             '<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:10px 0 4px;">',
@@ -7861,6 +7869,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                     "Fatal?":              _computed["Fatal?"],
                     "Notes":               _f_notes,
                     "Improvement Suggestion": _f_suggestion,
+                    "Call Drop Stage":     _f_call_drop_stage if _f_call_drop_stage != "NA" else "",
                 }
                 audit_store.append(_rec)
                 audit_log = st.session_state.get("sense_audit_log", [])
@@ -7870,9 +7879,10 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                 # Store last result for display below
                 st.session_state["qa_last_result"] = {
                     **_computed,
-                    "_disposition":       _f_disposition if _f_disposition != "— select —" else "—",
-                    "_correct_disp":      _f_correct_disp,
-                    "_correct_disp_text": _f_correct_disp_text,
+                    "_disposition":        _f_disposition if _f_disposition != "— select —" else "—",
+                    "_correct_disp":       _f_correct_disp,
+                    "_correct_disp_text":  _f_correct_disp_text,
+                    "_call_drop_stage":    _f_call_drop_stage if _f_call_drop_stage != "NA" else "",
                 }
 
                 # Clear AI suggestion draft after use
@@ -7916,6 +7926,9 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             + (f'<div><div style="font-size:1rem;font-weight:800;color:#dc2626;">{_lr.get("_correct_disp_text","—")}</div>'
                f'<div style="font-size:0.62rem;color:#5588bb;">Expected Disposition</div></div>'
                if _lr.get("_correct_disp_text") else "")
+            + (f'<div><div style="font-size:1rem;font-weight:800;color:#f59e0b;">{_lr.get("_call_drop_stage","—")}</div>'
+               f'<div style="font-size:0.62rem;color:#5588bb;">Call Drop Stage</div></div>'
+               if _lr.get("_call_drop_stage") else "")
             + f'</div></div>',
             unsafe_allow_html=True,
         )
