@@ -84,6 +84,18 @@ alter table public.audit_log enable row level security;
 drop policy if exists "allow all" on public.audit_log;
 create policy "allow all" on public.audit_log for all using (true) with check (true);
 
+-- ── 6. custom_params (persisted custom audit parameters) ─────────────────────
+create table if not exists public.custom_params (
+  id      text primary key,   -- slug: name lowercased + underscored
+  name    text not null,
+  options text not null default 'Yes|No',  -- pipe-separated
+  guide   text not null default ''
+);
+
+alter table public.custom_params enable row level security;
+drop policy if exists "allow all" on public.custom_params;
+create policy "allow all" on public.custom_params for all using (true) with check (true);
+
 -- ── Verify: list all tables and their RLS status ──────────────────────────────
 select
   schemaname,

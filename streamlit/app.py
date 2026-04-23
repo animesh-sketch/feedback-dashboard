@@ -34,6 +34,7 @@ import auth
 import gmail_sender
 import tracking_store
 import audit_store
+import param_store
 
 # ─── Page config ──────────────────────────────────────────────────────────────
 
@@ -7270,7 +7271,7 @@ def _render_registry():
 def _render_param_manager(key_sfx=""):
     """Parameter manager: view/edit weights, add custom params, auto-generate legend."""
     if "sense_custom_audit_params" not in st.session_state:
-        st.session_state["sense_custom_audit_params"] = []
+        st.session_state["sense_custom_audit_params"] = param_store.load()
     _ks = key_sfx  # short alias for unique widget keys
 
     with st.expander("⚙️ Parameter Manager — Add / Edit Parameters & Weights", expanded=False):
@@ -7335,13 +7336,17 @@ def _render_param_manager(key_sfx=""):
         if _add_btn and _new_name.strip():
             _existing = [p["name"].lower() for p in st.session_state["sense_custom_audit_params"]]
             if _new_name.strip().lower() not in _existing:
-                st.session_state["sense_custom_audit_params"].append({
-                    "name":    _new_name.strip(),
-                    "options": ["Yes", "No"],
-                    "guide":   _new_remarks.strip(),
-                })
-                st.success(f"Added '{_new_name.strip()}' — it will appear in the audit form below.")
-                st.rerun()
+                _err = param_store.add(_new_name.strip(), ["Yes", "No"], _new_remarks.strip())
+                if _err:
+                    st.error(f"Could not save parameter: {_err}")
+                else:
+                    st.session_state["sense_custom_audit_params"].append({
+                        "name":    _new_name.strip(),
+                        "options": ["Yes", "No"],
+                        "guide":   _new_remarks.strip(),
+                    })
+                    st.success(f"Added '{_new_name.strip()}' — it will appear in the audit form below.")
+                    st.rerun()
             else:
                 st.warning("A parameter with that name already exists.")
 
@@ -7352,10 +7357,14 @@ def _render_param_manager(key_sfx=""):
             _del_sel = st.selectbox("", _del_opts, key=f"pm_del_sel{_ks}", label_visibility="collapsed")
             if _del_sel != "—":
                 if st.button(f"🗑 Remove '{_del_sel}'", key=f"pm_del_btn{_ks}"):
-                    st.session_state["sense_custom_audit_params"] = [
-                        p for p in st.session_state["sense_custom_audit_params"] if p["name"] != _del_sel
-                    ]
-                    st.rerun()
+                    _del_err = param_store.remove(_del_sel)
+                    if _del_err:
+                        st.error(f"Could not delete parameter: {_del_err}")
+                    else:
+                        st.session_state["sense_custom_audit_params"] = [
+                            p for p in st.session_state["sense_custom_audit_params"] if p["name"] != _del_sel
+                        ]
+                        st.rerun()
 
         # ── Auto-generated legend preview ─────────────────────────────────────
         with st.expander("📋 Auto-Generated Legend Preview", expanded=False):
@@ -7771,7 +7780,9 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                     )
 
         # ── Custom parameters (Yes / No + comment) ───────────────────────────
-        _custom_params = st.session_state.get("sense_custom_audit_params", [])
+        if "sense_custom_audit_params" not in st.session_state:
+            st.session_state["sense_custom_audit_params"] = param_store.load()
+        _custom_params = st.session_state["sense_custom_audit_params"]
         if _custom_params:
             st.markdown(
                 '<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:10px 0 4px;">',
