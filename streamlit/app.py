@@ -7834,7 +7834,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                     _cp_key = f"af_cp_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
                     _pv[_cp["name"]] = st.selectbox(
                         f"{_cp['name']} *",
-                        ["— select —", "Yes", "No", "NA"],
+                        ["— select —", "Yes", "No"],
                         key=_cp_key,
                         help=_cp.get("guide", "") or None,
                     )
