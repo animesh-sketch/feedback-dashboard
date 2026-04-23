@@ -6562,7 +6562,7 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                         return _S
 
                     # ── Template 5: Premium Gradient (Purple/Pink) ───────────
-                    else:
+                    elif _tid == 5:
                         _S = '<div style="font-family:\'Segoe UI\',Arial,sans-serif;max-width:660px;margin:0 auto;background:#faf5ff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(109,40,217,0.12);">'
                         _S += f'''<div style="background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 45%,#db2777 100%);padding:34px 40px 30px;position:relative;">
   <div style="font-size:9px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:8px;">✦ CONVIN SENSE AUDIT &nbsp;·&nbsp; PREMIUM ANALYTICS</div>
