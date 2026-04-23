@@ -5116,6 +5116,132 @@ def _render_sense_scorecard(sheets, legend_map):
             except Exception:
                 pass
 
+            # ── Remarks Summary ────────────────────────────────────────────
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+            st.markdown(
+                '<div style="font-size:0.72rem;font-weight:800;color:#0B1F3A;letter-spacing:0.08em;'
+                'text-transform:uppercase;margin-bottom:10px;border-bottom:2px solid #E2EAF6;padding-bottom:6px;">'
+                '💬 Custom Parameter Remarks</div>',
+                unsafe_allow_html=True,
+            )
+
+            # Collect per-param comments
+            _cp_remark_map = {}
+            _all_cp_remarks = []
+            for _cp2 in _custom_params_in_data:
+                _cmt2_col = f"{_cp2['name']} Comment"
+                if _cmt2_col in audit_df.columns:
+                    _cmts2 = audit_df[_cmt2_col].replace("", None).dropna().astype(str).str.strip()
+                    _cmts2 = _cmts2[_cmts2.str.lower().str.len() > 0]
+                    _cmts2 = _cmts2[~_cmts2.str.lower().isin(["nan","none",""])]
+                    _cp_remark_map[_cp2["name"]] = _cmts2.tolist()
+                    _all_cp_remarks.extend(_cmts2.tolist())
+
+            if not _all_cp_remarks:
+                st.markdown(
+                    '<div style="font-size:0.72rem;color:#94a3b8;padding:8px 0;">No comments recorded for custom parameters yet.</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                # Per-param comment pills
+                for _pname, _prmks in _cp_remark_map.items():
+                    if not _prmks: continue
+                    st.markdown(
+                        f'<div style="font-size:0.68rem;font-weight:700;color:#0ebc6e;margin-bottom:4px;">⭐ {_pname} — {len(_prmks)} remark{"s" if len(_prmks)!=1 else ""}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    for _rm in _prmks[:5]:
+                        st.markdown(
+                            f'<div style="background:#f8fffe;border-left:3px solid #6ee7b7;border-radius:0 6px 6px 0;'
+                            f'padding:6px 12px;margin-bottom:4px;font-size:0.71rem;color:#374151;line-height:1.5;">{_rm}</div>',
+                            unsafe_allow_html=True,
+                        )
+                    if len(_prmks) > 5:
+                        st.markdown(
+                            f'<div style="font-size:0.65rem;color:#94a3b8;margin-bottom:8px;">+{len(_prmks)-5} more remarks</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                # AI summary button
+                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+                _cp_ai_key = "cp_remarks_ai_summary"
+                _api_key_cp = st.session_state.get("api_key", "")
+                _cp_ai_col1, _cp_ai_col2 = st.columns([3, 1])
+                with _cp_ai_col2:
+                    if st.button("✨ AI Summary", key="cp_remarks_ai_btn", use_container_width=True):
+                        if not _api_key_cp:
+                            st.warning("Add your Anthropic API key in Settings.")
+                        else:
+                            _cp_rm_text = "\n".join(
+                                f"[{pn}] {rm}"
+                                for pn, rms in _cp_remark_map.items()
+                                for rm in rms[:20]
+                            )
+                            _cp_prompt = (
+                                f"You are a QA analytics expert. The following are reviewer remarks for custom call-action parameters "
+                                f"(e.g. 'Was call patching done?'). Summarise the key findings.\n\n"
+                                f"Remarks:\n{_cp_rm_text}\n\n"
+                                f"Return ONLY valid JSON (no markdown) with these keys:\n"
+                                f'{{"summary": "2-3 sentence overall summary", '
+                                f'"per_param": [{{"name": "param name", "insight": "1-sentence insight"}}], '
+                                f'"top_issue": "single most critical finding", '
+                                f'"recommendation": "single actionable recommendation"}}'
+                            )
+                            try:
+                                import anthropic as _anth2, json as _jcp
+                                _ac2 = _anth2.Anthropic(api_key=_api_key_cp)
+                                with st.spinner("Summarising remarks…"):
+                                    _cp_msg = _ac2.messages.create(
+                                        model="claude-haiku-4-5-20251001",
+                                        max_tokens=600,
+                                        messages=[{"role": "user", "content": _cp_prompt}],
+                                    )
+                                _cp_raw = _cp_msg.content[0].text.strip()
+                                if _cp_raw.startswith("```"):
+                                    _cp_raw = _cp_raw.split("```")[1]
+                                    if _cp_raw.startswith("json"): _cp_raw = _cp_raw[4:]
+                                st.session_state[_cp_ai_key] = _jcp.loads(_cp_raw)
+                                st.rerun()
+                            except Exception as _cpe:
+                                st.error(f"AI error: {_cpe}")
+
+                # Show AI summary if available
+                _cp_ai = st.session_state.get(_cp_ai_key)
+                if _cp_ai:
+                    st.markdown(
+                        f'<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:12px;padding:16px 18px;margin-top:8px;">'
+                        f'<div style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#7c3aed;margin-bottom:10px;">✨ AI Remarks Summary</div>'
+                        f'<div style="font-size:0.77rem;color:#3b0764;line-height:1.65;margin-bottom:12px;">{_cp_ai.get("summary","")}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    if _cp_ai.get("per_param"):
+                        for _ppi in _cp_ai["per_param"]:
+                            st.markdown(
+                                f'<div style="display:flex;gap:10px;margin-bottom:6px;">'
+                                f'<span style="font-size:0.68rem;font-weight:700;color:#7c3aed;white-space:nowrap;">⭐ {_ppi.get("name","")}</span>'
+                                f'<span style="font-size:0.71rem;color:#374151;line-height:1.5;">{_ppi.get("insight","")}</span>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                    if _cp_ai.get("top_issue"):
+                        st.markdown(
+                            f'<div style="background:#fff1f2;border-left:3px solid #dc2626;border-radius:0 8px 8px 0;padding:8px 12px;margin-top:8px;">'
+                            f'<span style="font-size:0.68rem;font-weight:800;color:#dc2626;">🔴 Top Issue: </span>'
+                            f'<span style="font-size:0.71rem;color:#7f1d1d;">{_cp_ai["top_issue"]}</span></div>',
+                            unsafe_allow_html=True,
+                        )
+                    if _cp_ai.get("recommendation"):
+                        st.markdown(
+                            f'<div style="background:#eff6ff;border-left:3px solid #2563EB;border-radius:0 8px 8px 0;padding:8px 12px;margin-top:6px;">'
+                            f'<span style="font-size:0.68rem;font-weight:800;color:#2563EB;">💡 Recommendation: </span>'
+                            f'<span style="font-size:0.71rem;color:#1e3a5f;">{_cp_ai["recommendation"]}</span></div>',
+                            unsafe_allow_html=True,
+                        )
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    if st.button("↺ Regenerate", key="cp_remarks_ai_regen", use_container_width=False):
+                        st.session_state.pop(_cp_ai_key, None)
+                        st.rerun()
+
     # ── Top-5 Weakest Parameters (QA schema only) ─────────────────────────────
     if _has_qa_schema and scored_cols:
         with st.expander("🔍 Parameter Weakness Analysis", expanded=False):
