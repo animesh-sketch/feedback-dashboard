@@ -6515,7 +6515,47 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                             if _rem < _cols_per_row:
                                 for _ in range(_rem):
                                     _B += '<td style="padding:4px;width:33%;"></td>'
-                            _B += '</tr></table></div>'
+                            _B += '</tr></table>'
+                            # ── Key Insights for custom params ──────────────
+                            if len(_em_custom_rows) >= 1:
+                                _cp_sorted_fail = sorted(_em_custom_rows, key=lambda x: x["yes_pct"])
+                                _cp_sorted_pass = sorted(_em_custom_rows, key=lambda x: -x["yes_pct"])
+                                _cp_overall_yes = round(sum(r["yes"] for r in _em_custom_rows) / max(sum(r["tot"] for r in _em_custom_rows), 1) * 100, 1)
+                                _cp_health_c = "#059669" if _cp_overall_yes >= 70 else "#d97706" if _cp_overall_yes >= 50 else "#dc2626"
+                                _cp_health_l = "Strong" if _cp_overall_yes >= 70 else "Moderate" if _cp_overall_yes >= 50 else "Needs Attention"
+                                _B += f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;margin-top:10px;">'
+                                _B += f'<div style="font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#059669;margin-bottom:10px;">📌 Custom Parameter Key Insights</div>'
+                                # Overall health line
+                                _B += (f'<div style="font-size:12px;color:#0B1F3A;margin-bottom:8px;">'
+                                       f'Overall custom parameter compliance: <strong style="color:{_cp_health_c};">{_cp_overall_yes}% — {_cp_health_l}</strong> '
+                                       f'across {len(_em_custom_rows)} parameter{"s" if len(_em_custom_rows)!=1 else ""}.</div>')
+                                # Top failing
+                                _cp_fail = [r for r in _cp_sorted_fail if r["yes_pct"] < 70][:3]
+                                if _cp_fail:
+                                    _B += '<div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:4px;">🔴 Lowest Compliance</div>'
+                                    for _cpf in _cp_fail:
+                                        _cpf_c = "#dc2626" if _cpf["yes_pct"] < 50 else "#d97706"
+                                        _B += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">'
+                                               f'<div style="font-size:12px;font-weight:600;color:#374151;min-width:140px;">{_cpf["name"]}</div>'
+                                               f'<div style="flex:1;background:#fee2e2;border-radius:3px;height:8px;overflow:hidden;">'
+                                               f'<div style="width:{_cpf["yes_pct"]}%;height:100%;background:{_cpf_c};"></div></div>'
+                                               f'<div style="font-size:12px;font-weight:800;color:{_cpf_c};min-width:40px;text-align:right;">{_cpf["yes_pct"]}%</div>'
+                                               f'<div style="font-size:11px;color:#64748b;">{_cpf["no"]} No</div>'
+                                               f'</div>')
+                                # Top passing
+                                _cp_pass = [r for r in _cp_sorted_pass if r["yes_pct"] >= 70][:2]
+                                if _cp_pass:
+                                    _B += '<div style="font-size:11px;font-weight:700;color:#059669;margin-top:6px;margin-bottom:4px;">🟢 Highest Compliance</div>'
+                                    for _cpp in _cp_pass:
+                                        _B += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">'
+                                               f'<div style="font-size:12px;font-weight:600;color:#374151;min-width:140px;">{_cpp["name"]}</div>'
+                                               f'<div style="flex:1;background:#dcfce7;border-radius:3px;height:8px;overflow:hidden;">'
+                                               f'<div style="width:{_cpp["yes_pct"]}%;height:100%;background:#059669;"></div></div>'
+                                               f'<div style="font-size:12px;font-weight:800;color:#059669;min-width:40px;text-align:right;">{_cpp["yes_pct"]}%</div>'
+                                               f'<div style="font-size:11px;color:#64748b;">{_cpp["yes"]} Yes</div>'
+                                               f'</div>')
+                                _B += '</div>'
+                            _B += '</div>'
                         # Remarks Summary (AI)
                         _rm_data = st.session_state.get(_remarks_key)
                         if em_remarks and _rm_data:
