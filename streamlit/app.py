@@ -1096,210 +1096,205 @@ def _render_period_content(period: str):
 # ─── Home landing portal ──────────────────────────────────────────────────────
 
 def render_home():
-    _logo_html = _logo_img(48, 10)
+    _logo_html = _logo_img(52, 12)
     st.markdown(f"""
 <style>
-@keyframes phFadeUp {{
-    from {{ opacity:0; transform:translateY(24px); }}
+@keyframes hFadeUp {{
+    from {{ opacity:0; transform:translateY(28px); }}
     to   {{ opacity:1; transform:translateY(0); }}
 }}
-@keyframes phOrb {{
-    0%,100% {{ transform:translate(0,0) scale(1); }}
-    50%      {{ transform:translate(16px,-14px) scale(1.1); }}
+@keyframes hShimmer {{
+    0%   {{ background-position: -400px 0; }}
+    100% {{ background-position: 400px 0; }}
 }}
-@keyframes phPulse {{
-    0%,100% {{ opacity:0.6; }}
-    50%      {{ opacity:1; }}
+@keyframes hPulse {{
+    0%,100% {{ box-shadow: 0 0 0 0 rgba(99,179,237,0.4); }}
+    50%      {{ box-shadow: 0 0 0 10px rgba(99,179,237,0); }}
+}}
+@keyframes hFloat {{
+    0%,100% {{ transform: translateY(0px); }}
+    50%      {{ transform: translateY(-8px); }}
 }}
 
-/* ── Full-page wrapper ── */
-.ph-wrap {{
-    background: linear-gradient(160deg, #020d1f 0%, #061830 35%, #0a2248 65%, #071a38 100%);
-    border-radius: 20px;
-    padding: 56px 40px 52px;
+/* ── Hero banner ── */
+.h-hero {{
+    background: linear-gradient(135deg, #0a0f2e 0%, #0d1b4b 40%, #12236b 70%, #0a1840 100%);
+    border-radius: 24px;
+    padding: 52px 48px 44px;
+    text-align: center;
     position: relative;
     overflow: hidden;
-    animation: phFadeUp 0.5s ease both;
+    margin-bottom: 28px;
+    animation: hFadeUp 0.5s ease both;
+    border: 1px solid rgba(99,179,237,0.15);
 }}
-
-/* decorative orbs */
-.ph-wrap::before {{
-    content:""; position:absolute; top:-120px; right:-120px;
-    width:500px; height:500px; border-radius:50%; pointer-events:none;
-    background: radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 65%);
-    animation: phOrb 10s ease-in-out infinite;
+.h-hero::before {{
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(59,130,246,0.25) 0%, transparent 70%);
+    pointer-events: none;
 }}
-.ph-wrap::after {{
-    content:""; position:absolute; bottom:-160px; left:-100px;
-    width:460px; height:460px; border-radius:50%; pointer-events:none;
-    background: radial-gradient(circle, rgba(96,165,250,0.10) 0%, transparent 65%);
-    animation: phOrb 14s ease-in-out infinite reverse;
+.h-hero::after {{
+    content: "";
+    position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(99,179,237,0.5), transparent);
 }}
-
-/* ── Hero header ── */
-.ph-hero {{
-    text-align: center;
-    margin-bottom: 44px;
-    position: relative;
-    z-index: 1;
+.h-eyebrow {{
+    display: inline-block;
+    font-size: 0.6rem; font-weight: 800; letter-spacing: 0.25em;
+    text-transform: uppercase; color: #63b3ed;
+    background: rgba(99,179,237,0.12);
+    border: 1px solid rgba(99,179,237,0.3);
+    border-radius: 99px; padding: 4px 16px;
+    margin-bottom: 20px;
 }}
-.ph-wordmark {{
-    display: inline-flex; align-items: center; gap: 14px; margin-bottom: 18px;
-}}
-.ph-brand {{
-    font-size: 2.6rem; font-weight: 900; color: #ffffff;
+.h-brand {{
+    font-size: 3rem; font-weight: 900; color: #ffffff;
     letter-spacing: -0.05em; line-height: 1;
+    margin-bottom: 12px;
+    text-shadow: 0 0 60px rgba(99,179,237,0.4);
 }}
-.ph-eyebrow {{
-    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.22em;
-    text-transform: uppercase; color: #60a5fa;
-    margin-bottom: 14px;
-    animation: phPulse 3s ease-in-out infinite;
+.h-brand span {{
+    background: linear-gradient(90deg, #63b3ed, #a78bfa, #63b3ed);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: hShimmer 3s linear infinite;
 }}
-.ph-headline {{
-    font-size: 1.15rem; font-weight: 600; color: #e0eeff;
-    line-height: 1.5; margin-bottom: 6px;
+.h-tagline {{
+    font-size: 1rem; font-weight: 500; color: rgba(226,232,240,0.85);
+    line-height: 1.6; margin-bottom: 8px;
 }}
-.ph-headline span {{ color: #60a5fa; }}
-.ph-sub {{
-    font-size: 0.75rem; color: rgba(160,200,240,0.65);
-    letter-spacing: 0.04em;
-}}
-
-/* ── Cards grid ── */
-.ph-grid {{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    max-width: 860px;
-    margin: 0 auto;
-    position: relative;
-    z-index: 1;
+.h-sub {{
+    font-size: 0.72rem; color: rgba(148,163,184,0.7);
+    letter-spacing: 0.06em;
 }}
 
-.ph-card {{
-    border-radius: 16px;
-    padding: 30px 26px 22px;
+/* ── Cards ── */
+.h-card {{
+    border-radius: 20px;
+    padding: 32px 28px 26px;
     position: relative; overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1), box-shadow 0.25s;
+    animation: hFadeUp 0.6s ease both;
+    margin-bottom: 12px;
 }}
-.ph-card:hover {{ transform: translateY(-5px); }}
+.h-card:hover {{ transform: translateY(-6px); }}
 
-.ph-card-cdl {{
-    background: linear-gradient(140deg, rgba(37,99,235,0.22) 0%, rgba(30,64,175,0.30) 100%);
-    border: 1px solid rgba(96,165,250,0.30);
-    box-shadow: 0 8px 32px rgba(37,99,235,0.20);
+.h-card-cdl {{
+    background: linear-gradient(145deg, #1a3a8f 0%, #1e40af 45%, #1d4ed8 100%);
+    border: 1px solid rgba(147,197,253,0.4);
+    box-shadow: 0 4px 24px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.1);
 }}
-.ph-card-cdl:hover {{ box-shadow: 0 18px 50px rgba(37,99,235,0.32); border-color: rgba(96,165,250,0.55); }}
-
-.ph-card-sense {{
-    background: linear-gradient(140deg, rgba(124,58,237,0.20) 0%, rgba(109,40,217,0.28) 100%);
-    border: 1px solid rgba(167,139,250,0.28);
-    box-shadow: 0 8px 32px rgba(124,58,237,0.18);
+.h-card-cdl:hover {{
+    box-shadow: 0 20px 60px rgba(37,99,235,0.50), inset 0 1px 0 rgba(255,255,255,0.15);
+    border-color: rgba(147,197,253,0.7);
 }}
-.ph-card-sense:hover {{ box-shadow: 0 18px 50px rgba(124,58,237,0.30); border-color: rgba(167,139,250,0.50); }}
-
-/* inner card glow */
-.ph-card::before {{
-    content:""; position:absolute; top:-80px; right:-60px;
-    width:260px; height:260px; border-radius:50%; pointer-events:none;
+.h-card-sense {{
+    background: linear-gradient(145deg, #3b0764 0%, #6d28d9 45%, #7c3aed 100%);
+    border: 1px solid rgba(196,181,253,0.4);
+    box-shadow: 0 4px 24px rgba(124,58,237,0.35), inset 0 1px 0 rgba(255,255,255,0.1);
 }}
-.ph-card-cdl::before  {{ background: radial-gradient(circle, rgba(96,165,250,0.14) 0%, transparent 65%); }}
-.ph-card-sense::before {{ background: radial-gradient(circle, rgba(167,139,250,0.14) 0%, transparent 65%); }}
-
-.ph-card-badge {{
-    display: inline-flex; align-items: center; gap: 6px;
-    border-radius: 99px; padding: 3px 12px;
-    font-size: 0.56rem; font-weight: 700; letter-spacing: 0.14em;
-    text-transform: uppercase; margin-bottom: 14px;
-}}
-.ph-badge-cdl   {{ background: rgba(96,165,250,0.15); border:1px solid rgba(96,165,250,0.35); color:#93c5fd; }}
-.ph-badge-sense {{ background: rgba(167,139,250,0.15); border:1px solid rgba(167,139,250,0.35); color:#c4b5fd; }}
-
-.ph-card-title {{
-    font-size: 1.45rem; font-weight: 900; color: #ffffff;
-    letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 5px;
-}}
-.ph-card-sub {{
-    font-size: 0.78rem; font-weight: 600; margin-bottom: 14px;
-}}
-.ph-sub-cdl   {{ color: #93c5fd; }}
-.ph-sub-sense {{ color: #c4b5fd; }}
-
-.ph-divider {{
-    height: 1px; margin: 12px 0 14px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.12), transparent);
-}}
-.ph-desc {{
-    font-size: 0.74rem; color: rgba(210,230,255,0.75);
-    line-height: 1.7; margin-bottom: 18px;
-}}
-.ph-pills {{ display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px; }}
-.ph-pill {{
-    font-size: 0.61rem; font-weight: 600;
-    color: rgba(220,235,255,0.70);
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 99px; padding: 3px 10px; white-space: nowrap;
+.h-card-sense:hover {{
+    box-shadow: 0 20px 60px rgba(124,58,237,0.50), inset 0 1px 0 rgba(255,255,255,0.15);
+    border-color: rgba(196,181,253,0.7);
 }}
 
-/* ── Stats strip ── */
-.ph-stats {{
-    display: flex; justify-content: center; gap: 48px;
-    margin-top: 40px;
-    position: relative; z-index: 1;
-    border-top: 1px solid rgba(255,255,255,0.07);
-    padding-top: 28px;
+/* glow orb top-right of each card */
+.h-card::before {{
+    content: ""; position: absolute; top: -60px; right: -60px;
+    width: 220px; height: 220px; border-radius: 50%; pointer-events: none;
+    animation: hFloat 6s ease-in-out infinite;
 }}
-.ph-stat {{ text-align: center; }}
-.ph-stat-val {{
-    font-size: 1.6rem; font-weight: 900; color: #ffffff;
-    letter-spacing: -0.04em;
+.h-card-cdl::before  {{ background: radial-gradient(circle, rgba(147,197,253,0.25) 0%, transparent 65%); }}
+.h-card-sense::before {{ background: radial-gradient(circle, rgba(196,181,253,0.25) 0%, transparent 65%); }}
+
+.h-icon {{
+    font-size: 2.4rem; margin-bottom: 14px; display: block;
+    filter: drop-shadow(0 0 12px rgba(255,255,255,0.3));
+    animation: hFloat 5s ease-in-out infinite;
 }}
-.ph-stat-lbl {{
-    font-size: 0.62rem; color: rgba(160,200,240,0.55);
-    font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
-    margin-top: 2px;
+.h-card-title {{
+    font-size: 1.55rem; font-weight: 900; color: #ffffff;
+    letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 6px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}}
+.h-card-sub {{
+    font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.75);
+    margin-bottom: 16px; line-height: 1.5;
+}}
+.h-divider {{
+    height: 1px; margin: 14px 0;
+    background: linear-gradient(90deg, rgba(255,255,255,0.25), rgba(255,255,255,0.05), transparent);
+}}
+.h-desc {{
+    font-size: 0.76rem; color: rgba(255,255,255,0.82);
+    line-height: 1.75; margin-bottom: 20px;
+    font-weight: 400;
+}}
+.h-pills {{ display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }}
+.h-pill {{
+    font-size: 0.63rem; font-weight: 700;
+    color: rgba(255,255,255,0.95);
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 99px; padding: 4px 12px;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+}}
+
+/* ── Stats bar ── */
+.h-stats {{
+    display: flex; justify-content: space-around; align-items: center;
+    background: linear-gradient(135deg, #0a0f2e, #0d1b4b);
+    border: 1px solid rgba(99,179,237,0.15);
+    border-radius: 16px; padding: 20px 32px;
+    margin-top: 8px;
+    animation: hFadeUp 0.7s ease both;
+}}
+.h-stat {{ text-align: center; }}
+.h-stat-val {{
+    font-size: 1.5rem; font-weight: 900; color: #63b3ed;
+    letter-spacing: -0.04em; line-height: 1;
+}}
+.h-stat-lbl {{
+    font-size: 0.6rem; color: rgba(148,163,184,0.7);
+    font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; margin-top: 4px;
+}}
+.h-stat-div {{
+    width: 1px; height: 36px;
+    background: linear-gradient(180deg, transparent, rgba(99,179,237,0.3), transparent);
 }}
 </style>
 
-<div class="ph-wrap">
-
-  <!-- Hero -->
-  <div class="ph-hero">
-    <div class="ph-eyebrow">⚡ Convin Intelligence Suite</div>
-    <div class="ph-wordmark">
-      {_logo_html}
-      <span class="ph-brand">Convin Data Labs</span>
-    </div>
-    <div class="ph-headline">
-      One platform. <span>Complete conversation intelligence.</span>
-    </div>
-    <div class="ph-sub">Select a workspace to continue ↓</div>
-  </div>
-
+<div class="h-hero">
+  <div class="h-eyebrow">⚡ Convin Intelligence Suite</div>
+  <div class="h-brand">Convin <span>Data Labs</span></div>
+  <div class="h-tagline">One platform. Complete conversation intelligence.</div>
+  <div class="h-sub">Select a workspace below to continue</div>
 </div>""", unsafe_allow_html=True)
 
-    # Cards + buttons in columns so each button sits inside its card area
     _col_cdl, _col_sense = st.columns(2)
 
     with _col_cdl:
         st.markdown("""
-<div class="ph-card ph-card-cdl">
-  <div class="ph-card-badge ph-badge-cdl">📊 Insights Platform</div>
-  <div class="ph-card-title">Convin Data Labs</div>
-  <div class="ph-card-sub ph-sub-cdl">Track every insight. Own every relationship.</div>
-  <div class="ph-divider"></div>
-  <div class="ph-desc">
+<div class="h-card h-card-cdl">
+  <span class="h-icon">📊</span>
+  <div class="h-card-title">Convin Data Labs</div>
+  <div class="h-card-sub">Track every insight. Own every relationship.</div>
+  <div class="h-divider"></div>
+  <div class="h-desc">
     Centralised insights report feedback, stakeholder email campaigns,
     client management and real-time KPI tracking — all in one place.
   </div>
-  <div class="ph-pills">
-    <span class="ph-pill">📬 Campaign tracking</span>
-    <span class="ph-pill">⭐ CSAT feedback</span>
-    <span class="ph-pill">📧 Email delivery</span>
-    <span class="ph-pill">🏢 Client management</span>
-    <span class="ph-pill">📈 KPI monitoring</span>
+  <div class="h-pills">
+    <span class="h-pill">📬 Campaigns</span>
+    <span class="h-pill">⭐ CSAT</span>
+    <span class="h-pill">📧 Email delivery</span>
+    <span class="h-pill">🏢 Clients</span>
+    <span class="h-pill">📈 KPIs</span>
   </div>
 </div>""", unsafe_allow_html=True)
         if st.button("Open CDL Dashboard →", key="home_enter_cdl", use_container_width=True, type="primary"):
@@ -1309,21 +1304,21 @@ def render_home():
 
     with _col_sense:
         st.markdown("""
-<div class="ph-card ph-card-sense">
-  <div class="ph-card-badge ph-badge-sense">🎯 Auto QA · Bot Intelligence</div>
-  <div class="ph-card-title">Convin Sense Audit</div>
-  <div class="ph-card-sub ph-sub-sense">Auto-score every call. Never miss a failure.</div>
-  <div class="ph-divider"></div>
-  <div class="ph-desc">
+<div class="h-card h-card-sense">
+  <span class="h-icon">🎯</span>
+  <div class="h-card-title">Convin Sense Audit</div>
+  <div class="h-card-sub">Auto-score every call. Never miss a failure.</div>
+  <div class="h-divider"></div>
+  <div class="h-desc">
     Automated QA scoring, bot failure intelligence, tier-based parameter analysis,
     auditor leaderboards and priority action plans — powered by Convin Sense.
   </div>
-  <div class="ph-pills">
-    <span class="ph-pill">🤖 Auto QA scoring</span>
-    <span class="ph-pill">🧠 Bot intelligence</span>
-    <span class="ph-pill">👤 Auditor leaderboard</span>
-    <span class="ph-pill">📊 Tier-based QA</span>
-    <span class="ph-pill">⚡ Auto-fail detection</span>
+  <div class="h-pills">
+    <span class="h-pill">🤖 Auto QA</span>
+    <span class="h-pill">🧠 Bot intelligence</span>
+    <span class="h-pill">👤 Leaderboard</span>
+    <span class="h-pill">📊 Tier analysis</span>
+    <span class="h-pill">⚡ Auto-fail</span>
   </div>
 </div>""", unsafe_allow_html=True)
         if st.button("Open Sense Audit →", key="home_enter_sense", use_container_width=True, type="primary"):
@@ -1331,13 +1326,15 @@ def render_home():
             st.session_state["current_page"] = "Audit"
             st.rerun()
 
-    # Stats strip
     st.markdown("""
-<div class="ph-stats">
-  <div class="ph-stat"><div class="ph-stat-val">Tier 1–3</div><div class="ph-stat-lbl">QA Parameters</div></div>
-  <div class="ph-stat"><div class="ph-stat-val">Auto</div><div class="ph-stat-lbl">Score & Fail Detection</div></div>
-  <div class="ph-stat"><div class="ph-stat-val">Live</div><div class="ph-stat-lbl">Supabase Persistence</div></div>
-  <div class="ph-stat"><div class="ph-stat-val">100%</div><div class="ph-stat-lbl">Audit Coverage</div></div>
+<div class="h-stats">
+  <div class="h-stat"><div class="h-stat-val">Tier 1–3</div><div class="h-stat-lbl">QA Parameters</div></div>
+  <div class="h-stat-div"></div>
+  <div class="h-stat"><div class="h-stat-val">Auto</div><div class="h-stat-lbl">Scoring & Fail Detection</div></div>
+  <div class="h-stat-div"></div>
+  <div class="h-stat"><div class="h-stat-val">Live</div><div class="h-stat-lbl">Supabase Sync</div></div>
+  <div class="h-stat-div"></div>
+  <div class="h-stat"><div class="h-stat-val">100%</div><div class="h-stat-lbl">Audit Coverage</div></div>
 </div>""", unsafe_allow_html=True)
 
 
