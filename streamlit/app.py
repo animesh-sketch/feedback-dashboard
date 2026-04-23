@@ -7285,10 +7285,23 @@ def _render_param_manager(key_sfx=""):
         with _pc1:
             _new_name = st.text_input("Parameter Name", placeholder="e.g. Empathy Check", key=f"pm_new_name{_ks}")
         with _pc2:
-            _new_weight = st.number_input("Weight", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key=f"pm_new_weight{_ks}")
+            st.markdown(
+                '<div style="font-size:0.68rem;color:#5588bb;margin-bottom:4px;">Scoring</div>'
+                '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;'
+                'padding:6px 12px;font-size:0.75rem;font-weight:700;color:#16a34a;margin-top:2px;">'
+                '✓ Yes &nbsp;/&nbsp; No</div>',
+                unsafe_allow_html=True,
+            )
         with _pc3:
             st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
             _add_btn = st.button("Add", key=f"pm_add_param{_ks}", use_container_width=True, type="primary")
+
+        _new_remarks = st.text_area(
+            "Description / Remarks",
+            placeholder="What should the auditor check for this parameter? (optional)",
+            height=68,
+            key=f"pm_new_remarks{_ks}",
+        )
 
         if _add_btn and _new_name.strip():
             _existing = [p["name"].lower() for p in st.session_state["sense_custom_audit_params"]]
@@ -7297,6 +7310,7 @@ def _render_param_manager(key_sfx=""):
                     "name":    _new_name.strip(),
                     "options": ["Yes", "No"],
                     "weight":  round(float(_new_weight), 1),
+                    "guide":   _new_remarks.strip(),
                 })
                 st.success(f"Added '{_new_name.strip()}' — it will appear in the audit form below.")
                 st.rerun()
@@ -7730,6 +7744,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                         index=2,
                         horizontal=True,
                         key=_cp_key,
+                        help=_cp.get("guide", "") or None,
                     )
                 with _cp_col2:
                     _cp_cmt_key = f"af_cp_cmt_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
