@@ -7653,7 +7653,13 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
         with _ll3:
             _f_bot_name = st.text_input("Bot Name *", value=_qv(_q_rec, "Bot Name"), placeholder="e.g. Convin-LeadBot-v2")
         with _ll4:
-            st.empty()
+            _f_correct_disp = st.radio(
+                "Correct Disposition? *",
+                ["Yes", "No", "NA"],
+                index=2,
+                horizontal=True,
+                key="f_correct_disp",
+            )
 
         st.markdown(
             '<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:10px 0 4px;">',
@@ -7765,15 +7771,9 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             'text-transform:uppercase;color:#2563EB;margin-bottom:6px;">Lead Scoring</div>',
             unsafe_allow_html=True,
         )
-        _ls1, _ls2, _ls3, _ls4 = st.columns(4)
+        _ls1, = st.columns(1)
         with _ls1:
             _f_lead_stage = st.selectbox("Lead Stage *", ["— select —"] + _QA_SCHEMA["lead_stage_opts"], key="af_ls_stage")
-        with _ls2:
-            _f_pi = st.selectbox("Product Interest (0/1/2) *", ["— select —", "0", "1", "2"], key="af_ls_pi")
-        with _ls3:
-            _f_fr = st.selectbox("Follow-up Readiness (0/1/2) *", ["— select —", "0", "1", "2"], key="af_ls_fr")
-        with _ls4:
-            _f_dm = st.selectbox("DM Confirmed (0/1/2) *", ["— select —", "0", "1", "2"], key="af_ls_dm")
 
         _f_notes = st.text_area("Reviewer Notes", placeholder="Optional observations…", height=56)
         _f_suggestion = st.text_area(
@@ -7808,9 +7808,6 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                 _errs.append("Lead Stage must be selected")
             if _f_disposition == "— select —":
                 _errs.append("Disposition must be selected")
-            for _fn, _fv in [("Product Interest", _f_pi), ("Follow-up Readiness", _f_fr), ("DM Confirmed", _f_dm)]:
-                if _fv == "— select —":
-                    _errs.append(f"'{_fn}' must be selected")
 
             if _errs:
                 for _e in _errs:
@@ -7818,10 +7815,8 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             else:
                 # Build full param dict including lead fields
                 _full_pv = dict(_pv)
-                _full_pv["Lead Stage"]                   = _f_lead_stage
-                _full_pv["Product Interest (0/1/2)"]    = _f_pi
-                _full_pv["Follow-up Readiness (0/1/2)"] = _f_fr
-                _full_pv["DM Confirmed (0/1/2)"]         = _f_dm
+                _full_pv["Lead Stage"]         = _f_lead_stage
+                _full_pv["Correct Disposition"] = _f_correct_disp
 
                 # Auto-compute all scores
                 _computed = _compute_qa_score(_full_pv)
@@ -7854,7 +7849,11 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                 _audit_log_save(audit_log)
 
                 # Store last result for display below
-                st.session_state["qa_last_result"] = _computed
+                st.session_state["qa_last_result"] = {
+                    **_computed,
+                    "_disposition":       _f_disposition if _f_disposition != "— select —" else "—",
+                    "_correct_disp":      _f_correct_disp,
+                }
 
                 # Clear AI suggestion draft after use
                 st.session_state.pop("_audit_suggestion_draft", None)
@@ -7890,6 +7889,10 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             f'<div style="font-size:0.62rem;color:#5588bb;">Lead Composite</div></div>'
             f'<div><div style="font-size:1.4rem;font-weight:800;color:{"#dc2626" if _lr["Fatal?"]=="YES" else "#0ebc6e"};">{_lr["Fatal?"]}</div>'
             f'<div style="font-size:0.62rem;color:#5588bb;">Fatal?</div></div>'
+            f'<div><div style="font-size:1rem;font-weight:800;color:#0B1F3A;">{_lr.get("_disposition","—")}</div>'
+            f'<div style="font-size:0.62rem;color:#5588bb;">Disposition Selected</div></div>'
+            f'<div><div style="font-size:1rem;font-weight:800;color:{"#0ebc6e" if _lr.get("_correct_disp")=="Yes" else "#dc2626" if _lr.get("_correct_disp")=="No" else "#94a3b8"};">{_lr.get("_correct_disp","—")}</div>'
+            f'<div style="font-size:0.62rem;color:#5588bb;">Correct Disposition</div></div>'
             f'</div></div>',
             unsafe_allow_html=True,
         )
