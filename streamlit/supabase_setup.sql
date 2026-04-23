@@ -73,6 +73,17 @@ alter table public.client_emails enable row level security;
 drop policy if exists "allow all" on public.client_emails;
 create policy "allow all" on public.client_emails for all using (true) with check (true);
 
+-- ── 5. audit_log (permanent — never purged) ──────────────────────────────────
+create table if not exists public.audit_log (
+  id         bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  record     jsonb not null default '{}'
+);
+
+alter table public.audit_log enable row level security;
+drop policy if exists "allow all" on public.audit_log;
+create policy "allow all" on public.audit_log for all using (true) with check (true);
+
 -- ── Verify: list all tables and their RLS status ──────────────────────────────
 select
   schemaname,

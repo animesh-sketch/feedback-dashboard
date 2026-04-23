@@ -33,6 +33,7 @@ import client_emails_store
 import auth
 import gmail_sender
 import tracking_store
+import audit_store
 
 # ─── Page config ──────────────────────────────────────────────────────────────
 
@@ -3723,24 +3724,10 @@ def _sense_clear_cache():
         pass
 
 def _audit_log_save(records):
-    try:
-        import pickle
-        with open(_SENSE_AUDIT_LOG, "wb") as _f:
-            pickle.dump(records, _f)
-    except Exception:
-        pass
+    pass  # no-op — writes go through audit_store.append() directly
 
 def _audit_log_load():
-    try:
-        import pickle
-        if os.path.exists(_SENSE_AUDIT_LOG):
-            with open(_SENSE_AUDIT_LOG, "rb") as _f:
-                data = pickle.load(_f)
-                if data:
-                    return data
-    except Exception:
-        pass
-    return []
+    return audit_store.load()
 
 
 def _registry_save(data):
@@ -7694,10 +7681,10 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                     "Notes":               _f_notes,
                     "Improvement Suggestion": _f_suggestion,
                 }
+                audit_store.append(_rec)
                 audit_log = st.session_state.get("sense_audit_log", [])
-                audit_log.append(_rec)
+                audit_log.insert(0, _rec)
                 st.session_state["sense_audit_log"] = audit_log
-                _audit_log_save(audit_log)
 
                 # Store last result for display below
                 st.session_state["qa_last_result"] = {
@@ -7770,21 +7757,13 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
         _log_df = pd.DataFrame(audit_log[::-1])
         st.dataframe(_log_df, use_container_width=True, height=280, hide_index=True)
 
-        _dl_c, _clr_c = st.columns([4, 1])
-        with _dl_c:
-            st.download_button(
-                "⬇ Export Audit Log",
-                data=_log_df.to_csv(index=False).encode("utf-8"),
-                file_name="convin_qa_audit_log.csv",
-                mime="text/csv",
-                key="sense_dl_auditlog",
-            )
-        with _clr_c:
-            if st.button("✕ Clear log", key="sense_clear_auditlog", use_container_width=True):
-                st.session_state["sense_audit_log"] = []
-                st.session_state.pop("qa_last_result", None)
-                _audit_log_save([])
-                st.rerun()
+        st.download_button(
+            "⬇ Export Audit Log",
+            data=_log_df.to_csv(index=False).encode("utf-8"),
+            file_name="convin_qa_audit_log.csv",
+            mime="text/csv",
+            key="sense_dl_auditlog",
+        )
 
 
 def _render_legend_page():
