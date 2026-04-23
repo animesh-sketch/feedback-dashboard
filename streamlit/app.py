@@ -7673,14 +7673,11 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                 key="f_correct_disp",
             )
 
-        if _f_correct_disp == "No":
-            _f_correct_disp_text = st.text_input(
-                "What should the correct disposition be?",
-                placeholder="e.g. Not Interested, Warm Follow-up…",
-                key="f_correct_disp_text",
-            )
-        else:
-            _f_correct_disp_text = ""
+        _f_correct_disp_text = st.text_input(
+            "Correct Disposition (leave blank if correct)",
+            placeholder="e.g. Not Interested, Warm Follow-up…",
+            key="f_correct_disp_text",
+        )
 
         st.markdown(
             '<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:10px 0 4px;">',
@@ -7918,7 +7915,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             f'<div style="font-size:0.62rem;color:#5588bb;">Correct Disposition</div></div>'
             + (f'<div><div style="font-size:1rem;font-weight:800;color:#dc2626;">{_lr.get("_correct_disp_text","—")}</div>'
                f'<div style="font-size:0.62rem;color:#5588bb;">Expected Disposition</div></div>'
-               if _lr.get("_correct_disp") == "No" and _lr.get("_correct_disp_text") else "")
+               if _lr.get("_correct_disp_text") else "")
             + f'</div></div>',
             unsafe_allow_html=True,
         )
