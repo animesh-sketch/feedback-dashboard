@@ -5672,8 +5672,8 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     '📊 <strong>Demo data</strong> — showing seed audits. Upload a file or submit audits via ✍️ New Audit to see your own data.</div>',
                     unsafe_allow_html=True,
                 )
-            # ── Client / Campaign filter bar ─────────────────────────────────
-            _ins_fc1, _ins_fc2, _ins_fc3 = st.columns([2, 2, 1])
+            # ── Client / Campaign / Bot Name filter bar ──────────────────────
+            _ins_fc1, _ins_fc2, _ins_fc3, _ins_fc4 = st.columns([2, 2, 2, 1])
             with _ins_fc1:
                 _ins_cli_opts = ["All Clients"] + sorted(_audit_df_ins["Client"].dropna().astype(str).unique().tolist()) if "Client" in _audit_df_ins.columns else ["All Clients"]
                 _ins_cli = st.selectbox("Client", _ins_cli_opts, key="ins_filter_client")
@@ -5685,8 +5685,12 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                 _ins_camp_opts = ["All Campaigns"] + sorted(_ins_camp_src.dropna().astype(str).unique().tolist())
                 _ins_camp = st.selectbox("Campaign", _ins_camp_opts, key="ins_filter_camp")
             with _ins_fc3:
+                _ins_bot_src = _audit_df_ins["Bot Name"] if "Bot Name" in _audit_df_ins.columns else pd.Series(dtype=str)
+                _ins_bot_opts = ["All Bots"] + sorted(_ins_bot_src.dropna().astype(str).unique().tolist())
+                _ins_bot = st.selectbox("Bot Name", _ins_bot_opts, key="ins_filter_bot")
+            with _ins_fc4:
                 if st.button("↺ Reset", key="ins_filter_reset", use_container_width=True):
-                    for _k in ["ins_filter_client", "ins_filter_camp"]:
+                    for _k in ["ins_filter_client", "ins_filter_camp", "ins_filter_bot"]:
                         st.session_state.pop(_k, None)
                     st.rerun()
             _ins_df = _audit_df_ins.copy()
@@ -5694,6 +5698,8 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                 _ins_df = _ins_df[_ins_df["Client"].astype(str) == _ins_cli]
             if _ins_camp != "All Campaigns" and "Campaign Name" in _ins_df.columns:
                 _ins_df = _ins_df[_ins_df["Campaign Name"].astype(str) == _ins_camp]
+            if _ins_bot != "All Bots" and "Bot Name" in _ins_df.columns:
+                _ins_df = _ins_df[_ins_df["Bot Name"].astype(str) == _ins_bot]
             if len(_ins_df) != len(_audit_df_ins):
                 st.markdown(f'<div style="font-size:0.7rem;color:#2563EB;background:rgba(37,99,235,0.06);border-radius:6px;padding:4px 12px;margin-bottom:8px;">🔍 Filtered: <strong>{len(_ins_df):,}</strong> of <strong>{len(_audit_df_ins):,}</strong> audits</div>', unsafe_allow_html=True)
                 _audit_df_ins_view = _ins_df
@@ -6162,8 +6168,9 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                 unsafe_allow_html=True)
             with st.expander("📧 Select Sections & Generate Email Draft", expanded=True):
                 _now_str   = pd.Timestamp.now().strftime("%d %b %Y")
-                _cli_label = _ins_cli if _ins_cli != "All Clients" else "All Clients"
+                _cli_label  = _ins_cli  if _ins_cli  != "All Clients"   else "All Clients"
                 _camp_label = _ins_camp if _ins_camp != "All Campaigns" else "All Campaigns"
+                _bot_label  = _ins_bot  if _ins_bot  != "All Bots"      else "All Bots"
                 _avg_str   = f"{_avg_i}%" if _avg_i else "—"
 
                 # ── Pre-compute data for email blocks ─────────────────────────
@@ -6244,208 +6251,258 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
 
                 st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
+                # ── TEMPLATE SELECTOR ────────────────────────────────────────
+                _tpl_options = {
+                    "1 — Executive Dark (Navy/Blue)":    1,
+                    "2 — Minimal White (Clean/Modern)":  2,
+                    "3 — Bold Red (Urgent/Alert)":        3,
+                    "4 — Corporate Teal (Professional)": 4,
+                    "5 — Premium Gradient (Purple/Pink)":5,
+                }
+                _tpl_choice_label = st.selectbox(
+                    "Email Template Design",
+                    list(_tpl_options.keys()),
+                    key="ins_em_tpl_choice",
+                )
+                _em_tpl_id = _tpl_options[_tpl_choice_label]
+
                 # ── EMAIL GENERATOR ───────────────────────────────────────────
                 def _build_email():
-                    _S = '<div style="font-family:\'Segoe UI\',Arial,sans-serif;max-width:660px;margin:0 auto;background:#f0f4f9;padding:0;">'
+                    _tpl = st.session_state.get("ins_em_tpl_choice", "1 — Executive Dark (Navy/Blue)")
+                    _tid = _tpl_options.get(_tpl, 1)
 
-                    # ── HEADER ────────────────────────────────────────────────
-                    _S += f'''<div style="background:linear-gradient(135deg,#0B1F3A 0%,#1D4ED8 100%);border-radius:16px 16px 0 0;padding:32px 36px 28px;">
-  <div style="font-size:10px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:6px;">CONVIN SENSE AUDIT · AUTO QA DATA INSIGHTS</div>
-  <div style="font-size:26px;font-weight:900;color:#fff;line-height:1.15;margin-bottom:6px;">QA Performance Report</div>
-  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;">
-    <span style="font-size:12px;color:rgba(255,255,255,0.75);">📅 {_now_str}</span>
-    <span style="font-size:12px;color:rgba(255,255,255,0.75);">🏢 {_cli_label}</span>
-    <span style="font-size:12px;color:rgba(255,255,255,0.75);">🎯 {_camp_label}</span>
-  </div>
-</div>'''
-
-                    # ── BODY WRAPPER ─────────────────────────────────────────
-                    _S += '<div style="background:#fff;border-radius:0 0 16px 16px;padding:28px 36px;">'
-
-                    # ── KPI SUMMARY ──────────────────────────────────────────
-                    if em_kpis:
-                        _pass_c = "#059669" if pass_rate_i>=80 else "#d97706" if pass_rate_i>=60 else "#dc2626"
-                        _avg_c  = "#059669" if (_avg_i or 0)>=80 else "#d97706" if (_avg_i or 0)>=60 else "#dc2626"
-                        _S += f'''<div style="margin-bottom:24px;">
+                    # ── Shared body builder (sections) ────────────────────────
+                    def _body_sections():
+                        _B = ""
+                        # KPI Summary
+                        if em_kpis:
+                            _pass_c = "#059669" if pass_rate_i>=80 else "#d97706" if pass_rate_i>=60 else "#dc2626"
+                            _avg_c  = "#059669" if (_avg_i or 0)>=80 else "#d97706" if (_avg_i or 0)>=60 else "#dc2626"
+                            _B += f'''<div style="margin-bottom:24px;">
 <div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">📊 KPI Summary</div>
 <table style="width:100%;border-collapse:collapse;"><tr>
-  <td style="width:16.6%;padding:0 6px 0 0;vertical-align:top;">
-    <div style="background:#F0F4F9;border-radius:10px;padding:14px 12px;text-align:center;">
-      <div style="font-size:24px;font-weight:900;color:#0B1F3A;">{total_i:,}</div>
-      <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Total Audits</div>
-    </div>
-  </td>
-  <td style="width:16.6%;padding:0 6px;vertical-align:top;">
-    <div style="background:#F0F4F9;border-radius:10px;padding:14px 12px;text-align:center;">
-      <div style="font-size:24px;font-weight:900;color:{_avg_c};">{_avg_str}</div>
-      <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Avg Score</div>
-    </div>
-  </td>
-  <td style="width:16.6%;padding:0 6px;vertical-align:top;">
-    <div style="background:#F0F4F9;border-radius:10px;padding:14px 12px;text-align:center;">
-      <div style="font-size:24px;font-weight:900;color:{_pass_c};">{pass_rate_i}%</div>
-      <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Pass Rate</div>
-    </div>
-  </td>
-  <td style="width:16.6%;padding:0 6px;vertical-align:top;">
-    <div style="background:#ECFDF5;border-radius:10px;padding:14px 12px;text-align:center;">
-      <div style="font-size:24px;font-weight:900;color:#059669;">{pass_i}</div>
-      <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Passed</div>
-    </div>
-  </td>
-  <td style="width:16.6%;padding:0 6px;vertical-align:top;">
-    <div style="background:#FFFBEB;border-radius:10px;padding:14px 12px;text-align:center;">
-      <div style="font-size:24px;font-weight:900;color:#d97706;">{review_i}</div>
-      <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Review</div>
-    </div>
-  </td>
-  <td style="width:16.6%;padding:0 0 0 6px;vertical-align:top;">
-    <div style="background:#FFF1F2;border-radius:10px;padding:14px 12px;text-align:center;">
-      <div style="font-size:24px;font-weight:900;color:#dc2626;">{fail_i+fatal_i}</div>
-      <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Fail / Auto-Fail</div>
-    </div>
-  </td>
-</tr></table>
-</div>'''
-
-                    # ── STATUS DISTRIBUTION ──────────────────────────────────
-                    if em_status:
-                        _S += f'''<div style="margin-bottom:24px;">
+  <td style="width:16.6%;padding:0 6px 0 0;vertical-align:top;"><div style="background:#F0F4F9;border-radius:10px;padding:14px 12px;text-align:center;"><div style="font-size:24px;font-weight:900;color:#0B1F3A;">{total_i:,}</div><div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Total Audits</div></div></td>
+  <td style="width:16.6%;padding:0 6px;vertical-align:top;"><div style="background:#F0F4F9;border-radius:10px;padding:14px 12px;text-align:center;"><div style="font-size:24px;font-weight:900;color:{_avg_c};">{_avg_str}</div><div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Avg Score</div></div></td>
+  <td style="width:16.6%;padding:0 6px;vertical-align:top;"><div style="background:#F0F4F9;border-radius:10px;padding:14px 12px;text-align:center;"><div style="font-size:24px;font-weight:900;color:{_pass_c};">{pass_rate_i}%</div><div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Pass Rate</div></div></td>
+  <td style="width:16.6%;padding:0 6px;vertical-align:top;"><div style="background:#ECFDF5;border-radius:10px;padding:14px 12px;text-align:center;"><div style="font-size:24px;font-weight:900;color:#059669;">{pass_i}</div><div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Passed</div></div></td>
+  <td style="width:16.6%;padding:0 6px;vertical-align:top;"><div style="background:#FFFBEB;border-radius:10px;padding:14px 12px;text-align:center;"><div style="font-size:24px;font-weight:900;color:#d97706;">{review_i}</div><div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Review</div></div></td>
+  <td style="width:16.6%;padding:0 0 0 6px;vertical-align:top;"><div style="background:#FFF1F2;border-radius:10px;padding:14px 12px;text-align:center;"><div style="font-size:24px;font-weight:900;color:#dc2626;">{fail_i+fatal_i}</div><div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Fail / Auto-Fail</div></div></td>
+</tr></table></div>'''
+                        # Status Distribution
+                        if em_status:
+                            _B += f'''<div style="margin-bottom:24px;">
 <div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">🟢 Status Distribution</div>
 <table style="width:100%;border-collapse:collapse;font-size:13px;">'''
-                        for _sn2, _sc2, _sv2 in [("✅ Pass","#059669",pass_i),("🟡 Needs Review","#d97706",review_i),("❌ Fail","#dc2626",fail_i),("🚨 Auto-Fail","#7f1d1d",fatal_i)]:
-                            _sp2 = round(_sv2/total_i*100,1) if total_i else 0
-                            _S += f'<tr><td style="padding:7px 0;width:140px;font-weight:600;color:#374151;">{_sn2}</td><td style="padding:7px 8px;"><div style="background:#f0f4f9;border-radius:4px;overflow:hidden;height:12px;"><div style="width:{_sp2}%;height:100%;background:{_sc2};border-radius:4px;"></div></div></td><td style="padding:7px 0 7px 8px;text-align:right;font-weight:700;color:{_sc2};white-space:nowrap;">{_sv2:,} ({_sp2}%)</td></tr>'
-                        _S += '</table></div>'
+                            for _sn2, _sc2, _sv2 in [("✅ Pass","#059669",pass_i),("🟡 Needs Review","#d97706",review_i),("❌ Fail","#dc2626",fail_i),("🚨 Auto-Fail","#7f1d1d",fatal_i)]:
+                                _sp2 = round(_sv2/total_i*100,1) if total_i else 0
+                                _B += f'<tr><td style="padding:7px 0;width:140px;font-weight:600;color:#374151;">{_sn2}</td><td style="padding:7px 8px;"><div style="background:#f0f4f9;border-radius:4px;overflow:hidden;height:12px;"><div style="width:{_sp2}%;height:100%;background:{_sc2};border-radius:4px;"></div></div></td><td style="padding:7px 0 7px 8px;text-align:right;font-weight:700;color:{_sc2};white-space:nowrap;">{_sv2:,} ({_sp2}%)</td></tr>'
+                            _B += '</table></div>'
+                        # Disposition
+                        if em_disp and "Disposition" in _audit_df_ins_view.columns:
+                            _dv_em = _audit_df_ins_view["Disposition"].astype(str).str.strip()
+                            _dv_em = _dv_em[~_dv_em.isin(["","nan","— select —","None"])]
+                            _dc_em = _dv_em.value_counts().head(8)
+                            if len(_dc_em):
+                                _B += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">🎯 Disposition Mix</div>'
+                                _dcols_em = {"Interested":"#059669","Converted":"#16a34a","Warm Follow-up":"#2563EB","Not Interested":"#f59e0b","DNC":"#dc2626","Wrong Number":"#ef4444","Language Barrier":"#7c3aed","Voicemail / No Answer":"#6b7280","Other":"#aabbcc"}
+                                _B += '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+                                for _dn2, _dv2 in _dc_em.items():
+                                    _dp2 = round(_dv2/_dc_em.sum()*100,1)
+                                    _dc2 = _dcols_em.get(str(_dn2),"#5588bb")
+                                    _B += f'<tr><td style="padding:6px 0;width:160px;font-weight:600;color:#374151;">{_dn2}</td><td style="padding:6px 8px;"><div style="background:#f0f4f9;border-radius:3px;overflow:hidden;height:10px;"><div style="width:{_dp2}%;height:100%;background:{_dc2};border-radius:3px;"></div></div></td><td style="padding:6px 0 6px 8px;text-align:right;font-weight:700;color:{_dc2};white-space:nowrap;">{_dv2} ({_dp2}%)</td></tr>'
+                                _B += '</table></div>'
+                        # What Went Right
+                        if em_wr and _went_right:
+                            _B += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#059669;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #D1FAE5;">✅ What Went Right</div>'
+                            _B += '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+                            for _wrpe in _went_right[:8]:
+                                _B += f'<tr><td style="padding:6px 0;width:200px;font-weight:600;color:#0B1F3A;">{_wrpe["col"]}</td><td style="padding:6px 8px;"><div style="background:#D1FAE5;border-radius:4px;overflow:hidden;height:10px;"><div style="width:{_wrpe["pct"]}%;height:100%;background:linear-gradient(90deg,#059669,#34D399);border-radius:4px;"></div></div></td><td style="padding:6px 0 6px 8px;text-align:right;font-weight:800;color:#059669;white-space:nowrap;">{_wrpe["pct"]}%</td></tr>'
+                            _B += '</table></div>'
+                        # What Went Wrong
+                        if em_ww and _went_wrong:
+                            _B += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#dc2626;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #FEE2E2;">⚠️ What Went Wrong</div>'
+                            _B += '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+                            for _wwpe in _went_wrong[:8]:
+                                _urgency_e = "#dc2626" if _wwpe["pct"] < 50 else "#d97706"
+                                _bg_e = "#FEE2E2" if _wwpe["pct"] < 50 else "#FEF3C7"
+                                _B += f'<tr><td style="padding:6px 0;width:200px;font-weight:600;color:#0B1F3A;">{_wwpe["col"]}</td><td style="padding:6px 8px;"><div style="background:{_bg_e};border-radius:4px;overflow:hidden;height:10px;"><div style="width:{_wwpe["pct"]}%;height:100%;background:{_urgency_e};border-radius:4px;"></div></div></td><td style="padding:6px 0 6px 8px;text-align:right;font-weight:800;color:{_urgency_e};white-space:nowrap;">{_wwpe["pct"]}%</td></tr>'
+                            _B += '</table></div>'
+                        # Top 5 Best
+                        if em_best5 and not _top5_df.empty:
+                            _B += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">🏅 Top 5 Best Calls</div>'
+                            _B += '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#F0F4F9;"><th style="padding:8px;text-align:left;font-weight:700;color:#0B1F3A;">Lead / ID</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Score</th><th style="padding:8px;text-align:left;font-weight:700;color:#0B1F3A;">Campaign</th><th style="padding:8px;text-align:left;font-weight:700;color:#0B1F3A;">QA</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Status</th></tr></thead><tbody>'
+                            for _ri_e, (_, _row_e) in enumerate(_top5_df.iterrows()):
+                                _sc_e = float(_row_e.get("_bs_num",0))
+                                _ld_e = str(_row_e.get("Lead Number",_row_e.get("Phone Number",f"#{_ri_e+1}"))).strip()[:20]
+                                _cm_e = str(_row_e.get("Campaign Name","—")).strip()[:25]
+                                _qa_e = str(_row_e.get("QA","—")).strip()[:16]
+                                _st_e = str(_row_e.get("Status","—")).strip()
+                                _B += f'<tr style="border-bottom:1px solid #F0F4F9;"><td style="padding:7px 8px;font-weight:600;color:#0B1F3A;">{_ld_e}</td><td style="padding:7px 8px;text-align:center;font-weight:900;color:#059669;">{int(_sc_e)}%</td><td style="padding:7px 8px;color:#475569;">{_cm_e}</td><td style="padding:7px 8px;color:#475569;">{_qa_e}</td><td style="padding:7px 8px;text-align:center;"><span style="background:#ECFDF5;color:#059669;border-radius:4px;padding:2px 8px;font-weight:700;font-size:11px;">{_st_e}</span></td></tr>'
+                            _B += '</tbody></table></div>'
+                        # Top 5 Worst
+                        if em_worst5 and not _worst5_df.empty:
+                            _B += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#dc2626;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #FEE2E2;">🚨 Top 5 Worst Calls — Needs Attention</div>'
+                            _B += '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#FFF1F2;"><th style="padding:8px;text-align:left;font-weight:700;color:#0B1F3A;">Lead / ID</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Score</th><th style="padding:8px;text-align:left;font-weight:700;color:#0B1F3A;">Campaign</th><th style="padding:8px;text-align:left;font-weight:700;color:#0B1F3A;">QA</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Conversation</th></tr></thead><tbody>'
+                            for _wi_e, (_, _wrow_e) in enumerate(_worst5_df.iterrows()):
+                                _wsc_e = float(_wrow_e.get("_bs_num",0))
+                                _wld_e = str(_wrow_e.get("Lead Number",_wrow_e.get("Phone Number",f"#{_wi_e+1}"))).strip()[:20]
+                                _wcm_e = str(_wrow_e.get("Campaign Name","—")).strip()[:25]
+                                _wqa_e = str(_wrow_e.get("QA","—")).strip()[:16]
+                                _wlnk_e = str(_wrow_e.get("Conversation Link","")).strip()
+                                _wlnk_html = f'<a href="{_wlnk_e}" style="color:#2563EB;font-weight:700;font-size:11px;">🔗 View</a>' if _wlnk_e.startswith("http") else "—"
+                                _B += f'<tr style="border-bottom:1px solid #FEE2E2;"><td style="padding:7px 8px;font-weight:600;color:#0B1F3A;">{_wld_e}</td><td style="padding:7px 8px;text-align:center;font-weight:900;color:#dc2626;">{int(_wsc_e)}%</td><td style="padding:7px 8px;color:#475569;">{_wcm_e}</td><td style="padding:7px 8px;color:#475569;">{_wqa_e}</td><td style="padding:7px 8px;text-align:center;">{_wlnk_html}</td></tr>'
+                            _B += '</tbody></table></div>'
+                        # Campaign Breakdown
+                        if em_camp and _em_camp_rows:
+                            _B += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">🎯 Campaign Breakdown</div>'
+                            _B += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#F0F4F9;"><th style="padding:8px 12px;text-align:left;font-weight:700;color:#0B1F3A;">Campaign</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Audits</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Avg Score</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Pass Rate</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Fail Rate</th></tr></thead><tbody>'
+                            for _cr in sorted(_em_camp_rows, key=lambda x: -x["avg"]):
+                                _cc = "#059669" if _cr["avg"]>=80 else "#d97706" if _cr["avg"]>=60 else "#dc2626"
+                                _B += f'<tr style="border-bottom:1px solid #F0F4F9;"><td style="padding:8px 12px;font-weight:600;color:#0B1F3A;">{_cr["name"]}</td><td style="padding:8px;text-align:center;color:#475569;">{_cr["n"]}</td><td style="padding:8px;text-align:center;font-weight:900;color:{_cc};">{_cr["avg"]}%</td><td style="padding:8px;text-align:center;color:#059669;font-weight:700;">{_cr["pass"]}%</td><td style="padding:8px;text-align:center;color:#dc2626;font-weight:700;">{_cr["fail"]}%</td></tr>'
+                            _B += '</tbody></table></div>'
+                        # QA Team
+                        if em_qa_tbl and _em_qa_rows:
+                            _B += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">👤 QA Team Performance</div>'
+                            _B += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#F0F4F9;"><th style="padding:8px 12px;text-align:left;font-weight:700;color:#0B1F3A;">Auditor</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Audits</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Avg Score</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Pass Rate</th></tr></thead><tbody>'
+                            for _qr in sorted(_em_qa_rows, key=lambda x: -x["avg"]):
+                                _qc = "#059669" if _qr["avg"]>=80 else "#d97706" if _qr["avg"]>=60 else "#dc2626"
+                                _B += f'<tr style="border-bottom:1px solid #F0F4F9;"><td style="padding:8px 12px;font-weight:600;color:#0B1F3A;">{_qr["name"]}</td><td style="padding:8px;text-align:center;color:#475569;">{_qr["n"]}</td><td style="padding:8px;text-align:center;font-weight:900;color:{_qc};">{_qr["avg"]}%</td><td style="padding:8px;text-align:center;color:#059669;font-weight:700;">{_qr["pass"]}%</td></tr>'
+                            _B += '</tbody></table></div>'
+                        # Parameters
+                        if em_params and _em_param_rows:
+                            _B += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">🔬 Parameter Performance (Weakest First)</div>'
+                            _B += '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#F0F4F9;"><th style="padding:7px 12px;text-align:left;font-weight:700;color:#0B1F3A;">Parameter</th><th style="padding:7px;text-align:left;font-weight:700;color:#0B1F3A;width:40%;">Performance</th><th style="padding:7px;text-align:right;font-weight:700;color:#0B1F3A;">Score</th></tr></thead><tbody>'
+                            for _pr2 in _em_param_rows[:16]:
+                                _pc2 = "#059669" if _pr2["pct"]>=80 else "#d97706" if _pr2["pct"]>=60 else "#dc2626"
+                                _B += f'<tr style="border-bottom:1px solid #F0F4F9;"><td style="padding:6px 12px;font-weight:600;color:#0B1F3A;">{_pr2["col"]}</td><td style="padding:6px 8px;"><div style="background:#f0f4f9;border-radius:3px;overflow:hidden;height:10px;"><div style="width:{_pr2["pct"]}%;height:100%;background:{_pr2["color"]};border-radius:3px;"></div></div></td><td style="padding:6px 8px;text-align:right;font-weight:800;color:{_pc2};">{_pr2["pct"]}%</td></tr>'
+                            _B += '</tbody></table></div>'
+                        # Key Insights
+                        _sel_ins_list = [ins for i, ins in enumerate(_sorted_ins) if _em_ins_sel.get(i, True)]
+                        if _sel_ins_list:
+                            _type_icon_em = {"critical":"🚨","warning":"⚠️","success":"✅","info":"ℹ️"}
+                            _type_bg_em   = {"critical":"#FFF1F2","warning":"#FFFBEB","success":"#ECFDF5","info":"#EBF5FF"}
+                            _type_bc_em   = {"critical":"#dc2626","warning":"#D97706","success":"#059669","info":"#2563EB"}
+                            _type_tc_em   = {"critical":"#7F1D1D","warning":"#78350F","success":"#064E3B","info":"#0B1F3A"}
+                            _B += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">💡 Key Insights</div>'
+                            for _ins_e in _sel_ins_list:
+                                _t = _ins_e.get("type","info")
+                                _B += f'<div style="background:{_type_bg_em.get(_t,"#EBF5FF")};border-left:4px solid {_type_bc_em.get(_t,"#2563EB")};border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:10px;">'
+                                _B += f'<div style="font-size:13px;font-weight:800;color:{_type_tc_em.get(_t,"#0B1F3A")};margin-bottom:5px;">{_type_icon_em.get(_t,"ℹ️")} {_ins_e["title"]}</div>'
+                                _B += f'<div style="font-size:12px;color:{_type_tc_em.get(_t,"#374151")};line-height:1.6;">{_ins_e.get("detail","")}</div>'
+                                _B += '</div>'
+                            _B += '</div>'
+                        # Priority Actions
+                        _sel_act_list = [act for i, act in enumerate(_sorted_acts) if _em_act_sel.get(i, True)]
+                        if _sel_act_list:
+                            _pri_bg_em = {"high":"#FFF1F2","medium":"#FFFBEB","low":"#ECFDF5"}
+                            _pri_bc_em = {"high":"#dc2626","medium":"#D97706","low":"#059669"}
+                            _pri_lbl_em = {"high":"🔴 HIGH","medium":"🟡 MEDIUM","low":"🟢 LOW"}
+                            _B += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">🎯 Priority Actions</div>'
+                            for _ai_e, _act_e in enumerate(_sel_act_list, 1):
+                                _p = _act_e.get("priority","low")
+                                _B += f'<div style="background:{_pri_bg_em.get(_p,"#ECFDF5")};border-left:4px solid {_pri_bc_em.get(_p,"#059669")};border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:10px;">'
+                                _B += f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#fff;background:{_pri_bc_em.get(_p,"#059669")};padding:2px 9px;border-radius:10px;">#{_ai_e} · {_pri_lbl_em.get(_p,"")} · {_act_e.get("category","")}</span></div>'
+                                _B += f'<div style="font-size:13px;font-weight:700;color:#0B1F3A;margin-bottom:5px;line-height:1.5;">{_act_e["action"]}</div>'
+                                _B += f'<div style="font-size:11px;color:#64748b;line-height:1.5;border-top:1px solid rgba(0,0,0,0.06);padding-top:5px;">💥 Impact: {_act_e.get("impact","")}</div>'
+                                _B += '</div>'
+                            _B += '</div>'
+                        return _B
 
-                    # ── DISPOSITION MIX ──────────────────────────────────────
-                    if em_disp and "Disposition" in _audit_df_ins_view.columns:
-                        _dv_em = _audit_df_ins_view["Disposition"].astype(str).str.strip()
-                        _dv_em = _dv_em[~_dv_em.isin(["","nan","— select —","None"])]
-                        _dc_em = _dv_em.value_counts().head(8)
-                        if len(_dc_em):
-                            _S += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">🎯 Disposition Mix</div>'
-                            _dcols_em = {"Interested":"#059669","Converted":"#16a34a","Warm Follow-up":"#2563EB","Not Interested":"#f59e0b","DNC":"#dc2626","Wrong Number":"#ef4444","Language Barrier":"#7c3aed","Voicemail / No Answer":"#6b7280","Other":"#aabbcc"}
-                            _S += '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
-                            for _dn2, _dv2 in _dc_em.items():
-                                _dp2 = round(_dv2/_dc_em.sum()*100,1)
-                                _dc2 = _dcols_em.get(str(_dn2),"#5588bb")
-                                _S += f'<tr><td style="padding:6px 0;width:160px;font-weight:600;color:#374151;">{_dn2}</td><td style="padding:6px 8px;"><div style="background:#f0f4f9;border-radius:3px;overflow:hidden;height:10px;"><div style="width:{_dp2}%;height:100%;background:{_dc2};border-radius:3px;"></div></div></td><td style="padding:6px 0 6px 8px;text-align:right;font-weight:700;color:{_dc2};white-space:nowrap;">{_dv2} ({_dp2}%)</td></tr>'
-                            _S += '</table></div>'
+                    _content = _body_sections()
+                    _meta_row = f'📅 {_now_str} &nbsp;·&nbsp; 🏢 {_cli_label} &nbsp;·&nbsp; 🎯 {_camp_label} &nbsp;·&nbsp; 🤖 {_bot_label}'
+                    _footer = (f'<div style="border-top:1px solid #E2EAF6;margin-top:16px;padding-top:16px;text-align:center;">'
+                               f'<div style="font-size:11px;color:#94a3b8;line-height:1.7;">'
+                               f'Auto-generated by <strong style="color:#2563EB;">Convin Sense Audit</strong> · Auto QA Data Insights<br>'
+                               f'Report Date: {_now_str} &nbsp;·&nbsp; Client: {_cli_label} &nbsp;·&nbsp; Campaign: {_camp_label} &nbsp;·&nbsp; Bot: {_bot_label}'
+                               f'</div></div>')
 
-                    # ── WHAT WENT RIGHT ──────────────────────────────────────
-                    if em_wr and _went_right:
-                        _S += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#059669;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #D1FAE5;">✅ What Went Right</div>'
-                        _S += '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
-                        for _wrpe in _went_right[:8]:
-                            _S += f'<tr><td style="padding:6px 0;width:200px;font-weight:600;color:#0B1F3A;">{_wrpe["col"]}</td><td style="padding:6px 8px;"><div style="background:#D1FAE5;border-radius:4px;overflow:hidden;height:10px;"><div style="width:{_wrpe["pct"]}%;height:100%;background:linear-gradient(90deg,#059669,#34D399);border-radius:4px;"></div></div></td><td style="padding:6px 0 6px 8px;text-align:right;font-weight:800;color:#059669;white-space:nowrap;">{_wrpe["pct"]}%</td></tr>'
-                        _S += '</table></div>'
-
-                    # ── WHAT WENT WRONG ──────────────────────────────────────
-                    if em_ww and _went_wrong:
-                        _S += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#dc2626;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #FEE2E2;">⚠️ What Went Wrong</div>'
-                        _S += '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
-                        for _wwpe in _went_wrong[:8]:
-                            _urgency_e = "#dc2626" if _wwpe["pct"] < 50 else "#d97706"
-                            _bg_e = "#FEE2E2" if _wwpe["pct"] < 50 else "#FEF3C7"
-                            _S += f'<tr><td style="padding:6px 0;width:200px;font-weight:600;color:#0B1F3A;">{_wwpe["col"]}</td><td style="padding:6px 8px;"><div style="background:{_bg_e};border-radius:4px;overflow:hidden;height:10px;"><div style="width:{_wwpe["pct"]}%;height:100%;background:{_urgency_e};border-radius:4px;"></div></div></td><td style="padding:6px 0 6px 8px;text-align:right;font-weight:800;color:{_urgency_e};white-space:nowrap;">{_wwpe["pct"]}%</td></tr>'
-                        _S += '</table></div>'
-
-                    # ── TOP 5 BEST CALLS ─────────────────────────────────────
-                    if em_best5 and not _top5_df.empty:
-                        _S += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">🏅 Top 5 Best Calls</div>'
-                        _S += '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#F0F4F9;"><th style="padding:8px;text-align:left;font-weight:700;color:#0B1F3A;">Lead / ID</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Score</th><th style="padding:8px;text-align:left;font-weight:700;color:#0B1F3A;">Campaign</th><th style="padding:8px;text-align:left;font-weight:700;color:#0B1F3A;">QA</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Status</th></tr></thead><tbody>'
-                        for _ri_e, (_, _row_e) in enumerate(_top5_df.iterrows()):
-                            _sc_e = float(_row_e.get("_bs_num",0))
-                            _ld_e = str(_row_e.get("Lead Number",_row_e.get("Phone Number",f"#{_ri_e+1}"))).strip()[:20]
-                            _cm_e = str(_row_e.get("Campaign Name","—")).strip()[:25]
-                            _qa_e = str(_row_e.get("QA","—")).strip()[:16]
-                            _st_e = str(_row_e.get("Status","—")).strip()
-                            _S += f'<tr style="border-bottom:1px solid #F0F4F9;"><td style="padding:7px 8px;font-weight:600;color:#0B1F3A;">{_ld_e}</td><td style="padding:7px 8px;text-align:center;font-weight:900;color:#059669;">{int(_sc_e)}%</td><td style="padding:7px 8px;color:#475569;">{_cm_e}</td><td style="padding:7px 8px;color:#475569;">{_qa_e}</td><td style="padding:7px 8px;text-align:center;"><span style="background:#ECFDF5;color:#059669;border-radius:4px;padding:2px 8px;font-weight:700;font-size:11px;">{_st_e}</span></td></tr>'
-                        _S += '</tbody></table></div>'
-
-                    # ── TOP 5 WORST CALLS ────────────────────────────────────
-                    if em_worst5 and not _worst5_df.empty:
-                        _S += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#dc2626;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #FEE2E2;">🚨 Top 5 Worst Calls — Needs Attention</div>'
-                        _S += '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#FFF1F2;"><th style="padding:8px;text-align:left;font-weight:700;color:#0B1F3A;">Lead / ID</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Score</th><th style="padding:8px;text-align:left;font-weight:700;color:#0B1F3A;">Campaign</th><th style="padding:8px;text-align:left;font-weight:700;color:#0B1F3A;">QA</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Conversation</th></tr></thead><tbody>'
-                        for _wi_e, (_, _wrow_e) in enumerate(_worst5_df.iterrows()):
-                            _wsc_e = float(_wrow_e.get("_bs_num",0))
-                            _wld_e = str(_wrow_e.get("Lead Number",_wrow_e.get("Phone Number",f"#{_wi_e+1}"))).strip()[:20]
-                            _wcm_e = str(_wrow_e.get("Campaign Name","—")).strip()[:25]
-                            _wqa_e = str(_wrow_e.get("QA","—")).strip()[:16]
-                            _wlnk_e = str(_wrow_e.get("Conversation Link","")).strip()
-                            _wlnk_html = f'<a href="{_wlnk_e}" style="color:#2563EB;font-weight:700;font-size:11px;">🔗 View</a>' if _wlnk_e.startswith("http") else "—"
-                            _S += f'<tr style="border-bottom:1px solid #FEE2E2;"><td style="padding:7px 8px;font-weight:600;color:#0B1F3A;">{_wld_e}</td><td style="padding:7px 8px;text-align:center;font-weight:900;color:#dc2626;">{int(_wsc_e)}%</td><td style="padding:7px 8px;color:#475569;">{_wcm_e}</td><td style="padding:7px 8px;color:#475569;">{_wqa_e}</td><td style="padding:7px 8px;text-align:center;">{_wlnk_html}</td></tr>'
-                        _S += '</tbody></table></div>'
-
-                    # ── CAMPAIGN BREAKDOWN ───────────────────────────────────
-                    if em_camp and _em_camp_rows:
-                        _S += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">🎯 Campaign Breakdown</div>'
-                        _S += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#F0F4F9;"><th style="padding:8px 12px;text-align:left;font-weight:700;color:#0B1F3A;">Campaign</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Audits</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Avg Score</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Pass Rate</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Fail Rate</th></tr></thead><tbody>'
-                        for _cr in sorted(_em_camp_rows, key=lambda x: -x["avg"]):
-                            _cc = "#059669" if _cr["avg"]>=80 else "#d97706" if _cr["avg"]>=60 else "#dc2626"
-                            _S += f'<tr style="border-bottom:1px solid #F0F4F9;"><td style="padding:8px 12px;font-weight:600;color:#0B1F3A;">{_cr["name"]}</td><td style="padding:8px;text-align:center;color:#475569;">{_cr["n"]}</td><td style="padding:8px;text-align:center;font-weight:900;color:{_cc};">{_cr["avg"]}%</td><td style="padding:8px;text-align:center;color:#059669;font-weight:700;">{_cr["pass"]}%</td><td style="padding:8px;text-align:center;color:#dc2626;font-weight:700;">{_cr["fail"]}%</td></tr>'
-                        _S += '</tbody></table></div>'
-
-                    # ── QA TEAM PERFORMANCE ──────────────────────────────────
-                    if em_qa_tbl and _em_qa_rows:
-                        _S += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">👤 QA Team Performance</div>'
-                        _S += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#F0F4F9;"><th style="padding:8px 12px;text-align:left;font-weight:700;color:#0B1F3A;">Auditor</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Audits</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Avg Score</th><th style="padding:8px;text-align:center;font-weight:700;color:#0B1F3A;">Pass Rate</th></tr></thead><tbody>'
-                        for _qr in sorted(_em_qa_rows, key=lambda x: -x["avg"]):
-                            _qc = "#059669" if _qr["avg"]>=80 else "#d97706" if _qr["avg"]>=60 else "#dc2626"
-                            _S += f'<tr style="border-bottom:1px solid #F0F4F9;"><td style="padding:8px 12px;font-weight:600;color:#0B1F3A;">{_qr["name"]}</td><td style="padding:8px;text-align:center;color:#475569;">{_qr["n"]}</td><td style="padding:8px;text-align:center;font-weight:900;color:{_qc};">{_qr["avg"]}%</td><td style="padding:8px;text-align:center;color:#059669;font-weight:700;">{_qr["pass"]}%</td></tr>'
-                        _S += '</tbody></table></div>'
-
-                    # ── PARAMETER DETAIL ─────────────────────────────────────
-                    if em_params and _em_param_rows:
-                        _S += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">🔬 Parameter Performance (Weakest First)</div>'
-                        _S += '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#F0F4F9;"><th style="padding:7px 12px;text-align:left;font-weight:700;color:#0B1F3A;">Parameter</th><th style="padding:7px;text-align:left;font-weight:700;color:#0B1F3A;width:40%;">Performance</th><th style="padding:7px;text-align:right;font-weight:700;color:#0B1F3A;">Score</th></tr></thead><tbody>'
-                        for _pr2 in _em_param_rows[:16]:
-                            _pc2 = "#059669" if _pr2["pct"]>=80 else "#d97706" if _pr2["pct"]>=60 else "#dc2626"
-                            _S += f'<tr style="border-bottom:1px solid #F0F4F9;"><td style="padding:6px 12px;font-weight:600;color:#0B1F3A;">{_pr2["col"]}</td><td style="padding:6px 8px;"><div style="background:#f0f4f9;border-radius:3px;overflow:hidden;height:10px;"><div style="width:{_pr2["pct"]}%;height:100%;background:{_pr2["color"]};border-radius:3px;"></div></div></td><td style="padding:6px 8px;text-align:right;font-weight:800;color:{_pc2};">{_pr2["pct"]}%</td></tr>'
-                        _S += '</tbody></table></div>'
-
-                    # ── SELECTED KEY INSIGHTS ────────────────────────────────
-                    _sel_ins_list = [ins for i, ins in enumerate(_sorted_ins) if _em_ins_sel.get(i, True)]
-                    if _sel_ins_list:
-                        _type_icon_em = {"critical":"🚨","warning":"⚠️","success":"✅","info":"ℹ️"}
-                        _type_bg_em   = {"critical":"#FFF1F2","warning":"#FFFBEB","success":"#ECFDF5","info":"#EBF5FF"}
-                        _type_bc_em   = {"critical":"#dc2626","warning":"#D97706","success":"#059669","info":"#2563EB"}
-                        _type_tc_em   = {"critical":"#7F1D1D","warning":"#78350F","success":"#064E3B","info":"#0B1F3A"}
-                        _S += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">💡 Key Insights</div>'
-                        for _ins_e in _sel_ins_list:
-                            _t = _ins_e.get("type","info")
-                            _S += f'<div style="background:{_type_bg_em.get(_t,"#EBF5FF")};border-left:4px solid {_type_bc_em.get(_t,"#2563EB")};border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:10px;">'
-                            _S += f'<div style="font-size:13px;font-weight:800;color:{_type_tc_em.get(_t,"#0B1F3A")};margin-bottom:5px;">{_type_icon_em.get(_t,"ℹ️")} {_ins_e["title"]}</div>'
-                            _S += f'<div style="font-size:12px;color:{_type_tc_em.get(_t,"#374151")};line-height:1.6;">{_ins_e.get("detail","")}</div>'
-                            _S += '</div>'
-                        _S += '</div>'
-
-                    # ── SELECTED PRIORITY ACTIONS ────────────────────────────
-                    _sel_act_list = [act for i, act in enumerate(_sorted_acts) if _em_act_sel.get(i, True)]
-                    if _sel_act_list:
-                        _pri_bg_em = {"high":"#FFF1F2","medium":"#FFFBEB","low":"#ECFDF5"}
-                        _pri_bc_em = {"high":"#dc2626","medium":"#D97706","low":"#059669"}
-                        _pri_lbl_em = {"high":"🔴 HIGH","medium":"🟡 MEDIUM","low":"🟢 LOW"}
-                        _S += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2563EB;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #EBF5FF;">🎯 Priority Actions</div>'
-                        for _ai_e, _act_e in enumerate(_sel_act_list, 1):
-                            _p = _act_e.get("priority","low")
-                            _S += f'<div style="background:{_pri_bg_em.get(_p,"#ECFDF5")};border-left:4px solid {_pri_bc_em.get(_p,"#059669")};border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:10px;">'
-                            _S += f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#fff;background:{_pri_bc_em.get(_p,"#059669")};padding:2px 9px;border-radius:10px;">#{_ai_e} · {_pri_lbl_em.get(_p,"")} · {_act_e.get("category","")}</span></div>'
-                            _S += f'<div style="font-size:13px;font-weight:700;color:#0B1F3A;margin-bottom:5px;line-height:1.5;">{_act_e["action"]}</div>'
-                            _S += f'<div style="font-size:11px;color:#64748b;line-height:1.5;border-top:1px solid rgba(0,0,0,0.06);padding-top:5px;">💥 Impact: {_act_e.get("impact","")}</div>'
-                            _S += '</div>'
-                        _S += '</div>'
-
-                    # ── FOOTER ────────────────────────────────────────────────
-                    _S += f'''<div style="border-top:1px solid #E2EAF6;margin-top:16px;padding-top:16px;text-align:center;">
-  <div style="font-size:11px;color:#94a3b8;line-height:1.7;">
-    Auto-generated by <strong style="color:#2563EB;">Convin Sense Audit</strong> · Auto QA Data Insights<br>
-    Report Date: {_now_str} · Client: {_cli_label} · Campaign: {_camp_label}
+                    # ── Template 1: Executive Dark (Navy/Blue) ────────────────
+                    if _tid == 1:
+                        _S = '<div style="font-family:\'Segoe UI\',Arial,sans-serif;max-width:660px;margin:0 auto;background:#f0f4f9;padding:0;">'
+                        _S += f'''<div style="background:linear-gradient(135deg,#0B1F3A 0%,#1D4ED8 100%);border-radius:16px 16px 0 0;padding:32px 36px 28px;">
+  <div style="font-size:10px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:6px;">CONVIN SENSE AUDIT &nbsp;·&nbsp; AUTO QA DATA INSIGHTS</div>
+  <div style="font-size:26px;font-weight:900;color:#fff;line-height:1.15;margin-bottom:6px;">Convin Sense Audit Report</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+    <span style="background:rgba(255,255,255,0.12);border-radius:20px;padding:4px 12px;font-size:11px;color:rgba(255,255,255,0.9);">📅 {_now_str}</span>
+    <span style="background:rgba(255,255,255,0.12);border-radius:20px;padding:4px 12px;font-size:11px;color:rgba(255,255,255,0.9);">🏢 {_cli_label}</span>
+    <span style="background:rgba(255,255,255,0.12);border-radius:20px;padding:4px 12px;font-size:11px;color:rgba(255,255,255,0.9);">🎯 {_camp_label}</span>
+    <span style="background:rgba(255,255,255,0.12);border-radius:20px;padding:4px 12px;font-size:11px;color:rgba(255,255,255,0.9);">🤖 {_bot_label}</span>
   </div>
 </div>'''
-                    _S += '</div></div>'  # close body + outer
-                    return _S
+                        _S += f'<div style="background:#fff;border-radius:0 0 16px 16px;padding:28px 36px;">{_content}{_footer}</div></div>'
+                        return _S
+
+                    # ── Template 2: Minimal White ────────────────────────────
+                    elif _tid == 2:
+                        _S = '<div style="font-family:\'Helvetica Neue\',Arial,sans-serif;max-width:660px;margin:0 auto;background:#ffffff;border:1px solid #e8ecf0;border-radius:12px;overflow:hidden;">'
+                        _S += f'''<div style="padding:32px 40px 24px;border-bottom:3px solid #2563EB;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+    <div style="width:6px;height:40px;background:#2563EB;border-radius:3px;"></div>
+    <div>
+      <div style="font-size:9px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:#94a3b8;margin-bottom:3px;">CONVIN SENSE AUDIT</div>
+      <div style="font-size:24px;font-weight:800;color:#0B1F3A;line-height:1.2;">Convin Sense Audit Report</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <span style="border:1px solid #e2e8f0;border-radius:6px;padding:4px 10px;font-size:11px;color:#475569;">📅 {_now_str}</span>
+    <span style="border:1px solid #dbeafe;background:#eff6ff;border-radius:6px;padding:4px 10px;font-size:11px;color:#2563EB;font-weight:600;">🏢 {_cli_label}</span>
+    <span style="border:1px solid #dbeafe;background:#eff6ff;border-radius:6px;padding:4px 10px;font-size:11px;color:#2563EB;font-weight:600;">🎯 {_camp_label}</span>
+    <span style="border:1px solid #dbeafe;background:#eff6ff;border-radius:6px;padding:4px 10px;font-size:11px;color:#2563EB;font-weight:600;">🤖 {_bot_label}</span>
+  </div>
+</div>'''
+                        _S += f'<div style="padding:28px 40px;">{_content}{_footer}</div></div>'
+                        return _S
+
+                    # ── Template 3: Bold Red / Alert ─────────────────────────
+                    elif _tid == 3:
+                        _S = '<div style="font-family:\'Segoe UI\',Arial,sans-serif;max-width:660px;margin:0 auto;background:#fff5f5;border-radius:14px;overflow:hidden;border:1px solid #fecaca;">'
+                        _S += f'''<div style="background:linear-gradient(135deg,#7f1d1d 0%,#dc2626 60%,#ef4444 100%);padding:30px 36px 26px;">
+  <div style="font-size:9px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-bottom:8px;">&#9888; CONVIN SENSE AUDIT &nbsp;·&nbsp; QA PERFORMANCE ALERT</div>
+  <div style="font-size:26px;font-weight:900;color:#fff;line-height:1.15;margin-bottom:4px;">Convin Sense Audit Report</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:14px;">Performance review requiring attention</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <span style="background:rgba(0,0,0,0.25);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">📅 {_now_str}</span>
+    <span style="background:rgba(0,0,0,0.25);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🏢 {_cli_label}</span>
+    <span style="background:rgba(0,0,0,0.25);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🎯 {_camp_label}</span>
+    <span style="background:rgba(0,0,0,0.25);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🤖 {_bot_label}</span>
+  </div>
+</div>'''
+                        _S += f'<div style="padding:28px 36px;background:#fff;">{_content}{_footer}</div></div>'
+                        return _S
+
+                    # ── Template 4: Corporate Teal ───────────────────────────
+                    elif _tid == 4:
+                        _S = '<div style="font-family:Georgia,\'Times New Roman\',serif;max-width:660px;margin:0 auto;background:#f0fdf4;border-radius:14px;overflow:hidden;">'
+                        _S += f'''<div style="background:linear-gradient(135deg,#064e3b 0%,#059669 70%,#10b981 100%);padding:32px 40px 28px;">
+  <div style="font-size:9px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:8px;font-family:Arial,sans-serif;">CONVIN SENSE AUDIT &nbsp;·&nbsp; PROFESSIONAL QA REPORT</div>
+  <div style="font-size:27px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:4px;">Convin Sense Audit Report</div>
+  <div style="width:48px;height:3px;background:rgba(255,255,255,0.5);border-radius:2px;margin:10px 0 14px;"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;font-family:Arial,sans-serif;">
+    <span style="background:rgba(255,255,255,0.15);border-radius:4px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.9);">📅 {_now_str}</span>
+    <span style="background:rgba(255,255,255,0.15);border-radius:4px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.9);">🏢 {_cli_label}</span>
+    <span style="background:rgba(255,255,255,0.15);border-radius:4px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.9);">🎯 {_camp_label}</span>
+    <span style="background:rgba(255,255,255,0.15);border-radius:4px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.9);">🤖 {_bot_label}</span>
+  </div>
+</div>'''
+                        _S += f'<div style="padding:28px 40px;background:#fff;font-family:Arial,sans-serif;">{_content}{_footer}</div></div>'
+                        return _S
+
+                    # ── Template 5: Premium Gradient (Purple/Pink) ───────────
+                    else:
+                        _S = '<div style="font-family:\'Segoe UI\',Arial,sans-serif;max-width:660px;margin:0 auto;background:#faf5ff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(109,40,217,0.12);">'
+                        _S += f'''<div style="background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 45%,#db2777 100%);padding:34px 40px 30px;position:relative;">
+  <div style="font-size:9px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:8px;">✦ CONVIN SENSE AUDIT &nbsp;·&nbsp; PREMIUM ANALYTICS</div>
+  <div style="font-size:28px;font-weight:900;color:#fff;line-height:1.15;margin-bottom:4px;letter-spacing:-0.01em;">Convin Sense Audit Report</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-bottom:14px;">Powered by Convin Sense Intelligence</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <span style="background:rgba(255,255,255,0.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">📅 {_now_str}</span>
+    <span style="background:rgba(255,255,255,0.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🏢 {_cli_label}</span>
+    <span style="background:rgba(255,255,255,0.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🎯 {_camp_label}</span>
+    <span style="background:rgba(255,255,255,0.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🤖 {_bot_label}</span>
+  </div>
+</div>'''
+                        _S += f'<div style="padding:28px 40px;background:#fff;">{_content}{_footer}</div></div>'
+                        return _S
 
                 # ── PREVIEW ───────────────────────────────────────────────────
                 _gen_col, _prev_col = st.columns([1, 1])
@@ -6468,7 +6525,11 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                         _send_to_raw = st.text_input("Recipients (comma-separated)", placeholder="ceo@company.com, pm@company.com", key="ins_email_to")
                     with _send_c2:
                         _now_str2 = pd.Timestamp.now().strftime("%d %b %Y")
-                        _send_subj = st.text_input("Subject", value=f"QA Performance Report — {_now_str2}", key="ins_email_subj")
+                        _subj_parts = ["Convin Sense Audit Report"]
+                        if _cli_label != "All Clients": _subj_parts.append(_cli_label)
+                        if _camp_label != "All Campaigns": _subj_parts.append(_camp_label)
+                        _subj_parts.append(_now_str2)
+                        _send_subj = st.text_input("Subject", value=" — ".join(_subj_parts), key="ins_email_subj")
                     if st.button("📤 Send Now", key="ins_send_email_btn", type="primary", use_container_width=True):
                         _to_list = [e.strip() for e in _send_to_raw.split(",") if "@" in e.strip()]
                         if not _to_list:
