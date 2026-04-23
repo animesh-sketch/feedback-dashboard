@@ -7442,9 +7442,8 @@ def _render_param_manager(key_sfx=""):
 
 def _render_audit_form(legend_map, fname):
     """Convin Sense QA audit form — exact Convin.ai schema, all fields mandatory, auto-scoring."""
-    if "sense_audit_log" not in st.session_state or not st.session_state.get("_audit_log_loaded"):
-        st.session_state["sense_audit_log"] = _audit_log_load()
-        st.session_state["_audit_log_loaded"] = True
+    # Always reload from Supabase on each render so data is never stale
+    st.session_state["sense_audit_log"] = _audit_log_load()
     audit_log = st.session_state["sense_audit_log"]
 
     # ── "What's new" banner ────────────────────────────────────────────────────
@@ -7943,11 +7942,9 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                 }
                 _save_err = audit_store.append(_rec)
                 if _save_err:
-                    st.error(f"⚠️ Audit saved locally but failed to persist to database: {_save_err}")
-                # Always reload from Supabase so session state stays in sync
-                st.session_state["sense_audit_log"] = audit_store.load()
+                    st.error(f"⚠️ Failed to save audit to database: {_save_err}")
+                    st.stop()
 
-                # Store last result for display below
                 st.session_state["qa_last_result"] = {
                     **_computed,
                     "_disposition":        _f_disposition if _f_disposition != "— select —" else "—",
@@ -7956,11 +7953,9 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                     "_call_drop_stage":    _f_call_drop_stage if _f_call_drop_stage != "NA" else "",
                 }
 
-                # Clear AI suggestion draft after use
                 st.session_state.pop("_audit_suggestion_draft", None)
                 st.session_state.pop("_audit_suggestion_improved", None)
 
-                # Remove used queue item
                 if _q_idx >= 0 and _lead_q_form:
                     _lead_q_form.pop(_q_idx)
                     st.session_state["sense_lead_queue"] = _lead_q_form
