@@ -1072,161 +1072,259 @@ def _render_period_content(period: str):
 # ─── Home landing portal ──────────────────────────────────────────────────────
 
 def render_home():
-    st.markdown("""
-<style>
-@keyframes portalFadeUp {
-    from { opacity:0; transform:translateY(22px); }
-    to   { opacity:1; transform:translateY(0); }
-}
-@keyframes portalOrb {
-    0%,100% { transform:translate(0,0) scale(1); }
-    50%      { transform:translate(12px,-12px) scale(1.08); }
-}
-.portal-hero {
-    text-align:center;
-    padding:56px 20px 44px;
-    animation: portalFadeUp 0.55s ease both;
-}
-.portal-wordmark {
-    display:inline-flex; align-items:center; gap:12px; margin-bottom:16px;
-}
-.portal-wordmark-text {
-    font-size:2.2rem; font-weight:900; color:#0B1F3A;
-    letter-spacing:-0.04em; line-height:1;
-}
-.portal-tagline-main {
-    font-size:1.05rem; font-weight:500; color:#475569;
-    margin-bottom:6px; letter-spacing:-0.01em;
-}
-.portal-tagline-main strong { color:#0B1F3A; font-weight:700; }
-.portal-sub-label {
-    font-size:0.65rem; font-weight:700; letter-spacing:0.18em;
-    text-transform:uppercase; color:#94a3b8; margin-top:4px;
-}
-
-.portal-grid { display:grid; grid-template-columns:1fr 1fr; gap:22px; max-width:900px; margin:0 auto; }
-
-.portal-card {
-    border-radius:20px; padding:32px 28px 24px; position:relative;
-    overflow:hidden; display:flex; flex-direction:column; gap:0;
-    transition: transform 0.22s, box-shadow 0.22s;
-    animation: portalFadeUp 0.55s ease both;
-}
-.portal-card:hover { transform:translateY(-4px); }
-.portal-card-cdl {
-    background:linear-gradient(145deg,#061224 0%,#0B1F3A 60%,#0d2655 100%);
-    border:1px solid rgba(37,99,235,0.32);
-    box-shadow:0 8px 40px rgba(11,31,58,0.35), 0 0 0 1px rgba(37,99,235,0.08);
-}
-.portal-card-cdl:hover { box-shadow:0 16px 60px rgba(37,99,235,0.28), 0 0 0 1px rgba(37,99,235,0.2); }
-.portal-card-sense {
-    background:linear-gradient(145deg,#061224 0%,#091d40 60%,#0d2655 100%);
-    border:1px solid rgba(96,165,250,0.28);
-    box-shadow:0 8px 40px rgba(11,31,58,0.35), 0 0 0 1px rgba(96,165,250,0.06);
-}
-.portal-card-sense:hover { box-shadow:0 16px 60px rgba(37,99,235,0.24), 0 0 0 1px rgba(96,165,250,0.2); }
-
-/* Orb glow */
-.portal-card::before {
-    content:""; position:absolute; top:-100px; right:-80px;
-    width:320px; height:320px; border-radius:50%; pointer-events:none;
-    animation: portalOrb 7s ease-in-out infinite;
-}
-.portal-card-cdl::before  { background:radial-gradient(circle, rgba(37,99,235,0.16) 0%, transparent 65%); }
-.portal-card-sense::before { background:radial-gradient(circle, rgba(96,165,250,0.14) 0%, transparent 65%); }
-
-.pc-badge {
-    display:inline-flex; align-items:center; gap:6px; border-radius:99px;
-    padding:4px 14px; font-size:0.58rem; font-weight:700;
-    letter-spacing:0.12em; text-transform:uppercase; margin-bottom:18px;
-}
-.pc-badge-cdl   { background:rgba(37,99,235,0.14); border:1px solid rgba(37,99,235,0.35); color:#60A5FA; }
-.pc-badge-sense { background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.32); color:#93C5FD; }
-
-.pc-title {
-    font-size:1.5rem; font-weight:900; color:#F1F5F9;
-    letter-spacing:-0.03em; line-height:1.15; margin-bottom:4px;
-}
-.pc-tagline {
-    font-size:0.82rem; font-weight:600;
-    letter-spacing:-0.01em; margin-bottom:12px;
-}
-.pc-tagline-cdl   { color:#60A5FA; }
-.pc-tagline-sense { color:#93C5FD; }
-.pc-divider {
-    height:1px; margin:14px 0;
-    background:linear-gradient(90deg,rgba(255,255,255,0.1),transparent);
-}
-.pc-desc {
-    font-size:0.73rem; color:rgba(186,210,240,0.62);
-    line-height:1.65; margin-bottom:18px;
-}
-.pc-pills { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:4px; }
-.pc-pill {
-    font-size:0.62rem; font-weight:600; color:rgba(186,210,240,0.55);
-    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.10);
-    border-radius:99px; padding:3px 10px; white-space:nowrap;
-}
-</style>""", unsafe_allow_html=True)
-
-    _logo_html = _logo_img(52, 12)
+    _logo_html = _logo_img(48, 10)
     st.markdown(f"""
-<div class="portal-hero">
-  <div class="portal-wordmark">
-    {_logo_html}
-    <span class="portal-wordmark-text">Convin</span>
+<style>
+@keyframes phFadeUp {{
+    from {{ opacity:0; transform:translateY(24px); }}
+    to   {{ opacity:1; transform:translateY(0); }}
+}}
+@keyframes phOrb {{
+    0%,100% {{ transform:translate(0,0) scale(1); }}
+    50%      {{ transform:translate(16px,-14px) scale(1.1); }}
+}}
+@keyframes phPulse {{
+    0%,100% {{ opacity:0.6; }}
+    50%      {{ opacity:1; }}
+}}
+
+/* ── Full-page wrapper ── */
+.ph-wrap {{
+    background: linear-gradient(160deg, #020d1f 0%, #061830 35%, #0a2248 65%, #071a38 100%);
+    border-radius: 20px;
+    padding: 56px 40px 52px;
+    position: relative;
+    overflow: hidden;
+    animation: phFadeUp 0.5s ease both;
+}}
+
+/* decorative orbs */
+.ph-wrap::before {{
+    content:""; position:absolute; top:-120px; right:-120px;
+    width:500px; height:500px; border-radius:50%; pointer-events:none;
+    background: radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 65%);
+    animation: phOrb 10s ease-in-out infinite;
+}}
+.ph-wrap::after {{
+    content:""; position:absolute; bottom:-160px; left:-100px;
+    width:460px; height:460px; border-radius:50%; pointer-events:none;
+    background: radial-gradient(circle, rgba(96,165,250,0.10) 0%, transparent 65%);
+    animation: phOrb 14s ease-in-out infinite reverse;
+}}
+
+/* ── Hero header ── */
+.ph-hero {{
+    text-align: center;
+    margin-bottom: 44px;
+    position: relative;
+    z-index: 1;
+}}
+.ph-wordmark {{
+    display: inline-flex; align-items: center; gap: 14px; margin-bottom: 18px;
+}}
+.ph-brand {{
+    font-size: 2.6rem; font-weight: 900; color: #ffffff;
+    letter-spacing: -0.05em; line-height: 1;
+}}
+.ph-eyebrow {{
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.22em;
+    text-transform: uppercase; color: #60a5fa;
+    margin-bottom: 14px;
+    animation: phPulse 3s ease-in-out infinite;
+}}
+.ph-headline {{
+    font-size: 1.15rem; font-weight: 600; color: #e0eeff;
+    line-height: 1.5; margin-bottom: 6px;
+}}
+.ph-headline span {{ color: #60a5fa; }}
+.ph-sub {{
+    font-size: 0.75rem; color: rgba(160,200,240,0.65);
+    letter-spacing: 0.04em;
+}}
+
+/* ── Cards grid ── */
+.ph-grid {{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    max-width: 860px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}}
+
+.ph-card {{
+    border-radius: 16px;
+    padding: 30px 26px 22px;
+    position: relative; overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}}
+.ph-card:hover {{ transform: translateY(-5px); }}
+
+.ph-card-cdl {{
+    background: linear-gradient(140deg, rgba(37,99,235,0.22) 0%, rgba(30,64,175,0.30) 100%);
+    border: 1px solid rgba(96,165,250,0.30);
+    box-shadow: 0 8px 32px rgba(37,99,235,0.20);
+}}
+.ph-card-cdl:hover {{ box-shadow: 0 18px 50px rgba(37,99,235,0.32); border-color: rgba(96,165,250,0.55); }}
+
+.ph-card-sense {{
+    background: linear-gradient(140deg, rgba(124,58,237,0.20) 0%, rgba(109,40,217,0.28) 100%);
+    border: 1px solid rgba(167,139,250,0.28);
+    box-shadow: 0 8px 32px rgba(124,58,237,0.18);
+}}
+.ph-card-sense:hover {{ box-shadow: 0 18px 50px rgba(124,58,237,0.30); border-color: rgba(167,139,250,0.50); }}
+
+/* inner card glow */
+.ph-card::before {{
+    content:""; position:absolute; top:-80px; right:-60px;
+    width:260px; height:260px; border-radius:50%; pointer-events:none;
+}}
+.ph-card-cdl::before  {{ background: radial-gradient(circle, rgba(96,165,250,0.14) 0%, transparent 65%); }}
+.ph-card-sense::before {{ background: radial-gradient(circle, rgba(167,139,250,0.14) 0%, transparent 65%); }}
+
+.ph-card-badge {{
+    display: inline-flex; align-items: center; gap: 6px;
+    border-radius: 99px; padding: 3px 12px;
+    font-size: 0.56rem; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; margin-bottom: 14px;
+}}
+.ph-badge-cdl   {{ background: rgba(96,165,250,0.15); border:1px solid rgba(96,165,250,0.35); color:#93c5fd; }}
+.ph-badge-sense {{ background: rgba(167,139,250,0.15); border:1px solid rgba(167,139,250,0.35); color:#c4b5fd; }}
+
+.ph-card-title {{
+    font-size: 1.45rem; font-weight: 900; color: #ffffff;
+    letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 5px;
+}}
+.ph-card-sub {{
+    font-size: 0.78rem; font-weight: 600; margin-bottom: 14px;
+}}
+.ph-sub-cdl   {{ color: #93c5fd; }}
+.ph-sub-sense {{ color: #c4b5fd; }}
+
+.ph-divider {{
+    height: 1px; margin: 12px 0 14px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.12), transparent);
+}}
+.ph-desc {{
+    font-size: 0.74rem; color: rgba(210,230,255,0.75);
+    line-height: 1.7; margin-bottom: 18px;
+}}
+.ph-pills {{ display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px; }}
+.ph-pill {{
+    font-size: 0.61rem; font-weight: 600;
+    color: rgba(220,235,255,0.70);
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 99px; padding: 3px 10px; white-space: nowrap;
+}}
+
+/* ── Stats strip ── */
+.ph-stats {{
+    display: flex; justify-content: center; gap: 48px;
+    margin-top: 40px;
+    position: relative; z-index: 1;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding-top: 28px;
+}}
+.ph-stat {{ text-align: center; }}
+.ph-stat-val {{
+    font-size: 1.6rem; font-weight: 900; color: #ffffff;
+    letter-spacing: -0.04em;
+}}
+.ph-stat-lbl {{
+    font-size: 0.62rem; color: rgba(160,200,240,0.55);
+    font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    margin-top: 2px;
+}}
+</style>
+
+<div class="ph-wrap">
+
+  <!-- Hero -->
+  <div class="ph-hero">
+    <div class="ph-eyebrow">⚡ Convin Intelligence Suite</div>
+    <div class="ph-wordmark">
+      {_logo_html}
+      <span class="ph-brand">Convin Data Labs</span>
+    </div>
+    <div class="ph-headline">
+      One platform. <span>Complete conversation intelligence.</span>
+    </div>
+    <div class="ph-sub">Select a workspace to continue ↓</div>
   </div>
-  <div class="portal-tagline-main">
-    <strong>One platform.</strong> Complete conversation intelligence.
+
+  <!-- Cards -->
+  <div class="ph-grid">
+
+    <div class="ph-card ph-card-cdl">
+      <div class="ph-card-badge ph-badge-cdl">📊 Insights Platform</div>
+      <div class="ph-card-title">Convin Data Labs</div>
+      <div class="ph-card-sub ph-sub-cdl">Track every insight. Own every relationship.</div>
+      <div class="ph-divider"></div>
+      <div class="ph-desc">
+        Centralised insights report feedback, stakeholder email campaigns,
+        client management and real-time KPI tracking — all in one place.
+      </div>
+      <div class="ph-pills">
+        <span class="ph-pill">📬 Campaign tracking</span>
+        <span class="ph-pill">⭐ CSAT feedback</span>
+        <span class="ph-pill">📧 Email delivery</span>
+        <span class="ph-pill">🏢 Client management</span>
+        <span class="ph-pill">📈 KPI monitoring</span>
+      </div>
+    </div>
+
+    <div class="ph-card ph-card-sense">
+      <div class="ph-card-badge ph-badge-sense">🎯 Auto QA · Bot Intelligence</div>
+      <div class="ph-card-title">Convin Sense Audit</div>
+      <div class="ph-card-sub ph-sub-sense">Auto-score every call. Never miss a failure.</div>
+      <div class="ph-divider"></div>
+      <div class="ph-desc">
+        Automated QA scoring, bot failure intelligence, tier-based parameter analysis,
+        auditor leaderboards and priority action plans — powered by Convin Sense.
+      </div>
+      <div class="ph-pills">
+        <span class="ph-pill">🤖 Auto QA scoring</span>
+        <span class="ph-pill">🧠 Bot intelligence</span>
+        <span class="ph-pill">👤 Auditor leaderboard</span>
+        <span class="ph-pill">📊 Tier-based QA</span>
+        <span class="ph-pill">⚡ Auto-fail detection</span>
+      </div>
+    </div>
+
   </div>
-  <div class="portal-sub-label">Select a workspace to continue</div>
+
+  <!-- Stats strip -->
+  <div class="ph-stats">
+    <div class="ph-stat">
+      <div class="ph-stat-val">Tier 1–3</div>
+      <div class="ph-stat-lbl">QA Parameters</div>
+    </div>
+    <div class="ph-stat">
+      <div class="ph-stat-val">Auto</div>
+      <div class="ph-stat-lbl">Score & Fail Detection</div>
+    </div>
+    <div class="ph-stat">
+      <div class="ph-stat-val">Live</div>
+      <div class="ph-stat-lbl">Supabase Persistence</div>
+    </div>
+    <div class="ph-stat">
+      <div class="ph-stat-val">100%</div>
+      <div class="ph-stat-lbl">Audit Coverage</div>
+    </div>
+  </div>
+
 </div>""", unsafe_allow_html=True)
 
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
     _col_cdl, _col_sense = st.columns(2)
-
     with _col_cdl:
-        st.markdown("""
-<div class="portal-card portal-card-cdl">
-  <div class="pc-badge pc-badge-cdl">📊 Insights Platform</div>
-  <div class="pc-title">Convin Data Labs</div>
-  <div class="pc-tagline pc-tagline-cdl">Track every insight. Own every relationship.</div>
-  <div class="pc-divider"></div>
-  <div class="pc-desc">
-    Centralised insights report feedback, stakeholder email campaigns,
-    client management and real-time KPI tracking — all in one place.
-  </div>
-  <div class="pc-pills">
-    <span class="pc-pill">📬 Campaign tracking</span>
-    <span class="pc-pill">⭐ CSAT feedback</span>
-    <span class="pc-pill">📧 Email delivery</span>
-    <span class="pc-pill">🏢 Client management</span>
-    <span class="pc-pill">📈 KPI monitoring</span>
-  </div>
-</div>""", unsafe_allow_html=True)
         if st.button("Open CDL Dashboard →", key="home_enter_cdl", use_container_width=True, type="primary"):
             st.session_state["app_mode"] = "CDL"
             st.session_state["current_page"] = "Overview"
             st.rerun()
-
     with _col_sense:
-        st.markdown("""
-<div class="portal-card portal-card-sense">
-  <div class="pc-badge pc-badge-sense">🎯 Auto QA · Bot Intelligence</div>
-  <div class="pc-title">Convin Sense Audit</div>
-  <div class="pc-tagline pc-tagline-sense">Auto-score every call. Never miss a failure.</div>
-  <div class="pc-divider"></div>
-  <div class="pc-desc">
-    Automated QA scoring, bot failure intelligence, tier-based parameter analysis,
-    auditor leaderboards and priority action plans — powered by Convin Sense.
-  </div>
-  <div class="pc-pills">
-    <span class="pc-pill">🤖 Auto QA scoring</span>
-    <span class="pc-pill">🧠 Bot intelligence</span>
-    <span class="pc-pill">👤 Auditor leaderboard</span>
-    <span class="pc-pill">📊 Tier-based QA</span>
-    <span class="pc-pill">⚡ Auto-fail detection</span>
-  </div>
-</div>""", unsafe_allow_html=True)
         if st.button("Open Sense Audit →", key="home_enter_sense", use_container_width=True, type="primary"):
             st.session_state["app_mode"] = "Audit"
             st.session_state["current_page"] = "Audit"
