@@ -3740,7 +3740,7 @@ def _audit_log_load():
                     return data
     except Exception:
         pass
-    return list(_SEED_AUDIT_RECORDS)
+    return []
 
 
 def _registry_save(data):
@@ -3792,137 +3792,6 @@ def _registry_persist():
     })
 
 
-# ── Seed demo records — 200 audits, 2 clients, 4 campaigns ────────────────────
-def _mk(auditor, date, client, campaign, pm, agent_tag,
-        da, cp, mc, ft, dair, rc, intro, bn, trans, ls, scr, tts, tmpl, pron, disc, nba,
-        fi, brc, br,
-        lead_stage, pi, fr, dm, notes=""):
-    """Build a fully computed QA record dict."""
-    pv = {
-        "Disposition Accuracy": str(da),
-        "Context Passing": str(cp),
-        "Message Content": str(mc),
-        "Follow-up in Specified Time": str(ft),
-        "Dead Air/Blank Space": str(dair),
-        "Repeated Calls": str(rc),
-        "Introduction": str(intro),
-        "Background Noise": str(bn),
-        "Transcription Issues": str(trans),
-        "Language Switch": str(ls),
-        "Script Issue in Transcript": str(scr),
-        "TTS Issues (Voice)": str(tts),
-        "Template Issues": str(tmpl),
-        "Pronunciation Issue": str(pron),
-        "Abrupt Disconnection": str(disc),
-        "NBA Not Executed": str(nba),
-        "Flow Issue": fi,
-        "Bot Restarted Conversation": brc,
-        "Bot Repetition": br,
-        "Lead Stage": lead_stage,
-        "Product Interest (0/1/2)": str(pi),
-        "Follow-up Readiness (0/1/2)": str(fr),
-        "DM Confirmed (0/1/2)": str(dm),
-    }
-    computed = _compute_qa_score(pv)
-    return {
-        "Audit Date": date,
-        "QA": auditor,
-        "Client": client,
-        "Campaign Name": campaign,
-        "PM / CSM": pm,
-        "Lead Number": f"LD-{agent_tag}",
-        "Lead Link": "",
-        "Phone Number": "",
-        "Conversation Link": "",
-        **pv,
-        "Lead Score": computed["Lead Score"],
-        "Lead Composite": computed["Lead Composite"],
-        "Bot Score": computed["Bot Score"],
-        "Intelligence Score": computed["Intelligence Score"],
-        "Status": computed["Status"],
-        "Fatal?": computed["Fatal?"],
-        "Notes": notes,
-    }
-
-
-def _gen_seed_records():
-    import random as _r
-    _r.seed(42)
-    from datetime import date as _date, timedelta as _td
-
-    _auditors  = ["Animesh", "Shubham", "Aman", "Navya", "Alan"]
-    _campaigns = [
-        ("BACL",    "BACL Q2 Lead Gen",        "Sudesha"),
-        ("BACL",    "BACL Collections",         "Sudesha"),
-        ("mPokket", "mPokket Loan Outreach",    "Sudesha"),
-        ("mPokket", "mPokket Re-engagement",    "Sudesha"),
-    ]
-    _leads     = ["Hot", "Warm", "Cold", "Not Interested", "RNR"]
-    _lead_w    = [0.18, 0.30, 0.28, 0.14, 0.10]
-    _fi_opts   = ["None", "None", "None", "Minor", "Minor", "Major"]
-    _brc_opts  = ["No", "No", "No", "Once", "Once", "3–5 times"]
-    _br_opts   = ["None", "None", "None", "1–2 times", "1–2 times", "3–5 times"]
-
-    _start = _date(2026, 3, 1)
-    _days  = 52
-    _recs  = []
-
-    for i in range(200):
-        _aud = _auditors[i % len(_auditors)]
-        _cl, _camp, _pm = _campaigns[i % len(_campaigns)]
-        _day = _start + _td(days=_r.randint(0, _days))
-        _tag = f"{(i+1):03d}"
-        _lead = _r.choices(_leads, _lead_w)[0]
-
-        # Quality profile: 55% pass, 30% needs-review, 10% fail, 5% auto-fail
-        _profile = _r.choices(["pass","review","fail","autofail"],
-                               weights=[55, 30, 10, 5])[0]
-        if _profile == "pass":
-            da,cp,mc,ft = _r.choices([2],[1])[0], 2, 2, 2
-            disc = "0"
-        elif _profile == "review":
-            da  = _r.choice([0, 1])
-            cp  = _r.choice([1, 2])
-            mc  = _r.choice([1, 2])
-            ft  = _r.choice([1, 2])
-            disc = "0"
-        elif _profile == "fail":
-            da  = _r.choice([0, 0, 1])
-            cp  = _r.choice([0, 1])
-            mc  = _r.choice([0, 1])
-            ft  = _r.choice([0, 1])
-            disc = "0"
-        else:
-            da, cp, mc, ft = 2, 2, 2, 2
-            disc = "Fatal"
-
-        dair = _r.choice([2, 2, 1])
-        rc   = _r.choice(["2", "2", "1", "0"])
-        intro= _r.choice([2, 2, 1])
-        bn   = "2"
-        trans= _r.choice(["2", "2", "1"])
-        ls   = _r.choice([2, 2, 1])
-        scr  = "2"
-        tts  = _r.choice(["2", "1"])
-        tmpl = "2"
-        pron = _r.choice(["2", "2", "1"])
-        nba  = _r.choice(["2", "2", "1"])
-        fi   = _r.choice(_fi_opts)
-        brc  = _r.choice(_brc_opts)
-        br   = _r.choice(_br_opts)
-        pi   = _r.choice([2, 2, 1, 0])
-        fr   = _r.choice([2, 2, 1, 0])
-        dm   = _r.choice([2, 2, 1])
-
-        _recs.append(_mk(
-            _aud, str(_day), _cl, _camp, _pm, _tag,
-            da, cp, mc, ft, dair, rc, intro, bn, trans, ls,
-            scr, tts, tmpl, pron, disc, nba,
-            fi, brc, br, _lead, pi, fr, dm
-        ))
-    return _recs
-
-_SEED_AUDIT_RECORDS = _gen_seed_records()
 
 def _parse_legend(legend_df):
     """Extract {parameter: [score_options]} from a legend sheet."""
