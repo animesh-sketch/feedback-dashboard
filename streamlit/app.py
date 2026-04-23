@@ -3642,13 +3642,7 @@ def _compute_qa_score(pv):
     lead_score_raw = _QA_SCHEMA["lead_stage_scores"].get(str(pv.get("Lead Stage", "")), None)
     lead_composite = None
     if lead_score_raw is not None:
-        try:
-            _ls = (int(pv.get("Product Interest (0/1/2)", 0) or 0) +
-                   int(pv.get("Follow-up Readiness (0/1/2)", 0) or 0) +
-                   int(pv.get("DM Confirmed (0/1/2)", 0) or 0))
-            lead_composite = round((lead_score_raw + _ls / 6 * 100) / 2, 1)
-        except (ValueError, TypeError):
-            pass
+        lead_composite = float(lead_score_raw)
 
     return {
         "Bot Score":          bot_score,
@@ -7267,7 +7261,7 @@ def _render_param_manager(key_sfx=""):
             _rows += (
                 f'<tr style="background:#fffbf5;"><td>⭐ {_cp["name"]}</td>'
                 f'<td><span class="pm-tier-chip" style="background:#0ebc6e18;color:#0ebc6e;">Custom</span></td>'
-                f'<td style="font-weight:700;color:#0ebc6e;">{_cp["weight"]}×</td>'
+                f'<td style="font-weight:700;color:#0ebc6e;">{_cp.get("weight", "—")}</td>'
                 f'<td style="color:#7a99bb;">{_opts} · <span style="color:#2563EB;">NA</span></td></tr>'
             )
         st.markdown(
@@ -7326,7 +7320,7 @@ def _render_param_manager(key_sfx=""):
                     _leg_rows += f'<tr><td>{_p["col"]}</td><td>{_tier["label"]}</td><td>{int(_p["weight"]*100)}%</td><td>{_opts_str}</td></tr>'
             for _cp in st.session_state["sense_custom_audit_params"]:
                 _opts_str = ", ".join(_cp["options"] + ["NA"])
-                _leg_rows += f'<tr><td>⭐ {_cp["name"]}</td><td>Custom</td><td>{_cp["weight"]}×</td><td>{_opts_str}</td></tr>'
+                _leg_rows += f'<tr><td>⭐ {_cp["name"]}</td><td>Custom</td><td>{_cp.get("weight","—")}</td><td>{_opts_str}</td></tr>'
             st.markdown(
                 f'<table class="pm-table"><thead><tr><th>Parameter</th><th>Tier</th><th>Weight</th><th>Options</th></tr></thead>'
                 f'<tbody>{_leg_rows}</tbody></table>',
@@ -7339,7 +7333,7 @@ def _render_param_manager(key_sfx=""):
                 for _p in _tier["params"]:
                     _leg_csv_lines.append(f'"{_p["col"]}","{_tier["label"]}","{int(_p["weight"]*100)}%","{", ".join(_p["options"] + ["NA"])}"')
             for _cp in st.session_state["sense_custom_audit_params"]:
-                _leg_csv_lines.append(f'"{_cp["name"]}","Custom","{_cp["weight"]}×","{", ".join(_cp["options"] + ["NA"])}"')
+                _leg_csv_lines.append(f'"{_cp["name"]}","Custom","{_cp.get("weight","—")}","{", ".join(_cp["options"] + ["NA"])}"')
             st.download_button("⬇ Download Legend CSV", "\n".join(_leg_csv_lines).encode(),
                                "audit_legend.csv", "text/csv", key=f"pm_dl_legend{_ks}")
 
