@@ -6221,6 +6221,20 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                         "cmts": _ec_cmts,
                     })
 
+                # ── Collect remarks text for AI summary ───────────────────────
+                _remark_lines = []
+                for _rdf_col in ["Notes", "Improvement Suggestion"]:
+                    if _rdf_col in _audit_df_ins_view.columns:
+                        for _rv in _audit_df_ins_view[_rdf_col].dropna().astype(str).str.strip():
+                            if _rv and _rv.lower() not in ("", "nan", "none"):
+                                _remark_lines.append(_rv)
+                for _ecp2 in st.session_state.get("sense_custom_audit_params", []):
+                    _cmt2 = f"{_ecp2['name']} Comment"
+                    if _cmt2 in _audit_df_ins_view.columns:
+                        for _rv2 in _audit_df_ins_view[_cmt2].dropna().astype(str).str.strip():
+                            if _rv2 and _rv2.lower() not in ("", "nan", "none"):
+                                _remark_lines.append(_rv2)
+
                 # ── SECTION SELECTION ─────────────────────────────────────────
                 st.markdown('<div style="font-size:0.75rem;font-weight:800;color:#0B1F3A;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;border-bottom:2px solid #E2EAF6;padding-bottom:6px;">✅ Choose Sections to Include</div>', unsafe_allow_html=True)
                 _eml_c1, _eml_c2, _eml_c3 = st.columns(3)
@@ -6239,6 +6253,58 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     em_qa_tbl    = st.checkbox(f"👤 QA Team Performance  ({len(_em_qa_rows)} auditors)", value=bool(_em_qa_rows), key="em_qa_tbl")
                     em_params    = st.checkbox(f"🔬 Parameter Details  ({len(_em_param_rows)} params)", value=bool(_em_param_rows), key="em_params")
                     em_custom_ps = st.checkbox(f"⭐ Custom Parameters  ({len(_em_custom_rows)} params)", value=bool(_em_custom_rows), key="em_custom_ps")
+                    em_remarks   = st.checkbox(f"💬 Remarks Summary  ({len(_remark_lines)} remarks)", value=bool(_remark_lines), key="em_remarks")
+
+                # ── AI Remarks Summary generator ──────────────────────────────
+                _remarks_key = "ins_em_remarks_summary"
+                if em_remarks and _remark_lines:
+                    _api_key_rm = st.session_state.get("api_key", "")
+                    _rm_col1, _rm_col2 = st.columns([3, 1])
+                    with _rm_col1:
+                        _existing = st.session_state.get(_remarks_key)
+                        if _existing:
+                            st.markdown(
+                                '<div style="font-size:0.68rem;color:#059669;font-weight:700;margin-bottom:4px;">✅ Remarks summary ready — will be included in email</div>',
+                                unsafe_allow_html=True,
+                            )
+                        else:
+                            st.markdown(
+                                f'<div style="font-size:0.68rem;color:#475569;margin-bottom:4px;">💬 {len(_remark_lines)} remarks found (Notes + Improvement Suggestions + Custom Comments). Click to summarise with AI.</div>',
+                                unsafe_allow_html=True,
+                            )
+                    with _rm_col2:
+                        if st.button("✨ Summarise Remarks", key="ins_em_gen_remarks", use_container_width=True):
+                            if not _api_key_rm:
+                                st.warning("Add your Anthropic API key in Settings to use AI summary.")
+                            else:
+                                _rm_text = "\n".join(f"- {r}" for r in _remark_lines[:80])
+                                _rm_prompt = (
+                                    f"You are a QA analytics expert. Below are reviewer remarks, notes, and improvement suggestions from QA audit records "
+                                    f"for client '{_cli_label}', campaign '{_camp_label}', bot '{_bot_label}'.\n\n"
+                                    f"Remarks:\n{_rm_text}\n\n"
+                                    f"Return ONLY valid JSON (no markdown) with exactly these keys:\n"
+                                    f'{{"summary": "2-3 sentence overall summary of recurring themes", '
+                                    f'"positive": ["positive insight 1", "positive insight 2"], '
+                                    f'"concerns": ["concern 1", "concern 2", "concern 3"], '
+                                    f'"suggestions": ["suggestion 1", "suggestion 2"]}}'
+                                )
+                                try:
+                                    import anthropic as _anth, json as _jrm
+                                    _anth_c = _anth.Anthropic(api_key=_api_key_rm)
+                                    with st.spinner("Summarising remarks with AI…"):
+                                        _rm_msg = _anth_c.messages.create(
+                                            model="claude-haiku-4-5-20251001",
+                                            max_tokens=600,
+                                            messages=[{"role": "user", "content": _rm_prompt}],
+                                        )
+                                    _rm_raw = _rm_msg.content[0].text.strip()
+                                    if _rm_raw.startswith("```"):
+                                        _rm_raw = _rm_raw.split("```")[1]
+                                        if _rm_raw.startswith("json"): _rm_raw = _rm_raw[4:]
+                                    st.session_state[_remarks_key] = _jrm.loads(_rm_raw)
+                                    st.rerun()
+                                except Exception as _rme:
+                                    st.error(f"AI error: {_rme}")
 
                 # ── PER-INSIGHT SELECTION ──────────────────────────────────────
                 _em_ins_sel = {}
@@ -6449,6 +6515,43 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                             if _rem < _cols_per_row:
                                 for _ in range(_rem):
                                     _B += '<td style="padding:4px;width:33%;"></td>'
+                            _B += '</tr></table></div>'
+                        # Remarks Summary (AI)
+                        _rm_data = st.session_state.get(_remarks_key)
+                        if em_remarks and _rm_data:
+                            _B += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#7c3aed;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #ede9fe;">💬 Remarks Summary</div>'
+                            # Overall summary
+                            if _rm_data.get("summary"):
+                                _B += f'<div style="background:#f5f3ff;border-left:4px solid #7c3aed;border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#3b0764;line-height:1.65;">{_rm_data["summary"]}</div>'
+                            # Three columns: positive / concerns / suggestions
+                            _B += '<table style="width:100%;border-collapse:collapse;" cellpadding="0" cellspacing="8"><tr style="vertical-align:top;">'
+                            # Positive
+                            _pos = _rm_data.get("positive") or []
+                            _B += '<td style="width:33%;padding:0 6px 0 0;vertical-align:top;">'
+                            _B += '<div style="background:#ecfdf5;border-radius:8px;padding:12px;">'
+                            _B += '<div style="font-size:10px;font-weight:800;color:#059669;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">✅ Positive</div>'
+                            for _pi in _pos:
+                                _B += f'<div style="font-size:12px;color:#065f46;line-height:1.55;margin-bottom:5px;padding-left:10px;border-left:2px solid #6ee7b7;">• {_pi}</div>'
+                            if not _pos: _B += '<div style="font-size:11px;color:#94a3b8;">—</div>'
+                            _B += '</div></td>'
+                            # Concerns
+                            _con = _rm_data.get("concerns") or []
+                            _B += '<td style="width:33%;padding:0 3px;vertical-align:top;">'
+                            _B += '<div style="background:#fff1f2;border-radius:8px;padding:12px;">'
+                            _B += '<div style="font-size:10px;font-weight:800;color:#dc2626;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">⚠️ Concerns</div>'
+                            for _ci in _con:
+                                _B += f'<div style="font-size:12px;color:#7f1d1d;line-height:1.55;margin-bottom:5px;padding-left:10px;border-left:2px solid #fca5a5;">• {_ci}</div>'
+                            if not _con: _B += '<div style="font-size:11px;color:#94a3b8;">—</div>'
+                            _B += '</div></td>'
+                            # Suggestions
+                            _sug = _rm_data.get("suggestions") or []
+                            _B += '<td style="width:33%;padding:0 0 0 6px;vertical-align:top;">'
+                            _B += '<div style="background:#eff6ff;border-radius:8px;padding:12px;">'
+                            _B += '<div style="font-size:10px;font-weight:800;color:#2563EB;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">💡 Suggestions</div>'
+                            for _si in _sug:
+                                _B += f'<div style="font-size:12px;color:#1e3a5f;line-height:1.55;margin-bottom:5px;padding-left:10px;border-left:2px solid #93c5fd;">• {_si}</div>'
+                            if not _sug: _B += '<div style="font-size:11px;color:#94a3b8;">—</div>'
+                            _B += '</div></td>'
                             _B += '</tr></table></div>'
                         # Key Insights
                         _sel_ins_list = [ins for i, ins in enumerate(_sorted_ins) if _em_ins_sel.get(i, True)]
