@@ -7269,128 +7269,65 @@ def _render_registry():
 
 
 def _render_param_manager(key_sfx=""):
-    """Parameter manager: view/edit weights, add custom params, auto-generate legend."""
+    """Custom parameter manager — add/delete persisted custom audit params."""
     if "sense_custom_audit_params" not in st.session_state:
         st.session_state["sense_custom_audit_params"] = param_store.load()
-    _ks = key_sfx  # short alias for unique widget keys
+    _ks = key_sfx
+    _cps = st.session_state["sense_custom_audit_params"]
 
-    with st.expander("⚙️ Parameter Manager — Add / Edit Parameters & Weights", expanded=False):
-        st.markdown("""
-<style>
-.pm-table { width:100%; border-collapse:collapse; font-size:0.72rem; }
-.pm-table th { background:#f0f5ff; color:#2a5080; font-weight:700; padding:6px 10px;
-               text-align:left; border-bottom:2px solid #ddeeff; font-size:0.65rem;
-               letter-spacing:0.06em; text-transform:uppercase; }
-.pm-table td { padding:5px 10px; border-bottom:1px solid #edf2fb; color:#0d1d3a; vertical-align:middle; }
-.pm-tier-chip { display:inline-block; border-radius:4px; padding:2px 8px; font-size:0.58rem;
-                font-weight:700; letter-spacing:0.05em; text-transform:uppercase; }
-</style>""", unsafe_allow_html=True)
+    st.markdown('<div class="section-chip">⭐ Custom Parameters</div>', unsafe_allow_html=True)
 
-        # ── Built-in params table ──────────────────────────────────────────────
-        st.markdown('<div style="font-size:0.7rem;font-weight:700;color:#2a5080;margin-bottom:6px;">Built-in Parameters</div>', unsafe_allow_html=True)
-        _tier_colors = {"Critical": "#dc2626", "Important": "#f59e0b", "Quality": "#7c3aed"}
-        _rows = ""
-        for _tier in _QA_SCHEMA["tiers"]:
-            _tc = _tier["color"]
-            _tlabel = _tier["label"]
-            for _p in _tier["params"]:
-                _wt_pct = f"{int(_p['weight']*100)}%" if _p["weight"] > 0 else ("FATAL" if _p.get("fatal") else "0%")
-                _opts = " · ".join(_p["options"])
-                _rows += (
-                    f'<tr><td>{_p["col"]}</td>'
-                    f'<td><span class="pm-tier-chip" style="background:{_tc}18;color:{_tc};">{_tlabel}</span></td>'
-                    f'<td style="font-weight:700;color:#2563EB;">{_wt_pct}</td>'
-                    f'<td style="color:#7a99bb;">{_opts} · <span style="color:#2563EB;">NA</span></td></tr>'
+    # ── Existing params as cards with inline delete ───────────────────────────
+    if _cps:
+        for _cpi, _cp in enumerate(_cps):
+            _ca, _cb = st.columns([6, 1])
+            with _ca:
+                _guide_txt = f' <span style="color:#94a3b8;font-size:0.7rem;">— {_cp["guide"]}</span>' if _cp.get("guide") else ""
+                st.markdown(
+                    f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;'
+                    f'padding:8px 14px;font-size:0.82rem;font-weight:600;color:#166534;">'
+                    f'⭐ {_cp["name"]}{_guide_txt}</div>',
+                    unsafe_allow_html=True,
                 )
-        # Custom params
-        for _cp in st.session_state["sense_custom_audit_params"]:
-            _opts = " · ".join(_cp.get("options", ["0","1","2"]))
-            _rows += (
-                f'<tr style="background:#fffbf5;"><td>⭐ {_cp["name"]}</td>'
-                f'<td><span class="pm-tier-chip" style="background:#0ebc6e18;color:#0ebc6e;">Custom</span></td>'
-                f'<td style="font-weight:700;color:#0ebc6e;">{_cp.get("weight", "—")}</td>'
-                f'<td style="color:#7a99bb;">{_opts} · <span style="color:#2563EB;">NA</span></td></tr>'
-            )
-        st.markdown(
-            f'<table class="pm-table"><thead><tr>'
-            f'<th>Parameter</th><th>Tier</th><th>Weight</th><th>Options (NA always included)</th>'
-            f'</tr></thead><tbody>{_rows}</tbody></table>',
-            unsafe_allow_html=True,
-        )
-
-        st.markdown('<hr style="border:none;border-top:1px solid #edf2fb;margin:14px 0 10px;">', unsafe_allow_html=True)
-
-        # ── Add custom parameter ───────────────────────────────────────────────
-        st.markdown('<div style="font-size:0.7rem;font-weight:700;color:#0ebc6e;margin-bottom:8px;">➕ Add Custom Parameter</div>', unsafe_allow_html=True)
-        _pc1, _pc2, _pc3, _pc4 = st.columns([2.5, 1.2, 2.5, 0.8])
-        with _pc1:
-            _new_name = st.text_input("Parameter Name", placeholder="e.g. Empathy Check", key=f"pm_new_name{_ks}")
-        with _pc2:
-            _new_scoring = st.selectbox("Scoring", ["Yes / No"], key=f"pm_new_scoring{_ks}")
-        with _pc3:
-            _new_remarks = st.text_input("Remarks", placeholder="What should the auditor check? (optional)", key=f"pm_new_remarks{_ks}")
-        with _pc4:
-            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-            _add_btn = st.button("Add", key=f"pm_add_param{_ks}", use_container_width=True, type="primary")
-
-        if _add_btn and _new_name.strip():
-            _existing = [p["name"].lower() for p in st.session_state["sense_custom_audit_params"]]
-            if _new_name.strip().lower() not in _existing:
-                _err = param_store.add(_new_name.strip(), ["Yes", "No"], _new_remarks.strip())
-                if _err:
-                    st.error(f"Could not save parameter: {_err}")
-                else:
-                    st.session_state["sense_custom_audit_params"].append({
-                        "name":    _new_name.strip(),
-                        "options": ["Yes", "No"],
-                        "guide":   _new_remarks.strip(),
-                    })
-                    st.success(f"Added '{_new_name.strip()}' — it will appear in the audit form below.")
-                    st.rerun()
-            else:
-                st.warning("A parameter with that name already exists.")
-
-        # Remove custom params
-        if st.session_state["sense_custom_audit_params"]:
-            st.markdown('<div style="font-size:0.68rem;color:#5588bb;margin-top:10px;">Remove custom parameter:</div>', unsafe_allow_html=True)
-            _del_opts = ["—"] + [p["name"] for p in st.session_state["sense_custom_audit_params"]]
-            _del_sel = st.selectbox("", _del_opts, key=f"pm_del_sel{_ks}", label_visibility="collapsed")
-            if _del_sel != "—":
-                if st.button(f"🗑 Remove '{_del_sel}'", key=f"pm_del_btn{_ks}"):
-                    _del_err = param_store.remove(_del_sel)
+            with _cb:
+                if st.button("🗑", key=f"pm_del_{_cpi}{_ks}", help=f"Delete '{_cp['name']}'", use_container_width=True):
+                    _del_err = param_store.remove(_cp["name"])
                     if _del_err:
-                        st.error(f"Could not delete parameter: {_del_err}")
+                        st.error(f"Delete failed: {_del_err}")
                     else:
                         st.session_state["sense_custom_audit_params"] = [
-                            p for p in st.session_state["sense_custom_audit_params"] if p["name"] != _del_sel
+                            p for p in _cps if p["name"] != _cp["name"]
                         ]
                         st.rerun()
+    else:
+        st.caption("No custom parameters yet. Add one below.")
 
-        # ── Auto-generated legend preview ─────────────────────────────────────
-        with st.expander("📋 Auto-Generated Legend Preview", expanded=False):
-            _leg_rows = ""
-            for _tier in _QA_SCHEMA["tiers"]:
-                for _p in _tier["params"]:
-                    _opts_str = ", ".join(_p["options"] + ["NA"])
-                    _leg_rows += f'<tr><td>{_p["col"]}</td><td>{_tier["label"]}</td><td>{int(_p["weight"]*100)}%</td><td>{_opts_str}</td></tr>'
-            for _cp in st.session_state["sense_custom_audit_params"]:
-                _opts_str = ", ".join(_cp["options"] + ["NA"])
-                _leg_rows += f'<tr><td>⭐ {_cp["name"]}</td><td>Custom</td><td>{_cp.get("weight","—")}</td><td>{_opts_str}</td></tr>'
-            st.markdown(
-                f'<table class="pm-table"><thead><tr><th>Parameter</th><th>Tier</th><th>Weight</th><th>Options</th></tr></thead>'
-                f'<tbody>{_leg_rows}</tbody></table>',
-                unsafe_allow_html=True,
-            )
-            # CSV download
-            import io as _io
-            _leg_csv_lines = ["Parameter,Tier,Weight,Options"]
-            for _tier in _QA_SCHEMA["tiers"]:
-                for _p in _tier["params"]:
-                    _leg_csv_lines.append(f'"{_p["col"]}","{_tier["label"]}","{int(_p["weight"]*100)}%","{", ".join(_p["options"] + ["NA"])}"')
-            for _cp in st.session_state["sense_custom_audit_params"]:
-                _leg_csv_lines.append(f'"{_cp["name"]}","Custom","{_cp.get("weight","—")}","{", ".join(_cp["options"] + ["NA"])}"')
-            st.download_button("⬇ Download Legend CSV", "\n".join(_leg_csv_lines).encode(),
-                               "audit_legend.csv", "text/csv", key=f"pm_dl_legend{_ks}")
+    # ── Add form ──────────────────────────────────────────────────────────────
+    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+    _pa, _pb, _pc = st.columns([2.5, 3, 1])
+    with _pa:
+        _new_name = st.text_input("Parameter Name", placeholder="e.g. Empathy Check", key=f"pm_new_name{_ks}", label_visibility="collapsed")
+    with _pb:
+        _new_remarks = st.text_input("Remarks (optional)", placeholder="What should the auditor check?", key=f"pm_new_remarks{_ks}", label_visibility="collapsed")
+    with _pc:
+        _add_btn = st.button("➕ Add", key=f"pm_add_param{_ks}", use_container_width=True, type="primary")
+
+    if _add_btn:
+        if not _new_name.strip():
+            st.warning("Enter a parameter name.")
+        elif _new_name.strip().lower() in [p["name"].lower() for p in _cps]:
+            st.warning("A parameter with that name already exists.")
+        else:
+            _err = param_store.add(_new_name.strip(), ["Yes", "No"], _new_remarks.strip())
+            if _err:
+                st.error(f"Could not save: {_err}")
+            else:
+                st.session_state["sense_custom_audit_params"].append({
+                    "name":    _new_name.strip(),
+                    "options": ["Yes", "No"],
+                    "guide":   _new_remarks.strip(),
+                })
+                st.rerun()
 
 
 def _render_audit_form(legend_map, fname):
