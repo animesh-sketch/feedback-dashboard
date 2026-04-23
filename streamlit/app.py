@@ -7669,7 +7669,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
 </style>""", unsafe_allow_html=True)
     st.markdown('<div class="section-chip">✍️ New QA Audit — Convin.ai Standard Sheet</div>', unsafe_allow_html=True)
 
-    with st.form("qa_audit_form_v2", clear_on_submit=True):
+    with st.form("qa_audit_form_v2", clear_on_submit=False):
         # ── Queue selector ────────────────────────────────────────────────────
         def _qv(rec, key):
             v = rec.get(key, "")
