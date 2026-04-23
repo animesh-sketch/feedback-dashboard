@@ -7499,6 +7499,15 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                 key="f_correct_disp",
             )
 
+        if _f_correct_disp == "No":
+            _f_correct_disp_text = st.text_input(
+                "What should the correct disposition be?",
+                placeholder="e.g. Not Interested, Warm Follow-up…",
+                key="f_correct_disp_text",
+            )
+        else:
+            _f_correct_disp_text = ""
+
         st.markdown(
             '<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:10px 0 4px;">',
             unsafe_allow_html=True,
@@ -7653,8 +7662,9 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             else:
                 # Build full param dict including lead fields
                 _full_pv = dict(_pv)
-                _full_pv["Lead Stage"]         = _f_lead_stage
-                _full_pv["Correct Disposition"] = _f_correct_disp
+                _full_pv["Lead Stage"]                    = _f_lead_stage
+                _full_pv["Correct Disposition"]           = _f_correct_disp
+                _full_pv["Correct Disposition (Expected)"] = _f_correct_disp_text
 
                 # Auto-compute all scores
                 _computed = _compute_qa_score(_full_pv)
@@ -7691,6 +7701,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                     **_computed,
                     "_disposition":       _f_disposition if _f_disposition != "— select —" else "—",
                     "_correct_disp":      _f_correct_disp,
+                    "_correct_disp_text": _f_correct_disp_text,
                 }
 
                 # Clear AI suggestion draft after use
@@ -7731,6 +7742,9 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             f'<div style="font-size:0.62rem;color:#5588bb;">Disposition Selected</div></div>'
             f'<div><div style="font-size:1rem;font-weight:800;color:{"#0ebc6e" if _lr.get("_correct_disp")=="Yes" else "#dc2626" if _lr.get("_correct_disp")=="No" else "#94a3b8"};">{_lr.get("_correct_disp","—")}</div>'
             f'<div style="font-size:0.62rem;color:#5588bb;">Correct Disposition</div></div>'
+            + (f'<div><div style="font-size:1rem;font-weight:800;color:#dc2626;">{_lr.get("_correct_disp_text","—")}</div>'
+               f'<div style="font-size:0.62rem;color:#5588bb;">Expected Disposition</div></div>'
+               if _lr.get("_correct_disp") == "No" and _lr.get("_correct_disp_text") else "")
             f'</div></div>',
             unsafe_allow_html=True,
         )
@@ -7757,13 +7771,27 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
         _log_df = pd.DataFrame(audit_log[::-1])
         st.dataframe(_log_df, use_container_width=True, height=280, hide_index=True)
 
-        st.download_button(
-            "⬇ Export Audit Log",
-            data=_log_df.to_csv(index=False).encode("utf-8"),
-            file_name="convin_qa_audit_log.csv",
-            mime="text/csv",
-            key="sense_dl_auditlog",
-        )
+        _exp_csv, _exp_xl = st.columns(2)
+        with _exp_csv:
+            st.download_button(
+                "⬇ Export as CSV",
+                data=_log_df.to_csv(index=False).encode("utf-8"),
+                file_name="convin_qa_audit_log.csv",
+                mime="text/csv",
+                key="sense_dl_auditlog_csv",
+            )
+        with _exp_xl:
+            import io as _io
+            _xl_buf = _io.BytesIO()
+            with pd.ExcelWriter(_xl_buf, engine="openpyxl") as _xw:
+                _log_df.to_excel(_xw, index=False, sheet_name="Audit Log")
+            st.download_button(
+                "⬇ Export as Excel",
+                data=_xl_buf.getvalue(),
+                file_name="convin_qa_audit_log.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="sense_dl_auditlog_xl",
+            )
 
 
 def _render_legend_page():
