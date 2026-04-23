@@ -6520,39 +6520,49 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                             if len(_em_custom_rows) >= 1:
                                 _cp_sorted_fail = sorted(_em_custom_rows, key=lambda x: x["yes_pct"])
                                 _cp_sorted_pass = sorted(_em_custom_rows, key=lambda x: -x["yes_pct"])
-                                _cp_overall_yes = round(sum(r["yes"] for r in _em_custom_rows) / max(sum(r["tot"] for r in _em_custom_rows), 1) * 100, 1)
+                                _cp_total_calls  = max(_em_custom_rows[0]["tot"], 1)
+                                _cp_overall_yes  = round(sum(r["yes"] for r in _em_custom_rows) / max(sum(r["tot"] for r in _em_custom_rows), 1) * 100, 1)
                                 _cp_health_c = "#059669" if _cp_overall_yes >= 70 else "#d97706" if _cp_overall_yes >= 50 else "#dc2626"
-                                _cp_health_l = "Strong" if _cp_overall_yes >= 70 else "Moderate" if _cp_overall_yes >= 50 else "Needs Attention"
+                                _cp_health_l = "High Adherence" if _cp_overall_yes >= 70 else "Partial Adherence" if _cp_overall_yes >= 50 else "Low Adherence — Action Required"
                                 _B += f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;margin-top:10px;">'
-                                _B += f'<div style="font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#059669;margin-bottom:10px;">📌 Custom Parameter Key Insights</div>'
-                                # Overall health line
-                                _B += (f'<div style="font-size:12px;color:#0B1F3A;margin-bottom:8px;">'
-                                       f'Overall custom parameter compliance: <strong style="color:{_cp_health_c};">{_cp_overall_yes}% — {_cp_health_l}</strong> '
-                                       f'across {len(_em_custom_rows)} parameter{"s" if len(_em_custom_rows)!=1 else ""}.</div>')
-                                # Top failing
+                                _B += f'<div style="font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#059669;margin-bottom:10px;">📌 Call Action Adherence — Key Insights</div>'
+                                # Overall line
+                                _B += (f'<div style="font-size:12px;color:#0B1F3A;margin-bottom:12px;line-height:1.6;">'
+                                       f'Across <strong>{_cp_total_calls:,} calls</strong>, agents completed custom call actions at an average rate of '
+                                       f'<strong style="color:{_cp_health_c};">{_cp_overall_yes}%</strong> — '
+                                       f'<span style="color:{_cp_health_c};font-weight:700;">{_cp_health_l}</span>.</div>')
+                                # Skipped / not done
                                 _cp_fail = [r for r in _cp_sorted_fail if r["yes_pct"] < 70][:3]
                                 if _cp_fail:
-                                    _B += '<div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:4px;">🔴 Lowest Compliance</div>'
+                                    _B += '<div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:6px;">🔴 Not Done / Skipped Most Often</div>'
                                     for _cpf in _cp_fail:
-                                        _cpf_c = "#dc2626" if _cpf["yes_pct"] < 50 else "#d97706"
-                                        _B += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">'
-                                               f'<div style="font-size:12px;font-weight:600;color:#374151;min-width:140px;">{_cpf["name"]}</div>'
-                                               f'<div style="flex:1;background:#fee2e2;border-radius:3px;height:8px;overflow:hidden;">'
+                                        _cpf_c  = "#dc2626" if _cpf["yes_pct"] < 50 else "#d97706"
+                                        _skip_n = _cpf["no"] + _cpf["na"]
+                                        _B += (f'<div style="background:#fff;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;margin-bottom:6px;">'
+                                               f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">'
+                                               f'<div style="font-size:12px;font-weight:700;color:#0B1F3A;">{_cpf["name"]}</div>'
+                                               f'<span style="font-size:10px;font-weight:800;color:#fff;background:{_cpf_c};padding:2px 8px;border-radius:10px;">{_cpf["yes_pct"]}% Done</span>'
+                                               f'</div>'
+                                               f'<div style="background:#fee2e2;border-radius:3px;height:7px;overflow:hidden;margin-bottom:5px;">'
                                                f'<div style="width:{_cpf["yes_pct"]}%;height:100%;background:{_cpf_c};"></div></div>'
-                                               f'<div style="font-size:12px;font-weight:800;color:{_cpf_c};min-width:40px;text-align:right;">{_cpf["yes_pct"]}%</div>'
-                                               f'<div style="font-size:11px;color:#64748b;">{_cpf["no"]} No</div>'
+                                               f'<div style="font-size:11px;color:#64748b;">'
+                                               f'<strong style="color:#dc2626;">{_skip_n} calls</strong> did not complete this action '
+                                               f'({round(_skip_n/_cpf["tot"]*100,1) if _cpf["tot"] else 0}% skip rate)</div>'
                                                f'</div>')
-                                # Top passing
+                                # Completed consistently
                                 _cp_pass = [r for r in _cp_sorted_pass if r["yes_pct"] >= 70][:2]
                                 if _cp_pass:
-                                    _B += '<div style="font-size:11px;font-weight:700;color:#059669;margin-top:6px;margin-bottom:4px;">🟢 Highest Compliance</div>'
+                                    _B += '<div style="font-size:11px;font-weight:700;color:#059669;margin-top:8px;margin-bottom:6px;">🟢 Completed Consistently</div>'
                                     for _cpp in _cp_pass:
-                                        _B += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">'
-                                               f'<div style="font-size:12px;font-weight:600;color:#374151;min-width:140px;">{_cpp["name"]}</div>'
-                                               f'<div style="flex:1;background:#dcfce7;border-radius:3px;height:8px;overflow:hidden;">'
+                                        _B += (f'<div style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;margin-bottom:6px;">'
+                                               f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">'
+                                               f'<div style="font-size:12px;font-weight:700;color:#0B1F3A;">{_cpp["name"]}</div>'
+                                               f'<span style="font-size:10px;font-weight:800;color:#fff;background:#059669;padding:2px 8px;border-radius:10px;">{_cpp["yes_pct"]}% Done</span>'
+                                               f'</div>'
+                                               f'<div style="background:#dcfce7;border-radius:3px;height:7px;overflow:hidden;margin-bottom:5px;">'
                                                f'<div style="width:{_cpp["yes_pct"]}%;height:100%;background:#059669;"></div></div>'
-                                               f'<div style="font-size:12px;font-weight:800;color:#059669;min-width:40px;text-align:right;">{_cpp["yes_pct"]}%</div>'
-                                               f'<div style="font-size:11px;color:#64748b;">{_cpp["yes"]} Yes</div>'
+                                               f'<div style="font-size:11px;color:#64748b;">'
+                                               f'<strong style="color:#059669;">{_cpp["yes"]} of {_cpp["tot"]} calls</strong> had this action completed</div>'
                                                f'</div>')
                                 _B += '</div>'
                             _B += '</div>'
