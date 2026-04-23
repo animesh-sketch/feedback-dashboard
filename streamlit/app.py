@@ -3403,6 +3403,15 @@ _SENSE_BUILTIN_PARAMS = {
         "icon":        "🔄",
         "guide":       "2 = No repetition  |  1 = 1–2 repetitions  |  0 = 3+ repetitions",
     },
+    "Latency": {
+        "description": "Bot response latency / delay during conversation",
+        "options":     ["0", "1", "2"],
+        "inverted":    False,
+        "weight":      0.04,
+        "color":       "#0891b2",
+        "icon":        "⚡",
+        "guide":       "2 = Response within acceptable latency (<500ms)  |  1 = Slight delay (500ms–1s)  |  0 = High latency (>1s) impacted conversation quality",
+    },
 }
 _DEFAULT_PARAM_WEIGHT = 1.0   # weight for any legend param not listed above
 
@@ -3504,6 +3513,13 @@ _QA_SCHEMA = {
                     "options": ["0", "2"],
                     "fatal": False,
                     "guide": "2 = Transcription accurate and complete  |  0 = Inaccuracies impacted audit reliability",
+                },
+                {
+                    "col": "Latency",
+                    "weight": 0.04,
+                    "options": ["0", "1", "2"],
+                    "fatal": False,
+                    "guide": "2 = Response within acceptable latency (<500ms)  |  1 = Slight delay (500ms–1s)  |  0 = High latency (>1s) impacted conversation quality",
                 },
             ],
         },
@@ -7660,7 +7676,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
         with _ll1:
             _f_lead_link  = st.text_input("Lead Link", value=_qv(_q_rec,"Lead Link"), placeholder="https://...")
         with _ll2:
-            _disp_opts = ["— select —", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
+            _disp_opts = ["— select —", "Hot", "Warm", "Cold", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
             _f_disposition = st.selectbox("Disposition *", _disp_opts, key="f_disposition_sel")
         with _ll3:
             _f_bot_name = st.text_input("Bot Name *", value=_qv(_q_rec, "Bot Name"), placeholder="e.g. Convin-LeadBot-v2")
@@ -7787,20 +7803,6 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                         label_visibility="collapsed",
                     )
 
-        # ── Lead scoring ──────────────────────────────────────────────────────
-        st.markdown(
-            '<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:10px 0 4px;">',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            '<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
-            'text-transform:uppercase;color:#2563EB;margin-bottom:6px;">Lead Scoring</div>',
-            unsafe_allow_html=True,
-        )
-        _ls1, = st.columns(1)
-        with _ls1:
-            _f_lead_stage = st.selectbox("Lead Stage *", ["— select —"] + _QA_SCHEMA["lead_stage_opts"], key="af_ls_stage")
-
         _f_notes = st.text_area("Reviewer Notes", placeholder="Optional observations…", height=56)
         _f_suggestion = st.text_area(
             "💡 Improvement Suggestion",
@@ -7830,8 +7832,6 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                 if not _val or str(_val).strip() == "— select —":
                     _errs.append(f"'{_col}' must be selected")
                 # NA is accepted as "not applicable" — no error
-            if _f_lead_stage == "— select —":
-                _errs.append("Lead Stage must be selected")
             if _f_disposition == "— select —":
                 _errs.append("Disposition must be selected")
 
@@ -7841,7 +7841,6 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             else:
                 # Build full param dict including lead fields
                 _full_pv = dict(_pv)
-                _full_pv["Lead Stage"]                    = _f_lead_stage
                 _full_pv["Correct Disposition"]           = _f_correct_disp
                 _full_pv["Correct Disposition (Expected)"] = _f_correct_disp_text
 
@@ -7919,8 +7918,8 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             f'<div style="font-size:0.62rem;color:#5588bb;">Lead Composite</div></div>'
             f'<div><div style="font-size:1.4rem;font-weight:800;color:{"#dc2626" if _lr["Fatal?"]=="YES" else "#0ebc6e"};">{_lr["Fatal?"]}</div>'
             f'<div style="font-size:0.62rem;color:#5588bb;">Fatal?</div></div>'
-            f'<div><div style="font-size:1rem;font-weight:800;color:#0B1F3A;">{_lr.get("_disposition","—")}</div>'
-            f'<div style="font-size:0.62rem;color:#5588bb;">Disposition Selected</div></div>'
+            + f'<div><div style="font-size:1.1rem;font-weight:800;color:{"#dc2626" if _lr.get("_disposition")=="Hot" else "#f59e0b" if _lr.get("_disposition")=="Warm" else "#2563EB" if _lr.get("_disposition")=="Cold" else "#0B1F3A"};">{_lr.get("_disposition","—")}</div>'
+            f'<div style="font-size:0.62rem;color:#5588bb;">Disposition</div></div>'
             f'<div><div style="font-size:1rem;font-weight:800;color:{"#0ebc6e" if _lr.get("_correct_disp")=="Yes" else "#dc2626" if _lr.get("_correct_disp")=="No" else "#94a3b8"};">{_lr.get("_correct_disp","—")}</div>'
             f'<div style="font-size:0.62rem;color:#5588bb;">Correct Disposition</div></div>'
             + (f'<div><div style="font-size:1rem;font-weight:800;color:#dc2626;">{_lr.get("_correct_disp_text","—")}</div>'
