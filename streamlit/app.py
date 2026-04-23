@@ -6200,6 +6200,27 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                         _em_param_rows.append({"col":_ep["col"],"pct":round(_epv.mean()/_epmx*100,1),"tier":_etier["label"],"color":_etier["color"]})
                 _em_param_rows.sort(key=lambda x: x["pct"])
 
+                # ── Custom param rows for email ───────────────────────────────
+                _em_custom_rows = []
+                for _ecp in st.session_state.get("sense_custom_audit_params", []):
+                    if _ecp["name"] not in _audit_df_ins_view.columns: continue
+                    _ecpv = _audit_df_ins_view[_ecp["name"]].replace("", None).dropna().astype(str).str.strip()
+                    _ecpv = _ecpv[_ecpv.str.lower() != "nan"]
+                    _ec_tot = len(_ecpv)
+                    if _ec_tot == 0: continue
+                    _ec_yes = int((_ecpv.str.lower() == "yes").sum())
+                    _ec_no  = int((_ecpv.str.lower() == "no").sum())
+                    _ec_na  = int((_ecpv.str.lower() == "na").sum())
+                    _ec_cmt_col = f"{_ecp['name']} Comment"
+                    _ec_cmts = int(_audit_df_ins_view[_ec_cmt_col].replace("",None).dropna().astype(str).str.strip().str.len().gt(0).sum()) if _ec_cmt_col in _audit_df_ins_view.columns else 0
+                    _em_custom_rows.append({
+                        "name": _ecp["name"],
+                        "yes": _ec_yes, "no": _ec_no, "na": _ec_na, "tot": _ec_tot,
+                        "yes_pct": round(_ec_yes/_ec_tot*100,1),
+                        "no_pct":  round(_ec_no /_ec_tot*100,1),
+                        "cmts": _ec_cmts,
+                    })
+
                 # ── SECTION SELECTION ─────────────────────────────────────────
                 st.markdown('<div style="font-size:0.75rem;font-weight:800;color:#0B1F3A;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;border-bottom:2px solid #E2EAF6;padding-bottom:6px;">✅ Choose Sections to Include</div>', unsafe_allow_html=True)
                 _eml_c1, _eml_c2, _eml_c3 = st.columns(3)
@@ -6214,9 +6235,10 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     em_best5  = st.checkbox("🏅 Top 5 Best Calls", value=True, key="em_best5")
                     em_worst5 = st.checkbox("🚨 Top 5 Worst Calls", value=True, key="em_worst5")
                 with _eml_c3:
-                    em_camp   = st.checkbox(f"🎯 Campaign Breakdown  ({len(_em_camp_rows)} campaigns)", value=bool(_em_camp_rows), key="em_camp")
-                    em_qa_tbl = st.checkbox(f"👤 QA Team Performance  ({len(_em_qa_rows)} auditors)", value=bool(_em_qa_rows), key="em_qa_tbl")
-                    em_params = st.checkbox(f"🔬 Parameter Details  ({len(_em_param_rows)} params)", value=bool(_em_param_rows), key="em_params")
+                    em_camp      = st.checkbox(f"🎯 Campaign Breakdown  ({len(_em_camp_rows)} campaigns)", value=bool(_em_camp_rows), key="em_camp")
+                    em_qa_tbl    = st.checkbox(f"👤 QA Team Performance  ({len(_em_qa_rows)} auditors)", value=bool(_em_qa_rows), key="em_qa_tbl")
+                    em_params    = st.checkbox(f"🔬 Parameter Details  ({len(_em_param_rows)} params)", value=bool(_em_param_rows), key="em_params")
+                    em_custom_ps = st.checkbox(f"⭐ Custom Parameters  ({len(_em_custom_rows)} params)", value=bool(_em_custom_rows), key="em_custom_ps")
 
                 # ── PER-INSIGHT SELECTION ──────────────────────────────────────
                 _em_ins_sel = {}
@@ -6253,11 +6275,16 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
 
                 # ── TEMPLATE SELECTOR ────────────────────────────────────────
                 _tpl_options = {
-                    "1 — Executive Dark (Navy/Blue)":    1,
-                    "2 — Minimal White (Clean/Modern)":  2,
-                    "3 — Bold Red (Urgent/Alert)":        3,
-                    "4 — Corporate Teal (Professional)": 4,
-                    "5 — Premium Gradient (Purple/Pink)":5,
+                    "1 — Executive Dark (Navy/Blue)":       1,
+                    "2 — Minimal White (Clean/Modern)":     2,
+                    "3 — Bold Red (Urgent/Alert)":           3,
+                    "4 — Corporate Teal (Professional)":    4,
+                    "5 — Premium Gradient (Purple/Pink)":   5,
+                    "6 — Midnight Ink (Black/Gold)":        6,
+                    "7 — Arctic (Ice Blue/Silver)":         7,
+                    "8 — Warm Slate (Charcoal/Amber)":      8,
+                    "9 — Rose Gold (Blush/Copper)":         9,
+                    "10 — Deep Ocean (Indigo/Cyan)":        10,
                 }
                 _tpl_choice_label = st.selectbox(
                     "Email Template Design",
@@ -6376,6 +6403,53 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                                 _pc2 = "#059669" if _pr2["pct"]>=80 else "#d97706" if _pr2["pct"]>=60 else "#dc2626"
                                 _B += f'<tr style="border-bottom:1px solid #F0F4F9;"><td style="padding:6px 12px;font-weight:600;color:#0B1F3A;">{_pr2["col"]}</td><td style="padding:6px 8px;"><div style="background:#f0f4f9;border-radius:3px;overflow:hidden;height:10px;"><div style="width:{_pr2["pct"]}%;height:100%;background:{_pr2["color"]};border-radius:3px;"></div></div></td><td style="padding:6px 8px;text-align:right;font-weight:800;color:{_pc2};">{_pr2["pct"]}%</td></tr>'
                             _B += '</tbody></table></div>'
+                        # Custom Parameters Dashboard
+                        if em_custom_ps and _em_custom_rows:
+                            _B += '<div style="margin-bottom:24px;"><div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#0ebc6e;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #D1FAE5;">⭐ Custom Parameters</div>'
+                            _B += '<table style="width:100%;border-collapse:collapse;" cellpadding="0" cellspacing="0"><tr>'
+                            _cols_per_row = 3
+                            for _eci, _ecp in enumerate(_em_custom_rows):
+                                if _eci > 0 and _eci % _cols_per_row == 0:
+                                    _B += '</tr><tr>'
+                                _yes_w = _ecp["yes_pct"]
+                                _no_w  = _ecp["no_pct"]
+                                _na_w  = max(0, 100 - _yes_w - _no_w)
+                                _health_c = "#059669" if _ecp["yes_pct"] >= 70 else "#d97706" if _ecp["yes_pct"] >= 50 else "#dc2626"
+                                _B += (
+                                    f'<td style="padding:4px;width:33%;vertical-align:top;">'
+                                    f'<div style="background:#f8fffe;border:1px solid #a7f3d0;border-radius:10px;padding:12px 10px;">'
+                                    f'<div style="font-size:10px;font-weight:800;color:#065f46;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_ecp["name"]}</div>'
+                                    f'<div style="display:flex;gap:4px;margin-bottom:8px;">'
+                                    f'<div style="flex:1;background:#ecfdf5;border-radius:6px;padding:6px 4px;text-align:center;">'
+                                    f'<div style="font-size:18px;font-weight:900;color:#059669;line-height:1;">{_ecp["yes"]}</div>'
+                                    f'<div style="font-size:9px;font-weight:700;color:#059669;margin-top:2px;">YES</div>'
+                                    f'<div style="font-size:9px;color:#64748b;">{_ecp["yes_pct"]}%</div>'
+                                    f'</div>'
+                                    f'<div style="flex:1;background:#fef2f2;border-radius:6px;padding:6px 4px;text-align:center;">'
+                                    f'<div style="font-size:18px;font-weight:900;color:#dc2626;line-height:1;">{_ecp["no"]}</div>'
+                                    f'<div style="font-size:9px;font-weight:700;color:#dc2626;margin-top:2px;">NO</div>'
+                                    f'<div style="font-size:9px;color:#64748b;">{_ecp["no_pct"]}%</div>'
+                                    f'</div>'
+                                    f'<div style="flex:1;background:#f8fafc;border-radius:6px;padding:6px 4px;text-align:center;">'
+                                    f'<div style="font-size:18px;font-weight:900;color:#94a3b8;line-height:1;">{_ecp["na"]}</div>'
+                                    f'<div style="font-size:9px;font-weight:700;color:#94a3b8;margin-top:2px;">NA</div>'
+                                    f'<div style="font-size:9px;color:#64748b;">&nbsp;</div>'
+                                    f'</div>'
+                                    f'</div>'
+                                    f'<div style="height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;display:flex;">'
+                                    f'<div style="width:{_yes_w}%;background:#059669;"></div>'
+                                    f'<div style="width:{_no_w}%;background:#dc2626;"></div>'
+                                    f'<div style="width:{_na_w}%;background:#cbd5e1;"></div>'
+                                    f'</div>'
+                                    f'<div style="font-size:9px;color:#64748b;margin-top:5px;text-align:right;">{_ecp["tot"]} resp · {_ecp["cmts"]} cmts</div>'
+                                    f'</div></td>'
+                                )
+                            # pad remaining cells if row is incomplete
+                            _rem = _cols_per_row - (len(_em_custom_rows) % _cols_per_row)
+                            if _rem < _cols_per_row:
+                                for _ in range(_rem):
+                                    _B += '<td style="padding:4px;width:33%;"></td>'
+                            _B += '</tr></table></div>'
                         # Key Insights
                         _sel_ins_list = [ins for i, ins in enumerate(_sorted_ins) if _em_ins_sel.get(i, True)]
                         if _sel_ins_list:
@@ -6499,6 +6573,102 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
     <span style="background:rgba(255,255,255,0.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🏢 {_cli_label}</span>
     <span style="background:rgba(255,255,255,0.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🎯 {_camp_label}</span>
     <span style="background:rgba(255,255,255,0.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🤖 {_bot_label}</span>
+  </div>
+</div>'''
+                        _S += f'<div style="padding:28px 40px;background:#fff;">{_content}{_footer}</div></div>'
+                        return _S
+
+                    # ── Template 6: Midnight Ink (Black/Gold) ────────────────
+                    if _tid == 6:
+                        _S = '<div style="font-family:\'Segoe UI\',Arial,sans-serif;max-width:660px;margin:0 auto;background:#0a0a0a;border-radius:16px;overflow:hidden;">'
+                        _S += f'''<div style="background:#0a0a0a;border-top:3px solid #c9a84c;padding:34px 40px 28px;">
+  <div style="font-size:9px;font-weight:800;letter-spacing:0.25em;text-transform:uppercase;color:#c9a84c;margin-bottom:10px;">✦ CONVIN SENSE AUDIT &nbsp;·&nbsp; EXECUTIVE QA REPORT</div>
+  <div style="font-size:28px;font-weight:900;color:#f5f0e8;line-height:1.15;letter-spacing:-0.01em;margin-bottom:4px;">Convin Sense Audit Report</div>
+  <div style="width:40px;height:2px;background:#c9a84c;border-radius:1px;margin:10px 0 14px;"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <span style="border:1px solid #c9a84c33;background:#c9a84c15;border-radius:4px;padding:4px 10px;font-size:11px;color:#c9a84c;">📅 {_now_str}</span>
+    <span style="border:1px solid #c9a84c33;background:#c9a84c15;border-radius:4px;padding:4px 10px;font-size:11px;color:#c9a84c;">🏢 {_cli_label}</span>
+    <span style="border:1px solid #c9a84c33;background:#c9a84c15;border-radius:4px;padding:4px 10px;font-size:11px;color:#c9a84c;">🎯 {_camp_label}</span>
+    <span style="border:1px solid #c9a84c33;background:#c9a84c15;border-radius:4px;padding:4px 10px;font-size:11px;color:#c9a84c;">🤖 {_bot_label}</span>
+  </div>
+</div>'''
+                        _dark_footer = (f'<div style="border-top:1px solid #2a2a2a;margin-top:16px;padding-top:16px;text-align:center;">'
+                                        f'<div style="font-size:11px;color:#666;line-height:1.7;">'
+                                        f'Auto-generated by <strong style="color:#c9a84c;">Convin Sense Audit</strong> · Auto QA Data Insights<br>'
+                                        f'Report Date: {_now_str} &nbsp;·&nbsp; Client: {_cli_label} &nbsp;·&nbsp; Campaign: {_camp_label} &nbsp;·&nbsp; Bot: {_bot_label}'
+                                        f'</div></div>')
+                        _S += f'<div style="padding:28px 40px;background:#111111;">{_content}{_dark_footer}</div></div>'
+                        return _S
+
+                    # ── Template 7: Arctic (Ice Blue/Silver) ─────────────────
+                    elif _tid == 7:
+                        _S = '<div style="font-family:\'Segoe UI\',Arial,sans-serif;max-width:660px;margin:0 auto;background:#f0f7ff;border-radius:16px;overflow:hidden;border:1px solid #bfdbfe;">'
+                        _S += f'''<div style="background:linear-gradient(135deg,#dbeafe 0%,#e0f2fe 50%,#f0f9ff 100%);padding:32px 40px 26px;border-bottom:1px solid #bfdbfe;">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+    <div>
+      <div style="font-size:9px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:#0369a1;margin-bottom:8px;">CONVIN SENSE AUDIT &nbsp;·&nbsp; QA INTELLIGENCE</div>
+      <div style="font-size:27px;font-weight:800;color:#0c2d5e;line-height:1.15;letter-spacing:-0.02em;">Convin Sense<br>Audit Report</div>
+    </div>
+    <div style="text-align:right;flex-shrink:0;">
+      <div style="background:#0369a1;color:#fff;border-radius:8px;padding:6px 14px;font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">QA Report</div>
+      <div style="font-size:10px;color:#0369a1;margin-top:6px;font-weight:600;">{_now_str}</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
+    <span style="background:#fff;border:1px solid #93c5fd;border-radius:20px;padding:4px 11px;font-size:11px;color:#1e40af;font-weight:600;">🏢 {_cli_label}</span>
+    <span style="background:#fff;border:1px solid #93c5fd;border-radius:20px;padding:4px 11px;font-size:11px;color:#1e40af;font-weight:600;">🎯 {_camp_label}</span>
+    <span style="background:#fff;border:1px solid #93c5fd;border-radius:20px;padding:4px 11px;font-size:11px;color:#1e40af;font-weight:600;">🤖 {_bot_label}</span>
+  </div>
+</div>'''
+                        _S += f'<div style="padding:28px 40px;background:#fff;">{_content}{_footer}</div></div>'
+                        return _S
+
+                    # ── Template 8: Warm Slate (Charcoal/Amber) ──────────────
+                    elif _tid == 8:
+                        _S = '<div style="font-family:Georgia,\'Times New Roman\',serif;max-width:660px;margin:0 auto;background:#fafaf9;border-radius:14px;overflow:hidden;border:1px solid #e7e5e4;">'
+                        _S += f'''<div style="background:linear-gradient(160deg,#292524 0%,#44403c 100%);padding:34px 40px 28px;">
+  <div style="font-size:9px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:#fbbf24;margin-bottom:10px;font-family:Arial,sans-serif;">CONVIN SENSE AUDIT &nbsp;·&nbsp; PERFORMANCE REVIEW</div>
+  <div style="font-size:28px;font-weight:700;color:#fafaf9;line-height:1.2;margin-bottom:4px;">Convin Sense Audit Report</div>
+  <div style="font-size:12px;color:#a8a29e;font-style:italic;margin-bottom:14px;font-family:Arial,sans-serif;">Thoughtful QA analysis, delivered clearly.</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;font-family:Arial,sans-serif;">
+    <span style="background:#57534e;border-radius:4px;padding:4px 10px;font-size:11px;color:#e7e5e4;">📅 {_now_str}</span>
+    <span style="background:#57534e;border-radius:4px;padding:4px 10px;font-size:11px;color:#e7e5e4;">🏢 {_cli_label}</span>
+    <span style="background:#57534e;border-radius:4px;padding:4px 10px;font-size:11px;color:#e7e5e4;">🎯 {_camp_label}</span>
+    <span style="background:#57534e;border-radius:4px;padding:4px 10px;font-size:11px;color:#e7e5e4;">🤖 {_bot_label}</span>
+  </div>
+</div>'''
+                        _S += f'<div style="padding:28px 40px;background:#fff;font-family:Arial,sans-serif;">{_content}{_footer}</div></div>'
+                        return _S
+
+                    # ── Template 9: Rose Gold (Blush/Copper) ─────────────────
+                    elif _tid == 9:
+                        _S = '<div style="font-family:\'Segoe UI\',Arial,sans-serif;max-width:660px;margin:0 auto;background:#fff9f7;border-radius:16px;overflow:hidden;border:1px solid #fcd5c0;">'
+                        _S += f'''<div style="background:linear-gradient(135deg,#881337 0%,#be123c 40%,#c2410c 75%,#b45309 100%);padding:32px 40px 28px;">
+  <div style="font-size:9px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,220,200,0.75);margin-bottom:8px;">✦ CONVIN SENSE AUDIT &nbsp;·&nbsp; QA EXCELLENCE</div>
+  <div style="font-size:27px;font-weight:900;color:#fff;line-height:1.15;letter-spacing:-0.01em;margin-bottom:4px;">Convin Sense Audit Report</div>
+  <div style="font-size:12px;color:rgba(255,220,200,0.7);margin-bottom:14px;">Performance insights crafted with precision</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <span style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">📅 {_now_str}</span>
+    <span style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🏢 {_cli_label}</span>
+    <span style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🎯 {_camp_label}</span>
+    <span style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🤖 {_bot_label}</span>
+  </div>
+</div>'''
+                        _S += f'<div style="padding:28px 40px;background:#fff;">{_content}{_footer}</div></div>'
+                        return _S
+
+                    # ── Template 10: Deep Ocean (Indigo/Cyan) ────────────────
+                    else:
+                        _S = '<div style="font-family:\'Segoe UI\',Arial,sans-serif;max-width:660px;margin:0 auto;background:#f0fdfa;border-radius:16px;overflow:hidden;">'
+                        _S += f'''<div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 40%,#0e7490 80%,#06b6d4 100%);padding:32px 40px 28px;">
+  <div style="font-size:9px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:rgba(103,232,249,0.75);margin-bottom:8px;">◈ CONVIN SENSE AUDIT &nbsp;·&nbsp; DEEP ANALYTICS</div>
+  <div style="font-size:28px;font-weight:900;color:#fff;line-height:1.15;letter-spacing:-0.01em;margin-bottom:4px;">Convin Sense Audit Report</div>
+  <div style="font-size:12px;color:rgba(186,230,253,0.8);margin-bottom:14px;">Powered by Convin Sense Intelligence Engine</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <span style="background:rgba(6,182,212,0.2);border:1px solid rgba(6,182,212,0.4);border-radius:20px;padding:4px 12px;font-size:11px;color:#a5f3fc;">📅 {_now_str}</span>
+    <span style="background:rgba(6,182,212,0.2);border:1px solid rgba(6,182,212,0.4);border-radius:20px;padding:4px 12px;font-size:11px;color:#a5f3fc;">🏢 {_cli_label}</span>
+    <span style="background:rgba(6,182,212,0.2);border:1px solid rgba(6,182,212,0.4);border-radius:20px;padding:4px 12px;font-size:11px;color:#a5f3fc;">🎯 {_camp_label}</span>
+    <span style="background:rgba(6,182,212,0.2);border:1px solid rgba(6,182,212,0.4);border-radius:20px;padding:4px 12px;font-size:11px;color:#a5f3fc;">🤖 {_bot_label}</span>
   </div>
 </div>'''
                         _S += f'<div style="padding:28px 40px;background:#fff;">{_content}{_footer}</div></div>'
