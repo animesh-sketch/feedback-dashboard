@@ -318,6 +318,11 @@ section[data-testid="stSidebar"] hr { border-color: rgba(37,99,235,0.15) !import
     color: #fff !important;
     box-shadow: 0 2px 14px rgba(37,99,235,0.4) !important;
 }
+.stButton > button[kind="primary"] p,
+.stButton > button[kind="primary"] span,
+.stButton > button[kind="primary"] div {
+    color: #fff !important;
+}
 .stButton > button[kind="primary"]:hover {
     filter: brightness(1.1) !important;
     box-shadow: 0 4px 24px rgba(37,99,235,0.6), 0 0 40px rgba(96,165,250,0.2) !important;
