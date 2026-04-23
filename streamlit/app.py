@@ -273,10 +273,34 @@ section[data-testid="stSidebar"] hr { border-color: rgba(37,99,235,0.15) !import
     border-radius: 10px !important;
     color: #0B1F3A !important;
 }
+[data-testid="stSelectbox"] > div > div > div,
+[data-testid="stSelectbox"] span,
+[data-testid="stSelectbox"] p {
+    color: #0B1F3A !important;
+}
+/* Dropdown option list */
+[data-testid="stSelectbox"] ul,
+[data-baseweb="select"] ul,
+[data-baseweb="popover"] ul li,
+[data-baseweb="menu"] ul li,
+[role="listbox"] li,
+[role="option"] {
+    background: #ffffff !important;
+    color: #0B1F3A !important;
+}
+[role="option"]:hover,
+[data-baseweb="menu"] ul li:hover {
+    background: #eef4ff !important;
+    color: #0B1F3A !important;
+}
 [data-testid="stMultiSelect"] > div > div {
     background: #F7FAFF !important;
     border: 1.5px solid rgba(37,99,235,0.22) !important;
     border-radius: 10px !important;
+    color: #0B1F3A !important;
+}
+[data-testid="stMultiSelect"] span,
+[data-testid="stMultiSelect"] p {
     color: #0B1F3A !important;
 }
 
