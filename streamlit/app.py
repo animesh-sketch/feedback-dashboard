@@ -7853,9 +7853,10 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                 unsafe_allow_html=True,
             )
             for _cp in _custom_params:
-                _cp_key = f"af_cp_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
+                _cp_key  = f"af_cp_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
+                _cp_key2 = f"af_cp2_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
                 _cp_cmt_key = f"af_cp_cmt_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
-                _cpa, _cpb, _cpc = st.columns([3, 1, 3])
+                _cpa, _cpb, _cpb2, _cpc = st.columns([3, 1, 1, 3])
                 with _cpa:
                     _guide = _cp.get("guide", "")
                     _guide_html = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:2px;">{_guide}</div>' if _guide else ""
@@ -7870,6 +7871,13 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                         _cp["name"],
                         ["—", "Yes", "No", "NA"],
                         key=_cp_key,
+                        label_visibility="collapsed",
+                    )
+                with _cpb2:
+                    _pv[f"{_cp['name']} 2"] = st.selectbox(
+                        f"{_cp['name']} 2",
+                        ["—", "Yes", "No", "NA"],
+                        key=_cp_key2,
                         label_visibility="collapsed",
                     )
                 with _cpc:
