@@ -7742,19 +7742,12 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                 key="f_correct_disp",
             )
 
-        _cd_col1, _cd_col2 = st.columns([3, 1])
-        with _cd_col1:
-            _f_correct_disp_text = st.text_input(
-                "Correct Disposition (leave blank if correct)",
-                placeholder="e.g. Not Interested, Warm Follow-up…",
-                key="f_correct_disp_text",
-            )
-        with _cd_col2:
-            _f_call_drop_stage = st.selectbox(
-                "Call Drop Stage",
-                ["NA", "1st", "2nd", "3rd", "4th"],
-                key="f_call_drop_stage",
-            )
+        _f_correct_disp_text = st.text_input(
+            "Correct Disposition (leave blank if correct)",
+            placeholder="e.g. Not Interested, Warm Follow-up…",
+            key="f_correct_disp_text",
+        )
+        _f_call_drop_stage = ""
 
         st.markdown(
             '<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:10px 0 4px;">',
