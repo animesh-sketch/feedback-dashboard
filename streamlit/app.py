@@ -3569,7 +3569,7 @@ _QA_SCHEMA = {
     "intelligence": [],
     "lead_stage_opts":   ["Cold", "Warm", "Hot", "Not Interested", "RNR"],
     "lead_stage_scores": {"Cold": 30, "Warm": 70, "Hot": 90, "Not Interested": 0, "RNR": 10},
-    "lead_score_cols":   ["Lead Stage", "Product Interest (0/1/2)", "Follow-up Readiness (0/1/2)", "DM Confirmed (0/1/2)"],
+    "lead_score_cols":   ["Lead Stage", "Correct Disposition", "Correct Disposition (Expected)"],
     "auto_cols":         ["Lead Score", "Lead Composite", "Bot Score", "Intelligence Score", "Status", "Fatal?"],
     "metadata_cols":     ["Audit Date", "QA", "Client", "Campaign Name", "PM / CSM", "Bot Name", "Disposition", "Lead Number", "Lead Link", "Phone Number", "Conversation Link"],
     # Status bands: Bot Score ≥ 80 Pass | 60–79 Needs Review | < 60 Fail | Fatal → Auto-Fail
@@ -4360,6 +4360,14 @@ def _render_sense_scorecard(sheets, legend_map):
         _fr2       = round(fail_count   / total_rows * 100, 1) if total_rows else 0
         _afr       = round(fatal_count  / total_rows * 100, 1) if total_rows else 0
         _compl_c   = "#0ebc6e" if completion_pct >= 80 else "#f59e0b" if completion_pct >= 50 else "#dc2626"
+        # Disposition accuracy KPI
+        if "Correct Disposition" in audit_df.columns:
+            _cd_col   = audit_df["Correct Disposition"].replace("", None).dropna().astype(str).str.strip()
+            _cd_yes   = int((_cd_col.str.lower() == "yes").sum())
+            _cd_total = len(_cd_col)
+            _disp_acc = round(_cd_yes / _cd_total * 100, 1) if _cd_total else None
+        else:
+            _disp_acc = None
 
         _gauge_svg = (
             f'<svg width="160" height="100" viewBox="0 0 160 100" style="display:block;margin:auto;">'
@@ -4381,7 +4389,7 @@ def _render_sense_scorecard(sheets, legend_map):
       border-radius:20px;padding:3px 16px;font-size:0.72rem;font-weight:800;color:{_sc_col};">{_slabel}</div>
     <div style="font-size:0.62rem;color:#aabbcc;margin-top:6px;">{total_rows:,} total audits</div>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;grid-auto-rows:min-content;">
     <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid #2563EB;border-radius:10px;padding:13px 14px;">
       <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563EB;margin-bottom:4px;">Total Audits</div>
       <div style="font-size:1.65rem;font-weight:900;color:#2563EB;line-height:1;">{total_rows:,}</div>
@@ -4417,6 +4425,7 @@ def _render_sense_scorecard(sheets, legend_map):
       <div style="height:4px;background:#f0f2f5;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{completion_pct}%;height:100%;background:{_compl_c};border-radius:2px;"></div></div>
       <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">{scored_rows:,} scored</div>
     </div>
+    {'<div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid ' + ("#0ebc6e" if (_disp_acc or 0) >= 80 else "#f59e0b" if (_disp_acc or 0) >= 60 else "#dc2626") + ';border-radius:10px;padding:13px 14px;"><div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:' + ("#0ebc6e" if (_disp_acc or 0) >= 80 else "#f59e0b" if (_disp_acc or 0) >= 60 else "#dc2626") + ';margin-bottom:4px;">Disposition Accuracy</div><div style="font-size:1.65rem;font-weight:900;color:' + ("#0ebc6e" if (_disp_acc or 0) >= 80 else "#f59e0b" if (_disp_acc or 0) >= 60 else "#dc2626") + ';line-height:1;">' + str(_disp_acc) + '%</div><div style="height:4px;background:#f0f2f5;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:' + str(_disp_acc) + '%;height:100%;background:' + ("#0ebc6e" if (_disp_acc or 0) >= 80 else "#f59e0b" if (_disp_acc or 0) >= 60 else "#dc2626") + ';border-radius:2px;"></div></div><div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">correct dispositions</div></div>' if _disp_acc is not None else ''}
   </div>
 </div>""", unsafe_allow_html=True)
     else:
@@ -4764,42 +4773,64 @@ def _render_sense_scorecard(sheets, legend_map):
                 with _lc2:
                     st.markdown(
                         '<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
-                        'text-transform:uppercase;color:#5588bb;margin-bottom:8px;">Lead Composite & PI/FR/DM</div>',
+                        'text-transform:uppercase;color:#5588bb;margin-bottom:8px;">Disposition Accuracy</div>',
                         unsafe_allow_html=True,
                     )
-                    _lcomp = pd.to_numeric(audit_df.get("Lead Composite", pd.Series(dtype=float)), errors="coerce").dropna()
-                    _pi    = pd.to_numeric(audit_df.get("Product Interest (0/1/2)", pd.Series(dtype=float)), errors="coerce").dropna()
-                    _fr    = pd.to_numeric(audit_df.get("Follow-up Readiness (0/1/2)", pd.Series(dtype=float)), errors="coerce").dropna()
-                    _dm    = pd.to_numeric(audit_df.get("DM Confirmed (0/1/2)", pd.Series(dtype=float)), errors="coerce").dropna()
-                    _lead_kpis = []
-                    if len(_lcomp): _lead_kpis.append(("Lead Composite", round(_lcomp.mean(),1), "%", "#2563EB"))
-                    if len(_pi):    _lead_kpis.append(("Product Interest", round(_pi.mean(),2),  "/2", "#2563EB"))
-                    if len(_fr):    _lead_kpis.append(("Follow-up Readiness", round(_fr.mean(),2), "/2", "#0ebc6e"))
-                    if len(_dm):    _lead_kpis.append(("DM Confirmed",  round(_dm.mean(),2),  "/2", "#f59e0b"))
-                    _lk_html = ""
-                    for _lk_name, _lk_val, _lk_unit, _lk_c in _lead_kpis:
-                        _lk_html += (
-                            f'<div style="display:flex;align-items:center;justify-content:space-between;'
-                            f'padding:8px 0;border-bottom:1px solid rgba(61,130,245,0.06);">'
-                            f'<div style="font-size:0.73rem;color:#0d1d3a;font-weight:500;">{_lk_name}</div>'
-                            f'<div style="font-size:1.1rem;font-weight:800;color:{_lk_c};">{_lk_val}{_lk_unit}</div>'
-                            f'</div>'
-                        )
+                    _disp_html = ""
+                    # Correct Disposition breakdown
+                    if "Correct Disposition" in audit_df.columns:
+                        _cd_vc = audit_df["Correct Disposition"].replace("", None).dropna().value_counts()
+                        _cd_total = _cd_vc.sum()
+                        _CD_COLORS = {"Yes": "#0ebc6e", "No": "#dc2626", "NA": "#94a3b8"}
+                        for _cdv in ["Yes", "No", "NA"]:
+                            if _cdv not in _cd_vc.index: continue
+                            _cdn = int(_cd_vc[_cdv])
+                            _cdp = round(_cdn / _cd_total * 100, 1) if _cd_total else 0
+                            _cdc = _CD_COLORS.get(_cdv, "#2563EB")
+                            _disp_html += (
+                                f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;">'
+                                f'<div style="width:30px;font-size:0.72rem;font-weight:700;color:{_cdc};">{_cdv}</div>'
+                                f'<div style="flex:1;height:14px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
+                                f'<div style="width:{_cdp}%;height:100%;background:{_cdc};border-radius:3px;"></div></div>'
+                                f'<div style="width:70px;text-align:right;font-size:0.7rem;color:#5588bb;flex-shrink:0;">{_cdn} ({_cdp}%)</div>'
+                                f'</div>'
+                            )
+                    # Wrong disposition → expected breakdown
+                    if "Correct Disposition (Expected)" in audit_df.columns:
+                        _exp = (audit_df["Correct Disposition (Expected)"]
+                                .replace("", None).dropna()
+                                .astype(str).str.strip())
+                        _exp = _exp[_exp != "nan"]
+                        if len(_exp):
+                            _exp_vc = _exp.value_counts().head(5)
+                            _disp_html += (
+                                f'<div style="font-size:0.62rem;font-weight:700;color:#dc2626;'
+                                f'letter-spacing:0.08em;text-transform:uppercase;margin:10px 0 6px;">Expected (when Wrong)</div>'
+                            )
+                            for _ev, _ec in _exp_vc.items():
+                                _disp_html += (
+                                    f'<div style="display:flex;align-items:center;justify-content:space-between;'
+                                    f'padding:4px 0;border-bottom:1px solid rgba(220,38,38,0.08);">'
+                                    f'<div style="font-size:0.72rem;color:#0d1d3a;">{_ev}</div>'
+                                    f'<div style="font-size:0.72rem;font-weight:700;color:#dc2626;">{_ec}×</div>'
+                                    f'</div>'
+                                )
+                    # Qualified leads
                     _hot  = int((audit_df["Lead Stage"] == "Hot").sum())
                     _warm = int((audit_df["Lead Stage"] == "Warm").sum())
                     _qualif_pct = round((_hot + _warm) / total * 100, 1) if total else 0
-                    _lk_html += (
-                        f'<div style="margin-top:8px;background:#2563EB18;border:1px solid #2563EB44;'
+                    _disp_html += (
+                        f'<div style="margin-top:10px;background:#2563EB18;border:1px solid #2563EB44;'
                         f'border-radius:8px;padding:8px 12px;text-align:center;">'
-                        f'<div style="font-size:0.65rem;font-weight:700;color:#2563EB;letter-spacing:0.08em;'
-                        f'text-transform:uppercase;margin-bottom:3px;">Qualified Leads (Hot+Warm)</div>'
+                        f'<div style="font-size:0.62rem;font-weight:700;color:#2563EB;letter-spacing:0.08em;'
+                        f'text-transform:uppercase;margin-bottom:2px;">Qualified Leads (Hot+Warm)</div>'
                         f'<div style="font-size:1.5rem;font-weight:900;color:#2563EB;">{_qualif_pct}%</div>'
-                        f'<div style="font-size:0.62rem;color:#5588bb;">{_hot+_warm} of {total} conversations</div>'
+                        f'<div style="font-size:0.62rem;color:#5588bb;">{_hot+_warm} of {total}</div>'
                         f'</div>'
                     )
                     st.markdown(
                         f'<div style="background:#fff;border:1px solid #e4e7ec;'
-                        f'border-radius:10px;padding:12px 16px;">{_lk_html}</div>',
+                        f'border-radius:10px;padding:12px 16px;">{_disp_html}</div>',
                         unsafe_allow_html=True,
                     )
                 # Lead stage × campaign
@@ -4812,6 +4843,149 @@ def _render_sense_scorecard(sheets, legend_map):
                     _lsc_pivot = audit_df.groupby(["Campaign Name", "Lead Stage"]).size().unstack(fill_value=0)
                     if not _lsc_pivot.empty:
                         st.dataframe(_lsc_pivot, use_container_width=True)
+            except Exception:
+                pass
+
+    # ── Score Trend Over Time ─────────────────────────────────────────────────
+    if _has_qa_schema and "Audit Date" in audit_df.columns:
+        with st.expander("📈 Score Trend Over Time", expanded=True):
+            try:
+                _trend_df = audit_df.copy()
+                _trend_df["_date_parsed"] = pd.to_datetime(_trend_df["Audit Date"], errors="coerce")
+                _trend_df = _trend_df.dropna(subset=["_date_parsed"])
+                _trend_df["Bot Score"] = pd.to_numeric(_trend_df["Bot Score"], errors="coerce")
+                if len(_trend_df) >= 3:
+                    _daily = (
+                        _trend_df.groupby(_trend_df["_date_parsed"].dt.date)
+                        .agg(Avg_Score=("Bot Score", "mean"), Count=("Bot Score", "count"))
+                        .reset_index()
+                        .rename(columns={"_date_parsed": "Date"})
+                        .sort_values("Date")
+                    )
+                    _daily["Avg_Score"] = _daily["Avg_Score"].round(1)
+                    # Render as SVG sparkline
+                    _dates  = _daily["Date"].tolist()
+                    _scores = _daily["Avg_Score"].tolist()
+                    _n      = len(_scores)
+                    if _n >= 2:
+                        _W, _H = 700, 120
+                        _PAD   = 30
+                        _mn, _mx = min(_scores), max(_scores)
+                        _rng = max(_mx - _mn, 10)
+                        def _sx(i):  return _PAD + i / (_n - 1) * (_W - 2 * _PAD)
+                        def _sy(v):  return _PAD + (1 - (v - _mn) / _rng) * (_H - 2 * _PAD)
+                        _pts = " ".join(f"{_sx(i):.1f},{_sy(s):.1f}" for i, s in enumerate(_scores))
+                        _area_pts = (f"M {_sx(0):.1f},{_H} " +
+                                     " ".join(f"L {_sx(i):.1f},{_sy(s):.1f}" for i, s in enumerate(_scores)) +
+                                     f" L {_sx(_n-1):.1f},{_H} Z")
+                        _trend_svg = (
+                            f'<svg width="100%" viewBox="0 0 {_W} {_H}" style="border-radius:8px;" preserveAspectRatio="none">'
+                            f'<defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">'
+                            f'<stop offset="0%" stop-color="#2563EB" stop-opacity="0.18"/>'
+                            f'<stop offset="100%" stop-color="#2563EB" stop-opacity="0.01"/>'
+                            f'</linearGradient></defs>'
+                            f'<path d="{_area_pts}" fill="url(#tg)"/>'
+                            f'<polyline points="{_pts}" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linejoin="round"/>'
+                        )
+                        for i, (s, d) in enumerate(zip(_scores, _dates)):
+                            _c = "#0ebc6e" if s >= 80 else "#f59e0b" if s >= 60 else "#dc2626"
+                            _trend_svg += f'<circle cx="{_sx(i):.1f}" cy="{_sy(s):.1f}" r="4" fill="{_c}" stroke="#fff" stroke-width="1.5"/>'
+                        # Date labels (show max 6 evenly)
+                        _step = max(1, _n // 6)
+                        for i in range(0, _n, _step):
+                            _trend_svg += (f'<text x="{_sx(i):.1f}" y="{_H-4}" text-anchor="middle" '
+                                           f'font-size="8" fill="#aabbcc" font-family="Inter,sans-serif">'
+                                           f'{str(_dates[i])[-5:]}</text>')
+                        # Score labels
+                        for i, s in enumerate(_scores):
+                            if i % max(1, _n // 8) == 0:
+                                _trend_svg += (f'<text x="{_sx(i):.1f}" y="{_sy(s):.1f - 8}" text-anchor="middle" '
+                                               f'font-size="8.5" fill="#2563EB" font-weight="700" font-family="Inter,sans-serif">{s}%</text>')
+                        _trend_svg += '</svg>'
+                        # Summary stats beside chart
+                        _tr_c1, _tr_c2 = st.columns([4, 1])
+                        with _tr_c1:
+                            st.markdown(
+                                f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:12px 16px;">'
+                                f'{_trend_svg}</div>',
+                                unsafe_allow_html=True,
+                            )
+                        with _tr_c2:
+                            _first5  = _scores[:max(1, _n//2)]
+                            _last5   = _scores[max(1, _n//2):]
+                            _trend_d = round(sum(_last5)/len(_last5) - sum(_first5)/len(_first5), 1) if _first5 and _last5 else 0
+                            _tc_     = "#0ebc6e" if _trend_d >= 0 else "#dc2626"
+                            _tarr    = "↑" if _trend_d >= 0 else "↓"
+                            st.markdown(
+                                f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:16px;height:100%;">'
+                                f'<div style="font-size:0.62rem;color:#5588bb;margin-bottom:4px;">Trend</div>'
+                                f'<div style="font-size:1.6rem;font-weight:900;color:{_tc_};">{_tarr} {abs(_trend_d)}%</div>'
+                                f'<div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">vs first half</div>'
+                                f'<div style="margin-top:12px;font-size:0.62rem;color:#5588bb;">Peak</div>'
+                                f'<div style="font-size:1.2rem;font-weight:800;color:#0ebc6e;">{max(_scores)}%</div>'
+                                f'<div style="margin-top:6px;font-size:0.62rem;color:#5588bb;">Low</div>'
+                                f'<div style="font-size:1.2rem;font-weight:800;color:#dc2626;">{min(_scores)}%</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+            except Exception:
+                pass
+
+    # ── Custom Parameters Analysis ────────────────────────────────────────────
+    _custom_params_in_data = [
+        cp for cp in st.session_state.get("sense_custom_audit_params", [])
+        if cp["name"] in audit_df.columns
+    ]
+    if _custom_params_in_data:
+        with st.expander("⭐ Custom Parameters Analysis", expanded=True):
+            try:
+                _cp_cols = st.columns(min(len(_custom_params_in_data), 3))
+                for _cpi, _cp in enumerate(_custom_params_in_data):
+                    with _cp_cols[_cpi % len(_cp_cols)]:
+                        _cpv = audit_df[_cp["name"]].replace("", None).dropna().astype(str).str.strip()
+                        _cpv = _cpv[_cpv.str.lower() != "nan"]
+                        _yes = int((_cpv.str.lower() == "yes").sum())
+                        _no  = int((_cpv.str.lower() == "no").sum())
+                        _na  = int((_cpv.str.lower() == "na").sum())
+                        _tot = len(_cpv)
+                        _yes_pct = round(_yes / _tot * 100, 1) if _tot else 0
+                        _no_pct  = round(_no  / _tot * 100, 1) if _tot else 0
+                        _cmt_col = f"{_cp['name']} Comment"
+                        _cmt_count = int(audit_df[_cmt_col].replace("", None).dropna().astype(str).str.strip().str.len().gt(0).sum()) if _cmt_col in audit_df.columns else 0
+                        st.markdown(
+                            f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:14px 16px;margin-bottom:8px;">'
+                            f'<div style="font-size:0.68rem;font-weight:700;color:#0ebc6e;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">⭐ {_cp["name"]}</div>'
+                            f'<div style="display:flex;gap:8px;margin-bottom:10px;">'
+                            f'<div style="flex:1;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:8px;text-align:center;">'
+                            f'<div style="font-size:1.4rem;font-weight:900;color:#0ebc6e;">{_yes}</div>'
+                            f'<div style="font-size:0.62rem;color:#059669;font-weight:700;">Yes</div>'
+                            f'<div style="font-size:0.62rem;color:#5588bb;">{_yes_pct}%</div>'
+                            f'</div>'
+                            f'<div style="flex:1;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px;text-align:center;">'
+                            f'<div style="font-size:1.4rem;font-weight:900;color:#dc2626;">{_no}</div>'
+                            f'<div style="font-size:0.62rem;color:#dc2626;font-weight:700;">No</div>'
+                            f'<div style="font-size:0.62rem;color:#5588bb;">{_no_pct}%</div>'
+                            f'</div>'
+                            f'<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;text-align:center;">'
+                            f'<div style="font-size:1.4rem;font-weight:900;color:#94a3b8;">{_na}</div>'
+                            f'<div style="font-size:0.62rem;color:#94a3b8;font-weight:700;">NA</div>'
+                            f'</div>'
+                            f'</div>'
+                            f'<div style="height:6px;background:#f0f2f5;border-radius:3px;overflow:hidden;display:flex;">'
+                            f'<div style="width:{_yes_pct}%;background:#0ebc6e;"></div>'
+                            f'<div style="width:{_no_pct}%;background:#dc2626;"></div>'
+                            f'</div>'
+                            f'<div style="font-size:0.62rem;color:#5588bb;margin-top:6px;">'
+                            f'{_cmt_count} comment{"s" if _cmt_count != 1 else ""} recorded · {_tot} responses</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+                        if _cp.get("guide"):
+                            st.markdown(
+                                f'<div style="font-size:0.65rem;color:#7a99bb;font-style:italic;margin-top:2px;padding:0 4px;">'
+                                f'📌 {_cp["guide"]}</div>',
+                                unsafe_allow_html=True,
+                            )
             except Exception:
                 pass
 
