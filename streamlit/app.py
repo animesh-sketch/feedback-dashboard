@@ -25,7 +25,7 @@ import streamlit.components.v1 as components
 import base64
 import io
 from PIL import Image
-from data import format_kpi, format_delta, delta_is_positive, CAMPAIGNS, ACTION_QUEUE, HEALTH_KPIS, CSAT_RESPONDENTS
+from data import format_kpi, format_delta, delta_is_positive, KPIMetric
 from email_builder import build_email_html, TEMPLATE_NAMES
 import client_store
 import sent_store
@@ -3092,11 +3092,96 @@ def render_quality_engine():
         <div class="page-sub">Quality Engine · Automated issue detection across reports, feedback, and SLA compliance.</div>
     </div>""", unsafe_allow_html=True)
 
-    sla_breached   = [i for i in ACTION_QUEUE if i.get("sla_breached")]
-    critical_rpts  = [c for c in CAMPAIGNS if "Critical" in c["status"]]
-    needs_action   = [c for c in CAMPAIGNS if "Needs Action" in c["status"]]
-    low_csat       = [r for r in CSAT_RESPONDENTS if r["rating"] <= 2]
-    declining_kpis = [m for m in HEALTH_KPIS if not delta_is_positive(m)]
+    # ── Derive all flags from live Supabase data ──────────────────────────────
+    from datetime import timedelta as _td
+    _now        = datetime.now(timezone.utc)
+    _all_events = tracking_store.load()
+    _all_sent   = sent_store.load()
+    _cutoff_30  = _now - _td(days=30)
+    _cutoff_60  = _now - _td(days=60)
+
+    # Low CSAT: real ratings ≤ 2 from tracking_store
+    _all_respondents = tracking_store.get_stats_for_period(None)["respondents"]
+    low_csat = [r for r in _all_respondents if r["rating"] <= 2]
+
+    # SLA breaches: low-rated (≤ 2) feedback events open > 72 h without resolution
+    _SLA_H = 72
+    _rating_evts = [e for e in _all_events if e["type"] == "rating" and e.get("rating", 5) <= 2]
+    sla_breached = []
+    for _e in _rating_evts:
+        _ts_e = datetime.fromisoformat(_e["timestamp"])
+        _h_open = (_now - _ts_e).total_seconds() / 3600
+        if _h_open > _SLA_H:
+            sla_breached.append({
+                "priority":    "🔴 Critical",
+                "name":        _e["email"].split("@")[0].replace(".", " ").title(),
+                "email":       _e["email"],
+                "score":       _e.get("rating", 0),
+                "type":        "CSAT",
+                "campaign":    "—",
+                "tags":        [],
+                "comment":     "",
+                "hours_open":  round(_h_open),
+                "sla_hours":   _SLA_H,
+                "sla_breached": True,
+            })
+
+    # Campaign health: derive from sent_store + per-send tracking stats
+    critical_rpts = []
+    needs_action  = []
+    _curr_sent    = [r for r in _all_sent
+                     if datetime.fromisoformat(r["timestamp"]) >= _cutoff_30]
+    for _rec in _curr_sent:
+        _stats     = tracking_store.get_stats_for_send(_rec["id"])
+        _n_sent    = len(_rec.get("sent_to", []))
+        _ratings   = _stats["ratings"]
+        _n_ratings = len(_ratings)
+        _avg       = sum(r.get("rating", 0) for r in _ratings) / _n_ratings if _n_ratings else None
+        _camp = {
+            "name":      _rec.get("subject", "—"),
+            "type":      "CSAT",
+            "responses": _n_ratings,
+            "sent":      _n_sent,
+            "score":     round(_avg, 1) if _avg is not None else "—",
+            "audience":  _rec.get("client", "—"),
+            "sent_at":   _rec.get("date", "—"),
+        }
+        if _avg is not None and _avg < 2.5:
+            _camp["status"] = "🔴 Critical"
+            critical_rpts.append(_camp)
+        elif _avg is not None and _avg < 3.5:
+            _camp["status"] = "⚠️ Needs Action"
+            needs_action.append(_camp)
+
+    # Declining KPIs: compare current 30 d vs previous 30 d
+    def _period_kpis(events, sent_recs):
+        _r   = [e for e in events if e["type"] == "rating"]
+        _n_s = sum(len(r.get("sent_to", [])) for r in sent_recs)
+        _n_r = len(_r)
+        _avg = sum(e.get("rating", 0) for e in _r) / _n_r if _n_r else 0
+        _neg = len([e for e in _r if e.get("rating", 5) <= 2])
+        _rsp = round(_n_r / _n_s * 100, 1) if _n_s else 0
+        _neg_pct = round(_neg / _n_r * 100, 1) if _n_r else 0
+        return {"response_rate": _rsp, "avg_score": _avg, "neg_pct": _neg_pct}
+
+    _curr_evts = [e for e in _all_events
+                  if datetime.fromisoformat(e["timestamp"]) >= _cutoff_30]
+    _prev_evts = [e for e in _all_events
+                  if _cutoff_60 <= datetime.fromisoformat(e["timestamp"]) < _cutoff_30]
+    _prev_sent = [r for r in _all_sent
+                  if _cutoff_60 <= datetime.fromisoformat(r["timestamp"]) < _cutoff_30]
+
+    _ck = _period_kpis(_curr_evts, _curr_sent)
+    _pk = _period_kpis(_prev_evts, _prev_sent)
+
+    declining_kpis = []
+    for _km in [
+        KPIMetric("Response Rate",     _ck["response_rate"], _pk["response_rate"], "percent", True,  "% of report recipients who submitted feedback"),
+        KPIMetric("Avg Report Score",  _ck["avg_score"],     _pk["avg_score"],     "score",   True,  "Mean report quality score (1–5)"),
+        KPIMetric("Negative Feedback", _ck["neg_pct"],       _pk["neg_pct"],       "percent", False, "% of responses with rating ≤ 2"),
+    ]:
+        if not delta_is_positive(_km):
+            declining_kpis.append(_km)
 
     n_critical = len(sla_breached) + len(critical_rpts)
     n_high     = len(low_csat) + len(needs_action)
