@@ -7281,29 +7281,21 @@ def _render_param_manager(key_sfx=""):
 
         # ── Add custom parameter ───────────────────────────────────────────────
         st.markdown('<div style="font-size:0.7rem;font-weight:700;color:#0ebc6e;margin-bottom:8px;">➕ Add Custom Parameter</div>', unsafe_allow_html=True)
-        _pc1, _pc2, _pc3, _pc4 = st.columns([3, 1.5, 1.5, 1])
+        _pc1, _pc2, _pc3 = st.columns([3, 1.5, 1])
         with _pc1:
-            _new_name = st.text_input("Parameter Name", placeholder="e.g. Empathy Score", key=f"pm_new_name{_ks}")
+            _new_name = st.text_input("Parameter Name", placeholder="e.g. Empathy Check", key=f"pm_new_name{_ks}")
         with _pc2:
-            _new_type = st.selectbox("Scoring Type", ["0 / 1 / 2", "0 / 1", "Pass / Fail", "Custom"], key=f"pm_new_type{_ks}")
-        with _pc3:
             _new_weight = st.number_input("Weight", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key=f"pm_new_weight{_ks}")
-        with _pc4:
+        with _pc3:
             st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
             _add_btn = st.button("Add", key=f"pm_add_param{_ks}", use_container_width=True, type="primary")
 
-        _type_map = {
-            "0 / 1 / 2":   ["0", "1", "2"],
-            "0 / 1":       ["0", "1"],
-            "Pass / Fail":  ["Pass", "Fail"],
-            "Custom":       ["0", "1", "2"],
-        }
         if _add_btn and _new_name.strip():
             _existing = [p["name"].lower() for p in st.session_state["sense_custom_audit_params"]]
             if _new_name.strip().lower() not in _existing:
                 st.session_state["sense_custom_audit_params"].append({
                     "name":    _new_name.strip(),
-                    "options": _type_map.get(_new_type, ["0","1","2"]),
+                    "options": ["Yes", "No"],
                     "weight":  round(float(_new_weight), 1),
                 })
                 st.success(f"Added '{_new_name.strip()}' — it will appear in the audit form below.")
@@ -7716,6 +7708,38 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                         help=_ip.get("guide", _ip["desc"]),
                     )
 
+        # ── Custom parameters (Yes / No + comment) ───────────────────────────
+        _custom_params = st.session_state.get("sense_custom_audit_params", [])
+        if _custom_params:
+            st.markdown(
+                '<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:10px 0 4px;">',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                '<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
+                'text-transform:uppercase;color:#0ebc6e;margin-bottom:6px;">⭐ Custom Parameters</div>',
+                unsafe_allow_html=True,
+            )
+            for _cp in _custom_params:
+                _cp_col1, _cp_col2 = st.columns([1, 2])
+                with _cp_col1:
+                    _cp_key = f"af_cp_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
+                    _pv[_cp["name"]] = st.radio(
+                        f"{_cp['name']} *",
+                        ["Yes", "No", "NA"],
+                        index=2,
+                        horizontal=True,
+                        key=_cp_key,
+                    )
+                with _cp_col2:
+                    _cp_cmt_key = f"af_cp_cmt_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
+                    _pv[f"{_cp['name']} Comment"] = st.text_input(
+                        f"{_cp['name']} comment",
+                        placeholder="Add a comment…",
+                        key=_cp_cmt_key,
+                        label_visibility="collapsed",
+                    )
+
         # ── Lead scoring ──────────────────────────────────────────────────────
         st.markdown(
             '<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:10px 0 4px;">',
@@ -7760,6 +7784,8 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             if not _f_pm_csm.strip():
                 _errs.append("PM / CSM is required")
             for _col, _val in _pv.items():
+                if _col.endswith(" Comment"):
+                    continue  # comments are optional
                 if not _val or str(_val).strip() == "— select —":
                     _errs.append(f"'{_col}' must be selected")
                 # NA is accepted as "not applicable" — no error
