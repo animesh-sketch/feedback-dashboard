@@ -7919,7 +7919,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             + (f'<div><div style="font-size:1rem;font-weight:800;color:#dc2626;">{_lr.get("_correct_disp_text","—")}</div>'
                f'<div style="font-size:0.62rem;color:#5588bb;">Expected Disposition</div></div>'
                if _lr.get("_correct_disp") == "No" and _lr.get("_correct_disp_text") else "")
-            f'</div></div>',
+            + f'</div></div>',
             unsafe_allow_html=True,
         )
 
