@@ -5168,32 +5168,40 @@ def _render_sense_scorecard(sheets, legend_map):
                 _api_key_cp = st.session_state.get("api_key", "")
                 _cp_ai_col1, _cp_ai_col2 = st.columns([3, 1])
                 with _cp_ai_col2:
-                    if st.button("✨ AI Summary", key="cp_remarks_ai_btn", use_container_width=True):
+                    if st.button("✨ Generate Detailed Summary", key="cp_remarks_ai_btn", use_container_width=True):
                         if not _api_key_cp:
                             st.warning("Add your Anthropic API key in Settings.")
                         else:
                             _cp_rm_text = "\n".join(
                                 f"[{pn}] {rm}"
                                 for pn, rms in _cp_remark_map.items()
-                                for rm in rms[:20]
+                                for rm in rms
                             )
+                            _total_rm = sum(len(v) for v in _cp_remark_map.values())
                             _cp_prompt = (
-                                f"You are a QA analytics expert. The following are reviewer remarks for custom call-action parameters "
-                                f"(e.g. 'Was call patching done?'). Summarise the key findings.\n\n"
-                                f"Remarks:\n{_cp_rm_text}\n\n"
-                                f"Return ONLY valid JSON (no markdown) with these keys:\n"
-                                f'{{"summary": "2-3 sentence overall summary", '
-                                f'"per_param": [{{"name": "param name", "insight": "1-sentence insight"}}], '
-                                f'"top_issue": "single most critical finding", '
-                                f'"recommendation": "single actionable recommendation"}}'
+                                f"You are a senior QA analytics expert writing a detailed management report. "
+                                f"The following are ALL reviewer remarks collected from {_total_rm} QA audit records "
+                                f"for client '{_cli_label if '_cli_label' in dir() else 'N/A'}', "
+                                f"campaign '{_camp_label if '_camp_label' in dir() else 'N/A'}'. "
+                                f"These custom parameters are binary call-action checks (e.g. 'Was call patching done?', 'Was transfer attempted?'). "
+                                f"Each remark explains WHY the auditor marked Yes/No/NA.\n\n"
+                                f"ALL REMARKS:\n{_cp_rm_text}\n\n"
+                                f"Write a comprehensive, detailed summary report. Return ONLY valid JSON (no markdown) with these keys:\n"
+                                f'{{"executive_summary": "4-5 sentence executive overview covering overall adherence health, most critical failures, and business impact", '
+                                f'"per_param": [{{"name": "exact param name", "total_remarks": 0, "key_finding": "2-3 sentence detailed finding for this param", "common_reasons_failed": ["reason 1", "reason 2"], "common_reasons_passed": ["reason 1"], "pattern": "any pattern observed (time-based, agent-based, campaign-based)"}}], '
+                                f'"recurring_themes": ["detailed theme 1 with context", "detailed theme 2", "detailed theme 3"], '
+                                f'"agent_behaviour_patterns": "2-3 sentences on patterns in how agents are handling these call actions", '
+                                f'"risk_areas": [{{"area": "risk area name", "severity": "high/medium/low", "detail": "detailed explanation"}}], '
+                                f'"coaching_recommendations": [{{"title": "recommendation title", "detail": "detailed actionable steps", "priority": "high/medium/low"}}], '
+                                f'"positive_highlights": ["specific positive finding 1 with detail", "specific positive finding 2"]}}'
                             )
                             try:
                                 import anthropic as _anth2, json as _jcp
                                 _ac2 = _anth2.Anthropic(api_key=_api_key_cp)
-                                with st.spinner("Summarising remarks…"):
+                                with st.spinner("Generating detailed summary…"):
                                     _cp_msg = _ac2.messages.create(
                                         model="claude-haiku-4-5-20251001",
-                                        max_tokens=600,
+                                        max_tokens=2000,
                                         messages=[{"role": "user", "content": _cp_prompt}],
                                     )
                                 _cp_raw = _cp_msg.content[0].text.strip()
@@ -5209,34 +5217,132 @@ def _render_sense_scorecard(sheets, legend_map):
                 _cp_ai = st.session_state.get(_cp_ai_key)
                 if _cp_ai:
                     st.markdown(
-                        f'<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:12px;padding:16px 18px;margin-top:8px;">'
-                        f'<div style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#7c3aed;margin-bottom:10px;">✨ AI Remarks Summary</div>'
-                        f'<div style="font-size:0.77rem;color:#3b0764;line-height:1.65;margin-bottom:12px;">{_cp_ai.get("summary","")}</div>',
+                        f'<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:12px;padding:20px 22px;margin-top:8px;">'
+                        f'<div style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#7c3aed;margin-bottom:14px;">✨ Detailed Remarks Summary Report</div>',
                         unsafe_allow_html=True,
                     )
+
+                    # Executive Summary
+                    if _cp_ai.get("executive_summary"):
+                        st.markdown(
+                            f'<div style="background:#ede9fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
+                            f'<div style="font-size:0.65rem;font-weight:800;color:#6d28d9;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">📋 Executive Summary</div>'
+                            f'<div style="font-size:0.78rem;color:#3b0764;line-height:1.75;">{_cp_ai["executive_summary"]}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                    # Per-param detailed breakdown
                     if _cp_ai.get("per_param"):
+                        st.markdown(
+                            '<div style="font-size:0.65rem;font-weight:800;color:#7c3aed;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">⭐ Per-Parameter Breakdown</div>',
+                            unsafe_allow_html=True,
+                        )
                         for _ppi in _cp_ai["per_param"]:
+                            _fail_r = _ppi.get("common_reasons_failed") or []
+                            _pass_r = _ppi.get("common_reasons_passed") or []
+                            _fail_html = "".join(f'<li style="margin-bottom:3px;">{r}</li>' for r in _fail_r)
+                            _pass_html = "".join(f'<li style="margin-bottom:3px;">{r}</li>' for r in _pass_r)
+                            _pattern  = _ppi.get("pattern","")
                             st.markdown(
-                                f'<div style="display:flex;gap:10px;margin-bottom:6px;">'
-                                f'<span style="font-size:0.68rem;font-weight:700;color:#7c3aed;white-space:nowrap;">⭐ {_ppi.get("name","")}</span>'
-                                f'<span style="font-size:0.71rem;color:#374151;line-height:1.5;">{_ppi.get("insight","")}</span>'
+                                f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:14px 16px;margin-bottom:10px;">'
+                                f'<div style="font-size:0.72rem;font-weight:800;color:#0B1F3A;margin-bottom:6px;">⭐ {_ppi.get("name","")} '
+                                f'<span style="font-size:0.62rem;color:#7c3aed;font-weight:600;">({_ppi.get("total_remarks",0)} remarks)</span></div>'
+                                f'<div style="font-size:0.74rem;color:#374151;line-height:1.65;margin-bottom:8px;">{_ppi.get("key_finding","")}</div>'
+                                f'<div style="display:flex;gap:12px;">'
+                                f'<div style="flex:1;">'
+                                f'<div style="font-size:0.62rem;font-weight:700;color:#dc2626;margin-bottom:4px;">❌ Why Failed</div>'
+                                f'<ul style="margin:0;padding-left:16px;font-size:0.69rem;color:#7f1d1d;line-height:1.6;">{_fail_html or "<li>—</li>"}</ul>'
+                                f'</div>'
+                                f'<div style="flex:1;">'
+                                f'<div style="font-size:0.62rem;font-weight:700;color:#059669;margin-bottom:4px;">✅ Why Passed</div>'
+                                f'<ul style="margin:0;padding-left:16px;font-size:0.69rem;color:#065f46;line-height:1.6;">{_pass_html or "<li>—</li>"}</ul>'
+                                f'</div>'
+                                f'</div>'
+                                + (f'<div style="margin-top:8px;font-size:0.67rem;color:#6d28d9;background:#f5f3ff;border-radius:4px;padding:5px 10px;">🔍 Pattern: {_pattern}</div>' if _pattern else "")
+                                + f'</div>',
+                                unsafe_allow_html=True,
+                            )
+
+                    # Recurring themes
+                    if _cp_ai.get("recurring_themes"):
+                        st.markdown(
+                            '<div style="font-size:0.65rem;font-weight:800;color:#7c3aed;letter-spacing:0.1em;text-transform:uppercase;margin:12px 0 6px;">🔁 Recurring Themes</div>',
+                            unsafe_allow_html=True,
+                        )
+                        for _ti, _th in enumerate(_cp_ai["recurring_themes"], 1):
+                            st.markdown(
+                                f'<div style="background:#faf5ff;border-left:3px solid #a78bfa;border-radius:0 6px 6px 0;padding:8px 12px;margin-bottom:6px;font-size:0.73rem;color:#3b0764;line-height:1.6;">'
+                                f'<strong>#{_ti}</strong> {_th}</div>',
+                                unsafe_allow_html=True,
+                            )
+
+                    # Agent behaviour patterns
+                    if _cp_ai.get("agent_behaviour_patterns"):
+                        st.markdown(
+                            f'<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;margin:10px 0;">'
+                            f'<div style="font-size:0.62rem;font-weight:800;color:#d97706;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">👤 Agent Behaviour Patterns</div>'
+                            f'<div style="font-size:0.74rem;color:#78350f;line-height:1.65;">{_cp_ai["agent_behaviour_patterns"]}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                    # Risk areas
+                    _risk_bg = {"high":"#fff1f2","medium":"#fffbeb","low":"#f0fdf4"}
+                    _risk_bc = {"high":"#dc2626","medium":"#d97706","low":"#059669"}
+                    if _cp_ai.get("risk_areas"):
+                        st.markdown(
+                            '<div style="font-size:0.65rem;font-weight:800;color:#dc2626;letter-spacing:0.1em;text-transform:uppercase;margin:12px 0 6px;">⚠️ Risk Areas</div>',
+                            unsafe_allow_html=True,
+                        )
+                        for _ra in _cp_ai["risk_areas"]:
+                            _rsev = str(_ra.get("severity","low")).lower()
+                            st.markdown(
+                                f'<div style="background:{_risk_bg.get(_rsev,"#f0fdf4")};border-left:3px solid {_risk_bc.get(_rsev,"#059669")};'
+                                f'border-radius:0 6px 6px 0;padding:8px 12px;margin-bottom:6px;">'
+                                f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">'
+                                f'<span style="font-size:0.7rem;font-weight:700;color:{_risk_bc.get(_rsev,"#059669")};">{_ra.get("area","")}</span>'
+                                f'<span style="font-size:0.58rem;font-weight:800;text-transform:uppercase;color:#fff;background:{_risk_bc.get(_rsev,"#059669")};padding:1px 7px;border-radius:8px;">{_rsev}</span>'
+                                f'</div>'
+                                f'<div style="font-size:0.71rem;color:#374151;line-height:1.6;">{_ra.get("detail","")}</div>'
                                 f'</div>',
                                 unsafe_allow_html=True,
                             )
-                    if _cp_ai.get("top_issue"):
+
+                    # Coaching recommendations
+                    _pri_bc2 = {"high":"#dc2626","medium":"#d97706","low":"#059669"}
+                    if _cp_ai.get("coaching_recommendations"):
                         st.markdown(
-                            f'<div style="background:#fff1f2;border-left:3px solid #dc2626;border-radius:0 8px 8px 0;padding:8px 12px;margin-top:8px;">'
-                            f'<span style="font-size:0.68rem;font-weight:800;color:#dc2626;">🔴 Top Issue: </span>'
-                            f'<span style="font-size:0.71rem;color:#7f1d1d;">{_cp_ai["top_issue"]}</span></div>',
+                            '<div style="font-size:0.65rem;font-weight:800;color:#2563EB;letter-spacing:0.1em;text-transform:uppercase;margin:12px 0 6px;">💡 Coaching Recommendations</div>',
                             unsafe_allow_html=True,
                         )
-                    if _cp_ai.get("recommendation"):
+                        for _cri, _cr in enumerate(_cp_ai["coaching_recommendations"], 1):
+                            _cpri = str(_cr.get("priority","medium")).lower()
+                            st.markdown(
+                                f'<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;margin-bottom:8px;">'
+                                f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+                                f'<span style="background:#2563EB;color:#fff;border-radius:50%;width:20px;height:20px;font-size:0.65rem;font-weight:900;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">{_cri}</span>'
+                                f'<span style="font-size:0.72rem;font-weight:700;color:#0B1F3A;">{_cr.get("title","")}</span>'
+                                f'<span style="font-size:0.58rem;font-weight:800;text-transform:uppercase;color:#fff;background:{_pri_bc2.get(_cpri,"#d97706")};padding:1px 7px;border-radius:8px;margin-left:auto;">{_cpri}</span>'
+                                f'</div>'
+                                f'<div style="font-size:0.72rem;color:#1e3a5f;line-height:1.65;">{_cr.get("detail","")}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+
+                    # Positive highlights
+                    if _cp_ai.get("positive_highlights"):
                         st.markdown(
-                            f'<div style="background:#eff6ff;border-left:3px solid #2563EB;border-radius:0 8px 8px 0;padding:8px 12px;margin-top:6px;">'
-                            f'<span style="font-size:0.68rem;font-weight:800;color:#2563EB;">💡 Recommendation: </span>'
-                            f'<span style="font-size:0.71rem;color:#1e3a5f;">{_cp_ai["recommendation"]}</span></div>',
+                            '<div style="font-size:0.65rem;font-weight:800;color:#059669;letter-spacing:0.1em;text-transform:uppercase;margin:12px 0 6px;">✅ Positive Highlights</div>',
                             unsafe_allow_html=True,
                         )
+                        for _ph in _cp_ai["positive_highlights"]:
+                            st.markdown(
+                                f'<div style="background:#f0fdf4;border-left:3px solid #059669;border-radius:0 6px 6px 0;'
+                                f'padding:8px 12px;margin-bottom:6px;font-size:0.73rem;color:#064e3b;line-height:1.6;">{_ph}</div>',
+                                unsafe_allow_html=True,
+                            )
+
                     st.markdown('</div>', unsafe_allow_html=True)
                     if st.button("↺ Regenerate", key="cp_remarks_ai_regen", use_container_width=False):
                         st.session_state.pop(_cp_ai_key, None)
