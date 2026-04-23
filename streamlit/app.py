@@ -5365,21 +5365,22 @@ def _render_sense_scorecard(sheets, legend_map):
                 if _disp_col:
                     _cells += f'<td style="padding:6px 10px;color:#475569;">{str(_row.get(_disp_col,"—")).strip()[:18]}</td>'
                 for _cpn in _cp_names:
-                    _cpval  = str(_row.get(_cpn, "—")).strip().lower()
-                    _cpcmt  = str(_row.get(f"{_cpn} Comment", "")).strip()
-                    _cbg    = _yn_bg.get(_cpval, "#f8fafc")
-                    _ccc    = _yn_c.get(_cpval, "#475569")
-                    _cmt_tip = f' title="{_cpcmt}"' if _cpcmt else ""
-                    _cmt_dot = ' <span style="color:#7c3aed;font-size:9px;" title="has comment">●</span>' if _cpcmt else ""
-                    _cells += (f'<td style="padding:6px 10px;text-align:center;background:{_cbg};">'
-                               f'<span style="color:{_ccc};font-weight:700;font-size:11px;"{_cmt_tip}>'
-                               f'{_cpval.upper() if _cpval in ("yes","no","na") else _cpval}</span>{_cmt_dot}</td>')
+                    _cpval = str(_row.get(_cpn, "—")).strip().lower()
+                    _cpcmt = str(_row.get(f"{_cpn} Comment", "")).strip()
+                    if _cpcmt.lower() in ("nan", "none", ""): _cpcmt = ""
+                    _cbg   = _yn_bg.get(_cpval, "#f8fafc")
+                    _ccc   = _yn_c.get(_cpval, "#475569")
+                    _val_html = f'<span style="color:{_ccc};font-weight:800;font-size:11px;">{_cpval.upper() if _cpval in ("yes","no","na") else _cpval}</span>'
+                    _cmt_html = (f'<div style="font-size:10px;color:#7c3aed;font-style:italic;margin-top:3px;'
+                                 f'line-height:1.4;text-align:left;white-space:normal;">{_cpcmt}</div>') if _cpcmt else ""
+                    _cells += (f'<td style="padding:6px 10px;background:{_cbg};vertical-align:top;">'
+                               f'{_val_html}{_cmt_html}</td>')
                 _tbl += f'<tr style="border-bottom:1px solid #F0F4F9;background:{_bg};">{_cells}</tr>'
 
             _tbl += '</tbody></table></div>'
             st.markdown(_tbl, unsafe_allow_html=True)
             st.markdown(
-                f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:6px;">🔵 dot = has remark · hover cell to read · {len(audit_df)} calls shown</div>',
+                f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:6px;">Purple italic = remark text · {len(audit_df)} calls shown</div>',
                 unsafe_allow_html=True,
             )
 
