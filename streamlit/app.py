@@ -1278,81 +1278,67 @@ def render_home():
     <div class="ph-sub">Select a workspace to continue ↓</div>
   </div>
 
-  <!-- Cards -->
-  <div class="ph-grid">
-
-    <div class="ph-card ph-card-cdl">
-      <div class="ph-card-badge ph-badge-cdl">📊 Insights Platform</div>
-      <div class="ph-card-title">Convin Data Labs</div>
-      <div class="ph-card-sub ph-sub-cdl">Track every insight. Own every relationship.</div>
-      <div class="ph-divider"></div>
-      <div class="ph-desc">
-        Centralised insights report feedback, stakeholder email campaigns,
-        client management and real-time KPI tracking — all in one place.
-      </div>
-      <div class="ph-pills">
-        <span class="ph-pill">📬 Campaign tracking</span>
-        <span class="ph-pill">⭐ CSAT feedback</span>
-        <span class="ph-pill">📧 Email delivery</span>
-        <span class="ph-pill">🏢 Client management</span>
-        <span class="ph-pill">📈 KPI monitoring</span>
-      </div>
-    </div>
-
-    <div class="ph-card ph-card-sense">
-      <div class="ph-card-badge ph-badge-sense">🎯 Auto QA · Bot Intelligence</div>
-      <div class="ph-card-title">Convin Sense Audit</div>
-      <div class="ph-card-sub ph-sub-sense">Auto-score every call. Never miss a failure.</div>
-      <div class="ph-divider"></div>
-      <div class="ph-desc">
-        Automated QA scoring, bot failure intelligence, tier-based parameter analysis,
-        auditor leaderboards and priority action plans — powered by Convin Sense.
-      </div>
-      <div class="ph-pills">
-        <span class="ph-pill">🤖 Auto QA scoring</span>
-        <span class="ph-pill">🧠 Bot intelligence</span>
-        <span class="ph-pill">👤 Auditor leaderboard</span>
-        <span class="ph-pill">📊 Tier-based QA</span>
-        <span class="ph-pill">⚡ Auto-fail detection</span>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Stats strip -->
-  <div class="ph-stats">
-    <div class="ph-stat">
-      <div class="ph-stat-val">Tier 1–3</div>
-      <div class="ph-stat-lbl">QA Parameters</div>
-    </div>
-    <div class="ph-stat">
-      <div class="ph-stat-val">Auto</div>
-      <div class="ph-stat-lbl">Score & Fail Detection</div>
-    </div>
-    <div class="ph-stat">
-      <div class="ph-stat-val">Live</div>
-      <div class="ph-stat-lbl">Supabase Persistence</div>
-    </div>
-    <div class="ph-stat">
-      <div class="ph-stat-val">100%</div>
-      <div class="ph-stat-lbl">Audit Coverage</div>
-    </div>
-  </div>
-
 </div>""", unsafe_allow_html=True)
 
-    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+    # Cards + buttons in columns so each button sits inside its card area
     _col_cdl, _col_sense = st.columns(2)
+
     with _col_cdl:
+        st.markdown("""
+<div class="ph-card ph-card-cdl">
+  <div class="ph-card-badge ph-badge-cdl">📊 Insights Platform</div>
+  <div class="ph-card-title">Convin Data Labs</div>
+  <div class="ph-card-sub ph-sub-cdl">Track every insight. Own every relationship.</div>
+  <div class="ph-divider"></div>
+  <div class="ph-desc">
+    Centralised insights report feedback, stakeholder email campaigns,
+    client management and real-time KPI tracking — all in one place.
+  </div>
+  <div class="ph-pills">
+    <span class="ph-pill">📬 Campaign tracking</span>
+    <span class="ph-pill">⭐ CSAT feedback</span>
+    <span class="ph-pill">📧 Email delivery</span>
+    <span class="ph-pill">🏢 Client management</span>
+    <span class="ph-pill">📈 KPI monitoring</span>
+  </div>
+</div>""", unsafe_allow_html=True)
         if st.button("Open CDL Dashboard →", key="home_enter_cdl", use_container_width=True, type="primary"):
             st.session_state["app_mode"] = "CDL"
             st.session_state["current_page"] = "Overview"
             st.rerun()
+
     with _col_sense:
+        st.markdown("""
+<div class="ph-card ph-card-sense">
+  <div class="ph-card-badge ph-badge-sense">🎯 Auto QA · Bot Intelligence</div>
+  <div class="ph-card-title">Convin Sense Audit</div>
+  <div class="ph-card-sub ph-sub-sense">Auto-score every call. Never miss a failure.</div>
+  <div class="ph-divider"></div>
+  <div class="ph-desc">
+    Automated QA scoring, bot failure intelligence, tier-based parameter analysis,
+    auditor leaderboards and priority action plans — powered by Convin Sense.
+  </div>
+  <div class="ph-pills">
+    <span class="ph-pill">🤖 Auto QA scoring</span>
+    <span class="ph-pill">🧠 Bot intelligence</span>
+    <span class="ph-pill">👤 Auditor leaderboard</span>
+    <span class="ph-pill">📊 Tier-based QA</span>
+    <span class="ph-pill">⚡ Auto-fail detection</span>
+  </div>
+</div>""", unsafe_allow_html=True)
         if st.button("Open Sense Audit →", key="home_enter_sense", use_container_width=True, type="primary"):
             st.session_state["app_mode"] = "Audit"
             st.session_state["current_page"] = "Audit"
             st.rerun()
+
+    # Stats strip
+    st.markdown("""
+<div class="ph-stats">
+  <div class="ph-stat"><div class="ph-stat-val">Tier 1–3</div><div class="ph-stat-lbl">QA Parameters</div></div>
+  <div class="ph-stat"><div class="ph-stat-val">Auto</div><div class="ph-stat-lbl">Score & Fail Detection</div></div>
+  <div class="ph-stat"><div class="ph-stat-val">Live</div><div class="ph-stat-lbl">Supabase Persistence</div></div>
+  <div class="ph-stat"><div class="ph-stat-val">100%</div><div class="ph-stat-lbl">Audit Coverage</div></div>
+</div>""", unsafe_allow_html=True)
 
 
 # ─── Overview ─────────────────────────────────────────────────────────────────
