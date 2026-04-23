@@ -7581,9 +7581,6 @@ def _render_audit_form(legend_map, fname):
                     st.session_state["sense_lead_queue"] = []
                     st.rerun()
 
-    # ── Parameter manager (outside form) ─────────────────────────────────────
-    _render_param_manager()
-
     # ── AI Suggestion Builder (outside form — AI calls need rerun) ───────────
     with st.expander("✨ AI Suggestion Builder — draft & improve before submitting", expanded=False):
         st.markdown(
@@ -7971,6 +7968,9 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                     st.session_state["sense_lead_queue"] = _lead_q_form
 
                 st.rerun()
+
+    # ── Custom parameter manager (below form, always visible) ────────────────
+    _render_param_manager()
 
     # ── Last submission result ─────────────────────────────────────────────────
     if st.session_state.get("qa_last_result"):
