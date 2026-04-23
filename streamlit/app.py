@@ -7829,20 +7829,29 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                 unsafe_allow_html=True,
             )
             for _cp in _custom_params:
-                _cp_col1, _cp_col2 = st.columns([1, 2])
-                with _cp_col1:
-                    _cp_key = f"af_cp_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
-                    _pv[_cp["name"]] = st.selectbox(
-                        f"{_cp['name']} *",
-                        ["— select —", "Yes", "No"],
-                        key=_cp_key,
-                        help=_cp.get("guide", "") or None,
+                _cp_key = f"af_cp_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
+                _cp_cmt_key = f"af_cp_cmt_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
+                _cpa, _cpb, _cpc = st.columns([3, 1, 3])
+                with _cpa:
+                    _guide = _cp.get("guide", "")
+                    _guide_html = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:2px;">{_guide}</div>' if _guide else ""
+                    st.markdown(
+                        f'<div style="padding:8px 0 4px;">'
+                        f'<div style="font-size:0.82rem;font-weight:700;color:#0d1d3a;">⭐ {_cp["name"]} *</div>'
+                        f'{_guide_html}</div>',
+                        unsafe_allow_html=True,
                     )
-                with _cp_col2:
-                    _cp_cmt_key = f"af_cp_cmt_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
+                with _cpb:
+                    _pv[_cp["name"]] = st.selectbox(
+                        _cp["name"],
+                        ["—", "Yes", "No", "NA"],
+                        key=_cp_key,
+                        label_visibility="collapsed",
+                    )
+                with _cpc:
                     _pv[f"{_cp['name']} Comment"] = st.text_input(
-                        f"{_cp['name']} comment",
-                        placeholder="Add a comment…",
+                        "Comment",
+                        placeholder="Remark…",
                         key=_cp_cmt_key,
                         label_visibility="collapsed",
                     )
@@ -7873,7 +7882,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
             for _col, _val in _pv.items():
                 if _col.endswith(" Comment"):
                     continue  # comments are optional
-                if not _val or str(_val).strip() == "— select —":
+                if not _val or str(_val).strip() in ("— select —", "—"):
                     _errs.append(f"'{_col}' must be selected")
                 # NA is accepted as "not applicable" — no error
             if _f_disposition == "— select —":
