@@ -7281,27 +7281,16 @@ def _render_param_manager(key_sfx=""):
 
         # ── Add custom parameter ───────────────────────────────────────────────
         st.markdown('<div style="font-size:0.7rem;font-weight:700;color:#0ebc6e;margin-bottom:8px;">➕ Add Custom Parameter</div>', unsafe_allow_html=True)
-        _pc1, _pc2, _pc3 = st.columns([3, 1.5, 1])
+        _pc1, _pc2, _pc3, _pc4 = st.columns([2.5, 1.2, 2.5, 0.8])
         with _pc1:
             _new_name = st.text_input("Parameter Name", placeholder="e.g. Empathy Check", key=f"pm_new_name{_ks}")
         with _pc2:
-            st.markdown(
-                '<div style="font-size:0.68rem;color:#5588bb;margin-bottom:4px;">Scoring</div>'
-                '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;'
-                'padding:6px 12px;font-size:0.75rem;font-weight:700;color:#16a34a;margin-top:2px;">'
-                '✓ Yes &nbsp;/&nbsp; No</div>',
-                unsafe_allow_html=True,
-            )
+            _new_scoring = st.selectbox("Scoring", ["Yes / No"], key=f"pm_new_scoring{_ks}")
         with _pc3:
+            _new_remarks = st.text_input("Remarks", placeholder="What should the auditor check? (optional)", key=f"pm_new_remarks{_ks}")
+        with _pc4:
             st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
             _add_btn = st.button("Add", key=f"pm_add_param{_ks}", use_container_width=True, type="primary")
-
-        _new_remarks = st.text_area(
-            "Description / Remarks",
-            placeholder="What should the auditor check for this parameter? (optional)",
-            height=68,
-            key=f"pm_new_remarks{_ks}",
-        )
 
         if _add_btn and _new_name.strip():
             _existing = [p["name"].lower() for p in st.session_state["sense_custom_audit_params"]]
@@ -7309,7 +7298,6 @@ def _render_param_manager(key_sfx=""):
                 st.session_state["sense_custom_audit_params"].append({
                     "name":    _new_name.strip(),
                     "options": ["Yes", "No"],
-                    "weight":  round(float(_new_weight), 1),
                     "guide":   _new_remarks.strip(),
                 })
                 st.success(f"Added '{_new_name.strip()}' — it will appear in the audit form below.")
