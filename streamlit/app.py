@@ -3567,30 +3567,30 @@ _SENSE_CLIENT_NAMES = [""] + [r["client"] for r in _SENSE_CLIENTS]
 _SENSE_BUILTIN_PARAMS = {
     "Flow Issue": {
         "description": "Conversation flow quality — logical gaps / breakdowns",
-        "options":     ["0", "1", "2"],
-        "inverted":    False,  # 2=No issue (best), 0=Critical flow breakdown (worst)
+        "options":     ["Yes", "No"],  # Yes = issue present (bad), No = no issue (good)
+        "inverted":    False,
         "weight":      0.11,
         "color":       "#dc2626",
         "icon":        "🔍",
-        "guide":       "2 = No flow issue  |  1 = Minor gap or hiccup  |  0 = Major / critical flow breakdown",
+        "guide":       "Yes = Flow issue detected (breaks scoring)  |  No = No flow issue",
     },
     "Bot Restarted Conversation": {
         "description": "Bot forced a conversation restart",
-        "options":     ["0", "1", "2"],
-        "inverted":    False,  # 2=No restart (best), 0=Multiple restarts (worst)
+        "options":     ["Yes", "No"],  # Yes = restart happened (bad), No = no restart (good)
+        "inverted":    False,
         "weight":      0.09,
         "color":       "#d97706",
         "icon":        "🔁",
-        "guide":       "2 = No restart  |  1 = Restarted once  |  0 = Multiple restarts",
+        "guide":       "Yes = Bot restarted conversation (breaks scoring)  |  No = No restart",
     },
     "Bot Repetition": {
         "description": "Bot repeated same message / looped responses",
-        "options":     ["0", "1", "2"],
-        "inverted":    False,  # 2=No repetition (best), 0=Severe repetition (worst)
+        "options":     ["Yes", "No"],  # Yes = repetition detected (bad), No = no repetition (good)
+        "inverted":    False,
         "weight":      0.07,
         "color":       "#7c3aed",
         "icon":        "🔄",
-        "guide":       "2 = No repetition  |  1 = 1–2 repetitions  |  0 = 3+ repetitions",
+        "guide":       "Yes = Repetition detected (breaks scoring)  |  No = No repetition",
     },
     "Latency": {
         "description": "Bot response latency / delay during conversation",
@@ -3629,16 +3629,16 @@ _QA_SCHEMA = {
                 {
                     "col": "Flow Issue",
                     "weight": 0.11,
-                    "options": ["0", "1", "2"],
+                    "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "2 = No flow issue  |  1 = Minor gap or hiccup  |  0 = Major / critical flow breakdown",
+                    "guide": "Yes = Flow issue detected  |  No = No flow issue",
                 },
                 {
                     "col": "Bot Restarted Conversation",
                     "weight": 0.09,
-                    "options": ["0", "1", "2"],
+                    "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "2 = No restart  |  1 = Restarted once  |  0 = Multiple restarts",
+                    "guide": "Yes = Bot restarted conversation  |  No = No restart",
                 },
                 {
                     "col": "Message Content",
@@ -3664,9 +3664,9 @@ _QA_SCHEMA = {
                 {
                     "col": "Bot Repetition",
                     "weight": 0.07,
-                    "options": ["0", "1", "2"],
+                    "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "2 = No repetition  |  1 = 1–2 repetitions  |  0 = 3+ repetitions (loop)",
+                    "guide": "Yes = Repetition detected  |  No = No repetition",
                 },
                 {
                     "col": "Dead Air/Blank Space",
@@ -4263,15 +4263,15 @@ def _gen_qa_insights(audit_df):
 
     # Tier-1 critical parameter deep-dive (Flow Issue, Bot Restarted, Bot Repetition)
     _t1_alert_params = [
-        ("Flow Issue",                   "0", "🔍", "flow disruptions — bot exited the intended script path"),
-        ("Bot Restarted Conversation",   "0", "🔁", "conversation restarts — bot lost context mid-call"),
-        ("Bot Repetition",               "0", "🔄", "repetitive bot responses — duplicate script loops detected"),
+        ("Flow Issue",                   "No", "🔍", "flow disruptions — bot exited the intended script path"),
+        ("Bot Restarted Conversation",   "No", "🔁", "conversation restarts — bot lost context mid-call"),
+        ("Bot Repetition",               "No", "🔄", "repetitive bot responses — duplicate script loops detected"),
     ]
     for _tpn, _best_val, _icon, _desc in _t1_alert_params:
         _tc = next((c for c in audit_df.columns if _tpn.lower() in str(c).lower()), None)
         if _tc:
             _tv = audit_df[_tc].replace("", None).dropna().astype(str).str.strip()
-            _t_issues = int((_tv != _best_val).sum())
+            _t_issues = int((_tv.str.lower() != _best_val.lower()).sum())
             _t_pct    = round(_t_issues / total * 100, 1) if total else 0
             if _t_pct > 10:
                 insights.append({"type": "critical" if _t_pct > 30 else "warning",
