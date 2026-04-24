@@ -3776,7 +3776,7 @@ _QA_SCHEMA = {
     "lead_stage_scores": {"Cold": 30, "Warm": 70, "Hot": 90, "Not Interested": 0, "RNR": 10},
     "lead_score_cols":   ["Lead Stage", "Correct Disposition", "Correct Disposition (Expected)"],
     "auto_cols":         ["Lead Score", "Lead Composite", "Bot Score", "Intelligence Score", "Status", "Fatal?"],
-    "metadata_cols":     ["Audit Date", "QA", "Client", "Campaign Name", "PM / CSM", "Bot Name", "Disposition", "Lead Number", "Lead Link", "Phone Number", "Conversation Link"],
+    "metadata_cols":     ["Audit Date", "QA", "Client", "Campaign Name", "PM / CSM", "Bot Name", "Disposition", "Lead Number", "Lead Link", "Conversation Link"],
     # Status bands: Bot Score ≥ 80 Pass | 60–79 Needs Review | < 60 Fail | Fatal → Auto-Fail
     "status_bands": [
         {"min": 80,  "label": "Pass",         "color": "#0ebc6e"},
@@ -8638,7 +8638,7 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
         with _ad4:
             _f_campaign   = st.text_input("Campaign Name *", value=_qv(_q_rec,"Campaign Name"), placeholder="e.g. Q2 Outreach")
 
-        _ld1, _ld2, _ld3, _ld4 = st.columns(4)
+        _ld1, _ld2, _ld3 = st.columns(3)
         with _ld1:
             _reg_client_map_form = {c["client"]: c for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)}
             _auto_pm  = _reg_client_map_form.get(_f_client, {}).get("pm", "") or _SENSE_CLIENT_MAP.get(_f_client, {}).get("pm", "")
@@ -8648,8 +8648,6 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
         with _ld2:
             _f_lead_no    = st.text_input("Lead Number", value=_qv(_q_rec,"Lead Number"), placeholder="e.g. LD-20250422")
         with _ld3:
-            _f_phone      = st.text_input("Phone Number", value=_qv(_q_rec,"Phone Number"), placeholder="+91-XXXXXXXXXX")
-        with _ld4:
             _f_conv_link  = st.text_input("Conversation Link", value=_qv(_q_rec,"Conversation Link"), placeholder="https://...")
 
         _ll1, _ll2, _ll3, _ll4 = st.columns(4)
@@ -8847,7 +8845,6 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
                     "Lead Number":        _f_lead_no.strip(),
                     "Lead Link":          _f_lead_link.strip(),
                     "Disposition":        _f_disposition if _f_disposition != "— select —" else "",
-                    "Phone Number":       _f_phone.strip(),
                     "Conversation Link":  _f_conv_link.strip(),
                     **_full_pv,
                     "Lead Score":          _computed["Lead Score"],
