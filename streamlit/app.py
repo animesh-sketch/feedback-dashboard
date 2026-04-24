@@ -4319,7 +4319,8 @@ def _gen_qa_insights(audit_df):
             if _pc:
                 _pv = pd.to_numeric(audit_df[_pc], errors="coerce").dropna()
                 if len(_pv):
-                    _pmax = max(int(o) for o in _tp.get("options", ["0","1","2"]) if str(o).lstrip("-").isdigit()) or 2
+                    _pmax_vals = [int(o) for o in _tp.get("options", ["0","1","2"]) if str(o).lstrip("-").isdigit()]
+                    _pmax = max(_pmax_vals) if _pmax_vals else 2
                     _p_avgs.append({"col": _tp["col"], "pct": round(float(_pv.mean()) / _pmax * 100, 1)})
         if _p_avgs:
             _weakest_p = min(_p_avgs, key=lambda x: x["pct"])
