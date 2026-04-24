@@ -26,15 +26,20 @@ def _log_err(fn: str, exc: Exception) -> None:
 
 
 def load() -> list:
-    """Return all audit records newest-first."""
+    """Return all audit records newest-first (record dicts only)."""
     try:
         res = (
             _sb().table(_TABLE)
-            .select("record")
+            .select("id,record")
             .order("id", desc=True)
             .execute()
         )
-        return [row["record"] for row in (res.data or [])]
+        rows = []
+        for row in (res.data or []):
+            rec = dict(row["record"])
+            rec["_row_id"] = row["id"]
+            rows.append(rec)
+        return rows
     except Exception as e:
         _log_err("load", e)
         return []
@@ -47,4 +52,25 @@ def append(record: dict) -> str | None:
         return None
     except Exception as e:
         _log_err("append", e)
+        return str(e)
+
+
+def delete(row_id: int) -> str | None:
+    """Delete an audit record by its Supabase row id. Returns error string or None."""
+    try:
+        _sb().table(_TABLE).delete().eq("id", row_id).execute()
+        return None
+    except Exception as e:
+        _log_err("delete", e)
+        return str(e)
+
+
+def update(row_id: int, record: dict) -> str | None:
+    """Overwrite the record JSONB for a given row id. Returns error string or None."""
+    try:
+        clean = {k: v for k, v in record.items() if k != "_row_id"}
+        _sb().table(_TABLE).update({"record": clean}).eq("id", row_id).execute()
+        return None
+    except Exception as e:
+        _log_err("update", e)
         return str(e)

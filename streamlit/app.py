@@ -4372,7 +4372,7 @@ def _render_sense_scorecard(sheets, legend_map):
         if _form_log:
             st.session_state["sense_audit_log"] = _form_log
     if _form_log:
-        _log_df = pd.DataFrame(_form_log)
+        _log_df = pd.DataFrame([{k: v for k, v in r.items() if k != "_row_id"} for r in _form_log])
         if audit_df is not None:
             _appended = _log_df.reindex(columns=audit_df.columns, fill_value="")
             audit_df  = pd.concat([audit_df, _appended], ignore_index=True)
@@ -6103,7 +6103,7 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
             _audit_df_ins = _bi_v.copy()
 
     if _form_log_ins:
-        _log_df_ins = pd.DataFrame(_form_log_ins)
+        _log_df_ins = pd.DataFrame([{k: v for k, v in r.items() if k != "_row_id"} for r in _form_log_ins])
         if _audit_df_ins is not None:
             _audit_df_ins = pd.concat([_audit_df_ins,
                                        _log_df_ins.reindex(columns=_audit_df_ins.columns, fill_value="")],
@@ -8972,9 +8972,9 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         _lc5.metric("Auto-Fail",      f"{_fatal_ct}  ({round(_fatal_ct/_n*100,1)}%)")
         _lc6.metric("QA Count",        len(set(r.get("QA","") for r in audit_log)))
 
-        _log_df = pd.DataFrame(audit_log[::-1])
-        st.dataframe(_log_df, use_container_width=True, height=280, hide_index=True)
-
+        # ── Export strip (uses clean df — no _row_id column) ──────────────────
+        _log_df = pd.DataFrame([{k: v for k, v in r.items() if k != "_row_id"} for r in audit_log])
+        import io as _io
         _exp_csv, _exp_xl = st.columns(2)
         with _exp_csv:
             st.download_button(
@@ -8985,7 +8985,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 key="sense_dl_auditlog_csv",
             )
         with _exp_xl:
-            import io as _io
             _xl_buf = _io.BytesIO()
             with pd.ExcelWriter(_xl_buf, engine="openpyxl") as _xw:
                 _log_df.to_excel(_xw, index=False, sheet_name="Audit Log")
@@ -8996,6 +8995,128 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 key="sense_dl_auditlog_xl",
             )
+
+        # ── Per-record list with Edit / Delete ────────────────────────────────
+        st.markdown(
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 80px 90px 88px 88px;'
+            'gap:6px;padding:6px 10px;background:#f0f4ff;border-radius:8px;'
+            'font-size:0.66rem;font-weight:700;color:#2563EB;text-transform:uppercase;'
+            'letter-spacing:0.04em;margin-top:0.8rem;">'
+            '<span>Date</span><span>QA</span><span>Client</span><span>Bot Name</span>'
+            '<span style="text-align:center">Score</span><span style="text-align:center">Status</span>'
+            '<span></span><span></span></div>',
+            unsafe_allow_html=True,
+        )
+
+        _editing_id  = st.session_state.get("_audit_edit_id")
+        _deleting_id = st.session_state.get("_audit_del_id")
+
+        for _ar in audit_log:
+            _rid    = _ar.get("_row_id")
+            _status = str(_ar.get("Status", ""))
+            _score  = _ar.get("Bot Score", "—")
+            _sc_str = f"{_score}%" if isinstance(_score, (int, float)) else str(_score)
+            _sc_col = "#16a34a" if _status == "Pass" else ("#f59e0b" if _status == "Needs Review" else "#dc2626")
+
+            # ── record row ────────────────────────────────────────────────────
+            st.markdown(
+                f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 80px 90px 88px 88px;'
+                f'gap:6px;padding:7px 10px;border-bottom:1px solid #e9edf5;'
+                f'background:{"#f0f9ff" if _rid == _editing_id else "#fff"};">'
+                f'<span style="font-size:0.72rem;color:#334155;">{_ar.get("Audit Date","")}</span>'
+                f'<span style="font-size:0.72rem;color:#334155;">{_ar.get("QA","")}</span>'
+                f'<span style="font-size:0.72rem;color:#334155;">{_ar.get("Client","")}</span>'
+                f'<span style="font-size:0.72rem;color:#334155;">{_ar.get("Bot Name","")}</span>'
+                f'<span style="font-size:0.72rem;font-weight:700;color:{_sc_col};text-align:center">{_sc_str}</span>'
+                f'<span style="font-size:0.7rem;color:{_sc_col};text-align:center">{_status}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            _btn_edit, _btn_del = st.columns([1, 1])
+            with _btn_edit:
+                if st.button("✏️ Edit", key=f"_aed_{_rid}", use_container_width=True):
+                    if st.session_state.get("_audit_edit_id") == _rid:
+                        st.session_state.pop("_audit_edit_id", None)
+                    else:
+                        st.session_state["_audit_edit_id"] = _rid
+                        st.session_state.pop("_audit_del_id", None)
+                    st.rerun()
+            with _btn_del:
+                if st.button("🗑 Delete", key=f"_add_{_rid}", use_container_width=True):
+                    if st.session_state.get("_audit_del_id") == _rid:
+                        st.session_state.pop("_audit_del_id", None)
+                    else:
+                        st.session_state["_audit_del_id"] = _rid
+                        st.session_state.pop("_audit_edit_id", None)
+                    st.rerun()
+
+            # ── Delete confirmation ───────────────────────────────────────────
+            if _deleting_id == _rid:
+                st.warning(f"Delete audit for **{_ar.get('Client','')} / {_ar.get('Bot Name','')}** on {_ar.get('Audit Date','')}? This cannot be undone.")
+                _dc1, _dc2 = st.columns(2)
+                with _dc1:
+                    if st.button("Yes, delete", key=f"_adconf_{_rid}", type="primary", use_container_width=True):
+                        _derr = audit_store.delete(_rid)
+                        if _derr:
+                            st.error(f"Delete failed: {_derr}")
+                        else:
+                            st.session_state.pop("_audit_del_id", None)
+                            st.session_state["sense_audit_log"] = _audit_log_load()
+                            st.rerun()
+                with _dc2:
+                    if st.button("Cancel", key=f"_adcancel_{_rid}", use_container_width=True):
+                        st.session_state.pop("_audit_del_id", None)
+                        st.rerun()
+
+            # ── Inline edit form ──────────────────────────────────────────────
+            if _editing_id == _rid:
+                with st.container():
+                    st.markdown(
+                        '<div style="background:#f0f9ff;border:1px solid #bfdbfe;border-radius:10px;'
+                        'padding:14px 16px;margin:6px 0 10px;">',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown("**✏️ Edit Audit Record**", unsafe_allow_html=False)
+                    _ea1, _ea2, _ea3 = st.columns(3)
+                    _e_client    = _ea1.text_input("Client",       value=_ar.get("Client",""),       key=f"_ec_{_rid}")
+                    _e_campaign  = _ea2.text_input("Campaign Name",value=_ar.get("Campaign Name",""),key=f"_ecam_{_rid}")
+                    _e_bot       = _ea3.text_input("Bot Name",     value=_ar.get("Bot Name",""),     key=f"_ebot_{_rid}")
+                    _eb1, _eb2, _eb3 = st.columns(3)
+                    _e_qa        = _eb1.text_input("QA",           value=_ar.get("QA",""),           key=f"_eqa_{_rid}")
+                    _e_pm        = _eb2.text_input("PM / CSM",     value=_ar.get("PM / CSM",""),     key=f"_epm_{_rid}")
+                    _e_lead      = _eb3.text_input("Lead Number",  value=_ar.get("Lead Number",""),  key=f"_eld_{_rid}")
+                    _ec1, _ec2 = st.columns(2)
+                    _e_conv_link = _ec1.text_input("Conversation Link", value=_ar.get("Conversation Link",""), key=f"_ecl_{_rid}")
+                    _e_lead_link = _ec2.text_input("Lead Link",         value=_ar.get("Lead Link",""),         key=f"_ell_{_rid}")
+                    _e_notes     = st.text_area("Reviewer Notes",        value=_ar.get("Notes",""),             key=f"_en_{_rid}", height=72)
+                    _e_suggest   = st.text_area("Improvement Suggestion",value=_ar.get("Improvement Suggestion",""), key=f"_es_{_rid}", height=72)
+                    _esv1, _esv2 = st.columns(2)
+                    with _esv1:
+                        if st.button("💾 Save Changes", key=f"_esave_{_rid}", type="primary", use_container_width=True):
+                            _updated = dict(_ar)
+                            _updated["Client"]               = _e_client.strip()
+                            _updated["Campaign Name"]        = _e_campaign.strip()
+                            _updated["Bot Name"]             = _e_bot.strip()
+                            _updated["QA"]                   = _e_qa.strip()
+                            _updated["PM / CSM"]             = _e_pm.strip()
+                            _updated["Lead Number"]          = _e_lead.strip()
+                            _updated["Conversation Link"]    = _e_conv_link.strip()
+                            _updated["Lead Link"]            = _e_lead_link.strip()
+                            _updated["Notes"]                = _e_notes.strip()
+                            _updated["Improvement Suggestion"] = _e_suggest.strip()
+                            _uerr = audit_store.update(_rid, _updated)
+                            if _uerr:
+                                st.error(f"Save failed: {_uerr}")
+                            else:
+                                st.session_state.pop("_audit_edit_id", None)
+                                st.session_state["sense_audit_log"] = _audit_log_load()
+                                st.rerun()
+                    with _esv2:
+                        if st.button("✕ Cancel", key=f"_ecancel_{_rid}", use_container_width=True):
+                            st.session_state.pop("_audit_edit_id", None)
+                            st.rerun()
+                    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_legend_page():
