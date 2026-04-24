@@ -5852,7 +5852,7 @@ def _render_sense_scorecard(sheets, legend_map):
             pass
 
     # ── Incomplete rows ────────────────────────────────────────────────────────
-    _incomplete = audit_df[~audit_df[scored_cols].replace("", None).notna().all(axis=1)]
+    _incomplete = audit_df[~audit_df[scored_cols].replace("", None).notna().all(axis=1)] if scored_cols else pd.DataFrame()
     if not _incomplete.empty:
         with st.expander(f"⚠️ {len(_incomplete):,} rows not fully scored", expanded=False):
             st.dataframe(_incomplete, use_container_width=True, height=300)
@@ -5862,6 +5862,13 @@ def _render_sense_scorecard(sheets, legend_map):
                 file_name="incomplete_rows.csv", mime="text/csv",
                 key="sense_dl_incomplete",
             )
+
+    # ── Custom Parameters ──────────────────────────────────────────────────────
+    st.markdown(
+        '<hr style="border:none;border-top:1px solid rgba(37,99,235,0.12);margin:2rem 0 1.4rem;">',
+        unsafe_allow_html=True,
+    )
+    _render_param_manager(key_sfx="_sc")
 
 
 def _render_sense_sheet(df, sheet_name, fname, sheets=None):
@@ -8042,10 +8049,10 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
 
 
 def _render_registry():
-    """Registry management — add/edit/delete PMs, CMs, QA, Clients, and QA parameters."""
+    """Registry management — add/edit/delete PMs, CMs, QA, and Clients."""
     _registry_init()
     st.markdown('<div class="section-chip">🗂️ Registry Management</div>', unsafe_allow_html=True)
-    _reg_tabs = st.tabs(["👤 PM", "👥 CM", "🎯 QA", "🏢 Clients", "⚙️ QA Parameters"])
+    _reg_tabs = st.tabs(["👤 PM", "👥 CM", "🎯 QA", "🏢 Clients"])
 
     # ── PM Registry ────────────────────────────────────────────────────────────
     with _reg_tabs[0]:
@@ -8209,9 +8216,6 @@ def _render_registry():
                     _registry_persist()
                     st.rerun()
 
-    # ── QA Parameters ──────────────────────────────────────────────────────────
-    with _reg_tabs[4]:
-        _render_param_manager(key_sfx="_reg")
 
 
 _TYPE_LABELS = {
@@ -8903,9 +8907,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                     st.session_state["sense_lead_queue"] = _lead_q_form
 
                 st.rerun()
-
-    # ── Custom parameter manager (below form, always visible) ────────────────
-    _render_param_manager()
 
     # ── Last submission result ─────────────────────────────────────────────────
     if st.session_state.get("qa_last_result"):
