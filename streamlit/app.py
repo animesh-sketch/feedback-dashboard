@@ -5500,55 +5500,6 @@ def _render_sense_scorecard(sheets, legend_map):
                 )
 
 
-    # ── Top-5 Weakest Parameters (QA schema only) ─────────────────────────────
-    if _has_qa_schema and scored_cols:
-        with st.expander("🔍 Parameter Weakness Analysis", expanded=False):
-            try:
-                _param_fail_rates = []
-                for _pcol in scored_cols:
-                    _bcfg = _builtin_cfg(_pcol)
-                    _opts  = (legend_map.get(_pcol) or _match_legend(_pcol, legend_map) or [])
-                    _ns    = _score_to_numeric(audit_df[_pcol].replace("", None), _opts,
-                                               inverted=(_bcfg["inverted"] if _bcfg else False))
-                    if _ns is not None:
-                        _valid = _ns.dropna()
-                        if len(_valid):
-                            _mean_s  = round(_valid.mean() * 100, 1)
-                            _fail_n  = int((_valid < 0.5).sum())
-                            _fail_p  = round(_fail_n / len(_valid) * 100, 1)
-                            _tier_l  = "—"
-                            for _t in _QA_SCHEMA["tiers"]:
-                                if any(_p["col"] == _pcol for _p in _t["params"]):
-                                    _tier_l = _t["label"]
-                                    break
-                            _param_fail_rates.append({"param": _pcol, "avg": _mean_s,
-                                                      "fail_pct": _fail_p, "tier": _tier_l,
-                                                      "color": _bcfg["color"] if _bcfg else "#2563EB"})
-                _param_fail_rates.sort(key=lambda x: x["fail_pct"], reverse=True)
-                if _param_fail_rates:
-                    st.markdown(
-                        '<div style="font-size:0.7rem;color:#5588bb;margin-bottom:10px;">'
-                        'Parameters ranked by failure rate — highest-impact coaching targets appear first.</div>',
-                        unsafe_allow_html=True,
-                    )
-                    for _pfr in _param_fail_rates[:8]:
-                        _pfc = "#dc2626" if _pfr["fail_pct"] > 30 else "#f59e0b" if _pfr["fail_pct"] > 15 else "#0ebc6e"
-                        st.markdown(
-                            f'<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;'
-                            f'background:#fff;border:1px solid rgba(61,130,245,0.08);border-left:3px solid {_pfc};'
-                            f'border-radius:8px;margin-bottom:5px;">'
-                            f'<div style="flex:1;font-size:0.73rem;font-weight:600;color:#0d1d3a;">{_pfr["param"]}</div>'
-                            f'<div style="font-size:0.65rem;color:#aabbcc;width:90px;text-align:center;">{_pfr["tier"]}</div>'
-                            f'<div style="width:140px;height:9px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
-                            f'<div style="width:{min(_pfr["fail_pct"],100)}%;height:100%;background:{_pfc};border-radius:3px;"></div></div>'
-                            f'<div style="width:55px;text-align:right;font-size:0.73rem;font-weight:700;color:{_pfc};">{_pfr["fail_pct"]}%</div>'
-                            f'<div style="width:60px;text-align:right;font-size:0.65rem;color:#5588bb;">avg {_pfr["avg"]}%</div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
-            except Exception:
-                pass
-
     # ── All Parameter Performance ─────────────────────────────────────────────
     st.markdown('<div class="section-chip">📊 All Parameter Performance</div>', unsafe_allow_html=True)
     _app_tiers = _QA_SCHEMA.get("tiers", []) if _has_qa_schema else []
