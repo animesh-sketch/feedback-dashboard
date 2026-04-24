@@ -8566,48 +8566,52 @@ div[data-testid="stRadio"] > div[role="radiogroup"] {
     margin-top: 4px !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label {
-    background: #2563EB !important;
-    border: 1.5px solid #1d4ed8 !important;
+    background: #ffffff !important;
+    border: 1.5px solid #bfdbfe !important;
     border-radius: 8px !important;
     padding: 5px 14px !important;
     font-size: 0.82rem !important;
     font-weight: 700 !important;
-    color: #ffffff !important;
+    color: #0d1d3a !important;
     cursor: pointer !important;
     transition: background 0.15s, border-color 0.15s !important;
     min-width: 44px !important;
     text-align: center !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:last-child {
-    color: #ffffff !important;
+    color: #0d1d3a !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {
-    background: #1d4ed8 !important;
-    border-color: #1e40af !important;
+    background: #e0f2fe !important;
+    border-color: #38bdf8 !important;
+    color: #0d1d3a !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) {
-    background: linear-gradient(135deg,#0B1F3A,#1a3a8f) !important;
-    border-color: #0B1F3A !important;
-    color: #ffffff !important;
-    box-shadow: 0 2px 8px rgba(11,31,58,0.35) !important;
+    background: #7dd3fc !important;
+    border-color: #0ea5e9 !important;
+    color: #0d1d3a !important;
+    box-shadow: 0 2px 8px rgba(14,165,233,0.28) !important;
+}
+div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) > div:last-child {
+    color: #0d1d3a !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
     display: none !important;
 }
-/* NA option — muted slate, still readable */
+/* NA option — muted, clearly not applicable */
 div[data-testid="stRadio"][aria-label="Correct Disposition? *"] > div[role="radiogroup"] > label:nth-child(3),
 div[data-testid="stForm"] div[data-testid="stRadio"]:has(label[data-testid]) > div[role="radiogroup"] > label:nth-child(3) {
-    background: #64748b !important;
-    border-color: #475569 !important;
-    color: #e2e8f0 !important;
+    background: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+    color: #94a3b8 !important;
 }
 div[data-testid="stForm"] div[data-testid="stRadio"]:has(label[data-testid]) > div[role="radiogroup"] > label:nth-child(3) > div:last-child {
-    color: #e2e8f0 !important;
+    color: #94a3b8 !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:nth-child(3):has(input:checked) {
-    background: #475569 !important;
-    border-color: #334155 !important;
-    color: #f1f5f9 !important;
+    background: #e2e8f0 !important;
+    border-color: #94a3b8 !important;
+    color: #64748b !important;
 }
 /* Dropdowns inside audit form — clean white, dark text, clear border */
 div[data-testid="stForm"] [data-testid="stSelectbox"] > div > div {
