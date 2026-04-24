@@ -3820,16 +3820,23 @@ def _compute_qa_score(pv):
         for tier in _QA_SCHEMA["tiers"]:
             for p in tier["params"]:
                 if p["weight"] > 0:
+                    _raw = str(pv.get(p["col"], "")).strip()
+                    if _raw.upper() == "NA" or _raw == "":
+                        continue  # not applicable — skip without penalty
+                    s = None
                     try:
-                        _raw = str(pv.get(p["col"], "")).strip()
-                        if _raw.upper() == "NA" or _raw == "":
-                            pass  # NA = not applicable, skip without penalty
-                        else:
-                            s = float(_raw)
-                            ws += s * p["weight"]
-                            tw += p["weight"] * 2.0
+                        s = float(_raw)
                     except (ValueError, TypeError):
-                        pass
+                        # Text option (e.g. Yes/No) — map by position in options list
+                        # first option = 0, last option = 2 (max score per param)
+                        _opts = p.get("options", [])
+                        _oi = next((i for i, o in enumerate(_opts)
+                                    if str(o).strip().lower() == _raw.lower()), None)
+                        if _oi is not None and len(_opts) > 1:
+                            s = round(_oi / (len(_opts) - 1) * 2, 4)
+                    if s is not None:
+                        ws += s * p["weight"]
+                        tw += p["weight"] * 2.0
         bot_score = round(ws / tw * 100, 2) if tw > 0 else 0.0
 
     # Intelligence Score (Convin Sense params — separate 0–100 metric)
