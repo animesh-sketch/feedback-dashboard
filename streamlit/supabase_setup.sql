@@ -100,6 +100,19 @@ alter table public.custom_params enable row level security;
 drop policy if exists "allow all" on public.custom_params;
 create policy "allow all" on public.custom_params for all using (true) with check (true);
 
+-- ── 7. pending_audits (QA bulk-upload queue) ─────────────────────────────────
+create table if not exists public.pending_audits (
+  id           bigint generated always as identity primary key,
+  created_at   timestamptz not null default now(),
+  assigned_qa  text not null default '',
+  status       text not null default 'Ready for Audit',  -- 'Ready for Audit' | 'Completed'
+  record       jsonb not null default '{}'
+);
+
+alter table public.pending_audits enable row level security;
+drop policy if exists "allow all" on public.pending_audits;
+create policy "allow all" on public.pending_audits for all using (true) with check (true);
+
 -- ── Verify: list all tables and their RLS status ──────────────────────────────
 select
   schemaname,

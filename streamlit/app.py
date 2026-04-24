@@ -35,6 +35,7 @@ import gmail_sender
 import tracking_store
 import audit_store
 import param_store
+import pending_store
 
 # ─── Page config ──────────────────────────────────────────────────────────────
 
@@ -8244,6 +8245,14 @@ def _render_audit_form(legend_map, fname):
     st.session_state["sense_audit_log"] = _audit_log_load()
     audit_log = st.session_state["sense_audit_log"]
 
+    # Refresh pending DB queue and merge with manually-added session items
+    try:
+        _pending_db_all = pending_store.load_all()
+    except Exception:
+        _pending_db_all = []
+    _manual_q_items = [r for r in st.session_state.get("sense_lead_queue", []) if not r.get("_pending_id")]
+    st.session_state["sense_lead_queue"] = _pending_db_all + _manual_q_items
+
     # ── "What's new" banner ────────────────────────────────────────────────────
     st.markdown("""
 <div style="background:linear-gradient(120deg,#0d1d3a 0%,#1e3a5f 50%,#1a2d50 100%);
@@ -8309,62 +8318,192 @@ def _render_audit_form(legend_map, fname):
     _tier_html += '</div>'
     st.markdown(_tier_html, unsafe_allow_html=True)
 
-    # ── Bulk Lead Import ─────────────────────────────────────────────────────
-    with st.expander("📥 Bulk Import Leads (Client · Campaign · Lead No · Phone · Links)", expanded=False):
-        st.markdown(
-            '<div style="font-size:0.72rem;color:#5588bb;margin-bottom:8px;">'
-            'Upload a CSV/Excel or paste data with columns: '
-            '<strong>Client, Campaign Name, Lead Number, Phone Number, Lead Link, Conversation Link</strong> '
-            '(all columns are optional except Client &amp; Campaign Name)</div>',
-            unsafe_allow_html=True,
+    # ── Bulk Upload Audit Queue ──────────────────────────────────────────────
+    _pending_db_count = len(_pending_db_all)
+    _bulk_expander_label = (
+        f"📤 Bulk Upload Audit Queue  ·  {_pending_db_count} pending"
+        if _pending_db_count else "📤 Bulk Upload Audit Queue"
+    )
+    with st.expander(_bulk_expander_label, expanded=bool(_pending_db_count)):
+
+        # ── Sample template download ──────────────────────────────────────────
+        _tmpl_cols = [
+            "Client", "Campaign Name", "Bot Name", "PM / CSM",
+            "Lead Number", "Phone Number", "Lead Link", "Conversation Link",
+            "Disposition", "Audit Date", "Notes", "Assigned QA",
+        ]
+        _tmpl_csv = pd.DataFrame(columns=_tmpl_cols).to_csv(index=False)
+        _tpl_c1, _tpl_c2 = st.columns([2, 5])
+        with _tpl_c1:
+            st.download_button(
+                "⬇ Download Sample Template",
+                data=_tmpl_csv,
+                file_name="qa_audit_bulk_template.csv",
+                mime="text/csv",
+                key="bulk_dl_template",
+                use_container_width=True,
+            )
+        with _tpl_c2:
+            st.markdown(
+                '<div style="font-size:0.70rem;color:#5588bb;margin-top:6px;">'
+                '<strong>Client</strong> and <strong>Campaign Name</strong> are required. '
+                'All other fields are optional. Bot scores &amp; QA parameters are captured during audit.</div>',
+                unsafe_allow_html=True,
+            )
+
+        # ── Assign to QA ──────────────────────────────────────────────────────
+        _registry_init()
+        _bulk_qa_list = st.session_state.get("sense_registry_qas", ["Animesh", "Shubham", "Aman", "Navya", "Alan"])
+        _bulk_assign_qa = st.selectbox(
+            "Assign to QA",
+            _bulk_qa_list,
+            key="bulk_assign_qa_sel",
+            help="Uploaded leads will be assigned to this QA's audit queue",
         )
-        _bulk_tab1, _bulk_tab2 = st.tabs(["📤 Upload File", "📋 Paste CSV"])
+
+        # ── Upload tabs ───────────────────────────────────────────────────────
+        _bulk_tab1, _bulk_tab2 = st.tabs(["📤 Upload CSV / Excel", "📋 Paste CSV"])
+
         with _bulk_tab1:
-            _bulk_file = st.file_uploader("Upload CSV or Excel", type=["csv","xlsx","xls"], key="bulk_lead_upload")
+            _bulk_file = st.file_uploader(
+                "Upload CSV or Excel", type=["csv", "xlsx", "xls"], key="bulk_lead_upload_v2"
+            )
             if _bulk_file:
                 try:
-                    if _bulk_file.name.endswith((".xlsx",".xls")):
-                        _bulk_df = pd.read_excel(_bulk_file)
+                    if _bulk_file.name.endswith((".xlsx", ".xls")):
+                        _bulk_raw_df = pd.read_excel(_bulk_file)
                     else:
-                        _bulk_df = pd.read_csv(_bulk_file)
-                    _bulk_df.columns = [str(c).strip() for c in _bulk_df.columns]
-                    st.dataframe(_bulk_df.head(10), use_container_width=True, hide_index=True)
-                    if st.button("➕ Add to Lead Queue", key="bulk_add_file_btn", type="primary"):
-                        _existing_q = st.session_state.get("sense_lead_queue", [])
-                        _new_q = _bulk_df.to_dict("records")
-                        st.session_state["sense_lead_queue"] = _existing_q + _new_q
-                        st.success(f"✅ {len(_new_q)} leads added to queue.")
+                        _bulk_raw_df = pd.read_csv(_bulk_file)
+                    _bulk_raw_df.columns = [str(c).strip() for c in _bulk_raw_df.columns]
+
+                    _valid_rows, _invalid_rows = [], []
+                    for _bidx, _brow in _bulk_raw_df.iterrows():
+                        _berrs = []
+                        _cv = str(_brow.get("Client", "")).strip()
+                        _kv = str(_brow.get("Campaign Name", "")).strip()
+                        if not _cv or _cv in ("nan", "None", ""):
+                            _berrs.append("Client required")
+                        if not _kv or _kv in ("nan", "None", ""):
+                            _berrs.append("Campaign Name required")
+                        for _ucol in ("Lead Link", "Conversation Link"):
+                            _uv = str(_brow.get(_ucol, "")).strip()
+                            if _uv and _uv not in ("nan", "None", "") and not _uv.startswith(("http://", "https://")):
+                                _berrs.append(f"{_ucol} must start with http(s)://")
+                        if _berrs:
+                            _invalid_rows.append({"Row": int(_bidx) + 2, "Errors": "; ".join(_berrs)})
+                        else:
+                            _clean = {
+                                k: ("" if (str(v) in ("nan", "None") or v != v) else str(v).strip())
+                                for k, v in _brow.items()
+                            }
+                            _valid_rows.append(_clean)
+
+                    st.markdown(
+                        f'<div style="display:flex;gap:14px;margin:6px 0 8px;">'
+                        f'<span style="font-size:0.72rem;color:#16a34a;font-weight:700;">'
+                        f'✓ {len(_valid_rows)} valid</span>'
+                        + (f'<span style="font-size:0.72rem;color:#dc2626;font-weight:700;">'
+                           f'⚠ {len(_invalid_rows)} invalid</span>' if _invalid_rows else "")
+                        + f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                    if _valid_rows:
+                        _prev_df  = pd.DataFrame(_valid_rows)
+                        _prev_cols = [c for c in ["Client", "Campaign Name", "Bot Name", "Lead Number", "Conversation Link"] if c in _prev_df.columns]
+                        st.dataframe(_prev_df[_prev_cols].head(10), use_container_width=True, hide_index=True, height=160)
+                    if _invalid_rows:
+                        with st.expander(f"⚠️ {len(_invalid_rows)} rows with errors"):
+                            st.dataframe(pd.DataFrame(_invalid_rows), use_container_width=True, hide_index=True)
+
+                    if _valid_rows and st.button(
+                        f"📥 Upload {len(_valid_rows)} leads → {_bulk_assign_qa}'s queue",
+                        key="bulk_upload_save_btn",
+                        type="primary",
+                    ):
+                        _ok_cnt, _db_errs = pending_store.add_batch(_valid_rows, _bulk_assign_qa)
+                        if _ok_cnt:
+                            st.success(f"✅ {_ok_cnt} leads added to {_bulk_assign_qa}'s audit queue.")
+                        if _db_errs:
+                            st.warning(f"⚠️ {len(_db_errs)} rows failed to save to database.")
                         st.rerun()
                 except Exception as _be:
                     st.error(f"Error reading file: {_be}")
+
         with _bulk_tab2:
-            _paste_help = "Client,Campaign Name,Lead Number,Phone Number,Lead Link,Conversation Link\nHDFC,Q2 Campaign,LD-001,9876543210,https://...,https://..."
-            _pasted = st.text_area("Paste CSV data (with header row)", placeholder=_paste_help, height=120, key="bulk_paste_csv")
-            if st.button("➕ Add Pasted Leads", key="bulk_add_paste_btn", type="primary"):
+            _paste_help = "Client,Campaign Name,Bot Name,Lead Number,Lead Link,Conversation Link\nHDFC,Q2 Campaign,Bot-v2,LD-001,https://...,https://..."
+            _pasted = st.text_area(
+                "Paste CSV data (with header row)", placeholder=_paste_help, height=120, key="bulk_paste_csv_v2"
+            )
+            if st.button("➕ Add Pasted Leads to Queue", key="bulk_add_paste_btn_v2", type="primary"):
                 try:
-                    import io as _io
-                    _pasted_df = pd.read_csv(_io.StringIO(_pasted.strip()))
+                    import io as _io_p
+                    _pasted_df = pd.read_csv(_io_p.StringIO(_pasted.strip()))
                     _pasted_df.columns = [str(c).strip() for c in _pasted_df.columns]
-                    _existing_q = st.session_state.get("sense_lead_queue", [])
-                    _new_q = _pasted_df.to_dict("records")
-                    st.session_state["sense_lead_queue"] = _existing_q + _new_q
-                    st.success(f"✅ {len(_new_q)} leads added to queue.")
+                    _new_manual = [
+                        {k: ("" if (str(v) in ("nan", "None") or v != v) else str(v).strip())
+                         for k, v in r.items()}
+                        for r in _pasted_df.to_dict("records")
+                    ]
+                    _manual_now = [r for r in st.session_state.get("sense_lead_queue", []) if not r.get("_pending_id")]
+                    st.session_state["sense_lead_queue"] = _pending_db_all + _manual_now + _new_manual
+                    st.success(f"✅ {len(_new_manual)} leads added to queue.")
                     st.rerun()
                 except Exception as _pe:
                     st.error(f"Parse error: {_pe}")
 
-        # Show queue
-        _lead_q = st.session_state.get("sense_lead_queue", [])
-        if _lead_q:
-            st.markdown(f'<div style="font-size:0.72rem;color:#2563EB;margin-top:8px;font-weight:700;">{len(_lead_q)} leads in queue</div>', unsafe_allow_html=True)
-            _q_df_show = pd.DataFrame(_lead_q)
-            _q_cols_show = [c for c in ["Client","Campaign Name","Lead Number","Phone Number","Lead Link","Conversation Link"] if c in _q_df_show.columns]
-            if _q_cols_show:
-                st.dataframe(_q_df_show[_q_cols_show].head(20), use_container_width=True, hide_index=True, height=180)
-            _qcl1, _qcl2 = st.columns([1,4])
+        # ── Queue summary ─────────────────────────────────────────────────────
+        st.markdown(
+            '<hr style="border:none;border-top:1px solid #e4e7ec;margin:12px 0 8px;">',
+            unsafe_allow_html=True,
+        )
+        _all_q_now  = st.session_state.get("sense_lead_queue", [])
+        _db_q_items = [r for r in _all_q_now if r.get("_pending_id")]
+        _ss_q_items = [r for r in _all_q_now if not r.get("_pending_id")]
+
+        if _db_q_items:
+            st.markdown(
+                f'<div style="font-size:0.72rem;font-weight:700;color:#1d4ed8;margin-bottom:6px;">'
+                f'🗂 {len(_db_q_items)} Pending — Ready for Audit</div>',
+                unsafe_allow_html=True,
+            )
+            for _pqi, _pq_r in enumerate(_db_q_items):
+                _pq_pid = _pq_r.get("_pending_id")
+                _pq_qa  = _pq_r.get("_assigned_qa", "")
+                _pc1, _pc2 = st.columns([6, 1])
+                with _pc1:
+                    st.markdown(
+                        f'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">'
+                        f'<span style="background:#dbeafe;border:1px solid #93c5fd;border-radius:5px;'
+                        f'padding:1px 7px;font-size:0.60rem;font-weight:700;color:#1d4ed8;">READY</span>'
+                        f'<span style="font-size:0.72rem;color:#334155;">'
+                        f'{_pq_r.get("Client","—")} · {_pq_r.get("Campaign Name","—")}'
+                        f'{(" · " + _pq_r.get("Lead Number","")) if _pq_r.get("Lead Number") else ""}'
+                        f'</span>'
+                        + (f'<span style="font-size:0.62rem;color:#5588bb;"> → {_pq_qa}</span>' if _pq_qa else "")
+                        + f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                with _pc2:
+                    if st.button("✕", key=f"bulk_rm_pend_{_pqi}_{_pq_pid}", help="Remove from queue"):
+                        pending_store.remove(_pq_pid)
+                        st.rerun()
+
+        if _ss_q_items:
+            st.markdown(
+                f'<div style="font-size:0.72rem;font-weight:700;color:#0ebc6e;margin-top:8px;margin-bottom:6px;">'
+                f'📋 {len(_ss_q_items)} Manually Added</div>',
+                unsafe_allow_html=True,
+            )
+            _sq_df = pd.DataFrame(_ss_q_items)
+            _sq_show_cols = [c for c in ["Client", "Campaign Name", "Lead Number", "Bot Name", "Lead Link"] if c in _sq_df.columns]
+            if _sq_show_cols:
+                st.dataframe(_sq_df[_sq_show_cols].head(20), use_container_width=True, hide_index=True, height=150)
+
+        if _ss_q_items:
+            _qcl1, _ = st.columns([1, 4])
             with _qcl1:
-                if st.button("🗑️ Clear Queue", key="bulk_clear_queue", type="secondary", use_container_width=True):
-                    st.session_state["sense_lead_queue"] = []
+                if st.button("🗑️ Clear Manual Queue", key="bulk_clear_queue_v2", type="secondary", use_container_width=True):
+                    st.session_state["sense_lead_queue"] = _db_q_items
                     st.rerun()
 
     # ── AI Suggestion Builder (outside form — AI calls need rerun) ───────────
@@ -8799,6 +8938,10 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 st.session_state.pop("_audit_suggestion_improved", None)
 
                 if _q_idx >= 0 and _lead_q_form:
+                    _done_item   = _lead_q_form[_q_idx]
+                    _pending_rid = _done_item.get("_pending_id")
+                    if _pending_rid:
+                        pending_store.mark_done(_pending_rid)
                     _lead_q_form.pop(_q_idx)
                     st.session_state["sense_lead_queue"] = _lead_q_form
 
