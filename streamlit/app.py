@@ -8845,45 +8845,66 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
     if audit_log:
         st.markdown('<div class="section-chip">📋 Audit Log</div>', unsafe_allow_html=True)
 
-        # ── TOP BAR: search + export ──────────────────────────────────────────
-        _srch_col, _csv_col, _xl_col = st.columns([3, 1, 1])
-        with _srch_col:
-            _qa_search = st.text_input(
-                "Search by QA name",
-                placeholder="🔍  Type QA name to filter…",
-                key="audit_log_qa_search",
-                label_visibility="collapsed",
-            )
-        _log_df = pd.DataFrame([{k: v for k, v in r.items() if k != "_row_id"} for r in audit_log])
+        # ── FILTER BAR ────────────────────────────────────────────────────────
+        _f1, _f2, _f3, _f4 = st.columns([2, 2, 2, 1])
+
+        # Date picker — unique dates in the log
+        _all_dates  = sorted({str(r.get("Audit Date","")).strip() for r in audit_log if r.get("Audit Date","").strip()}, reverse=True)
+        _date_opts  = ["All Dates"] + _all_dates
+        with _f1:
+            _date_sel = st.selectbox("Date", _date_opts, key="al_filter_date", label_visibility="collapsed")
+
+        # QA dropdown
+        _all_qas = sorted({str(r.get("QA","")).strip() for r in audit_log if r.get("QA","").strip()})
+        _qa_opts = ["All QA"] + _all_qas
+        with _f2:
+            _qa_sel = st.selectbox("QA", _qa_opts, key="al_filter_qa", label_visibility="collapsed")
+
+        # Client dropdown
+        _all_clients_log = sorted({str(r.get("Client","")).strip() for r in audit_log if r.get("Client","").strip()})
+        _client_opts = ["All Clients"] + _all_clients_log
+        with _f3:
+            _client_sel = st.selectbox("Client", _client_opts, key="al_filter_client", label_visibility="collapsed")
+
+        with _f4:
+            if st.button("✕ Clear", key="al_filter_clear", use_container_width=True):
+                for _k in ("al_filter_date","al_filter_qa","al_filter_client"):
+                    st.session_state.pop(_k, None)
+                st.rerun()
+
+        # Apply filters
+        _filtered_log = [
+            r for r in audit_log
+            if (_date_sel   == "All Dates"   or str(r.get("Audit Date","")).strip() == _date_sel)
+            and (_qa_sel    == "All QA"      or str(r.get("QA","")).strip()         == _qa_sel)
+            and (_client_sel== "All Clients" or str(r.get("Client","")).strip()     == _client_sel)
+        ]
+
+        # ── Export (based on filtered set) ────────────────────────────────────
+        _log_df = pd.DataFrame([{k: v for k, v in r.items() if k != "_row_id"} for r in _filtered_log])
         import io as _io
-        with _csv_col:
+        _ec1, _ec2 = st.columns(2)
+        with _ec1:
             st.download_button(
-                "⬇ CSV",
+                "⬇ Export CSV",
                 data=_log_df.to_csv(index=False).encode("utf-8"),
                 file_name="convin_qa_audit_log.csv",
                 mime="text/csv",
                 key="sense_dl_auditlog_csv",
                 use_container_width=True,
             )
-        with _xl_col:
+        with _ec2:
             _xl_buf = _io.BytesIO()
             with pd.ExcelWriter(_xl_buf, engine="openpyxl") as _xw:
                 _log_df.to_excel(_xw, index=False, sheet_name="Audit Log")
             st.download_button(
-                "⬇ Excel",
+                "⬇ Export Excel",
                 data=_xl_buf.getvalue(),
                 file_name="convin_qa_audit_log.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 key="sense_dl_auditlog_xl",
                 use_container_width=True,
             )
-
-        # Apply QA name filter
-        _qa_filter = (_qa_search or "").strip().lower()
-        _filtered_log = [
-            r for r in audit_log
-            if not _qa_filter or _qa_filter in str(r.get("QA", "")).lower()
-        ]
 
         # ── KPI strip ─────────────────────────────────────────────────────────
         _scores_v  = [r.get("Bot Score", 0) for r in audit_log if r.get("Bot Score") is not None]
@@ -8903,8 +8924,8 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
 
         # ── Record list ───────────────────────────────────────────────────────
         _show_n = len(_filtered_log)
-        if _qa_filter and _show_n < _n:
-            st.caption(f'Showing {_show_n} of {_n} records matching "{_qa_search}"')
+        if _show_n < _n:
+            st.caption(f'Showing {_show_n} of {_n} records')
 
         st.markdown(
             '<div style="display:grid;grid-template-columns:90px 1fr 1fr 1fr 72px 88px;'
