@@ -8328,9 +8328,11 @@ def _render_audit_form(legend_map, fname):
 
         # ── Sample template download ──────────────────────────────────────────
         _tmpl_cols = [
-            "Client", "Campaign Name", "Bot Name", "PM / CSM",
-            "Lead Number", "Phone Number", "Lead Link", "Conversation Link",
-            "Disposition", "Audit Date", "Notes", "Assigned QA",
+            "Audit Date", "QA", "Client", "Campaign Name", "PM / CSM",
+            "Lead Number", "Lead Link", "Conversation Link",
+            "Disposition", "Bot Name",
+            "Correct Disposition?", "Correct Disposition Text",
+            "Notes",
         ]
         _tmpl_csv = pd.DataFrame(columns=_tmpl_cols).to_csv(index=False)
         _tpl_c1, _tpl_c2 = st.columns([2, 5])
@@ -8346,8 +8348,8 @@ def _render_audit_form(legend_map, fname):
         with _tpl_c2:
             st.markdown(
                 '<div style="font-size:0.70rem;color:#5588bb;margin-top:6px;">'
-                '<strong>Client</strong> and <strong>Campaign Name</strong> are required. '
-                'All other fields are optional. Bot scores &amp; QA parameters are captured during audit.</div>',
+                'Fill all audit detail columns. <strong>Client</strong> and <strong>Campaign Name</strong> are required. '
+                'QA scoring parameters are captured by the auditor during review.</div>',
                 unsafe_allow_html=True,
             )
 
@@ -8677,23 +8679,53 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         _q_idx = _q_labels.index(_q_sel) - 1
         _q_rec = _lead_q_form[_q_idx] if _q_idx >= 0 else {}
 
-        # Detect selection change → push values into form-field session-state keys
+        # Detect selection change → push ALL audit-detail values into form-field session-state keys
         _pf_sig = f"{_q_idx}_{_qv(_q_rec,'Client')}_{_qv(_q_rec,'Campaign Name')}_{_qv(_q_rec,'Lead Number')}"
         if _q_idx >= 0 and st.session_state.get("_q_pf_sig") != _pf_sig:
-            st.session_state["_q_pf_sig"]       = _pf_sig
-            st.session_state["f_campaign"]       = _qv(_q_rec, "Campaign Name")
-            st.session_state["f_lead_no"]        = _qv(_q_rec, "Lead Number")
-            st.session_state["f_conv_link"]      = _qv(_q_rec, "Conversation Link")
-            st.session_state["f_lead_link"]      = _qv(_q_rec, "Lead Link")
-            st.session_state["f_bot_name"]       = _qv(_q_rec, "Bot Name")
+            st.session_state["_q_pf_sig"]        = _pf_sig
+
+            # Text fields
+            st.session_state["f_campaign"]        = _qv(_q_rec, "Campaign Name")
+            st.session_state["f_lead_no"]         = _qv(_q_rec, "Lead Number")
+            st.session_state["f_conv_link"]       = _qv(_q_rec, "Conversation Link")
+            st.session_state["f_lead_link"]       = _qv(_q_rec, "Lead Link")
+            st.session_state["f_bot_name"]        = _qv(_q_rec, "Bot Name")
+            st.session_state["f_correct_disp_text"] = _qv(_q_rec, "Correct Disposition Text")
+
+            # Client selectbox
             _reg_cl_pre = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
             _cl_pre = _qv(_q_rec, "Client")
-            st.session_state["f_client_sel"]     = _cl_pre if _cl_pre in _reg_cl_pre else ""
+            st.session_state["f_client_sel"]      = _cl_pre if _cl_pre in _reg_cl_pre else ""
+
+            # QA (auditor) selectbox
+            _qa_pre = _qv(_q_rec, "QA") or _qv(_q_rec, "Assigned QA")
+            _qa_opts_pre = [""] + st.session_state.get("sense_registry_qas", ["Animesh","Shubham","Aman","Navya","Alan"])
+            st.session_state["f_auditor_sel"]     = _qa_pre if _qa_pre in _qa_opts_pre else ""
+
+            # PM / CSM selectbox
+            _pm_pre = _qv(_q_rec, "PM / CSM")
+            _pm_opts_pre = [""] + st.session_state.get("sense_registry_pms", sorted(set(r["pm"] for r in _SENSE_CLIENTS)))
+            st.session_state["f_pm_csm_sel"]      = _pm_pre if _pm_pre in _pm_opts_pre else ""
+
+            # Disposition selectbox
             _disp_pre = _qv(_q_rec, "Disposition")
             _disp_opts_pre = ["— select —", "Hot", "Warm", "Cold", "Interested", "Warm Follow-up",
                               "Not Interested", "Converted", "DNC", "Wrong Number",
                               "Language Barrier", "Voicemail / No Answer", "Other"]
             st.session_state["f_disposition_sel"] = _disp_pre if _disp_pre in _disp_opts_pre else "— select —"
+
+            # Correct Disposition radio (Yes / No / NA)
+            _cd_pre = _qv(_q_rec, "Correct Disposition?")
+            if _cd_pre in ("Yes", "No", "NA"):
+                st.session_state["f_correct_disp"] = _cd_pre
+
+            # Audit Date — parse string to datetime.date
+            _ad_pre = _qv(_q_rec, "Audit Date")
+            if _ad_pre:
+                try:
+                    st.session_state["f_audit_date"] = pd.Timestamp(_ad_pre).date()
+                except Exception:
+                    pass
 
         if _q_idx >= 0:
             st.markdown(
@@ -8712,7 +8744,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         )
         _ad1, _ad2, _ad3, _ad4 = st.columns(4)
         with _ad1:
-            _f_audit_date = st.date_input("Audit Date *", value=pd.Timestamp.now().date())
+            _f_audit_date = st.date_input("Audit Date *", key="f_audit_date", value=pd.Timestamp.now().date())
         with _ad2:
             _registry_init()
             _reg_qas_form = [""] + st.session_state.get("sense_registry_qas", ["Animesh", "Shubham", "Aman", "Navya", "Alan"])
@@ -8727,10 +8759,13 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         _ld1, _ld2, _ld3 = st.columns(3)
         with _ld1:
             _reg_client_map_form = {c["client"]: c for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)}
-            _auto_pm  = _reg_client_map_form.get(_f_client, {}).get("pm", "") or _SENSE_CLIENT_MAP.get(_f_client, {}).get("pm", "")
-            _pm_opts  = [""] + st.session_state.get("sense_registry_pms", sorted(set(r["pm"] for r in _SENSE_CLIENTS)))
-            _pm_idx   = _pm_opts.index(_auto_pm) if _auto_pm in _pm_opts else 0
-            _f_pm_csm = st.selectbox("PM / CSM *", _pm_opts, index=_pm_idx, key="f_pm_csm_sel")
+            _pm_opts = [""] + st.session_state.get("sense_registry_pms", sorted(set(r["pm"] for r in _SENSE_CLIENTS)))
+            # Auto-fill PM from client only when no queue prefill is active
+            if not st.session_state.get("f_pm_csm_sel"):
+                _auto_pm = _reg_client_map_form.get(_f_client, {}).get("pm", "") or _SENSE_CLIENT_MAP.get(_f_client, {}).get("pm", "")
+                if _auto_pm in _pm_opts:
+                    st.session_state["f_pm_csm_sel"] = _auto_pm
+            _f_pm_csm = st.selectbox("PM / CSM *", _pm_opts, key="f_pm_csm_sel")
         with _ld2:
             _f_lead_no   = st.text_input("Lead Number", key="f_lead_no", placeholder="e.g. LD-20250422")
         with _ld3:
