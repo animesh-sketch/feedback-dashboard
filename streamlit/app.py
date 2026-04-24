@@ -8566,44 +8566,48 @@ div[data-testid="stRadio"] > div[role="radiogroup"] {
     margin-top: 4px !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label {
-    background: rgba(61,130,245,0.06) !important;
-    border: 1.5px solid rgba(61,130,245,0.22) !important;
+    background: #2563EB !important;
+    border: 1.5px solid #1d4ed8 !important;
     border-radius: 8px !important;
     padding: 5px 14px !important;
-    font-size: 0.78rem !important;
-    font-weight: 600 !important;
-    color: #1e3a5f !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
     cursor: pointer !important;
     transition: background 0.15s, border-color 0.15s !important;
     min-width: 44px !important;
     text-align: center !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:last-child {
-    color: inherit !important;
+    color: #ffffff !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {
-    background: rgba(61,130,245,0.13) !important;
-    border-color: rgba(61,130,245,0.5) !important;
+    background: #1d4ed8 !important;
+    border-color: #1e40af !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) {
-    background: linear-gradient(135deg,#0B1F3A,#2563EB) !important;
-    border-color: transparent !important;
-    color: #fff !important;
+    background: linear-gradient(135deg,#0B1F3A,#1a3a8f) !important;
+    border-color: #0B1F3A !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(11,31,58,0.35) !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
     display: none !important;
 }
-/* NA option (3rd label) in Correct Disposition radio — visually muted */
+/* NA option — muted slate, still readable */
 div[data-testid="stRadio"][aria-label="Correct Disposition? *"] > div[role="radiogroup"] > label:nth-child(3),
 div[data-testid="stForm"] div[data-testid="stRadio"]:has(label[data-testid]) > div[role="radiogroup"] > label:nth-child(3) {
-    background: rgba(148,163,184,0.08) !important;
-    border-color: rgba(148,163,184,0.25) !important;
-    color: #94a3b8 !important;
+    background: #64748b !important;
+    border-color: #475569 !important;
+    color: #e2e8f0 !important;
+}
+div[data-testid="stForm"] div[data-testid="stRadio"]:has(label[data-testid]) > div[role="radiogroup"] > label:nth-child(3) > div:last-child {
+    color: #e2e8f0 !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:nth-child(3):has(input:checked) {
-    background: rgba(148,163,184,0.2) !important;
-    border-color: rgba(148,163,184,0.4) !important;
-    color: #64748b !important;
+    background: #475569 !important;
+    border-color: #334155 !important;
+    color: #f1f5f9 !important;
 }
 /* Submit audit button — blue bg white text */
 div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
