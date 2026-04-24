@@ -8593,6 +8593,31 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) {
 div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
     display: none !important;
 }
+/* NA option (3rd label) in Correct Disposition radio — visually muted */
+div[data-testid="stRadio"][aria-label="Correct Disposition? *"] > div[role="radiogroup"] > label:nth-child(3),
+div[data-testid="stForm"] div[data-testid="stRadio"]:has(label[data-testid]) > div[role="radiogroup"] > label:nth-child(3) {
+    background: rgba(148,163,184,0.08) !important;
+    border-color: rgba(148,163,184,0.25) !important;
+    color: #94a3b8 !important;
+}
+div[data-testid="stRadio"] > div[role="radiogroup"] > label:nth-child(3):has(input:checked) {
+    background: rgba(148,163,184,0.2) !important;
+    border-color: rgba(148,163,184,0.4) !important;
+    color: #64748b !important;
+}
+/* Submit audit button — blue bg white text */
+div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
+div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button {
+    background: linear-gradient(135deg,#1a62f2,#2563EB) !important;
+    color: #ffffff !important;
+    border: none !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.02em !important;
+}
+div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
+    background: linear-gradient(135deg,#1550d4,#1d4ed8) !important;
+    color: #ffffff !important;
+}
 </style>""", unsafe_allow_html=True)
     st.markdown('<div class="section-chip">✍️ New QA Audit — Convin.ai Standard Sheet</div>', unsafe_allow_html=True)
 
