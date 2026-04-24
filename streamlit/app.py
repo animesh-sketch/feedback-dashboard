@@ -9100,7 +9100,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         # ── Record list ───────────────────────────────────────────────────────
         _show_n = len(_filtered_log)
         if _qa_filter and _show_n < _n:
-            st.caption(f"Showing {_show_n} of {_n} records matching "{_qa_search}"")
+            st.caption(f'Showing {_show_n} of {_n} records matching "{_qa_search}"')
 
         st.markdown(
             '<div style="display:grid;grid-template-columns:90px 1fr 1fr 1fr 72px 88px 72px 72px;'
