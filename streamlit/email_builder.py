@@ -118,6 +118,13 @@ def build_email_html(draft: dict, template_id: int = 1, send_id: str = None, rec
             f'</div>{dl_btn}</div></div>'
         )
 
+    # Build scoreboard block — rendered before attachment, after images
+    if draft.get("scoreboard_enabled") and draft.get("scoreboard_rows"):
+        extra_parts.append(_build_scoreboard_html(
+            draft.get("scoreboard_title") or "Performance Scoreboard",
+            draft["scoreboard_rows"],
+        ))
+
     extra_imgs_html = "".join(extra_parts)
 
     builders = {1: _tpl_executive, 2: _tpl_minimal,
@@ -128,6 +135,59 @@ def build_email_html(draft: dict, template_id: int = 1, send_id: str = None, rec
     _pixel    = _tracking_pixel(send_id, em_b64)
     _stars    = [_rating_url(i, send_id, em_b64) for i in range(1, 6)]
     return builders.get(template_id, _tpl_executive)(c, h, b, ss, sc, _track_rl, sq, extra_imgs_html, _pixel, _stars)
+
+
+# ─── Scoreboard HTML block ────────────────────────────────────────────────────
+
+def _build_scoreboard_html(title: str, rows: list) -> str:
+    """Render a scoreboard table as an email-safe HTML block."""
+    def _stars_html(val):
+        try:
+            n = round(float(val))
+        except (ValueError, TypeError):
+            n = 0
+        filled = min(max(n, 0), 5)
+        return "".join(
+            ['<span style="color:#f59e0b;font-size:16px;">★</span>'] * filled +
+            ['<span style="color:#d1d5db;font-size:16px;">★</span>'] * (5 - filled)
+        )
+
+    rows_html = ""
+    for i, row in enumerate(rows):
+        label = row.get("label") or ""
+        value = str(row.get("value") or "—")
+        rtype = row.get("type", "text")
+        bg    = "#f8faff" if i % 2 == 0 else "#ffffff"
+
+        if rtype == "scoring":
+            val_html = _stars_html(value)
+        else:
+            val_html = (f'<span style="font-size:14px;font-weight:700;color:#1a62f2;">'
+                        f'{value}</span>')
+
+        rows_html += (
+            f'<tr style="background:{bg};">'
+            f'<td style="padding:10px 16px;font-size:12px;font-weight:600;color:#374151;'
+            f'border-bottom:1px solid #e5e7eb;width:55%;">{label}</td>'
+            f'<td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;'
+            f'text-align:right;">{val_html}</td>'
+            f'</tr>'
+        )
+
+    return (
+        f'<div style="padding:0 44px 24px;">'
+        f'<div style="border:1px solid #dbeafe;border-radius:10px;overflow:hidden;">'
+        f'<div style="background:linear-gradient(90deg,#1a62f2,#2563eb);'
+        f'padding:10px 16px;display:flex;align-items:center;gap:8px;">'
+        f'<span style="font-size:16px;">📊</span>'
+        f'<span style="color:#fff;font-size:13px;font-weight:700;letter-spacing:0.02em;">{title}</span>'
+        f'</div>'
+        f'<table width="100%" cellpadding="0" cellspacing="0" '
+        f'style="border-collapse:collapse;background:#fff;">'
+        f'{rows_html}'
+        f'</table>'
+        f'</div></div>'
+    )
 
 
 # ─── Shared helpers ───────────────────────────────────────────────────────────

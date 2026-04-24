@@ -86,11 +86,15 @@ create policy "allow all" on public.audit_log for all using (true) with check (t
 
 -- ── 6. custom_params (persisted custom audit parameters) ─────────────────────
 create table if not exists public.custom_params (
-  id      text primary key,   -- slug: name lowercased + underscored
-  name    text not null,
-  options text not null default 'Yes|No',  -- pipe-separated
-  guide   text not null default ''
+  id         text primary key,   -- slug: name lowercased + underscored
+  name       text not null,
+  options    text not null default 'Yes|No',  -- pipe-separated
+  guide      text not null default '',
+  input_type text not null default 'dropdown' -- dropdown | scoring | number | text
 );
+
+-- migration: add input_type if missing on existing installs
+alter table public.custom_params add column if not exists input_type text not null default 'dropdown';
 
 alter table public.custom_params enable row level security;
 drop policy if exists "allow all" on public.custom_params;

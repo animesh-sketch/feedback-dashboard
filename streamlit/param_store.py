@@ -8,6 +8,8 @@ import streamlit as st
 
 _TABLE = "custom_params"
 
+_VALID_TYPES = ("dropdown", "scoring", "number", "text")
+
 
 @st.cache_resource
 def _sb():
@@ -29,9 +31,10 @@ def load() -> list:
         res = _sb().table(_TABLE).select("*").order("id").execute()
         return [
             {
-                "name":    row["name"],
-                "options": row.get("options", "Yes|No").split("|"),
-                "guide":   row.get("guide", ""),
+                "name":       row["name"],
+                "options":    row.get("options", "Yes|No").split("|"),
+                "guide":      row.get("guide", ""),
+                "input_type": row.get("input_type", "dropdown"),
             }
             for row in (res.data or [])
         ]
@@ -40,18 +43,38 @@ def load() -> list:
         return []
 
 
-def add(name: str, options: list, guide: str) -> str | None:
+def add(name: str, options: list, guide: str, input_type: str = "dropdown") -> str | None:
     """Insert a custom param. Returns error string or None."""
+    if input_type not in _VALID_TYPES:
+        input_type = "dropdown"
     try:
         _sb().table(_TABLE).insert({
-            "id":      name.strip().lower().replace(" ", "_"),
-            "name":    name.strip(),
-            "options": "|".join(options),
-            "guide":   guide.strip(),
+            "id":         name.strip().lower().replace(" ", "_"),
+            "name":       name.strip(),
+            "options":    "|".join(options),
+            "guide":      guide.strip(),
+            "input_type": input_type,
         }).execute()
         return None
     except Exception as e:
         _log_err("add", e)
+        return str(e)
+
+
+def update(name: str, options: list, guide: str, input_type: str = "dropdown") -> str | None:
+    """Update an existing param by name. Returns error string or None."""
+    if input_type not in _VALID_TYPES:
+        input_type = "dropdown"
+    try:
+        _id = name.strip().lower().replace(" ", "_")
+        _sb().table(_TABLE).update({
+            "options":    "|".join(options),
+            "guide":      guide.strip(),
+            "input_type": input_type,
+        }).eq("id", _id).execute()
+        return None
+    except Exception as e:
+        _log_err("update", e)
         return str(e)
 
 

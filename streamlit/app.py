@@ -68,6 +68,10 @@ def _blank_draft(idx: int) -> dict:
         "attachment_data": "",   # base64-encoded bytes for MIME attachment
         "attachment_mime": "",
         "attachment_url": "",    # URL alternative (shown as Download button in email)
+        "scoreboard_enabled": False,
+        "scoreboard_title":   "Performance Scoreboard",
+        "scoreboard_rows":    [],
+        "sb_rows":            [],
     }
 
 if "drafts" not in st.session_state:
@@ -2615,6 +2619,80 @@ def render_email_maker():
             _attachment_slot(d, f"c{ci}")
             st.markdown("")
             d["survey_question"] = st.text_input("Survey Question", value=d["survey_question"], key=f"cc_sq_{ci}")
+
+        # ── Scoreboard ────────────────────────────────────────────────────────
+        with st.expander("📊  Scoreboard (embed in email)", expanded=d.get("scoreboard_enabled", False)):
+            _sb_enabled = st.toggle(
+                "Include Scoreboard in email",
+                value=d.get("scoreboard_enabled", False),
+                key=f"cc_sb_on_{ci}",
+            )
+            d["scoreboard_enabled"] = _sb_enabled
+
+            if _sb_enabled:
+                d["scoreboard_title"] = st.text_input(
+                    "Scoreboard Title",
+                    value=d.get("scoreboard_title", "Performance Scoreboard"),
+                    key=f"cc_sb_title_{ci}",
+                )
+
+                # Load params to offer as metric labels
+                if "sense_custom_audit_params" not in st.session_state:
+                    st.session_state["sense_custom_audit_params"] = param_store.load()
+                _param_names = [p["name"] for p in st.session_state["sense_custom_audit_params"]]
+                _param_map   = {p["name"]: p for p in st.session_state["sense_custom_audit_params"]}
+
+                if "sb_rows" not in d or not isinstance(d.get("sb_rows"), list):
+                    d["sb_rows"] = []
+
+                st.markdown('<div style="font-size:0.7rem;color:#64748b;font-weight:600;margin-bottom:6px;">Metrics</div>', unsafe_allow_html=True)
+
+                _rows_updated = []
+                for _ri, _row in enumerate(d["sb_rows"]):
+                    _rc1, _rc2, _rc3, _rc4 = st.columns([3, 1.5, 2.5, 0.6])
+                    with _rc1:
+                        _use_custom = _row.get("label", "") not in _param_names
+                        _label_opts = _param_names + (["✏️ Custom…"] if _param_names else [])
+                        if _param_names and not _use_custom:
+                            _sel_idx = _param_names.index(_row["label"]) if _row["label"] in _param_names else 0
+                            _sel     = st.selectbox("Metric", _label_opts, index=_sel_idx, key=f"sb_lbl_{ci}_{_ri}", label_visibility="collapsed")
+                            if _sel == "✏️ Custom…":
+                                _label = st.text_input("Custom label", value="", key=f"sb_cust_{ci}_{_ri}", label_visibility="collapsed")
+                            else:
+                                _label = _sel
+                        else:
+                            _label = st.text_input("Metric label", value=_row.get("label", ""), key=f"sb_lbl_t_{ci}_{_ri}", label_visibility="collapsed", placeholder="Metric label")
+                    with _rc2:
+                        _rtype_opts = list(_TYPE_LABELS.keys())
+                        _rtype_src  = _param_map.get(_label, {}).get("input_type", _row.get("type", "text"))
+                        _rtype_idx  = _rtype_opts.index(_rtype_src) if _rtype_src in _rtype_opts else 3
+                        _rtype = st.selectbox("Type", _rtype_opts, index=_rtype_idx, format_func=lambda k: _TYPE_LABELS[k], key=f"sb_type_{ci}_{_ri}", label_visibility="collapsed")
+                    with _rc3:
+                        if _rtype == "scoring":
+                            _val = str(st.slider("Score", 1, 5, int(_row.get("value", 3)) if str(_row.get("value", "3")).isdigit() else 3, key=f"sb_val_{ci}_{_ri}", label_visibility="collapsed"))
+                        elif _rtype == "dropdown" and _label in _param_map:
+                            _opts = _param_map[_label].get("options", ["Yes", "No"])
+                            _cur  = _row.get("value", _opts[0]) if _row.get("value") in _opts else _opts[0]
+                            _val  = st.selectbox("Value", _opts, index=_opts.index(_cur), key=f"sb_val_{ci}_{_ri}", label_visibility="collapsed")
+                        elif _rtype == "number":
+                            _val = str(st.number_input("Value", value=float(_row.get("value", 0)) if _row.get("value", "") else 0.0, key=f"sb_val_{ci}_{_ri}", label_visibility="collapsed"))
+                        else:
+                            _val = st.text_input("Value", value=str(_row.get("value", "")), key=f"sb_val_{ci}_{_ri}", label_visibility="collapsed", placeholder="e.g. 87%")
+                    with _rc4:
+                        if st.button("✕", key=f"sb_rm_{ci}_{_ri}", use_container_width=True, help="Remove row"):
+                            continue  # skip this row
+                    _rows_updated.append({"label": _label, "value": _val, "type": _rtype})
+
+                d["sb_rows"] = _rows_updated
+                d["scoreboard_rows"] = d["sb_rows"]
+
+                if st.button("➕ Add Metric", key=f"sb_add_row_{ci}", use_container_width=False):
+                    d["sb_rows"].append({"label": "", "value": "", "type": "text"})
+                    d["scoreboard_rows"] = d["sb_rows"]
+                    st.rerun()
+
+                if not d["sb_rows"]:
+                    st.caption("No metrics yet. Click ➕ Add Metric to start.")
 
         pc1, pc2, pc3, pc4 = st.columns(4)
         with pc1:
@@ -8136,28 +8214,50 @@ def _render_registry():
         _render_param_manager(key_sfx="_reg")
 
 
+_TYPE_LABELS = {
+    "dropdown": "📋 Dropdown",
+    "scoring":  "⭐ Scoring (1–5)",
+    "number":   "🔢 Number",
+    "text":     "✏️ Text",
+}
+_TYPE_KEYS = list(_TYPE_LABELS.keys())
+
+
 def _render_param_manager(key_sfx=""):
-    """Custom parameter manager — add/delete persisted custom audit params."""
+    """Custom parameter manager — add/edit/delete persisted custom audit params with input types."""
     if "sense_custom_audit_params" not in st.session_state:
         st.session_state["sense_custom_audit_params"] = param_store.load()
-    _ks = key_sfx
+    _ks  = key_sfx
     _cps = st.session_state["sense_custom_audit_params"]
 
     st.markdown('<div class="section-chip">⭐ Custom Parameters</div>', unsafe_allow_html=True)
 
-    # ── Existing params as cards with inline delete ───────────────────────────
+    # ── Existing params ────────────────────────────────────────────────────────
     if _cps:
         for _cpi, _cp in enumerate(_cps):
-            _ca, _cb = st.columns([6, 1])
+            _itype   = _cp.get("input_type", "dropdown")
+            _lbl     = _TYPE_LABELS.get(_itype, _itype)
+            _editing = st.session_state.get(f"pm_editing_{_cpi}{_ks}", False)
+
+            _ca, _cb, _cc = st.columns([5, 1, 1])
             with _ca:
                 _guide_txt = f' <span style="color:#94a3b8;font-size:0.7rem;">— {_cp["guide"]}</span>' if _cp.get("guide") else ""
+                _badge_col = {"dropdown": "#dbeafe", "scoring": "#fef9c3", "number": "#f0fdf4", "text": "#f3e8ff"}.get(_itype, "#f1f5f9")
+                _badge_txt = {"dropdown": "#1d4ed8", "scoring": "#854d0e", "number": "#166534", "text": "#6b21a8"}.get(_itype, "#475569")
                 st.markdown(
                     f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;'
-                    f'padding:8px 14px;font-size:0.82rem;font-weight:600;color:#166534;">'
-                    f'⭐ {_cp["name"]}{_guide_txt}</div>',
+                    f'padding:8px 14px;font-size:0.82rem;font-weight:600;color:#166534;display:flex;align-items:center;gap:8px;">'
+                    f'⭐ {_cp["name"]}{_guide_txt}'
+                    f'<span style="margin-left:auto;background:{_badge_col};color:{_badge_txt};'
+                    f'font-size:0.65rem;font-weight:700;padding:2px 7px;border-radius:99px;">{_lbl}</span>'
+                    f'</div>',
                     unsafe_allow_html=True,
                 )
             with _cb:
+                if st.button("✏️", key=f"pm_edit_{_cpi}{_ks}", help="Edit", use_container_width=True):
+                    st.session_state[f"pm_editing_{_cpi}{_ks}"] = not _editing
+                    st.rerun()
+            with _cc:
                 if st.button("🗑", key=f"pm_del_{_cpi}{_ks}", help=f"Delete '{_cp['name']}'", use_container_width=True):
                     _del_err = param_store.remove(_cp["name"])
                     if _del_err:
@@ -8166,19 +8266,87 @@ def _render_param_manager(key_sfx=""):
                         st.session_state["sense_custom_audit_params"] = [
                             p for p in _cps if p["name"] != _cp["name"]
                         ]
+                        st.session_state.pop(f"pm_editing_{_cpi}{_ks}", None)
                         st.rerun()
+
+            if st.session_state.get(f"pm_editing_{_cpi}{_ks}", False):
+                with st.container():
+                    st.markdown('<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin:4px 0 8px 0;">', unsafe_allow_html=True)
+                    _e1, _e2 = st.columns([2, 3])
+                    with _e1:
+                        _e_type = st.selectbox(
+                            "Input Type",
+                            _TYPE_KEYS,
+                            index=_TYPE_KEYS.index(_itype) if _itype in _TYPE_KEYS else 0,
+                            format_func=lambda k: _TYPE_LABELS[k],
+                            key=f"pm_e_type_{_cpi}{_ks}",
+                        )
+                    with _e2:
+                        _e_guide = st.text_input("Remarks", value=_cp.get("guide", ""), key=f"pm_e_guide_{_cpi}{_ks}", placeholder="Auditor guidance")
+                    if _e_type == "dropdown":
+                        _e_opts_raw = st.text_input(
+                            "Options (comma-separated)",
+                            value=", ".join(_cp.get("options", ["Yes", "No"])),
+                            key=f"pm_e_opts_{_cpi}{_ks}",
+                            placeholder="Yes, No, NA",
+                        )
+                        _e_opts = [o.strip() for o in _e_opts_raw.split(",") if o.strip()] or ["Yes", "No"]
+                    else:
+                        _e_opts = _cp.get("options", ["Yes", "No"])
+
+                    _save_col, _cancel_col = st.columns([1, 1])
+                    with _save_col:
+                        if st.button("💾 Save Changes", key=f"pm_e_save_{_cpi}{_ks}", use_container_width=True, type="primary"):
+                            _upd_err = param_store.update(_cp["name"], _e_opts, _e_guide, _e_type)
+                            if _upd_err:
+                                st.error(f"Save failed: {_upd_err}")
+                            else:
+                                st.session_state["sense_custom_audit_params"][_cpi] = {
+                                    **_cp,
+                                    "options":    _e_opts,
+                                    "guide":      _e_guide,
+                                    "input_type": _e_type,
+                                }
+                                st.session_state[f"pm_editing_{_cpi}{_ks}"] = False
+                                st.rerun()
+                    with _cancel_col:
+                        if st.button("✕ Cancel", key=f"pm_e_cancel_{_cpi}{_ks}", use_container_width=True):
+                            st.session_state[f"pm_editing_{_cpi}{_ks}"] = False
+                            st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.caption("No custom parameters yet. Add one below.")
 
     # ── Add form ──────────────────────────────────────────────────────────────
-    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-    _pa, _pb, _pc = st.columns([2.5, 3, 1])
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    st.markdown('<div style="font-size:0.7rem;font-weight:700;color:#64748b;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Add New Parameter</div>', unsafe_allow_html=True)
+
+    _pa, _pb, _pc = st.columns([2.5, 2, 1.5])
     with _pa:
         _new_name = st.text_input("Parameter Name", placeholder="e.g. Empathy Check", key=f"pm_new_name{_ks}", label_visibility="collapsed")
     with _pb:
-        _new_remarks = st.text_input("Remarks (optional)", placeholder="What should the auditor check?", key=f"pm_new_remarks{_ks}", label_visibility="collapsed")
+        _new_remarks = st.text_input("Remarks (optional)", placeholder="Auditor guidance", key=f"pm_new_remarks{_ks}", label_visibility="collapsed")
     with _pc:
-        _add_btn = st.button("➕ Add", key=f"pm_add_param{_ks}", use_container_width=True, type="primary")
+        _new_type = st.selectbox(
+            "Type",
+            _TYPE_KEYS,
+            format_func=lambda k: _TYPE_LABELS[k],
+            key=f"pm_new_type{_ks}",
+            label_visibility="collapsed",
+        )
+
+    if _new_type == "dropdown":
+        _new_opts_raw = st.text_input(
+            "Dropdown Options",
+            placeholder="Yes, No, NA",
+            key=f"pm_new_opts{_ks}",
+            help="Comma-separated values",
+        )
+        _new_opts = [o.strip() for o in _new_opts_raw.split(",") if o.strip()] or ["Yes", "No"]
+    else:
+        _new_opts = ["Yes", "No"]
+
+    _add_btn = st.button("➕ Add Parameter", key=f"pm_add_param{_ks}", use_container_width=True, type="primary")
 
     if _add_btn:
         if not _new_name.strip():
@@ -8186,14 +8354,15 @@ def _render_param_manager(key_sfx=""):
         elif _new_name.strip().lower() in [p["name"].lower() for p in _cps]:
             st.warning("A parameter with that name already exists.")
         else:
-            _err = param_store.add(_new_name.strip(), ["Yes", "No"], _new_remarks.strip())
+            _err = param_store.add(_new_name.strip(), _new_opts, _new_remarks.strip(), _new_type)
             if _err:
                 st.error(f"Could not save: {_err}")
             else:
                 st.session_state["sense_custom_audit_params"].append({
-                    "name":    _new_name.strip(),
-                    "options": ["Yes", "No"],
-                    "guide":   _new_remarks.strip(),
+                    "name":       _new_name.strip(),
+                    "options":    _new_opts,
+                    "guide":      _new_remarks.strip(),
+                    "input_type": _new_type,
                 })
                 st.rerun()
 
