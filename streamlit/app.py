@@ -8885,98 +8885,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             if not _qa_filter or _qa_filter in str(r.get("QA", "")).lower()
         ]
 
-        # ── TOP PANEL: edit form / delete confirmation ────────────────────────
-        _editing_id  = st.session_state.get("_audit_edit_id")
-        _deleting_id = st.session_state.get("_audit_del_id")
-
-        _active_record = None
-        if _editing_id or _deleting_id:
-            _active_id = _editing_id or _deleting_id
-            _active_record = next(
-                (r for i, r in enumerate(_filtered_log)
-                 if (r.get("_row_id") or f"idx{i}") == _active_id),
-                None,
-            )
-            # Also search full log in case record is outside the filter
-            if _active_record is None:
-                _active_record = next(
-                    (r for i, r in enumerate(audit_log)
-                     if (r.get("_row_id") or f"idx{i}") == _active_id),
-                    None,
-                )
-
-        if _editing_id and _active_record is not None:
-            _ar_e = _active_record
-            _rid_e = _editing_id
-            st.markdown(
-                '<div style="background:#f0f9ff;border:1px solid #bfdbfe;border-radius:12px;'
-                'padding:16px 18px;margin-bottom:1rem;">',
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                f'**✏️ Editing — {_ar_e.get("QA","")} · {_ar_e.get("Client","")} · {_ar_e.get("Audit Date","")}**'
-            )
-            _ea1, _ea2, _ea3 = st.columns(3)
-            _e_client    = _ea1.text_input("Client",       value=_ar_e.get("Client",""),       key="_top_ec")
-            _e_campaign  = _ea2.text_input("Campaign Name",value=_ar_e.get("Campaign Name",""),key="_top_ecam")
-            _e_bot       = _ea3.text_input("Bot Name",     value=_ar_e.get("Bot Name",""),     key="_top_ebot")
-            _eb1, _eb2, _eb3 = st.columns(3)
-            _e_qa        = _eb1.text_input("QA",           value=_ar_e.get("QA",""),           key="_top_eqa")
-            _e_pm        = _eb2.text_input("PM / CSM",     value=_ar_e.get("PM / CSM",""),     key="_top_epm")
-            _e_lead      = _eb3.text_input("Lead Number",  value=_ar_e.get("Lead Number",""),  key="_top_eld")
-            _ec1, _ec2 = st.columns(2)
-            _e_conv_link = _ec1.text_input("Conversation Link", value=_ar_e.get("Conversation Link",""), key="_top_ecl")
-            _e_lead_link = _ec2.text_input("Lead Link",         value=_ar_e.get("Lead Link",""),         key="_top_ell")
-            _e_notes     = st.text_area("Reviewer Notes",         value=_ar_e.get("Notes",""),             key="_top_en",  height=68)
-            _e_suggest   = st.text_area("Improvement Suggestion", value=_ar_e.get("Improvement Suggestion",""), key="_top_es", height=68)
-            _esv1, _esv2 = st.columns(2)
-            with _esv1:
-                if st.button("💾 Save Changes", key="_top_esave", type="primary", use_container_width=True):
-                    _updated = dict(_ar_e)
-                    _updated["Client"]                  = _e_client.strip()
-                    _updated["Campaign Name"]           = _e_campaign.strip()
-                    _updated["Bot Name"]                = _e_bot.strip()
-                    _updated["QA"]                      = _e_qa.strip()
-                    _updated["PM / CSM"]                = _e_pm.strip()
-                    _updated["Lead Number"]             = _e_lead.strip()
-                    _updated["Conversation Link"]       = _e_conv_link.strip()
-                    _updated["Lead Link"]               = _e_lead_link.strip()
-                    _updated["Notes"]                   = _e_notes.strip()
-                    _updated["Improvement Suggestion"]  = _e_suggest.strip()
-                    _uerr = audit_store.update(_ar_e.get("_row_id"), _updated)
-                    if _uerr:
-                        st.error(f"Save failed: {_uerr}")
-                    else:
-                        st.session_state.pop("_audit_edit_id", None)
-                        st.session_state["sense_audit_log"] = _audit_log_load()
-                        st.rerun()
-            with _esv2:
-                if st.button("✕ Cancel Edit", key="_top_ecancel", use_container_width=True):
-                    st.session_state.pop("_audit_edit_id", None)
-                    st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        if _deleting_id and _active_record is not None:
-            _ar_d = _active_record
-            st.warning(
-                f"Delete audit for **{_ar_d.get('QA','')} / {_ar_d.get('Client','')} / "
-                f"{_ar_d.get('Bot Name','')}** on {_ar_d.get('Audit Date','')}? This cannot be undone."
-            )
-            _dc1, _dc2 = st.columns(2)
-            with _dc1:
-                if st.button("Yes, delete", key="_top_adconf", type="primary", use_container_width=True):
-                    _derr = audit_store.delete(_ar_d.get("_row_id"))
-                    if _derr:
-                        st.error(f"Delete failed: {_derr}")
-                    else:
-                        st.session_state.pop("_audit_del_id", None)
-                        st.session_state["sense_audit_log"] = _audit_log_load()
-                        st.rerun()
-            with _dc2:
-                if st.button("Cancel", key="_top_adcancel", use_container_width=True):
-                    st.session_state.pop("_audit_del_id", None)
-                    st.rerun()
-
         # ── KPI strip ─────────────────────────────────────────────────────────
         _scores_v  = [r.get("Bot Score", 0) for r in audit_log if r.get("Bot Score") is not None]
         _avg_s     = round(sum(_scores_v) / len(_scores_v), 1) if _scores_v else 0
@@ -8999,28 +8907,25 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             st.caption(f'Showing {_show_n} of {_n} records matching "{_qa_search}"')
 
         st.markdown(
-            '<div style="display:grid;grid-template-columns:90px 1fr 1fr 1fr 72px 88px 72px 72px;'
+            '<div style="display:grid;grid-template-columns:90px 1fr 1fr 1fr 72px 88px;'
             'gap:6px;padding:6px 10px;background:#f0f4ff;border-radius:8px;'
             'font-size:0.66rem;font-weight:700;color:#2563EB;text-transform:uppercase;'
             'letter-spacing:0.04em;margin-top:0.6rem;">'
             '<span>Date</span><span>QA</span><span>Client</span><span>Bot Name</span>'
             '<span style="text-align:center">Score</span><span style="text-align:center">Status</span>'
-            '<span></span><span></span></div>',
+            '</div>',
             unsafe_allow_html=True,
         )
 
-        for _aidx, _ar in enumerate(_filtered_log):
-            _rid    = _ar.get("_row_id") or f"idx{_aidx}"
+        for _ar in _filtered_log:
             _status = str(_ar.get("Status", ""))
             _score  = _ar.get("Bot Score", "—")
             _sc_str = f"{_score}%" if isinstance(_score, (int, float)) else str(_score)
             _sc_col = "#16a34a" if _status == "Pass" else ("#f59e0b" if _status == "Needs Review" else "#dc2626")
-            _is_active = _rid in (_editing_id, _deleting_id)
 
             st.markdown(
-                f'<div style="display:grid;grid-template-columns:90px 1fr 1fr 1fr 72px 88px 72px 72px;'
-                f'gap:6px;padding:7px 10px;border-bottom:1px solid #e9edf5;'
-                f'background:{"#eff6ff" if _is_active else "#fff"};">'
+                f'<div style="display:grid;grid-template-columns:90px 1fr 1fr 1fr 72px 88px;'
+                f'gap:6px;padding:7px 10px;border-bottom:1px solid #e9edf5;background:#fff;">'
                 f'<span style="font-size:0.71rem;color:#334155;">{_ar.get("Audit Date","")}</span>'
                 f'<span style="font-size:0.71rem;color:#334155;">{_ar.get("QA","")}</span>'
                 f'<span style="font-size:0.71rem;color:#334155;">{_ar.get("Client","")}</span>'
@@ -9030,26 +8935,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 f'</div>',
                 unsafe_allow_html=True,
             )
-
-            _btn_edit, _btn_del = st.columns([1, 1])
-            with _btn_edit:
-                _edit_label = "✏️ Editing" if _editing_id == _rid else "✏️ Edit"
-                if st.button(_edit_label, key=f"_aed_{_rid}", use_container_width=True):
-                    if _editing_id == _rid:
-                        st.session_state.pop("_audit_edit_id", None)
-                    else:
-                        st.session_state["_audit_edit_id"] = _rid
-                        st.session_state.pop("_audit_del_id", None)
-                    st.rerun()
-            with _btn_del:
-                _del_label = "🗑 Confirm?" if _deleting_id == _rid else "🗑 Delete"
-                if st.button(_del_label, key=f"_add_{_rid}", use_container_width=True):
-                    if _deleting_id == _rid:
-                        st.session_state.pop("_audit_del_id", None)
-                    else:
-                        st.session_state["_audit_del_id"] = _rid
-                        st.session_state.pop("_audit_edit_id", None)
-                    st.rerun()
 
 
 def _render_legend_page():
