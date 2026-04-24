@@ -8660,25 +8660,49 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
 </style>""", unsafe_allow_html=True)
     st.markdown('<div class="section-chip">✍️ New QA Audit — Convin.ai Standard Sheet</div>', unsafe_allow_html=True)
 
+    # ── Queue selector — OUTSIDE form so selection triggers rerun & auto-fill ──
+    def _qv(rec, key):
+        v = rec.get(key, "")
+        return "" if (v is None or (isinstance(v, float) and v != v) or str(v).strip() in ("nan","None","")) else str(v).strip()
+
+    _lead_q_form = st.session_state.get("sense_lead_queue", [])
+    _q_idx = -1
+    _q_rec = {}
+    if _lead_q_form:
+        _q_labels = ["— type manually —"] + [
+            f"{r.get('Client','?')} · {r.get('Campaign Name','?')} · {r.get('Lead Number', r.get('Phone Number','#'+str(i+1)))}"
+            for i, r in enumerate(_lead_q_form)
+        ]
+        _q_sel = st.selectbox("📋 Pick lead from queue (auto-fills form)", _q_labels, key="f_queue_sel")
+        _q_idx = _q_labels.index(_q_sel) - 1
+        _q_rec = _lead_q_form[_q_idx] if _q_idx >= 0 else {}
+
+        # Detect selection change → push values into form-field session-state keys
+        _pf_sig = f"{_q_idx}_{_qv(_q_rec,'Client')}_{_qv(_q_rec,'Campaign Name')}_{_qv(_q_rec,'Lead Number')}"
+        if _q_idx >= 0 and st.session_state.get("_q_pf_sig") != _pf_sig:
+            st.session_state["_q_pf_sig"]       = _pf_sig
+            st.session_state["f_campaign"]       = _qv(_q_rec, "Campaign Name")
+            st.session_state["f_lead_no"]        = _qv(_q_rec, "Lead Number")
+            st.session_state["f_conv_link"]      = _qv(_q_rec, "Conversation Link")
+            st.session_state["f_lead_link"]      = _qv(_q_rec, "Lead Link")
+            st.session_state["f_bot_name"]       = _qv(_q_rec, "Bot Name")
+            _reg_cl_pre = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
+            _cl_pre = _qv(_q_rec, "Client")
+            st.session_state["f_client_sel"]     = _cl_pre if _cl_pre in _reg_cl_pre else ""
+            _disp_pre = _qv(_q_rec, "Disposition")
+            _disp_opts_pre = ["— select —", "Hot", "Warm", "Cold", "Interested", "Warm Follow-up",
+                              "Not Interested", "Converted", "DNC", "Wrong Number",
+                              "Language Barrier", "Voicemail / No Answer", "Other"]
+            st.session_state["f_disposition_sel"] = _disp_pre if _disp_pre in _disp_opts_pre else "— select —"
+
+        if _q_idx >= 0:
+            st.markdown(
+                f'<div style="font-size:0.65rem;color:#0ebc6e;margin-bottom:6px;">'
+                f'✅ Pre-filling from queue record {_q_idx + 1}</div>',
+                unsafe_allow_html=True,
+            )
+
     with st.form("qa_audit_form_v2", clear_on_submit=False):
-        # ── Queue selector ────────────────────────────────────────────────────
-        def _qv(rec, key):
-            v = rec.get(key, "")
-            return "" if (v is None or (isinstance(v, float) and v != v) or str(v).strip() in ("nan","None","")) else str(v).strip()
-        _lead_q_form = st.session_state.get("sense_lead_queue", [])
-        if _lead_q_form:
-            _q_labels = ["— type manually —"] + [
-                f"{r.get('Client','?')} · {r.get('Campaign Name','?')} · {r.get('Lead Number', r.get('Phone Number','#'+str(i+1)))}"
-                for i, r in enumerate(_lead_q_form)
-            ]
-            _q_sel = st.selectbox("📋 Pick lead from queue (auto-fills fields)", _q_labels, key="f_queue_sel")
-            _q_idx = _q_labels.index(_q_sel) - 1 if _q_sel != "— type manually —" else -1
-            _q_rec = _lead_q_form[_q_idx] if _q_idx >= 0 else {}
-            if _q_idx >= 0:
-                st.markdown(f'<div style="font-size:0.65rem;color:#0ebc6e;margin-bottom:6px;">✅ Pre-filling from queue record {_q_idx+1}</div>', unsafe_allow_html=True)
-        else:
-            _q_rec = {}
-            _q_idx = -1
 
         # ── Audit & Lead details ──────────────────────────────────────────────
         st.markdown(
@@ -8696,11 +8720,9 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         with _ad3:
             _registry_init()
             _reg_clients_form = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
-            _q_client_val = _qv(_q_rec, "Client")
-            _q_client_idx = _reg_clients_form.index(_q_client_val) if _q_client_val in _reg_clients_form else 0
-            _f_client = st.selectbox("Client *", _reg_clients_form, index=_q_client_idx, key="f_client_sel")
+            _f_client = st.selectbox("Client *", _reg_clients_form, key="f_client_sel")
         with _ad4:
-            _f_campaign   = st.text_input("Campaign Name *", value=_qv(_q_rec,"Campaign Name"), placeholder="e.g. Q2 Outreach")
+            _f_campaign = st.text_input("Campaign Name *", key="f_campaign", placeholder="e.g. Q2 Outreach")
 
         _ld1, _ld2, _ld3 = st.columns(3)
         with _ld1:
@@ -8710,18 +8732,18 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             _pm_idx   = _pm_opts.index(_auto_pm) if _auto_pm in _pm_opts else 0
             _f_pm_csm = st.selectbox("PM / CSM *", _pm_opts, index=_pm_idx, key="f_pm_csm_sel")
         with _ld2:
-            _f_lead_no    = st.text_input("Lead Number", value=_qv(_q_rec,"Lead Number"), placeholder="e.g. LD-20250422")
+            _f_lead_no   = st.text_input("Lead Number", key="f_lead_no", placeholder="e.g. LD-20250422")
         with _ld3:
-            _f_conv_link  = st.text_input("Conversation Link", value=_qv(_q_rec,"Conversation Link"), placeholder="https://...")
+            _f_conv_link = st.text_input("Conversation Link", key="f_conv_link", placeholder="https://...")
 
         _ll1, _ll2, _ll3, _ll4 = st.columns(4)
         with _ll1:
-            _f_lead_link  = st.text_input("Lead Link", value=_qv(_q_rec,"Lead Link"), placeholder="https://...")
+            _f_lead_link = st.text_input("Lead Link", key="f_lead_link", placeholder="https://...")
         with _ll2:
             _disp_opts = ["— select —", "Hot", "Warm", "Cold", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
             _f_disposition = st.selectbox("Disposition *", _disp_opts, key="f_disposition_sel")
         with _ll3:
-            _f_bot_name = st.text_input("Bot Name *", value=_qv(_q_rec, "Bot Name"), placeholder="e.g. Convin-LeadBot-v2")
+            _f_bot_name = st.text_input("Bot Name *", key="f_bot_name", placeholder="e.g. Convin-LeadBot-v2")
         with _ll4:
             _f_correct_disp = st.radio(
                 "Correct Disposition? *",
@@ -8936,6 +8958,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
 
                 st.session_state.pop("_audit_suggestion_draft", None)
                 st.session_state.pop("_audit_suggestion_improved", None)
+                st.session_state.pop("_q_pf_sig", None)  # reset prefill sig so next pick triggers auto-fill
 
                 if _q_idx >= 0 and _lead_q_form:
                     _done_item   = _lead_q_form[_q_idx]
