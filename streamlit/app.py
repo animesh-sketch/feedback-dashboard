@@ -5625,113 +5625,97 @@ def _render_sense_scorecard(sheets, legend_map):
             except Exception:
                 pass
 
-    # ── Weight overview bar ───────────────────────────────────────────────────
-    st.markdown('<div class="section-chip">⚖️ Parameter Weights</div>', unsafe_allow_html=True)
-    _weight_html = ""
-    for col in scored_cols:
-        _w   = _custom_weights.get(col, _DEFAULT_PARAM_WEIGHT)
-        _pct = round(_w / total_weight * 100, 1) if total_weight else 0
-        _bcfg = _builtin_cfg(col)
-        _col_c = _bcfg["color"] if _bcfg else "#2563EB"
-        _tag  = " 🧠" if _bcfg else ""
-        _weight_html += (
-            f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
-            f'<div style="width:200px;font-size:0.73rem;color:#0d1d3a;font-weight:500;'
-            f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">{col}{_tag}</div>'
-            f'<div style="flex:1;height:14px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
-            f'<div style="width:{_pct}%;height:100%;background:{_col_c};border-radius:3px;"></div></div>'
-            f'<div style="width:90px;text-align:right;font-size:0.7rem;color:#5588bb;flex-shrink:0;">'
-            f'w={_w:.1f} &nbsp;<span style="color:#aabbcc;">({_pct}%)</span></div>'
-            f'</div>'
-        )
-    st.markdown(
-        f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:10px;'
-        f'padding:14px 18px;margin-bottom:1.2rem;">{_weight_html}</div>',
-        unsafe_allow_html=True,
-    )
+    # ── All Parameter Performance ─────────────────────────────────────────────
+    st.markdown('<div class="section-chip">📊 All Parameter Performance</div>', unsafe_allow_html=True)
+    _app_tiers = _QA_SCHEMA.get("tiers", []) if _has_qa_schema else []
+    _app_tier_cols_done = set()
+    _app_tier_cols_list = st.columns(max(len(_app_tiers), 1)) if _app_tiers else [st]
 
-    # ── Per-parameter score distribution ──────────────────────────────────────
-    st.markdown('<div class="section-chip">🎯 Score Distribution by Parameter</div>', unsafe_allow_html=True)
-    _PARAM_COLORS = ["#2563EB","#2563EB","#0ebc6e","#f59e0b","#7c3aed","#06b6d4","#ef4444","#84cc16"]
-
-    # Split: intelligence params first, then others
-    _intel_cols  = [c for c in scored_cols if _builtin_cfg(c)]
-    _other_cols  = [c for c in scored_cols if not _builtin_cfg(c)]
-
-    for section_cols, section_label in [(_intel_cols, "🧠 Intelligence Parameters"), (_other_cols, "📋 Audit Parameters")]:
-        if not section_cols:
-            continue
-        st.markdown(
-            f'<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;'
-            f'color:#5588bb;margin:12px 0 8px;">{section_label}</div>',
-            unsafe_allow_html=True,
-        )
-        for p_idx, col in enumerate(section_cols):
-            _bcfg     = _builtin_cfg(col)
-            opts      = legend_map.get(col) or _match_legend(col, legend_map) or []
-            _vals     = audit_df[col].replace("", None).dropna().astype(str).str.strip()
-            vc        = _vals.value_counts()
-            total_filled = vc.sum()
-            blank_count  = total_rows - total_filled
-            col_color = _bcfg["color"] if _bcfg else _PARAM_COLORS[p_idx % len(_PARAM_COLORS)]
-            _w        = _custom_weights.get(col, _DEFAULT_PARAM_WEIGHT)
-            _inv_tag  = " ↓ lower=better" if (_bcfg and _bcfg["inverted"]) else ""
-
-            bars_html = ""
-            _ordered  = [str(o) for o in opts if str(o) in vc.index]
-            _ordered += [v for v in vc.index if v not in _ordered]
-            for val in _ordered:
-                cnt = int(vc.get(val, 0))
-                pct = round(cnt / total_rows * 100, 1)
-                # Colour the bar by value rank.
-                # Non-inverted (standard): higher option index = better → last index is green
-                # Inverted: first option index = best (legacy string-keyed params)
-                if _bcfg and opts:
-                    _rank_i = opts.index(val) if val in opts else len(opts) // 2
-                    _grad   = ["#0ebc6e","#84cc16","#f59e0b","#ef4444"]
-                    if not _bcfg.get("inverted", True):
-                        _grad = list(reversed(_grad))  # 0=red, 2=green for numeric params
-                    _bar_c  = _grad[min(_rank_i, 3)]
-                else:
-                    _bar_c  = col_color
-                bars_html += (
-                    f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
-                    f'<div style="width:130px;font-size:0.73rem;color:#0d1d3a;font-weight:500;'
-                    f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">{val}</div>'
-                    f'<div style="flex:1;height:16px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
-                    f'<div style="width:{pct}%;height:100%;background:{_bar_c};border-radius:3px;"></div></div>'
-                    f'<div style="width:80px;text-align:right;font-size:0.71rem;color:#5588bb;flex-shrink:0;">'
-                    f'{cnt:,} <span style="color:#aabbcc;">({pct}%)</span></div>'
+    for _app_ti, _app_tier in enumerate(_app_tiers):
+        with _app_tier_cols_list[_app_ti]:
+            _ap_color = _app_tier["color"]
+            _ap_rows_html = ""
+            _ap_has = False
+            for _app_p in _app_tier["params"]:
+                _app_col = _app_p["col"]
+                _app_tier_cols_done.add(_app_col)
+                if _app_col not in audit_df.columns:
+                    continue
+                _pmx_vals = [int(o) for o in _app_p.get("options", ["0","1","2"]) if str(o).lstrip("-").isdigit()]
+                _pmx = max(_pmx_vals) if _pmx_vals else 2
+                _pv_num = pd.to_numeric(
+                    audit_df[_app_col].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":"","Yes":"1","No":"0"}),
+                    errors="coerce",
+                ).dropna()
+                _avg_pct = round(_pv_num.mean() / _pmx * 100, 1) if len(_pv_num) else None
+                if _avg_pct is None:
+                    continue
+                _ap_has = True
+                _bclr = "#059669" if _avg_pct >= 80 else "#d97706" if _avg_pct >= 60 else "#dc2626"
+                _icon = "✅" if _avg_pct >= 80 else "⚠️" if _avg_pct >= 60 else "🔴"
+                _ap_rows_html += (
+                    f'<div style="margin-bottom:8px;">'
+                    f'<div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
+                    f'<div style="font-size:0.67rem;font-weight:600;color:#0B1F3A;'
+                    f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;">{_icon} {_app_col}</div>'
+                    f'<div style="font-size:0.67rem;font-weight:800;color:{_bclr};flex-shrink:0;margin-left:4px;">{_avg_pct}%</div>'
                     f'</div>'
+                    f'<div style="height:8px;background:#F1F5F9;border-radius:4px;overflow:hidden;">'
+                    f'<div style="width:{_avg_pct}%;height:100%;background:linear-gradient(90deg,{_ap_color},{_bclr});border-radius:4px;"></div>'
+                    f'</div></div>'
                 )
-            if blank_count > 0:
-                _bp = round(blank_count / total_rows * 100, 1)
-                bars_html += (
-                    f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;opacity:0.45;">'
-                    f'<div style="width:130px;font-size:0.71rem;color:#aabbcc;flex-shrink:0;">— not scored</div>'
-                    f'<div style="flex:1;height:16px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
-                    f'<div style="width:{_bp}%;height:100%;background:#cbd5e0;border-radius:3px;"></div></div>'
-                    f'<div style="width:80px;text-align:right;font-size:0.71rem;color:#aabbcc;flex-shrink:0;">'
-                    f'{blank_count:,} ({_bp}%)</div></div>'
+            if _ap_has:
+                st.markdown(
+                    f'<div style="background:#fff;border:1px solid #E2EAF6;border-top:3px solid {_ap_color};'
+                    f'border-radius:10px;padding:14px 16px;margin-bottom:10px;">'
+                    f'<div style="font-size:0.61rem;font-weight:800;color:{_ap_color};letter-spacing:0.1em;'
+                    f'text-transform:uppercase;margin-bottom:12px;">{_app_tier["label"]}</div>'
+                    f'{_ap_rows_html}</div>',
+                    unsafe_allow_html=True,
                 )
 
-            st.markdown(
-                f'<div style="background:#fff;border:1px solid #e4e7ec;'
-                f'border-left:3px solid {col_color};border-radius:10px;padding:14px 18px;margin-bottom:8px;">'
-                f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
-                f'<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:{col_color};">'
-                f'{"" if not _bcfg else _bcfg["icon"]+" "}{col}</div>'
-                f'<div style="font-size:0.63rem;color:#aabbcc;">weight {_w:.1f}{_inv_tag} &nbsp;·&nbsp; {total_filled:,}/{total_rows:,} scored</div>'
+    # Custom params performance (scored_cols not already in QA tiers)
+    _custom_perf_cols = [c for c in scored_cols if c not in _app_tier_cols_done]
+    if _custom_perf_cols:
+        _cp_rows_html = ""
+        for _cpc in _custom_perf_cols:
+            if _cpc not in audit_df.columns:
+                continue
+            _bcfg2 = _builtin_cfg(_cpc)
+            _opts2 = legend_map.get(_cpc) or _match_legend(_cpc, legend_map) or []
+            _ns2 = _score_to_numeric(audit_df[_cpc], _opts2, inverted=_bcfg2.get("inverted", False) if _bcfg2 else False)
+            _avg2 = round((_ns2.mean() if _ns2 is not None and _ns2.notna().sum() > 0 else None) * 100, 1) if (_ns2 is not None and _ns2.notna().sum() > 0) else None
+            if _avg2 is None:
+                continue
+            _bclr2 = "#059669" if _avg2 >= 80 else "#d97706" if _avg2 >= 60 else "#dc2626"
+            _icon2 = "✅" if _avg2 >= 80 else "⚠️" if _avg2 >= 60 else "🔴"
+            _cp_rows_html += (
+                f'<div style="margin-bottom:8px;">'
+                f'<div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
+                f'<div style="font-size:0.67rem;font-weight:600;color:#0B1F3A;'
+                f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">{_icon2} {_cpc}</div>'
+                f'<div style="font-size:0.67rem;font-weight:800;color:{_bclr2};flex-shrink:0;margin-left:4px;">{_avg2}%</div>'
                 f'</div>'
-                f'{bars_html}</div>',
+                f'<div style="height:8px;background:#F1F5F9;border-radius:4px;overflow:hidden;">'
+                f'<div style="width:{_avg2}%;height:100%;background:linear-gradient(90deg,#2563EB,{_bclr2});border-radius:4px;"></div>'
+                f'</div></div>'
+            )
+        if _cp_rows_html:
+            st.markdown(
+                f'<div style="background:#fff;border:1px solid #E2EAF6;border-top:3px solid #2563EB;'
+                f'border-radius:10px;padding:14px 16px;margin-bottom:10px;">'
+                f'<div style="font-size:0.61rem;font-weight:800;color:#2563EB;letter-spacing:0.1em;'
+                f'text-transform:uppercase;margin-bottom:12px;">Custom / Other Parameters</div>'
+                f'{_cp_rows_html}</div>',
                 unsafe_allow_html=True,
             )
 
-    # ── Agent / Auditor performance leaderboard ───────────────────────────────
-    if group_col and (scored_cols or _has_qa_schema):
-        st.markdown(f'<div class="section-chip">👤 Auditor Leaderboard — {group_col}</div>', unsafe_allow_html=True)
+    # ── Bot-wise Score leaderboard ────────────────────────────────────────────
+    _bot_col = "Bot Name" if "Bot Name" in audit_df.columns else group_col
+    if _bot_col and (scored_cols or _has_qa_schema):
+        st.markdown(f'<div class="section-chip">🤖 Bot-wise Score</div>', unsafe_allow_html=True)
         _grp_rows = []
-        for agent, grp in audit_df.groupby(group_col, sort=False):
+        for agent, grp in audit_df.groupby(_bot_col, sort=False):
             _row = {"Agent": str(agent), "Audits": len(grp)}
             if _has_qa_schema:
                 _bs_grp = pd.to_numeric(grp.get("Bot Score", pd.Series(dtype=float)), errors="coerce").dropna()
@@ -5810,7 +5794,7 @@ def _render_sense_scorecard(sheets, legend_map):
             st.bar_chart(_chart_df, use_container_width=True)
 
             # Full parameter table (collapsible)
-            with st.expander("📊 Full Parameter Breakdown by Agent", expanded=False):
+            with st.expander("📊 Full Parameter Breakdown by Bot", expanded=False):
                 _tbl = [{k: v for k, v in r.items() if k != "_score_raw"} for r in _grp_rows]
                 st.dataframe(pd.DataFrame(_tbl), use_container_width=True, hide_index=True)
 
@@ -5825,8 +5809,8 @@ def _render_sense_scorecard(sheets, legend_map):
         try:
             _td = audit_df[[date_col]].copy()
             _td["score"] = _trend_scores.values
-            if group_col and group_col in audit_df.columns:
-                _td["group"] = audit_df[group_col].values
+            if _bot_col and _bot_col in audit_df.columns:
+                _td["group"] = audit_df[_bot_col].values
             _td[date_col] = pd.to_datetime(_td[date_col], errors="coerce")
             _td = _td.dropna(subset=[date_col, "score"]).sort_values(date_col)
 
@@ -5845,8 +5829,8 @@ def _render_sense_scorecard(sheets, legend_map):
                 if not _agg.empty:
                     st.line_chart(_agg, use_container_width=True)
 
-            if group_col and "group" in _td.columns:
-                with st.expander(f"📊 Score Trend by {group_col}", expanded=False):
+            if _bot_col and "group" in _td.columns:
+                with st.expander(f"📊 Score Trend by {_bot_col}", expanded=False):
                     try:
                         _apt = _td.pivot_table(
                             index=pd.Grouper(key=date_col, freq=_freq),
@@ -8588,10 +8572,14 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label {
     padding: 5px 14px !important;
     font-size: 0.78rem !important;
     font-weight: 600 !important;
+    color: #1e3a5f !important;
     cursor: pointer !important;
     transition: background 0.15s, border-color 0.15s !important;
     min-width: 44px !important;
     text-align: center !important;
+}
+div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:last-child {
+    color: inherit !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {
     background: rgba(61,130,245,0.13) !important;
@@ -9011,8 +8999,8 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         _editing_id  = st.session_state.get("_audit_edit_id")
         _deleting_id = st.session_state.get("_audit_del_id")
 
-        for _ar in audit_log:
-            _rid    = _ar.get("_row_id")
+        for _aidx, _ar in enumerate(audit_log):
+            _rid    = _ar.get("_row_id") or f"idx{_aidx}"
             _status = str(_ar.get("Status", ""))
             _score  = _ar.get("Bot Score", "—")
             _sc_str = f"{_score}%" if isinstance(_score, (int, float)) else str(_score)
@@ -9057,7 +9045,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 _dc1, _dc2 = st.columns(2)
                 with _dc1:
                     if st.button("Yes, delete", key=f"_adconf_{_rid}", type="primary", use_container_width=True):
-                        _derr = audit_store.delete(_rid)
+                        _derr = audit_store.delete(_ar.get("_row_id"))
                         if _derr:
                             st.error(f"Delete failed: {_derr}")
                         else:
@@ -9105,7 +9093,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                             _updated["Lead Link"]            = _e_lead_link.strip()
                             _updated["Notes"]                = _e_notes.strip()
                             _updated["Improvement Suggestion"] = _e_suggest.strip()
-                            _uerr = audit_store.update(_rid, _updated)
+                            _uerr = audit_store.update(_ar.get("_row_id"), _updated)
                             if _uerr:
                                 st.error(f"Save failed: {_uerr}")
                             else:
