@@ -8609,6 +8609,23 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label:nth-child(3):has(inp
     border-color: #334155 !important;
     color: #f1f5f9 !important;
 }
+/* Dropdowns inside audit form — clean white, dark text, clear border */
+div[data-testid="stForm"] [data-testid="stSelectbox"] > div > div {
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    color: #0d1d3a !important;
+}
+div[data-testid="stForm"] [data-testid="stSelectbox"] > div > div:focus-within {
+    border-color: #2563EB !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12) !important;
+}
+div[data-testid="stForm"] [data-testid="stSelectbox"] > div > div > div,
+div[data-testid="stForm"] [data-testid="stSelectbox"] span,
+div[data-testid="stForm"] [data-testid="stSelectbox"] p {
+    color: #0d1d3a !important;
+    font-weight: 500 !important;
+}
 /* Submit audit button — blue bg white text */
 div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
 div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button {
