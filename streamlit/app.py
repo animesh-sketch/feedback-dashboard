@@ -9403,36 +9403,39 @@ def render_convin_sense():
     transform: translateY(-1px) !important;
 }
 
-/* ── Tabs: premium glass pill bar ── */
+/* ── Tabs: dark navy bar with bright active pill ── */
 .stTabs [data-baseweb="tab-list"] {
-    background: #fff !important;
+    background: linear-gradient(108deg,#040d1e,#0d1a3a) !important;
     border-radius: 14px !important;
-    padding: 5px !important;
+    padding: 6px 8px !important;
     border-bottom: none !important;
-    gap: 3px !important;
-    box-shadow: 0 2px 10px rgba(11,31,58,0.08), inset 0 1px 0 rgba(255,255,255,0.8) !important;
+    gap: 4px !important;
+    box-shadow: 0 4px 20px rgba(4,13,30,0.45), inset 0 1px 0 rgba(255,255,255,0.04) !important;
 }
 .stTabs [data-baseweb="tab"] {
-    font-size: 0.75rem !important;
+    font-size: 0.76rem !important;
     font-weight: 600 !important;
-    color: #64748b !important;
+    color: rgba(148,163,184,0.9) !important;
     background: transparent !important;
     border: none !important;
-    border-radius: 10px !important;
-    padding: 9px 18px !important;
-    transition: all 0.2s ease !important;
+    border-radius: 9px !important;
+    padding: 9px 20px !important;
+    transition: all 0.18s ease !important;
     letter-spacing: 0.01em !important;
+    white-space: nowrap !important;
 }
 .stTabs [data-baseweb="tab"]:hover {
-    background: #F0F4F9 !important;
-    color: #0B1F3A !important;
+    background: rgba(37,99,235,0.15) !important;
+    color: #93c5fd !important;
 }
 .stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg,#0B1F3A,#2563EB) !important;
-    color: #fff !important;
-    box-shadow: 0 3px 10px rgba(37,99,235,0.32) !important;
+    background: linear-gradient(135deg,#1d4ed8,#2563EB) !important;
+    color: #ffffff !important;
+    box-shadow: 0 3px 12px rgba(37,99,235,0.5), 0 1px 0 rgba(255,255,255,0.12) inset !important;
     font-weight: 700 !important;
 }
+.stTabs [aria-selected="true"] p,
+.stTabs [aria-selected="true"] span { color: #ffffff !important; }
 .stTabs [data-baseweb="tab-panel"] { padding-top: 20px !important; }
 
 /* ── Expanders: elevated card ── */
