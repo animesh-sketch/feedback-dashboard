@@ -1,46 +1,91 @@
 """
-Email + password authentication for the Streamlit app.
-Credentials are read from .streamlit/secrets.toml:
-  USER_EMAIL = "you@example.com"
-  USER_HASH  = "<sha256 of your password>"
+PIN-based authentication with role support.
 
-To generate a hash for a new password, run in Python:
-  import hashlib; print(hashlib.sha256("yourpassword".encode()).hexdigest())
+Users log in with a unique 4-digit number.
+Roles: "admin" (full access) | "qa" (Audit section only).
 
-If neither key is set, any valid email can log in (open access).
+USERS can be overridden via st.secrets["USERS"] (JSON string) for production.
 """
 
+import json
 import streamlit as st
 
+# ── User table ────────────────────────────────────────────────────────────────
+# Format: { "PIN": {"name": "...", "role": "admin"|"qa"} }
 
-def check_login(email: str) -> tuple[bool, str]:
+_DEFAULT_USERS = {
+    "1000": {"name": "Admin",   "role": "admin"},
+    "1001": {"name": "Animesh", "role": "qa"},
+    "1002": {"name": "Steve",   "role": "qa"},
+    "1003": {"name": "Adam",    "role": "qa"},
+    "1004": {"name": "Nora",    "role": "qa"},
+    "1005": {"name": "Alan",    "role": "qa"},
+    "1006": {"name": "Priya",   "role": "qa"},
+    "1007": {"name": "Raj",     "role": "qa"},
+    "1008": {"name": "Sara",    "role": "qa"},
+    "1009": {"name": "Mike",    "role": "qa"},
+    "1010": {"name": "Lisa",    "role": "qa"},
+}
+
+
+def _get_users() -> dict:
+    """Return user table, preferring st.secrets override if present."""
+    raw = st.secrets.get("USERS", "")
+    if raw:
+        try:
+            return json.loads(raw)
+        except Exception:
+            pass
+    return _DEFAULT_USERS
+
+
+def check_login(pin: str) -> tuple[bool, dict, str]:
     """
-    Returns (True, "") if the email is valid (and matches USER_EMAIL if set).
-    No password required.
+    Returns (True, user_dict, "") on success.
+    Returns (False, {}, error_message) on failure.
+    user_dict has keys: name, role, pin
     """
-    email = email.strip().lower()
-    if not email or "@" not in email:
-        return False, "Enter a valid email address."
+    pin = str(pin).strip()
+    if not pin.isdigit():
+        return False, {}, "Enter your numeric access code."
+    users = _get_users()
+    user = users.get(pin)
+    if not user:
+        return False, {}, "Invalid access code. Please try again."
+    return True, {"pin": pin, "name": user["name"], "role": user["role"]}, ""
 
-    # Restrict to the configured email address (if set in secrets)
-    allowed_email = st.secrets.get("USER_EMAIL", "").strip().lower()
-    if allowed_email and email != allowed_email:
-        return False, "This email is not authorised to access this dashboard."
 
-    return True, ""
+def current_user() -> dict:
+    """Return the logged-in user dict or {}."""
+    return st.session_state.get("auth_user", {})
+
+
+def is_admin() -> bool:
+    return current_user().get("role") == "admin"
+
+
+def is_qa() -> bool:
+    return current_user().get("role") == "qa"
+
+
+def current_name() -> str:
+    return current_user().get("name", "")
 
 
 def render_login_sidebar() -> None:
     """Renders signed-in state + sign-out button in the sidebar."""
-    if st.session_state.get("logged_in"):
-        email = st.session_state.get("user_email", "")
+    user = current_user()
+    if user:
+        role_badge = "🔑 Admin" if user["role"] == "admin" else "👤 QA"
         st.markdown(
             f'<div style="color:#16a34a;font-size:0.78rem;font-weight:600;margin-bottom:2px;">✓ Signed in</div>'
-            f'<div style="color:#475569;font-size:0.75rem;word-break:break-all;margin-bottom:8px;">{email}</div>',
+            f'<div style="color:#334155;font-size:0.80rem;font-weight:700;margin-bottom:2px;">{user["name"]}</div>'
+            f'<div style="color:#5588bb;font-size:0.68rem;margin-bottom:8px;">{role_badge}</div>',
             unsafe_allow_html=True,
         )
         if st.button("Sign out", key="signout_btn", use_container_width=True):
             st.session_state.pop("logged_in", None)
+            st.session_state.pop("auth_user", None)
             st.session_state.pop("user_email", None)
             st.session_state.pop("gmail_app_password", None)
             st.rerun()
