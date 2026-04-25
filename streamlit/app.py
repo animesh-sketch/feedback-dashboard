@@ -8397,98 +8397,72 @@ def _render_audit_form(legend_map, fname):
                 help="Uploaded leads will be assigned to this QA's audit queue",
             )
     
-            # ── Upload tabs ───────────────────────────────────────────────────────
-            _bulk_tab1, _bulk_tab2 = st.tabs(["📤 Upload CSV / Excel", "📋 Paste CSV"])
-    
-            with _bulk_tab1:
-                _bulk_file = st.file_uploader(
-                    "Upload CSV or Excel", type=["csv", "xlsx", "xls"], key="bulk_lead_upload_v2"
-                )
-                if _bulk_file:
-                    try:
-                        if _bulk_file.name.endswith((".xlsx", ".xls")):
-                            _bulk_raw_df = pd.read_excel(_bulk_file)
+            # ── Upload ────────────────────────────────────────────────────────────
+            _bulk_file = st.file_uploader(
+                "Upload CSV or Excel", type=["csv", "xlsx", "xls"], key="bulk_lead_upload_v2"
+            )
+            if _bulk_file:
+                try:
+                    if _bulk_file.name.endswith((".xlsx", ".xls")):
+                        _bulk_raw_df = pd.read_excel(_bulk_file)
+                    else:
+                        _bulk_raw_df = pd.read_csv(_bulk_file)
+                    _bulk_raw_df.columns = [str(c).strip() for c in _bulk_raw_df.columns]
+
+                    _valid_rows, _invalid_rows = [], []
+                    for _bidx, _brow in _bulk_raw_df.iterrows():
+                        _berrs = []
+                        _cv = str(_brow.get("Client", "")).strip()
+                        _kv = str(_brow.get("Campaign Name", "")).strip()
+                        if not _cv or _cv in ("nan", "None", ""):
+                            _berrs.append("Client required")
+                        if not _kv or _kv in ("nan", "None", ""):
+                            _berrs.append("Campaign Name required")
+                        for _ucol in ("Lead Link", "Conversation Link"):
+                            _uv = str(_brow.get(_ucol, "")).strip()
+                            if _uv and _uv not in ("nan", "None", "") and not _uv.startswith(("http://", "https://")):
+                                _berrs.append(f"{_ucol} must start with http(s)://")
+                        if _berrs:
+                            _invalid_rows.append({"Row": int(_bidx) + 2, "Errors": "; ".join(_berrs)})
                         else:
-                            _bulk_raw_df = pd.read_csv(_bulk_file)
-                        _bulk_raw_df.columns = [str(c).strip() for c in _bulk_raw_df.columns]
-    
-                        _valid_rows, _invalid_rows = [], []
-                        for _bidx, _brow in _bulk_raw_df.iterrows():
-                            _berrs = []
-                            _cv = str(_brow.get("Client", "")).strip()
-                            _kv = str(_brow.get("Campaign Name", "")).strip()
-                            if not _cv or _cv in ("nan", "None", ""):
-                                _berrs.append("Client required")
-                            if not _kv or _kv in ("nan", "None", ""):
-                                _berrs.append("Campaign Name required")
-                            for _ucol in ("Lead Link", "Conversation Link"):
-                                _uv = str(_brow.get(_ucol, "")).strip()
-                                if _uv and _uv not in ("nan", "None", "") and not _uv.startswith(("http://", "https://")):
-                                    _berrs.append(f"{_ucol} must start with http(s)://")
-                            if _berrs:
-                                _invalid_rows.append({"Row": int(_bidx) + 2, "Errors": "; ".join(_berrs)})
-                            else:
-                                _clean = {
-                                    k: ("" if (str(v) in ("nan", "None") or v != v) else str(v).strip())
-                                    for k, v in _brow.items()
-                                }
-                                _valid_rows.append(_clean)
-    
-                        st.markdown(
-                            f'<div style="display:flex;gap:14px;margin:6px 0 8px;">'
-                            f'<span style="font-size:0.72rem;color:#16a34a;font-weight:700;">'
-                            f'✓ {len(_valid_rows)} valid</span>'
-                            + (f'<span style="font-size:0.72rem;color:#dc2626;font-weight:700;">'
-                               f'⚠ {len(_invalid_rows)} invalid</span>' if _invalid_rows else "")
-                            + f'</div>',
-                            unsafe_allow_html=True,
-                        )
-                        if _valid_rows:
-                            _prev_df  = pd.DataFrame(_valid_rows)
-                            _prev_cols = [c for c in ["Client", "Campaign Name", "Bot Name", "Lead Number", "Conversation Link"] if c in _prev_df.columns]
-                            st.dataframe(_prev_df[_prev_cols].head(10), use_container_width=True, hide_index=True, height=160)
-                        if _invalid_rows:
-                            with st.expander(f"⚠️ {len(_invalid_rows)} rows with errors"):
-                                st.dataframe(pd.DataFrame(_invalid_rows), use_container_width=True, hide_index=True)
-    
-                        if _valid_rows and st.button(
-                            f"📥 Upload {len(_valid_rows)} leads → {_bulk_assign_qa}'s queue",
-                            key="bulk_upload_save_btn",
-                            type="primary",
-                        ):
-                            _ok_cnt, _db_errs = pending_store.add_batch(_valid_rows, _bulk_assign_qa)
-                            if _ok_cnt:
-                                st.success(f"✅ {_ok_cnt} leads added to {_bulk_assign_qa}'s audit queue.")
-                                # Auto-load into the Bulk Audit Grid below
-                                st.session_state["bag_rows"]   = pending_store.load_for_qa(_bulk_assign_qa)
-                                st.session_state["bag_qa_sel"] = _bulk_assign_qa
-                            if _db_errs:
-                                st.warning(f"⚠️ {len(_db_errs)} rows failed to save to database.")
-                            st.rerun()
-                    except Exception as _be:
-                        st.error(f"Error reading file: {_be}")
-    
-            with _bulk_tab2:
-                _paste_help = "Client,Campaign Name,Bot Name,Lead Number,Lead Link,Conversation Link\nHDFC,Q2 Campaign,Bot-v2,LD-001,https://...,https://..."
-                _pasted = st.text_area(
-                    "Paste CSV data (with header row)", placeholder=_paste_help, height=120, key="bulk_paste_csv_v2"
-                )
-                if st.button("➕ Add Pasted Leads to Queue", key="bulk_add_paste_btn_v2", type="primary"):
-                    try:
-                        import io as _io_p
-                        _pasted_df = pd.read_csv(_io_p.StringIO(_pasted.strip()))
-                        _pasted_df.columns = [str(c).strip() for c in _pasted_df.columns]
-                        _new_manual = [
-                            {k: ("" if (str(v) in ("nan", "None") or v != v) else str(v).strip())
-                             for k, v in r.items()}
-                            for r in _pasted_df.to_dict("records")
-                        ]
-                        _manual_now = [r for r in st.session_state.get("sense_lead_queue", []) if not r.get("_pending_id")]
-                        st.session_state["sense_lead_queue"] = _pending_db_all + _manual_now + _new_manual
-                        st.success(f"✅ {len(_new_manual)} leads added to queue.")
+                            _clean = {
+                                k: ("" if (str(v) in ("nan", "None") or v != v) else str(v).strip())
+                                for k, v in _brow.items()
+                            }
+                            _valid_rows.append(_clean)
+
+                    st.markdown(
+                        f'<div style="display:flex;gap:14px;margin:6px 0 8px;">'
+                        f'<span style="font-size:0.72rem;color:#16a34a;font-weight:700;">'
+                        f'✓ {len(_valid_rows)} valid</span>'
+                        + (f'<span style="font-size:0.72rem;color:#dc2626;font-weight:700;">'
+                           f'⚠ {len(_invalid_rows)} invalid</span>' if _invalid_rows else "")
+                        + f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                    if _valid_rows:
+                        _prev_df  = pd.DataFrame(_valid_rows)
+                        _prev_cols = [c for c in ["Client", "Campaign Name", "Bot Name", "Lead Number", "Conversation Link"] if c in _prev_df.columns]
+                        st.dataframe(_prev_df[_prev_cols].head(10), use_container_width=True, hide_index=True, height=160)
+                    if _invalid_rows:
+                        with st.expander(f"⚠️ {len(_invalid_rows)} rows with errors"):
+                            st.dataframe(pd.DataFrame(_invalid_rows), use_container_width=True, hide_index=True)
+
+                    if _valid_rows and st.button(
+                        f"📥 Upload {len(_valid_rows)} leads → {_bulk_assign_qa}'s queue",
+                        key="bulk_upload_save_btn",
+                        type="primary",
+                    ):
+                        _ok_cnt, _db_errs = pending_store.add_batch(_valid_rows, _bulk_assign_qa)
+                        if _ok_cnt:
+                            st.success(f"✅ {_ok_cnt} leads added to {_bulk_assign_qa}'s audit queue.")
+                            st.session_state["bag_rows"]   = pending_store.load_for_qa(_bulk_assign_qa)
+                            st.session_state["bag_qa_sel"] = _bulk_assign_qa
+                        if _db_errs:
+                            st.warning(f"⚠️ {len(_db_errs)} rows failed to save to database.")
                         st.rerun()
-                    except Exception as _pe:
-                        st.error(f"Parse error: {_pe}")
+                except Exception as _be:
+                    st.error(f"Error reading file: {_be}")
     
             # ── Queue summary ─────────────────────────────────────────────────────
             st.markdown(
