@@ -2,7 +2,7 @@
 PIN-based authentication with role support.
 
 Users log in with a unique 4-digit number.
-Roles: "admin" (full access) | "qa" (Audit section only).
+Roles: "admin" (full access) | "tl" (Team Lead — same as admin) | "qa" (Audit only).
 
 USERS can be overridden via st.secrets["USERS"] (JSON string) for production.
 """
@@ -11,10 +11,11 @@ import json
 import streamlit as st
 
 # ── User table ────────────────────────────────────────────────────────────────
-# Format: { "PIN": {"name": "...", "role": "admin"|"qa"} }
+# Format: { "PIN": {"name": "...", "role": "admin"|"tl"|"qa"} }
 
 _DEFAULT_USERS = {
     "1000": {"name": "Admin",   "role": "admin"},
+    "1011": {"name": "Aman",    "role": "tl"},
     "1001": {"name": "Animesh", "role": "qa"},
     "1002": {"name": "Steve",   "role": "qa"},
     "1003": {"name": "Adam",    "role": "qa"},
@@ -25,6 +26,18 @@ _DEFAULT_USERS = {
     "1008": {"name": "Sara",    "role": "qa"},
     "1009": {"name": "Mike",    "role": "qa"},
     "1010": {"name": "Lisa",    "role": "qa"},
+}
+
+_ROLE_LABELS = {
+    "admin": "🔑 Admin",
+    "tl":    "⭐ Team Lead",
+    "qa":    "👤 QA",
+}
+
+_ROLE_ICONS = {
+    "admin": "🔑",
+    "tl":    "⭐",
+    "qa":    "👤",
 }
 
 
@@ -61,7 +74,12 @@ def current_user() -> dict:
 
 
 def is_admin() -> bool:
-    return current_user().get("role") == "admin"
+    """True for admin and TL — both have full access."""
+    return current_user().get("role") in ("admin", "tl")
+
+
+def is_tl() -> bool:
+    return current_user().get("role") == "tl"
 
 
 def is_qa() -> bool:
@@ -72,15 +90,19 @@ def current_name() -> str:
     return current_user().get("name", "")
 
 
+def role_icon() -> str:
+    return _ROLE_ICONS.get(current_user().get("role", ""), "👤")
+
+
 def render_login_sidebar() -> None:
     """Renders signed-in state + sign-out button in the sidebar."""
     user = current_user()
     if user:
-        role_badge = "🔑 Admin" if user["role"] == "admin" else "👤 QA"
+        badge = _ROLE_LABELS.get(user["role"], "👤 QA")
         st.markdown(
             f'<div style="color:#16a34a;font-size:0.78rem;font-weight:600;margin-bottom:2px;">✓ Signed in</div>'
             f'<div style="color:#334155;font-size:0.80rem;font-weight:700;margin-bottom:2px;">{user["name"]}</div>'
-            f'<div style="color:#5588bb;font-size:0.68rem;margin-bottom:8px;">{role_badge}</div>',
+            f'<div style="color:#5588bb;font-size:0.68rem;margin-bottom:8px;">{badge}</div>',
             unsafe_allow_html=True,
         )
         if st.button("Sign out", key="signout_btn", use_container_width=True):

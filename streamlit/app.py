@@ -8356,8 +8356,8 @@ def _render_audit_form(legend_map, fname):
         f"📤 Bulk Upload Audit Queue  ·  {_pending_db_count} pending"
         if _pending_db_count else "📤 Bulk Upload Audit Queue"
     )
-    with st.expander(_bulk_expander_label, expanded=bool(_pending_db_count) and _sense_role == "admin"):
-        if _sense_role != "admin":
+    with st.expander(_bulk_expander_label, expanded=bool(_pending_db_count) and _sense_role in ("admin", "tl")):
+        if _sense_role == "qa":
             st.info("🔒 Case uploads are managed by an admin. Your pending cases appear in the Bulk Audit Grid below.")
         else:
             # ── Sample template download ──────────────────────────────────────────
@@ -10329,7 +10329,7 @@ elif _app_mode == "CDL":
             {auth.current_name()[:1].upper() or "?"}
         </div>
         <div style="color:rgba(255,255,255,0.9);font-size:0.72rem;font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-            {auth.current_name() or "—"} {"🔑" if auth.is_admin() else "👤"}
+            {auth.current_name() or "—"} {auth.role_icon()}
         </div>
     </div>
 </div>""", unsafe_allow_html=True)
@@ -10442,7 +10442,7 @@ else:
             {auth.current_name()[:1].upper() or "?"}
         </div>
         <div style="color:rgba(255,255,255,0.85);font-size:0.72rem;font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-            {auth.current_name() or "—"} {"🔑" if auth.is_admin() else "👤"}
+            {auth.current_name() or "—"} {auth.role_icon()}
         </div>
     </div>
 </div>""", unsafe_allow_html=True)
