@@ -3505,6 +3505,17 @@ _SENSE_AUDIT_LOG = os.path.join(os.path.dirname(__file__), ".sense_audit_log.pkl
 _SENSE_REGISTRY  = os.path.join(os.path.dirname(__file__), ".sense_registry.pkl")
 _REGISTRY_VERSION = 2   # bump whenever _SENSE_CLIENTS is re-anonymised
 
+# Delete stale registry on startup so old real names never load
+try:
+    import pickle as _pkl
+    if os.path.exists(_SENSE_REGISTRY):
+        with open(_SENSE_REGISTRY, "rb") as _rf:
+            _rv = _pkl.load(_rf)
+        if _rv.get("_version", 1) < _REGISTRY_VERSION:
+            os.remove(_SENSE_REGISTRY)
+except Exception:
+    pass
+
 # ── Client registry ────────────────────────────────────────────────────────────
 _SENSE_CLIENTS = [
     {"client": "ShopNow",                          "pm": "Tom",       "status": "Active"},
