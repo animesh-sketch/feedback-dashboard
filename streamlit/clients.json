@@ -1,10 +1,10 @@
 [
   {
     "id": "98f2bae2",
-    "company": "Convin",
-    "contact": "",
+    "company": "Acme Corp",
+    "contact": "Tom Harrison",
     "emails": [
-      "aman@convin.ai"
+      "tom@acmecorp.com"
     ],
     "status": "Active",
     "tags": [
