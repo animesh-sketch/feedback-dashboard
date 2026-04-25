@@ -3997,7 +3997,7 @@ def _registry_init():
         _saved = None
     _default_pms = sorted(set(r["pm"] for r in _SENSE_CLIENTS))
     _default_cms: list = []
-    _default_qas = ["Animesh", "Steve", "Adam", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"]
+    _default_qas = ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"]
     _default_clients = [{"client": r["client"], "pm": r["pm"], "cm": "", "status": r["status"]} for r in _SENSE_CLIENTS]
     if _saved:
         st.session_state.setdefault("sense_registry_pms",     _saved.get("pms",     _default_pms))
@@ -8389,7 +8389,7 @@ def _render_audit_form(legend_map, fname):
     
             # ── Assign to QA ──────────────────────────────────────────────────────
             _registry_init()
-            _bulk_qa_list = st.session_state.get("sense_registry_qas", ["Animesh", "Steve", "Adam", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
+            _bulk_qa_list = st.session_state.get("sense_registry_qas", ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
             _bulk_assign_qa = st.selectbox(
                 "Assign to QA",
                 _bulk_qa_list,
@@ -8562,7 +8562,7 @@ def _render_audit_form(legend_map, fname):
                 unsafe_allow_html=True,
             )
         else:
-            _bag_qa_opts = st.session_state.get("sense_registry_qas", ["Animesh", "Steve", "Adam", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
+            _bag_qa_opts = st.session_state.get("sense_registry_qas", ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
             _bag_qa = st.selectbox("Select QA", _bag_qa_opts, key="bag_qa_sel")
 
         if st.button("🔄 Load my pending cases", key="bag_load_btn", type="primary"):
@@ -8852,7 +8852,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
 
             # QA (auditor) selectbox
             _qa_pre = _qv(_q_rec, "QA") or _qv(_q_rec, "Assigned QA")
-            _qa_opts_pre = [""] + st.session_state.get("sense_registry_qas", ["Animesh","Steve","Adam","Nora","Alan"])
+            _qa_opts_pre = [""] + st.session_state.get("sense_registry_qas", ["Animesh","Navya","Shubham Sharma","Nora","Alan"])
             st.session_state["f_auditor_sel"]     = _qa_pre if _qa_pre in _qa_opts_pre else ""
 
             # PM / CSM selectbox
@@ -8900,7 +8900,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             _f_audit_date = st.date_input("Audit Date *", key="f_audit_date", value=pd.Timestamp.now().date())
         with _ad2:
             _registry_init()
-            _reg_qas_form = [""] + st.session_state.get("sense_registry_qas", ["Animesh", "Steve", "Adam", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
+            _reg_qas_form = [""] + st.session_state.get("sense_registry_qas", ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
             _f_auditor = st.selectbox("QA *", _reg_qas_form, key="f_auditor_sel")
         with _ad3:
             _registry_init()
