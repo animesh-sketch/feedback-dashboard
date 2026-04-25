@@ -8527,39 +8527,22 @@ def _render_audit_form(legend_map, fname):
     # loads all pending cases into an editable grid, scores every row via
     # dropdowns, and submits everything in one click.
     _registry_init()
-    # ── Resolve QA name for the grid ─────────────────────────────────────────
+    # ── Load pending rows ─────────────────────────────────────────────────────
+    # QA: auto-load their own cases on every render
+    # Admin/TL: load ALL pending cases across all QAs on every render
     if _sense_role == "qa":
         _bag_qa = _sense_qa_name
-    else:
-        _bag_qa_opts = st.session_state.get("sense_registry_qas", ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
-        _bag_qa = st.selectbox("View pending cases for QA", _bag_qa_opts, key="bag_qa_sel")
-
-    # ── Load pending rows ─────────────────────────────────────────────────────
-    # QA: always auto-load (their own cases, fresh every render)
-    # Admin/TL: load on button click or after upload
-    if _sense_role == "qa":
         _bag_rows = pending_store.load_for_qa(_bag_qa)
-        st.session_state["bag_rows"] = _bag_rows
     else:
-        _prev_bag_qa = st.session_state.get("_bag_qa_prev", "")
-        if st.button("🔄 Load pending cases", key="bag_load_btn", type="primary") or _bag_qa != _prev_bag_qa:
-            st.session_state.pop("bag_data_editor", None)
-            st.session_state["bag_rows"] = pending_store.load_for_qa(_bag_qa)
-        st.session_state["_bag_qa_prev"] = _bag_qa
-        _bag_rows = st.session_state.get("bag_rows", [])
+        _bag_qa = "All QAs"
+        _bag_rows = pending_store.load_all()
+    st.session_state["bag_rows"] = _bag_rows
 
     _bag_auto_open = bool(_bag_rows)
     with st.expander(
         f"📊 Bulk Audit Grid — {len(_bag_rows)} pending" if _bag_rows else "📊 Bulk Audit Grid",
         expanded=_bag_auto_open,
     ):
-        if _sense_role == "qa":
-            st.markdown(
-                f'<div style="font-size:0.78rem;font-weight:700;color:#0B1F3A;margin-bottom:8px;">'
-                f'👤 {_bag_qa} · {len(_bag_rows)} pending case{"s" if len(_bag_rows) != 1 else ""}</div>',
-                unsafe_allow_html=True,
-            )
-
         if not _bag_rows:
             st.caption("No pending cases. Admin/TL uploads leads via the Bulk Upload Queue above.")
         else:
@@ -8570,11 +8553,18 @@ def _render_audit_form(legend_map, fname):
                 for p in tier["params"]
             ]
 
-            # Build display dataframe: read-only meta + editable param cols
+            # Admin/TL sees an "Assigned QA" column; QA does not
             _bag_meta_show = ["Client", "Campaign Name", "Bot Name", "Lead Number", "Disposition", "Conversation Link"]
+            if _sense_role != "qa":
+                _bag_meta_show = ["Assigned QA"] + _bag_meta_show
+
             _bag_df_data = []
             for _br in _bag_rows:
-                _row = {c: _br.get(c, "") for c in _bag_meta_show}
+                _row = {}
+                if _sense_role != "qa":
+                    _row["Assigned QA"] = _br.get("_assigned_qa", "")
+                for _c in ["Client", "Campaign Name", "Bot Name", "Lead Number", "Disposition", "Conversation Link"]:
+                    _row[_c] = _br.get(_c, "")
                 for _pd in _bag_param_defs:
                     _row[_pd["col"]] = ""   # blank — QA fills
                 _row["Correct Disposition"] = ""
