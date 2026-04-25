@@ -3506,58 +3506,58 @@ _SENSE_REGISTRY  = os.path.join(os.path.dirname(__file__), ".sense_registry.pkl"
 
 # ── Client registry ────────────────────────────────────────────────────────────
 _SENSE_CLIENTS = [
-    {"client": "E-Kart",                          "pm": "Ashutosh",  "status": "Active"},
-    {"client": "mPokket",                          "pm": "Sudesha",   "status": "Active"},
-    {"client": "Kotak Securities",                 "pm": "Sudesha",   "status": "Active"},
-    {"client": "ManMatters",                       "pm": "Sudesha",   "status": "Active"},
-    {"client": "Wakefit",                          "pm": "Sudesha",   "status": "Active"},
-    {"client": "Reliance General Insurance",       "pm": "Sudesha",   "status": "Active"},
-    {"client": "Lemonn",                           "pm": "Shivansh",  "status": "Active"},
-    {"client": "Moneyview",                        "pm": "Shivansh",  "status": "Active"},
-    {"client": "Apollo Finvest",                   "pm": "Shivansh",  "status": "Active"},
-    {"client": "Cleartrip - Holiday Travel",       "pm": "Arnab",     "status": "Active"},
-    {"client": "Capital Now",                      "pm": "Arnab",     "status": "Hold"},
-    {"client": "AESL Digital",                     "pm": "Arnab",     "status": "Active"},
-    {"client": "Teamlease",                        "pm": "Arnab",     "status": "Active"},
-    {"client": "Entri App",                        "pm": "Hamza",     "status": "Active"},
-    {"client": "EyeQ India",                       "pm": "Hamza",     "status": "Active"},
-    {"client": "KollegeApply",                     "pm": "Hamza",     "status": "Active"},
-    {"client": "Cleartrip - NPS",                  "pm": "Hamza",     "status": "Active"},
-    {"client": "Cleartrip - Refund",               "pm": "Hamza",     "status": "Active"},
-    {"client": "Oliveboard",                       "pm": "Suyasha",   "status": "Active"},
-    {"client": "Careers360",                       "pm": "Kritik",    "status": "Active"},
-    {"client": "Even Insurance",                   "pm": "Manjusha",  "status": "Active"},
-    {"client": "Credila",                          "pm": "Bhargava",  "status": "Active"},
-    {"client": "JM Financial",                     "pm": "Amith",     "status": "Hold"},
-    {"client": "TrueMeds",                         "pm": "Ashutosh",  "status": "Hold"},
-    {"client": "Ather",                            "pm": "Ashutosh",  "status": "Hold"},
-    {"client": "Mobikwik - Lending Sales",         "pm": "Ashutosh",  "status": "Hold"},
-    {"client": "Agrostar",                         "pm": "Hamza",     "status": "Hold"},
-    {"client": "Nestaway",                         "pm": "Amith",     "status": "Campaigns Over"},
-    {"client": "Shaadi.com",                       "pm": "Bhargava",  "status": "Campaigns Over"},
-    {"client": "Hike Education",                   "pm": "Ashutosh",  "status": "Sales Negotiation"},
-    {"client": "Grip Invest",                      "pm": "Ashutosh",  "status": "Campaigns Over"},
-    {"client": "Guvi",                             "pm": "Sayani",    "status": "Campaigns Over"},
-    {"client": "Habuild",                          "pm": "Arnab",     "status": "Sales Negotiation"},
-    {"client": "FitPass",                          "pm": "Hamza",     "status": "Sales Negotiation"},
-    {"client": "Vyapar",                           "pm": "Arnab",     "status": "Live"},
-    {"client": "BACL - Voicebot use case",         "pm": "Sudesha",   "status": "Live"},
-    {"client": "ABSLI VRM",                        "pm": "Bhargava",  "status": "Live"},
-    {"client": "BACL - Collections",               "pm": "Siddhant",  "status": "Live"},
-    {"client": "Cleartrip - Hotel Confirmation",   "pm": "Utsav",     "status": "Live"},
-    {"client": "PhysicsWallah",                    "pm": "Utsav",     "status": "Live"},
-    {"client": "boAt",                             "pm": "Sudesha",   "status": "Self-Serve Live"},
-    {"client": "Nirvasa Health",                   "pm": "Shivansh",  "status": "Onboarding"},
-    {"client": "Mobikwik",                         "pm": "Raghav",    "status": "Onboarding"},
-    {"client": "Allen - Offline Center",           "pm": "Shubham",   "status": "Onboarding"},
-    {"client": "Allen - Attendance",               "pm": "Shubham",   "status": "Onboarding"},
-    {"client": "Cashify",                          "pm": "Raghav",    "status": "Onboarding"},
-    {"client": "Leap Scholar",                     "pm": "Shivansh",  "status": "Onboarding"},
-    {"client": "Bigul",                            "pm": "Shivansh",  "status": "Onboarding"},
-    {"client": "Ezobooks",                         "pm": "Shubham",   "status": "Onboarding"},
-    {"client": "Miles Education",                  "pm": "Shubham",   "status": "Onboarding"},
-    {"client": "ABSLI PO",                         "pm": "Sudesha",   "status": "Onboarding"},
-    {"client": "AriseAll",                         "pm": "Sudesha",   "status": "Onboarding"},
+    {"client": "ShopNow",                          "pm": "Tom",       "status": "Active"},
+    {"client": "QuickCash",                        "pm": "Harry",     "status": "Active"},
+    {"client": "Peak Securities",                  "pm": "Harry",     "status": "Active"},
+    {"client": "GroomCo",                          "pm": "Harry",     "status": "Active"},
+    {"client": "SleepWell",                        "pm": "Harry",     "status": "Active"},
+    {"client": "Atlas Insurance",                  "pm": "Harry",     "status": "Active"},
+    {"client": "CitrusFin",                        "pm": "Nick",      "status": "Active"},
+    {"client": "ClearView Finance",                "pm": "Nick",      "status": "Active"},
+    {"client": "Apex Finvest",                     "pm": "Nick",      "status": "Active"},
+    {"client": "JetAway - Holiday Travel",         "pm": "Jack",      "status": "Active"},
+    {"client": "FundNow",                          "pm": "Jack",      "status": "Hold"},
+    {"client": "Nexus Digital",                    "pm": "Jack",      "status": "Active"},
+    {"client": "WorkForce Inc",                    "pm": "Jack",      "status": "Active"},
+    {"client": "SkillUp App",                      "pm": "James",     "status": "Active"},
+    {"client": "VisionIQ",                         "pm": "James",     "status": "Active"},
+    {"client": "CampusApply",                      "pm": "James",     "status": "Active"},
+    {"client": "JetAway - NPS",                    "pm": "James",     "status": "Active"},
+    {"client": "JetAway - Refund",                 "pm": "James",     "status": "Active"},
+    {"client": "PrepBoard",                        "pm": "Jane",      "status": "Active"},
+    {"client": "CareerPath",                       "pm": "Sam",       "status": "Active"},
+    {"client": "Evenly Insurance",                 "pm": "Sara",      "status": "Active"},
+    {"client": "CredPrime",                        "pm": "Ben",       "status": "Active"},
+    {"client": "JP Finance",                       "pm": "Alex",      "status": "Hold"},
+    {"client": "MedTrue",                          "pm": "Tom",       "status": "Hold"},
+    {"client": "ElectroRide",                      "pm": "Tom",       "status": "Hold"},
+    {"client": "PaySwift - Lending Sales",         "pm": "Tom",       "status": "Hold"},
+    {"client": "FarmStar",                         "pm": "James",     "status": "Hold"},
+    {"client": "HomeAway",                         "pm": "Alex",      "status": "Campaigns Over"},
+    {"client": "WeddingLink",                      "pm": "Ben",       "status": "Campaigns Over"},
+    {"client": "Summit Education",                 "pm": "Tom",       "status": "Sales Negotiation"},
+    {"client": "Hold Invest",                      "pm": "Tom",       "status": "Campaigns Over"},
+    {"client": "CodeLearn",                        "pm": "Sophie",    "status": "Campaigns Over"},
+    {"client": "FitBuild",                         "pm": "Jack",      "status": "Sales Negotiation"},
+    {"client": "ActivePass",                       "pm": "James",     "status": "Sales Negotiation"},
+    {"client": "TradeApp",                         "pm": "Jack",      "status": "Live"},
+    {"client": "APEX - Voicebot use case",         "pm": "Harry",     "status": "Live"},
+    {"client": "ASTRA VRM",                        "pm": "Ben",       "status": "Live"},
+    {"client": "APEX - Collections",               "pm": "Dan",       "status": "Live"},
+    {"client": "JetAway - Hotel Confirmation",     "pm": "Ryan",      "status": "Live"},
+    {"client": "ScienceGuru",                      "pm": "Ryan",      "status": "Live"},
+    {"client": "WaveAudio",                        "pm": "Harry",     "status": "Self-Serve Live"},
+    {"client": "NovaCare Health",                  "pm": "Nick",      "status": "Onboarding"},
+    {"client": "PaySwift",                         "pm": "Rob",       "status": "Onboarding"},
+    {"client": "Bright - Offline Center",          "pm": "Steve",     "status": "Onboarding"},
+    {"client": "Bright - Attendance",              "pm": "Steve",     "status": "Onboarding"},
+    {"client": "QuickSell",                        "pm": "Rob",       "status": "Onboarding"},
+    {"client": "AimScholar",                       "pm": "Nick",      "status": "Onboarding"},
+    {"client": "TradePro",                         "pm": "Nick",      "status": "Onboarding"},
+    {"client": "BookEasy",                         "pm": "Steve",     "status": "Onboarding"},
+    {"client": "Horizon Education",                "pm": "Steve",     "status": "Onboarding"},
+    {"client": "ASTRA PO",                         "pm": "Harry",     "status": "Onboarding"},
+    {"client": "RiseUp",                           "pm": "Harry",     "status": "Onboarding"},
 ]
 _SENSE_CLIENT_MAP = {r["client"]: r for r in _SENSE_CLIENTS}
 _SENSE_CLIENT_NAMES = [""] + [r["client"] for r in _SENSE_CLIENTS]
@@ -3968,7 +3968,7 @@ def _registry_init():
     _saved = _registry_load()
     _default_pms = sorted(set(r["pm"] for r in _SENSE_CLIENTS))
     _default_cms: list = []
-    _default_qas = ["Animesh", "Shubham", "Aman", "Navya", "Alan"]
+    _default_qas = ["Animesh", "Steve", "Adam", "Nora", "Alan"]
     _default_clients = [{"client": r["client"], "pm": r["pm"], "cm": "", "status": r["status"]} for r in _SENSE_CLIENTS]
     if _saved:
         st.session_state.setdefault("sense_registry_pms",     _saved.get("pms",     _default_pms))
@@ -8355,7 +8355,7 @@ def _render_audit_form(legend_map, fname):
 
         # ── Assign to QA ──────────────────────────────────────────────────────
         _registry_init()
-        _bulk_qa_list = st.session_state.get("sense_registry_qas", ["Animesh", "Shubham", "Aman", "Navya", "Alan"])
+        _bulk_qa_list = st.session_state.get("sense_registry_qas", ["Animesh", "Steve", "Adam", "Nora", "Alan"])
         _bulk_assign_qa = st.selectbox(
             "Assign to QA",
             _bulk_qa_list,
@@ -8699,7 +8699,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
 
             # QA (auditor) selectbox
             _qa_pre = _qv(_q_rec, "QA") or _qv(_q_rec, "Assigned QA")
-            _qa_opts_pre = [""] + st.session_state.get("sense_registry_qas", ["Animesh","Shubham","Aman","Navya","Alan"])
+            _qa_opts_pre = [""] + st.session_state.get("sense_registry_qas", ["Animesh","Steve","Adam","Nora","Alan"])
             st.session_state["f_auditor_sel"]     = _qa_pre if _qa_pre in _qa_opts_pre else ""
 
             # PM / CSM selectbox
@@ -8747,7 +8747,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             _f_audit_date = st.date_input("Audit Date *", key="f_audit_date", value=pd.Timestamp.now().date())
         with _ad2:
             _registry_init()
-            _reg_qas_form = [""] + st.session_state.get("sense_registry_qas", ["Animesh", "Shubham", "Aman", "Navya", "Alan"])
+            _reg_qas_form = [""] + st.session_state.get("sense_registry_qas", ["Animesh", "Steve", "Adam", "Nora", "Alan"])
             _f_auditor = st.selectbox("QA *", _reg_qas_form, key="f_auditor_sel")
         with _ad3:
             _registry_init()
