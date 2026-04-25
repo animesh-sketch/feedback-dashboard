@@ -3503,6 +3503,7 @@ _SENSE_CACHE     = os.path.join(os.path.dirname(__file__), ".sense_cache.pkl")
 _SENSE_PROTECTED = os.path.join(os.path.dirname(__file__), ".sense_protected.pkl")
 _SENSE_AUDIT_LOG = os.path.join(os.path.dirname(__file__), ".sense_audit_log.pkl")
 _SENSE_REGISTRY  = os.path.join(os.path.dirname(__file__), ".sense_registry.pkl")
+_REGISTRY_VERSION = 2   # bump whenever _SENSE_CLIENTS is re-anonymised
 
 # ── Client registry ────────────────────────────────────────────────────────────
 _SENSE_CLIENTS = [
@@ -3966,6 +3967,13 @@ def _registry_init():
     if st.session_state.get("_registry_initialized"):
         return
     _saved = _registry_load()
+    # Discard stale registry saved before the current anonymisation pass
+    if _saved and _saved.get("_version", 1) < _REGISTRY_VERSION:
+        try:
+            os.remove(_SENSE_REGISTRY)
+        except Exception:
+            pass
+        _saved = None
     _default_pms = sorted(set(r["pm"] for r in _SENSE_CLIENTS))
     _default_cms: list = []
     _default_qas = ["Animesh", "Steve", "Adam", "Nora", "Alan"]
@@ -3985,6 +3993,7 @@ def _registry_init():
 def _registry_persist():
     """Write current session state registry to disk."""
     _registry_save({
+        "_version": _REGISTRY_VERSION,
         "pms":     st.session_state.get("sense_registry_pms", []),
         "cms":     st.session_state.get("sense_registry_cms", []),
         "qas":     st.session_state.get("sense_registry_qas", []),
