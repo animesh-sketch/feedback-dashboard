@@ -8445,6 +8445,9 @@ def _render_audit_form(legend_map, fname):
                         _ok_cnt, _db_errs = pending_store.add_batch(_valid_rows, _bulk_assign_qa)
                         if _ok_cnt:
                             st.success(f"✅ {_ok_cnt} leads added to {_bulk_assign_qa}'s audit queue.")
+                            # Auto-load into the Bulk Audit Grid below
+                            st.session_state["bag_rows"]   = pending_store.load_for_qa(_bulk_assign_qa)
+                            st.session_state["bag_qa_sel"] = _bulk_assign_qa
                         if _db_errs:
                             st.warning(f"⚠️ {len(_db_errs)} rows failed to save to database.")
                         st.rerun()
@@ -8528,182 +8531,112 @@ def _render_audit_form(legend_map, fname):
                     st.session_state["sense_lead_queue"] = _db_q_items
                     st.rerun()
 
-    # ── Bulk Audit Submission ────────────────────────────────────────────────
-    with st.expander("📊 Bulk Audit Submission — upload pre-filled audits", expanded=False):
-        st.markdown(
-            '<div style="font-size:0.72rem;color:#5588bb;margin-bottom:10px;">'
-            'Download the template, fill in audit parameters for each row '
-            '(Yes / No / NA or 0 / 1 / 2 as shown per column), then upload — '
-            'scores are computed automatically and all rows are saved at once.'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-
-        # ── QA selector ──────────────────────────────────────────────────────
+    # ── Bulk Audit Grid ──────────────────────────────────────────────────────
+    # Step 1 — admin uploads metadata (Client, Campaign, Lead #, etc.) once via
+    # the Bulk Upload Audit Queue above.  Step 2 — QA selects their name here,
+    # loads all pending cases into an editable grid, scores every row via
+    # dropdowns, and submits everything in one click.
+    _bag_auto_open = bool(st.session_state.get("bag_rows"))
+    with st.expander("📊 Bulk Audit Grid — score all pending cases at once", expanded=_bag_auto_open):
         _registry_init()
-        _bsub_qa_opts = st.session_state.get("sense_registry_qas", ["Animesh", "Steve", "Adam", "Nora", "Alan"])
-        _bsub_qa = st.selectbox("Your name (QA)", _bsub_qa_opts, key="bsub_qa_sel")
+        _bag_qa_opts = st.session_state.get("sense_registry_qas", ["Animesh", "Steve", "Adam", "Nora", "Alan"])
+        _bag_qa = st.selectbox("Your name (QA)", _bag_qa_opts, key="bag_qa_sel")
 
-        # ── Build template columns ────────────────────────────────────────────
-        _bsub_meta_cols = [
-            "Audit Date", "Client", "Campaign Name", "PM / CSM",
-            "Bot Name", "Lead Number", "Lead Link", "Conversation Link",
-            "Disposition", "Correct Disposition", "Correct Disposition (Expected)",
-            "Call Drop Stage", "Notes", "Improvement Suggestion",
-        ]
-        _bsub_param_cols = [
-            p["col"]
-            for tier in _QA_SCHEMA["tiers"]
-            for p in tier["params"]
-        ]
-        _bsub_all_cols = _bsub_meta_cols + _bsub_param_cols
+        if st.button("🔄 Load my pending cases", key="bag_load_btn", type="primary"):
+            st.session_state["bag_rows"] = pending_store.load_for_qa(_bag_qa)
 
-        # Example row showing valid values
-        _bsub_guide_row = {
-            "Audit Date": "2026-04-25",
-            "Client": "ShopNow",
-            "Campaign Name": "Campaign_April",
-            "PM / CSM": "Tom",
-            "Bot Name": "Aria",
-            "Lead Number": "+91XXXXXXXXXX",
-            "Lead Link": "https://...",
-            "Conversation Link": "https://...",
-            "Disposition": "Hot",
-            "Correct Disposition": "Yes",
-            "Correct Disposition (Expected)": "",
-            "Call Drop Stage": "NA",
-            "Notes": "",
-            "Improvement Suggestion": "",
-            "Disposition Accuracy": "2",
-            "Context Passing": "2",
-            "Flow Issue": "No",
-            "Bot Restarted Conversation": "No",
-            "Message Content": "2",
-            "Follow-up in Specified Time": "NA",
-            "Bot Repetition": "No",
-            "Dead Air/Blank Space": "2",
-            "Repeated Calls": "2",
-            "Introduction": "2",
-            "Background Noise": "2",
-            "Transcription Issues": "2",
-            "Latency": "2",
-            "Language Switch": "2",
-            "Script Issue in Transcript": "2",
-            "TTS Issues (Voice)": "2",
-            "Template Issues": "2",
-            "Pronunciation Issue": "2",
-            "Abrupt Disconnection": "0",
-            "NBA Not Executed": "2",
-        }
-        _bsub_tmpl_df = pd.DataFrame([[_bsub_guide_row.get(c, "") for c in _bsub_all_cols]], columns=_bsub_all_cols)
-        import io as _bsub_io
-        _bsub_buf = _bsub_io.BytesIO()
-        _bsub_tmpl_df.to_excel(_bsub_buf, index=False)
-        st.download_button(
-            "⬇️ Download Template (.xlsx)",
-            data=_bsub_buf.getvalue(),
-            file_name="bulk_audit_template.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key="bsub_tmpl_dl",
-        )
+        _bag_rows = st.session_state.get("bag_rows", [])
 
-        # ── Upload ────────────────────────────────────────────────────────────
-        _bsub_file = st.file_uploader(
-            "Upload filled CSV or Excel", type=["csv", "xlsx", "xls"], key="bsub_file_upload"
-        )
-        if _bsub_file:
-            try:
-                if _bsub_file.name.endswith((".xlsx", ".xls")):
-                    _bsub_df = pd.read_excel(_bsub_file)
-                else:
-                    _bsub_df = pd.read_csv(_bsub_file)
-                _bsub_df.columns = [str(c).strip() for c in _bsub_df.columns]
+        if not _bag_rows:
+            st.caption("No pending cases loaded. Upload leads via '📤 Bulk Upload Audit Queue' above, then click Load.")
+        else:
+            # Build options per param col
+            _bag_param_defs = [
+                {"col": p["col"], "options": p["options"]}
+                for tier in _QA_SCHEMA["tiers"]
+                for p in tier["params"]
+            ]
 
-                _bsub_valid, _bsub_invalid = [], []
-                for _bi, _br in _bsub_df.iterrows():
-                    _berrs = []
-                    _bclean = {
-                        k: ("" if (str(v) in ("nan", "None", "") or (v != v)) else str(v).strip())
-                        for k, v in _br.items()
-                    }
-                    if not _bclean.get("Client"):
-                        _berrs.append("Client required")
-                    if not _bclean.get("Campaign Name"):
-                        _berrs.append("Campaign Name required")
-                    if not _bclean.get("Audit Date"):
-                        _berrs.append("Audit Date required")
-                    if _berrs:
-                        _bsub_invalid.append({"Row": int(_bi) + 2, "Errors": "; ".join(_berrs)})
-                    else:
-                        _bsub_valid.append(_bclean)
+            # Build display dataframe: read-only meta + editable param cols
+            _bag_meta_show = ["Client", "Campaign Name", "Bot Name", "Lead Number", "Disposition", "Conversation Link"]
+            _bag_df_data = []
+            for _br in _bag_rows:
+                _row = {c: _br.get(c, "") for c in _bag_meta_show}
+                for _pd in _bag_param_defs:
+                    _row[_pd["col"]] = ""   # blank — QA fills
+                _row["Correct Disposition"] = ""
+                _row["Notes"] = ""
+                _bag_df_data.append(_row)
 
-                # Summary
-                st.markdown(
-                    f'<div style="display:flex;gap:14px;margin:8px 0;">'
-                    f'<span style="font-size:0.72rem;color:#16a34a;font-weight:700;">✓ {len(_bsub_valid)} valid rows</span>'
-                    + (f'<span style="font-size:0.72rem;color:#dc2626;font-weight:700;">⚠ {len(_bsub_invalid)} invalid</span>' if _bsub_invalid else "")
-                    + '</div>',
-                    unsafe_allow_html=True,
+            _bag_df = pd.DataFrame(_bag_df_data)
+
+            # Column configs: meta = disabled, params = selectbox
+            _bag_col_cfg = {c: st.column_config.TextColumn(c, disabled=True) for c in _bag_meta_show}
+            for _pd in _bag_param_defs:
+                _opts = [""] + _pd["options"] + (["NA"] if "NA" not in _pd["options"] else [])
+                _bag_col_cfg[_pd["col"]] = st.column_config.SelectboxColumn(
+                    _pd["col"], options=_opts, required=False
                 )
+            _bag_col_cfg["Correct Disposition"] = st.column_config.SelectboxColumn(
+                "Correct Disposition", options=["", "Yes", "No"], required=False
+            )
+            _bag_col_cfg["Notes"] = st.column_config.TextColumn("Notes", disabled=False)
 
-                # Preview
-                if _bsub_valid:
-                    _prev_show_cols = [c for c in ["Client", "Campaign Name", "Bot Name", "Disposition Accuracy", "Context Passing", "Flow Issue"] if c in _bsub_df.columns]
-                    st.dataframe(pd.DataFrame(_bsub_valid)[_prev_show_cols].head(10), use_container_width=True, hide_index=True, height=160)
+            st.caption(f"📋 {len(_bag_rows)} cases — fill audit parameters for each row, then Submit All.")
 
-                if _bsub_invalid:
-                    with st.expander(f"⚠️ {len(_bsub_invalid)} rows with errors"):
-                        st.dataframe(pd.DataFrame(_bsub_invalid), use_container_width=True, hide_index=True)
+            _bag_edited = st.data_editor(
+                _bag_df,
+                column_config=_bag_col_cfg,
+                use_container_width=True,
+                hide_index=True,
+                height=min(400, 40 + len(_bag_rows) * 35),
+                key="bag_data_editor",
+            )
 
-                if _bsub_valid and st.button(
-                    f"✅ Submit {len(_bsub_valid)} audits to log",
-                    key="bsub_submit_btn", type="primary",
-                ):
-                    _bsub_ok, _bsub_errs = 0, []
-                    for _brow in _bsub_valid:
-                        # Build full param values dict for score computation
-                        _bpv = {p["col"]: _brow.get(p["col"], "") for tier in _QA_SCHEMA["tiers"] for p in tier["params"]}
-                        _bpv["Correct Disposition"]            = _brow.get("Correct Disposition", "")
-                        _bpv["Correct Disposition (Expected)"] = _brow.get("Correct Disposition (Expected)", "")
-                        _bcomputed = _compute_qa_score(_bpv)
-                        _brec = {
-                            "Audit Date":        _brow.get("Audit Date", str(datetime.now(timezone.utc).date())),
-                            "QA":                _bsub_qa,
-                            "Client":            _brow.get("Client", ""),
-                            "Campaign Name":     _brow.get("Campaign Name", ""),
-                            "PM / CSM":          _brow.get("PM / CSM", ""),
-                            "Bot Name":          _brow.get("Bot Name", ""),
-                            "Lead Number":       _brow.get("Lead Number", ""),
-                            "Lead Link":         _brow.get("Lead Link", ""),
-                            "Disposition":       _brow.get("Disposition", ""),
-                            "Conversation Link": _brow.get("Conversation Link", ""),
-                            **_bpv,
-                            "Lead Score":               _bcomputed["Lead Score"],
-                            "Lead Composite":           _bcomputed["Lead Composite"],
-                            "Bot Score":                _bcomputed["Bot Score"],
-                            "Intelligence Score":       _bcomputed["Intelligence Score"],
-                            "Status":                   _bcomputed["Status"],
-                            "Fatal?":                   _bcomputed["Fatal?"],
-                            "Notes":                    _brow.get("Notes", ""),
-                            "Improvement Suggestion":   _brow.get("Improvement Suggestion", ""),
-                            "Call Drop Stage":          _brow.get("Call Drop Stage", ""),
-                        }
-                        _berr = audit_store.append(_brec)
-                        if _berr:
-                            _bsub_errs.append(_berr)
-                        else:
-                            _bsub_ok += 1
+            if st.button(f"✅ Submit all {len(_bag_rows)} audits", key="bag_submit_btn", type="primary"):
+                _bag_ok, _bag_errs = 0, []
+                for _ri, (_brow_meta, _brow_edit) in enumerate(zip(_bag_rows, _bag_edited.to_dict("records"))):
+                    _bpv = {p["col"]: str(_brow_edit.get(p["col"], "") or "").strip() for tier in _QA_SCHEMA["tiers"] for p in tier["params"]}
+                    _bpv["Correct Disposition"]            = str(_brow_edit.get("Correct Disposition", "") or "").strip()
+                    _bpv["Correct Disposition (Expected)"] = ""
+                    _bcomputed = _compute_qa_score(_bpv)
+                    _brec = {
+                        "Audit Date":        str(_brow_meta.get("Audit Date", datetime.now(timezone.utc).date())),
+                        "QA":                _bag_qa,
+                        "Client":            _brow_meta.get("Client", ""),
+                        "Campaign Name":     _brow_meta.get("Campaign Name", ""),
+                        "PM / CSM":          _brow_meta.get("PM / CSM", ""),
+                        "Bot Name":          _brow_meta.get("Bot Name", ""),
+                        "Lead Number":       _brow_meta.get("Lead Number", ""),
+                        "Lead Link":         _brow_meta.get("Lead Link", ""),
+                        "Disposition":       _brow_meta.get("Disposition", ""),
+                        "Conversation Link": _brow_meta.get("Conversation Link", ""),
+                        **_bpv,
+                        "Lead Score":             _bcomputed["Lead Score"],
+                        "Lead Composite":         _bcomputed["Lead Composite"],
+                        "Bot Score":              _bcomputed["Bot Score"],
+                        "Intelligence Score":     _bcomputed["Intelligence Score"],
+                        "Status":                 _bcomputed["Status"],
+                        "Fatal?":                 _bcomputed["Fatal?"],
+                        "Notes":                  str(_brow_edit.get("Notes", "") or ""),
+                        "Improvement Suggestion": "",
+                        "Call Drop Stage":        "",
+                    }
+                    _berr = audit_store.append(_brec)
+                    if _berr:
+                        _bag_errs.append(_berr)
+                    else:
+                        pending_store.mark_done(_brow_meta["_pending_id"])
+                        _bag_ok += 1
 
-                    if _bsub_ok:
-                        st.success(f"✅ {_bsub_ok} audits saved to log.")
-                    if _bsub_errs:
-                        st.warning(f"⚠️ {len(_bsub_errs)} rows failed to save.")
-                    if _bsub_ok:
-                        st.session_state["sense_audit_log"] = _audit_log_load()
-                        st.rerun()
-
-            except Exception as _bsub_ex:
-                st.error(f"Error reading file: {_bsub_ex}")
+                if _bag_ok:
+                    st.success(f"✅ {_bag_ok} audits saved.")
+                if _bag_errs:
+                    st.warning(f"⚠️ {len(_bag_errs)} rows failed.")
+                if _bag_ok:
+                    st.session_state.pop("bag_rows", None)
+                    st.session_state["sense_audit_log"] = _audit_log_load()
+                    st.rerun()
 
     # ── AI Suggestion Builder (outside form — AI calls need rerun) ───────────
     with st.expander("✨ AI Suggestion Builder — draft & improve before submitting", expanded=False):
