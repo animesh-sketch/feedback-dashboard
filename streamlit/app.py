@@ -8456,8 +8456,10 @@ def _render_audit_form(legend_map, fname):
                         _ok_cnt, _db_errs = pending_store.add_batch(_valid_rows, _bulk_assign_qa)
                         if _ok_cnt:
                             st.success(f"✅ {_ok_cnt} leads added to {_bulk_assign_qa}'s audit queue.")
-                            st.session_state["bag_rows"]   = pending_store.load_for_qa(_bulk_assign_qa)
-                            st.session_state["bag_qa_sel"] = _bulk_assign_qa
+                            st.session_state.pop("bag_data_editor", None)
+                            st.session_state["bag_rows"]    = pending_store.load_for_qa(_bulk_assign_qa)
+                            st.session_state["bag_qa_sel"]  = _bulk_assign_qa
+                            st.session_state["_bag_qa_prev"] = _bulk_assign_qa
                         if _db_errs:
                             st.warning(f"⚠️ {len(_db_errs)} rows failed to save to database.")
                         st.rerun()
@@ -8524,28 +8526,42 @@ def _render_audit_form(legend_map, fname):
     # the Bulk Upload Audit Queue above.  Step 2 — QA selects their name here,
     # loads all pending cases into an editable grid, scores every row via
     # dropdowns, and submits everything in one click.
-    _bag_auto_open = bool(st.session_state.get("bag_rows"))
-    with st.expander("📊 Bulk Audit Grid — score all pending cases at once", expanded=_bag_auto_open):
-        _registry_init()
-        # QA users: name is fixed from login. Admin can pick any QA from dropdown.
-        if _sense_role == "qa":
-            _bag_qa = _sense_qa_name
-            st.markdown(
-                f'<div style="font-size:0.78rem;font-weight:700;color:#0B1F3A;margin-bottom:8px;">'
-                f'👤 Logged in as: <span style="color:#2563EB;">{_bag_qa}</span></div>',
-                unsafe_allow_html=True,
-            )
-        else:
-            _bag_qa_opts = st.session_state.get("sense_registry_qas", ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
-            _bag_qa = st.selectbox("Select QA", _bag_qa_opts, key="bag_qa_sel")
+    _registry_init()
+    # ── Resolve QA name for the grid ─────────────────────────────────────────
+    if _sense_role == "qa":
+        _bag_qa = _sense_qa_name
+    else:
+        _bag_qa_opts = st.session_state.get("sense_registry_qas", ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
+        _bag_qa = st.selectbox("View pending cases for QA", _bag_qa_opts, key="bag_qa_sel")
 
-        if st.button("🔄 Load my pending cases", key="bag_load_btn", type="primary"):
+    # ── Load pending rows ─────────────────────────────────────────────────────
+    # QA: always auto-load (their own cases, fresh every render)
+    # Admin/TL: load on button click or after upload
+    if _sense_role == "qa":
+        _bag_rows = pending_store.load_for_qa(_bag_qa)
+        st.session_state["bag_rows"] = _bag_rows
+    else:
+        _prev_bag_qa = st.session_state.get("_bag_qa_prev", "")
+        if st.button("🔄 Load pending cases", key="bag_load_btn", type="primary") or _bag_qa != _prev_bag_qa:
+            st.session_state.pop("bag_data_editor", None)
             st.session_state["bag_rows"] = pending_store.load_for_qa(_bag_qa)
-
+        st.session_state["_bag_qa_prev"] = _bag_qa
         _bag_rows = st.session_state.get("bag_rows", [])
 
+    _bag_auto_open = bool(_bag_rows)
+    with st.expander(
+        f"📊 Bulk Audit Grid — {len(_bag_rows)} pending" if _bag_rows else "📊 Bulk Audit Grid",
+        expanded=_bag_auto_open,
+    ):
+        if _sense_role == "qa":
+            st.markdown(
+                f'<div style="font-size:0.78rem;font-weight:700;color:#0B1F3A;margin-bottom:8px;">'
+                f'👤 {_bag_qa} · {len(_bag_rows)} pending case{"s" if len(_bag_rows) != 1 else ""}</div>',
+                unsafe_allow_html=True,
+            )
+
         if not _bag_rows:
-            st.caption("No pending cases loaded. Ask admin to upload leads, then click Load.")
+            st.caption("No pending cases. Admin/TL uploads leads via the Bulk Upload Queue above.")
         else:
             # Build options per param col
             _bag_param_defs = [
