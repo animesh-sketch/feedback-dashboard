@@ -8526,94 +8526,115 @@ def _render_audit_form(legend_map, fname):
     # the Bulk Upload Audit Queue above.  Step 2 — QA selects their name here,
     # loads all pending cases into an editable grid, scores every row via
     # dropdowns, and submits everything in one click.
-    _registry_init()
-    # ── Load pending rows ─────────────────────────────────────────────────────
-    # QA: auto-load their own cases on every render
-    # Admin/TL: load ALL pending cases across all QAs on every render
+    # ── Bulk Audit Grid rows — reuse already-loaded _pending_db_all ──────────
+    # Admin/TL: all pending cases. QA: only their own.
     if _sense_role == "qa":
-        _bag_qa = _sense_qa_name
-        _bag_rows = pending_store.load_for_qa(_bag_qa)
+        _bag_rows = [r for r in _pending_db_all if r.get("_assigned_qa") == _sense_qa_name]
     else:
-        _bag_qa = "All QAs"
-        _bag_rows = pending_store.load_all()
-    st.session_state["bag_rows"] = _bag_rows
+        _bag_rows = _pending_db_all   # already loaded at top of this function
 
-    _bag_auto_open = bool(_bag_rows)
-    with st.expander(
-        f"📊 Bulk Audit Grid — {len(_bag_rows)} pending" if _bag_rows else "📊 Bulk Audit Grid",
-        expanded=_bag_auto_open,
-    ):
+    # Dynamic editor key — changes when the set of pending IDs changes,
+    # which forces Streamlit to create a fresh data_editor (no stale edit state).
+    _bag_editor_key = "bag_editor_" + str(hash(tuple(r.get("_pending_id", 0) for r in _bag_rows)))
+
+    _bag_label = f"📊 Bulk Audit Grid — {len(_bag_rows)} pending" if _bag_rows else "📊 Bulk Audit Grid"
+    with st.expander(_bag_label, expanded=bool(_bag_rows)):
         if not _bag_rows:
             st.caption("No pending cases. Admin/TL uploads leads via the Bulk Upload Queue above.")
         else:
-            # Build options per param col
             _bag_param_defs = [
                 {"col": p["col"], "options": p["options"]}
                 for tier in _QA_SCHEMA["tiers"]
                 for p in tier["params"]
             ]
 
-            # Admin/TL sees an "Assigned QA" column; QA does not
-            _bag_meta_show = ["Client", "Campaign Name", "Bot Name", "Lead Number", "Disposition", "Conversation Link"]
-            if _sense_role != "qa":
-                _bag_meta_show = ["Assigned QA"] + _bag_meta_show
+            # Admin/TL: Assigned QA column visible + meta cols editable + rows deletable
+            # QA: meta cols read-only, no delete
+            _bag_meta_cols = ["Client", "Campaign Name", "Bot Name", "Lead Number", "Disposition", "Conversation Link"]
+            _show_qa_col = (_sense_role != "qa")
+            _is_privileged_grid = (_sense_role != "qa")
 
             _bag_df_data = []
             for _br in _bag_rows:
                 _row = {}
-                if _sense_role != "qa":
+                if _show_qa_col:
                     _row["Assigned QA"] = _br.get("_assigned_qa", "")
-                for _c in ["Client", "Campaign Name", "Bot Name", "Lead Number", "Disposition", "Conversation Link"]:
+                for _c in _bag_meta_cols:
                     _row[_c] = _br.get(_c, "")
                 for _pd in _bag_param_defs:
-                    _row[_pd["col"]] = ""   # blank — QA fills
+                    _row[_pd["col"]] = ""
                 _row["Correct Disposition"] = ""
                 _row["Notes"] = ""
                 _bag_df_data.append(_row)
 
             _bag_df = pd.DataFrame(_bag_df_data)
 
-            # Column configs: meta = disabled, params = selectbox
-            _bag_col_cfg = {c: st.column_config.TextColumn(c, disabled=True) for c in _bag_meta_show}
+            _all_meta = (["Assigned QA"] if _show_qa_col else []) + _bag_meta_cols
+            # Admin/TL can edit meta cols; QA cannot
+            _bag_col_cfg = {c: st.column_config.TextColumn(c, disabled=not _is_privileged_grid) for c in _all_meta}
+            if _show_qa_col:
+                _all_qa_names = st.session_state.get("sense_registry_qas", ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
+                _bag_col_cfg["Assigned QA"] = st.column_config.SelectboxColumn("Assigned QA", options=_all_qa_names, required=False)
             for _pd in _bag_param_defs:
                 _opts = [""] + _pd["options"] + (["NA"] if "NA" not in _pd["options"] else [])
-                _bag_col_cfg[_pd["col"]] = st.column_config.SelectboxColumn(
-                    _pd["col"], options=_opts, required=False
-                )
+                _bag_col_cfg[_pd["col"]] = st.column_config.SelectboxColumn(_pd["col"], options=_opts, required=False)
             _bag_col_cfg["Correct Disposition"] = st.column_config.SelectboxColumn(
                 "Correct Disposition", options=["", "Yes", "No"], required=False
             )
             _bag_col_cfg["Notes"] = st.column_config.TextColumn("Notes", disabled=False)
 
-            st.caption(f"📋 {len(_bag_rows)} cases — fill audit parameters for each row, then Submit All.")
+            st.caption(f"📋 {len(_bag_rows)} cases — score each row then Submit All.")
 
             _bag_edited = st.data_editor(
                 _bag_df,
                 column_config=_bag_col_cfg,
                 use_container_width=True,
                 hide_index=True,
-                height=min(400, 40 + len(_bag_rows) * 35),
-                key="bag_data_editor",
+                num_rows="dynamic" if _is_privileged_grid else "fixed",
+                height=min(500, 50 + len(_bag_rows) * 38),
+                key=_bag_editor_key,
             )
 
-            if st.button(f"✅ Submit all {len(_bag_rows)} audits", key="bag_submit_btn", type="primary"):
+            # Admin delete: rows removed in the editor → remove from Supabase queue
+            if _is_privileged_grid:
+                _edited_records = _bag_edited.to_dict("records")
+                _kept_ids = set()
+                for _i, _er in enumerate(_edited_records):
+                    if _i < len(_bag_rows):
+                        _kept_ids.add(_bag_rows[_i].get("_pending_id"))
+                _removed_rows = [r for r in _bag_rows if r.get("_pending_id") not in _kept_ids]
+                if _removed_rows:
+                    for _rr in _removed_rows:
+                        pending_store.remove(_rr["_pending_id"])
+                    st.rerun()
+
+            if st.button(f"✅ Submit all {len(_bag_edited)} audits", key="bag_submit_btn", type="primary"):
                 _bag_ok, _bag_errs = 0, []
-                for _ri, (_brow_meta, _brow_edit) in enumerate(zip(_bag_rows, _bag_edited.to_dict("records"))):
+                _edited_list = _bag_edited.to_dict("records")
+                for _brow_edit, _brow_meta in zip(_edited_list, _bag_rows[:len(_edited_list)]):
                     _bpv = {p["col"]: str(_brow_edit.get(p["col"], "") or "").strip() for tier in _QA_SCHEMA["tiers"] for p in tier["params"]}
                     _bpv["Correct Disposition"]            = str(_brow_edit.get("Correct Disposition", "") or "").strip()
                     _bpv["Correct Disposition (Expected)"] = ""
                     _bcomputed = _compute_qa_score(_bpv)
+                    # Admin edits override meta cols; QA reads from original meta
+                    _eff_client   = str(_brow_edit.get("Client", "") or _brow_meta.get("Client", ""))
+                    _eff_campaign = str(_brow_edit.get("Campaign Name", "") or _brow_meta.get("Campaign Name", ""))
+                    _eff_bot      = str(_brow_edit.get("Bot Name", "") or _brow_meta.get("Bot Name", ""))
+                    _eff_lead     = str(_brow_edit.get("Lead Number", "") or _brow_meta.get("Lead Number", ""))
+                    _eff_disp     = str(_brow_edit.get("Disposition", "") or _brow_meta.get("Disposition", ""))
+                    _eff_conv     = str(_brow_edit.get("Conversation Link", "") or _brow_meta.get("Conversation Link", ""))
+                    _eff_qa       = str(_brow_edit.get("Assigned QA", "") or _brow_meta.get("_assigned_qa", _sense_qa_name))
                     _brec = {
                         "Audit Date":        str(_brow_meta.get("Audit Date", datetime.now(timezone.utc).date())),
-                        "QA":                _bag_qa,
-                        "Client":            _brow_meta.get("Client", ""),
-                        "Campaign Name":     _brow_meta.get("Campaign Name", ""),
+                        "QA":                _eff_qa,
+                        "Client":            _eff_client,
+                        "Campaign Name":     _eff_campaign,
                         "PM / CSM":          _brow_meta.get("PM / CSM", ""),
-                        "Bot Name":          _brow_meta.get("Bot Name", ""),
-                        "Lead Number":       _brow_meta.get("Lead Number", ""),
+                        "Bot Name":          _eff_bot,
+                        "Lead Number":       _eff_lead,
                         "Lead Link":         _brow_meta.get("Lead Link", ""),
-                        "Disposition":       _brow_meta.get("Disposition", ""),
-                        "Conversation Link": _brow_meta.get("Conversation Link", ""),
+                        "Disposition":       _eff_disp,
+                        "Conversation Link": _eff_conv,
                         **_bpv,
                         "Lead Score":             _bcomputed["Lead Score"],
                         "Lead Composite":         _bcomputed["Lead Composite"],
@@ -8637,7 +8658,6 @@ def _render_audit_form(legend_map, fname):
                 if _bag_errs:
                     st.warning(f"⚠️ {len(_bag_errs)} rows failed.")
                 if _bag_ok:
-                    st.session_state.pop("bag_rows", None)
                     st.session_state["sense_audit_log"] = _audit_log_load()
                     st.rerun()
 
