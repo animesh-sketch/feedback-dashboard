@@ -8984,16 +8984,16 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             'text-transform:uppercase;margin-bottom:6px;">Audit Details</div>',
             unsafe_allow_html=True,
         )
-        # ── Get logged-in user's PIN/ID ───────────────────────────────────────
-        _logged_in_pin = st.session_state.get("auth_user", {}).get("pin") or st.session_state.get("auth_user", {}).get("name", "")
+        # ── Get logged-in user's name ───────────────────────────────────────
+        _logged_in_name = st.session_state.get("auth_user", {}).get("name") or st.session_state.get("auth_user", {}).get("pin", "")
 
         _ad1, _ad2, _ad3, _ad4 = st.columns(4)
         with _ad1:
             st.markdown('<div style="background:#eff6ff;border-left:4px solid #2563EB;padding:8px;border-radius:4px;"><strong style="color:#1e40af;font-size:0.8rem;">📅 ' + pd.Timestamp.now().strftime("%d %b %Y") + '</strong></div>', unsafe_allow_html=True)
             _f_audit_date = st.date_input("Audit Date *", key="f_audit_date", value=pd.Timestamp.now().date(), disabled=True, label_visibility="collapsed")
         with _ad2:
-            st.markdown(f'<div style="background:#dcfce7;border-left:4px solid #22c55e;padding:8px;border-radius:4px;"><strong style="color:#166534;font-size:0.8rem;">👤 {_logged_in_pin}</strong></div>', unsafe_allow_html=True)
-            _f_auditor = st.text_input("QA *", key="f_auditor_sel", value=_logged_in_pin, disabled=True, label_visibility="collapsed")
+            st.markdown(f'<div style="background:#dcfce7;border-left:4px solid #22c55e;padding:8px;border-radius:4px;"><strong style="color:#166534;font-size:0.8rem;">👤 {_logged_in_name}</strong></div>', unsafe_allow_html=True)
+            _f_auditor = st.text_input("QA Name *", key="f_auditor_sel", value=_logged_in_name, disabled=True, label_visibility="collapsed")
         with _ad3:
             _registry_init()
             _reg_clients_form = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
