@@ -9280,8 +9280,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                     _lead_q_form.pop(_q_idx)
                     st.session_state["sense_lead_queue"] = _lead_q_form
 
-                st.rerun()
-
     # ── Clear form button (outside form) ────────────────────────────────────────
     _clear_col1, _clear_col2 = st.columns([4, 1])
     with _clear_col2:
