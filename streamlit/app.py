@@ -9271,27 +9271,63 @@ def _render_qa_scorecard_audit(legend_map, fname):
     st.markdown('<div class="section-chip">📋 QA Scorecard Audit</div>', unsafe_allow_html=True)
     st.info("📊 Tier-based QA scoring with explicit weights: CRITICAL (63%) · IMPORTANT (29%) · QUALITY (8%)")
 
+    # ── Batch file upload ──────────────────────────────────────────────────────
+    _batch_file = st.file_uploader("📤 Bulk Upload QA Data (CSV/Excel)", type=["csv", "xlsx"], key="qa_batch_upload")
+    if _batch_file:
+        try:
+            if _batch_file.name.endswith('.csv'):
+                _batch_df = pd.read_csv(_batch_file)
+            else:
+                _batch_df = pd.read_excel(_batch_file)
+            st.session_state["qa_batch_data"] = _batch_df.to_dict('records')
+            st.session_state["qa_batch_index"] = 0
+            st.success(f"✅ Loaded {len(_batch_df)} records")
+        except Exception as e:
+            st.error(f"❌ Error loading file: {e}")
+
+    # ── Progress indicator for batch processing ─────────────────────────────────
+    if st.session_state.get("qa_batch_data"):
+        _total = len(st.session_state["qa_batch_data"])
+        _current = st.session_state.get("qa_batch_index", 0) + 1
+        st.progress(_current / _total, text=f"Processing {_current} of {_total}")
+
+    # ── Get current batch record if processing ────────────────────────────────
+    _batch_record = None
+    if st.session_state.get("qa_batch_data"):
+        _idx = st.session_state.get("qa_batch_index", 0)
+        if _idx < len(st.session_state["qa_batch_data"]):
+            _batch_record = st.session_state["qa_batch_data"][_idx]
+
     with st.form("qa_scorecard_form", clear_on_submit=False):
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            _f_audit_date = st.date_input("Audit Date *", key="f_qs_audit_date", value=pd.Timestamp.now().date())
+            _def_date = pd.Timestamp(_batch_record["Audit Date"]).date() if _batch_record and "Audit Date" in _batch_record else pd.Timestamp.now().date()
+            _f_audit_date = st.date_input("Audit Date *", key="f_qs_audit_date", value=_def_date)
         with col2:
-            _f_auditor = st.text_input("QA Name *", key="f_qs_auditor", placeholder="e.g. Animesh")
+            _def_auditor = _batch_record.get("QA Name", "") if _batch_record else ""
+            _f_auditor = st.text_input("QA Name *", key="f_qs_auditor", value=_def_auditor, placeholder="e.g. Animesh")
         with col3:
-            _f_client = st.text_input("Client *", key="f_qs_client", placeholder="e.g. Acme Corp")
+            _def_client = _batch_record.get("Client", "") if _batch_record else ""
+            _f_client = st.text_input("Client *", key="f_qs_client", value=_def_client, placeholder="e.g. Acme Corp")
         with col4:
-            _f_campaign = st.text_input("Campaign *", key="f_qs_campaign", placeholder="e.g. Q2 Outreach")
+            _def_campaign = _batch_record.get("Campaign", "") if _batch_record else ""
+            _f_campaign = st.text_input("Campaign *", key="f_qs_campaign", value=_def_campaign, placeholder="e.g. Q2 Outreach")
 
         col1, col2, col3 = st.columns(3)
         with col1:
-            _f_pm = st.text_input("PM / CSM *", key="f_qs_pm", placeholder="e.g. John Doe")
+            _def_pm = _batch_record.get("PM / CSM", "") if _batch_record else ""
+            _f_pm = st.text_input("PM / CSM *", key="f_qs_pm", value=_def_pm, placeholder="e.g. John Doe")
         with col2:
-            _f_bot = st.text_input("Bot Name *", key="f_qs_bot", placeholder="e.g. Bot-v2")
+            _def_bot = _batch_record.get("Bot Name", "") if _batch_record else ""
+            _f_bot = st.text_input("Bot Name *", key="f_qs_bot", value=_def_bot, placeholder="e.g. Bot-v2")
         with col3:
             _disp_opts = ["Hot", "Warm", "Cold", "Interested", "Not Interested", "Other"]
-            _f_disposition = st.selectbox("Disposition *", _disp_opts, key="f_qs_disp")
+            _def_disp = _batch_record.get("Disposition", "Hot") if _batch_record else "Hot"
+            _def_disp_idx = _disp_opts.index(_def_disp) if _def_disp in _disp_opts else 0
+            _f_disposition = st.selectbox("Disposition *", _disp_opts, index=_def_disp_idx, key="f_qs_disp")
 
-        _f_conv_link = st.text_input("Conversation Link", key="f_qs_conv_link", placeholder="https://...")
+        _def_conv_link = _batch_record.get("Conversation Link", "") if _batch_record else ""
+        _f_conv_link = st.text_input("Conversation Link", value=_def_conv_link, key="f_qs_conv_link", placeholder="https://...")
 
         st.markdown('---')
 
@@ -9304,15 +9340,24 @@ def _render_qa_scorecard_audit(legend_map, fname):
                 _opts = _p["options"] + ["NA"]
                 _wt = f"({int(_p['weight']*100)}%)" if _p["weight"] > 0 else "(FATAL)"
                 _key = f"qs_{_ti}_{_pi}"
+
+                # ── Auto-fill from batch record if available ───────────────────
+                _def_idx = len(_opts) - 1  # Default to "NA"
+                if _batch_record and _p["col"] in _batch_record:
+                    _batch_val = str(_batch_record[_p["col"]]).strip()
+                    if _batch_val in _opts:
+                        _def_idx = _opts.index(_batch_val)
+
                 _pv[_p["col"]] = st.radio(
                     f"{_p['col']} {_wt}",
                     _opts,
-                    index=len(_opts) - 1,
+                    index=_def_idx,
                     horizontal=True,
                     key=_key,
                 )
 
-        _f_notes = st.text_area("Reviewer Notes", placeholder="Optional...", height=50, key="f_qs_notes")
+        _def_notes = _batch_record.get("Notes", "") if _batch_record else ""
+        _f_notes = st.text_area("Reviewer Notes", value=_def_notes, placeholder="Optional...", height=50, key="f_qs_notes")
 
         _sub = st.form_submit_button("✅ Submit QA Scorecard Audit", use_container_width=True, type="primary")
 
@@ -9359,7 +9404,23 @@ def _render_qa_scorecard_audit(legend_map, fname):
                     st.error(f"Save failed: {_save_err}")
                 else:
                     st.success(f"✅ Audit submitted - Score: {_computed['Bot Score']}% ({_computed['Status']})")
-                    st.rerun()
+
+                    # ── Batch processing: move to next record ───────────────────
+                    if st.session_state.get("qa_batch_data"):
+                        _next_idx = st.session_state.get("qa_batch_index", 0) + 1
+                        _total = len(st.session_state["qa_batch_data"])
+
+                        if _next_idx < _total:
+                            st.session_state["qa_batch_index"] = _next_idx
+                            st.info(f"➡️ Loading record {_next_idx + 1} of {_total}...")
+                            st.rerun()
+                        else:
+                            st.balloons()
+                            st.success(f"🎉 All {_total} records processed successfully!")
+                            st.session_state.pop("qa_batch_data", None)
+                            st.session_state.pop("qa_batch_index", None)
+                    else:
+                        st.rerun()
 
 
 def _render_legend_page():
