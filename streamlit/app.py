@@ -9264,211 +9264,74 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
 
 
 def _render_qa_scorecard_audit(legend_map, fname):
-    """QA Scorecard Audit — tier-organized form with explicit weight display."""
-    st.session_state["sense_audit_log"] = _audit_log_load()
-    audit_log = st.session_state["sense_audit_log"]
-
-    try:
-        _pending_db_all = pending_store.load_all()
-    except Exception:
-        _pending_db_all = []
-    _manual_q_items = [r for r in st.session_state.get("sense_lead_queue", []) if not r.get("_pending_id")]
-    st.session_state["sense_lead_queue"] = _pending_db_all + _manual_q_items
-
-    st.markdown("""
-<div style="background:linear-gradient(120deg,#1a2d50 0%,#0f1f3a 50%,#1e3a5f 100%);
-  border-radius:14px;padding:20px 24px;margin-bottom:1.4rem;position:relative;overflow:hidden;">
-  <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;
-    background:rgba(37,99,235,0.12);border-radius:50%;"></div>
-  <div style="position:absolute;bottom:-30px;left:40%;width:180px;height:180px;
-    background:rgba(37,99,235,0.07);border-radius:50%;"></div>
-  <div style="display:flex;align-items:flex-start;gap:16px;position:relative;">
-    <div style="background:linear-gradient(135deg,#0B1F3A,#2563EB);border-radius:10px;
-      padding:10px;flex-shrink:0;font-size:1.3rem;">📋</div>
-    <div>
-      <div style="font-size:1rem;font-weight:900;color:#fff;letter-spacing:-0.01em;margin-bottom:4px;">
-        QA Scorecard Audit</div>
-      <div style="font-size:0.74rem;color:#93c5fd;margin-bottom:12px;">
-        Explicit tier-based scoring · Clear metric definitions · Real-time results</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        <span style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);
-          border-radius:6px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:#fca5a5;">
-          🔴 CRITICAL 63%</span>
-        <span style="background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.3);
-          border-radius:6px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:#fed7aa;">
-          🟠 IMPORTANT 29%</span>
-        <span style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);
-          border-radius:6px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:#93c5fd;">
-          🔵 QUALITY 8%</span>
-        <span style="background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);
-          border-radius:6px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:#c4b5fd;">
-          🎯 Pass ≥80 · Review 60-79 · Fail &lt;60</span>
-      </div>
-    </div>
-  </div>
-</div>""", unsafe_allow_html=True)
-
-    def _qv(rec, key):
-        v = rec.get(key, "")
-        return "" if (v is None or (isinstance(v, float) and v != v) or str(v).strip() in ("nan","None","")) else str(v).strip()
-
-    _lead_q_form = st.session_state.get("sense_lead_queue", [])
-    _q_idx = -1
-    _q_rec = {}
-    if _lead_q_form:
-        _q_labels = ["— type manually —"] + [
-            f"{r.get('Client','?')} · {r.get('Campaign Name','?')} · {r.get('Lead Number', r.get('Phone Number','#'+str(i+1)))}"
-            for i, r in enumerate(_lead_q_form)
-        ]
-        _q_sel = st.selectbox("📋 Pick lead from queue (auto-fills form)", _q_labels, key="f_qs_queue_sel")
-        _q_idx = _q_labels.index(_q_sel) - 1
-        _q_rec = _lead_q_form[_q_idx] if _q_idx >= 0 else {}
-
-        _pf_sig = f"{_q_idx}_{_qv(_q_rec,'Client')}_{_qv(_q_rec,'Campaign Name')}_{_qv(_q_rec,'Lead Number')}"
-        if _q_idx >= 0 and st.session_state.get("_qs_pf_sig") != _pf_sig:
-            st.session_state["_qs_pf_sig"] = _pf_sig
-            st.session_state["f_qs_campaign"] = _qv(_q_rec, "Campaign Name")
-            st.session_state["f_qs_lead_no"] = _qv(_q_rec, "Lead Number")
-            st.session_state["f_qs_conv_link"] = _qv(_q_rec, "Conversation Link")
-            st.session_state["f_qs_lead_link"] = _qv(_q_rec, "Lead Link")
-            st.session_state["f_qs_bot_name"] = _qv(_q_rec, "Bot Name")
-            st.session_state["f_qs_correct_disp_text"] = _qv(_q_rec, "Correct Disposition Text")
-            _reg_cl_pre = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
-            _cl_pre = _qv(_q_rec, "Client")
-            st.session_state["f_qs_client_sel"] = _cl_pre if _cl_pre in _reg_cl_pre else ""
-            _qa_pre = _qv(_q_rec, "QA") or _qv(_q_rec, "Assigned QA")
-            _qa_opts_pre = [""] + st.session_state.get("sense_registry_qas", ["Animesh","Navya","Shubham Sharma","Nora","Alan"])
-            st.session_state["f_qs_auditor_sel"] = _qa_pre if _qa_pre in _qa_opts_pre else ""
-            _pm_pre = _qv(_q_rec, "PM / CSM")
-            _pm_opts_pre = [""] + st.session_state.get("sense_registry_pms", sorted(set(r["pm"] for r in _SENSE_CLIENTS)))
-            st.session_state["f_qs_pm_csm_sel"] = _pm_pre if _pm_pre in _pm_opts_pre else ""
-            _disp_pre = _qv(_q_rec, "Disposition")
-            _disp_opts_pre = ["— select —", "Hot", "Warm", "Cold", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
-            st.session_state["f_qs_disposition_sel"] = _disp_pre if _disp_pre in _disp_opts_pre else "— select —"
-            _cd_pre = _qv(_q_rec, "Correct Disposition?")
-            if _cd_pre in ("Yes", "No", "NA"):
-                st.session_state["f_qs_correct_disp"] = _cd_pre
-            _ad_pre = _qv(_q_rec, "Audit Date")
-            if _ad_pre:
-                try:
-                    st.session_state["f_qs_audit_date"] = pd.Timestamp(_ad_pre).date()
-                except Exception:
-                    pass
-
-        if _q_idx >= 0:
-            st.markdown('<div style="font-size:0.65rem;color:#0ebc6e;margin-bottom:6px;">✅ Pre-filling from queue record ' + str(_q_idx + 1) + '</div>', unsafe_allow_html=True)
+    """QA Scorecard Audit — simplified tier-organized form."""
+    st.markdown('<div class="section-chip">📋 QA Scorecard Audit</div>', unsafe_allow_html=True)
+    st.info("📊 Tier-based QA scoring with explicit weights: CRITICAL (63%) · IMPORTANT (29%) · QUALITY (8%)")
 
     with st.form("qa_scorecard_form", clear_on_submit=False):
-        st.markdown('<div style="font-size:0.68rem;font-weight:700;color:#2a5080;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">Audit Metadata</div>', unsafe_allow_html=True)
-
-        _ad1, _ad2, _ad3, _ad4 = st.columns(4)
-        with _ad1:
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
             _f_audit_date = st.date_input("Audit Date *", key="f_qs_audit_date", value=pd.Timestamp.now().date())
-        with _ad2:
-            _registry_init()
-            _reg_qas = [""] + st.session_state.get("sense_registry_qas", ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
-            _f_auditor = st.selectbox("QA *", _reg_qas, key="f_qs_auditor_sel")
-        with _ad3:
-            _registry_init()
-            _reg_clients = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
-            _f_client = st.selectbox("Client *", _reg_clients, key="f_qs_client_sel")
-        with _ad4:
-            _f_campaign = st.text_input("Campaign Name *", key="f_qs_campaign", placeholder="e.g. Q2 Outreach")
+        with col2:
+            _f_auditor = st.text_input("QA Name *", key="f_qs_auditor", placeholder="e.g. Animesh")
+        with col3:
+            _f_client = st.text_input("Client *", key="f_qs_client", placeholder="e.g. Acme Corp")
+        with col4:
+            _f_campaign = st.text_input("Campaign *", key="f_qs_campaign", placeholder="e.g. Q2 Outreach")
 
-        _ld1, _ld2, _ld3 = st.columns(3)
-        with _ld1:
-            _registry_init()
-            _reg_client_map = {c["client"]: c for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)}
-            _pm_opts = [""] + st.session_state.get("sense_registry_pms", sorted(set(r["pm"] for r in _SENSE_CLIENTS)))
-            if not st.session_state.get("f_qs_pm_csm_sel") and _f_client:
-                _auto_pm = _reg_client_map.get(_f_client, {}).get("pm", "") or _SENSE_CLIENT_MAP.get(_f_client, {}).get("pm", "")
-                if _auto_pm in _pm_opts:
-                    st.session_state["f_qs_pm_csm_sel"] = _auto_pm
-            _f_pm_csm = st.selectbox("PM / CSM *", _pm_opts, key="f_qs_pm_csm_sel")
-        with _ld2:
-            _f_lead_no = st.text_input("Lead Number", key="f_qs_lead_no", placeholder="e.g. LD-20250422")
-        with _ld3:
-            _f_conv_link = st.text_input("Conversation Link", key="f_qs_conv_link", placeholder="https://...")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            _f_pm = st.text_input("PM / CSM *", key="f_qs_pm", placeholder="e.g. John Doe")
+        with col2:
+            _f_bot = st.text_input("Bot Name *", key="f_qs_bot", placeholder="e.g. Bot-v2")
+        with col3:
+            _disp_opts = ["Hot", "Warm", "Cold", "Interested", "Not Interested", "Other"]
+            _f_disposition = st.selectbox("Disposition *", _disp_opts, key="f_qs_disp")
 
-        _ll1, _ll2, _ll3, _ll4 = st.columns(4)
-        with _ll1:
-            _f_lead_link = st.text_input("Lead Link", key="f_qs_lead_link", placeholder="https://...")
-        with _ll2:
-            _disp_opts = ["— select —", "Hot", "Warm", "Cold", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
-            _f_disposition = st.selectbox("Disposition *", _disp_opts, key="f_qs_disposition_sel")
-        with _ll3:
-            _f_bot_name = st.text_input("Bot Name *", key="f_qs_bot_name", placeholder="e.g. Convin-LeadBot-v2")
-        with _ll4:
-            _f_correct_disp = st.radio("Correct Disposition? *", ["Yes", "No", "NA"], index=2, horizontal=True, key="f_qs_correct_disp")
+        _f_conv_link = st.text_input("Conversation Link", key="f_qs_conv_link", placeholder="https://...")
 
-        _f_correct_disp_text = st.text_input("Correct Disposition (leave blank if correct)", placeholder="e.g. Not Interested, Warm Follow-up…", key="f_qs_correct_disp_text")
-
-        st.markdown('<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:10px 0 4px;">', unsafe_allow_html=True)
+        st.markdown('---')
 
         _pv = {}
-
         for _ti, _tier in enumerate(_QA_SCHEMA["tiers"]):
-            _tc = _tier["color"]
-            _tier_label = _tier["label"]
-            _weight_pct = _tier["weight_pct"]
-
-            st.markdown(
-                f'<div style="display:flex;align-items:center;gap:8px;font-size:0.72rem;font-weight:800;'
-                f'letter-spacing:0.1em;text-transform:uppercase;color:{_tc};margin:14px 0 8px;">'
-                f'{_tier_label} · {_weight_pct}% Weight</div>',
-                unsafe_allow_html=True,
-            )
+            st.markdown(f"### {_tier['label']} ({_tier['weight_pct']}%)", divider="blue" if _ti == 0 else ("orange" if _ti == 1 else "violet"))
 
             _params = _tier["params"]
-            for _ri in range(0, len(_params), 2):
-                _batch = _params[_ri: _ri + 2]
-                _wcols = st.columns(len(_batch))
+            for _pi, _p in enumerate(_params):
+                _opts = _p["options"] + ["NA"]
+                _wt = f"({int(_p['weight']*100)}%)" if _p["weight"] > 0 else "(FATAL)"
+                _key = f"qs_{_ti}_{_pi}"
+                _pv[_p["col"]] = st.radio(
+                    f"{_p['col']} {_wt}",
+                    _opts,
+                    index=len(_opts) - 1,
+                    horizontal=True,
+                    key=_key,
+                )
 
-                for _wc, _p in zip(_wcols, _batch):
-                    with _wc:
-                        _wt = f"({int(_p['weight']*100)}%)" if _p["weight"] > 0 else "⚠️ FATAL"
-                        _key = f"qs_t_{_p['col'][:22].replace(' ','_').replace('/','_').replace('(','').replace(')','')}"
-                        _tick_opts = _p["options"] + ["NA"]
-                        _pv[_p["col"]] = st.radio(
-                            f"{_p['col']} {_wt} *",
-                            _tick_opts,
-                            index=len(_tick_opts) - 1,
-                            horizontal=True,
-                            key=_key,
-                            help=_p.get("guide", ""),
-                        )
+        _f_notes = st.text_area("Reviewer Notes", placeholder="Optional...", height=50, key="f_qs_notes")
 
-        _f_notes = st.text_area("Reviewer Notes", placeholder="Optional observations…", height=56, key="f_qs_notes")
-        _f_suggestion = st.text_area("💡 Improvement Suggestion", placeholder="What could the bot improve?", height=72, key="f_qs_suggestion")
-
-        _sub = st.form_submit_button("✅ Submit QA Scorecard Audit — Auto-Score", use_container_width=True, type="primary")
+        _sub = st.form_submit_button("✅ Submit QA Scorecard Audit", use_container_width=True, type="primary")
 
         if _sub:
             _errs = []
             if not _f_auditor.strip():
-                _errs.append("QA name is required")
+                _errs.append("QA name required")
             if not _f_client.strip():
-                _errs.append("Client is required")
+                _errs.append("Client required")
             if not _f_campaign.strip():
-                _errs.append("Campaign Name is required")
-            if not _f_bot_name.strip():
-                _errs.append("Bot Name is required")
-            if not _f_pm_csm.strip():
-                _errs.append("PM / CSM is required")
-            for _col, _val in _pv.items():
-                if not _val or str(_val).strip() in ("— select —", "—"):
-                    _errs.append(f"'{_col}' must be selected")
-            if _f_disposition == "— select —":
-                _errs.append("Disposition must be selected")
+                _errs.append("Campaign required")
+            if not _f_bot.strip():
+                _errs.append("Bot name required")
+            if not _f_pm.strip():
+                _errs.append("PM/CSM required")
 
             if _errs:
                 for _e in _errs:
                     st.error(_e)
             else:
                 _full_pv = dict(_pv)
-                _full_pv["Correct Disposition"] = _f_correct_disp
-                _full_pv["Correct Disposition (Expected)"] = _f_correct_disp_text
-
+                _full_pv["Correct Disposition"] = "—"
                 _computed = _compute_qa_score(_full_pv)
 
                 _rec = {
@@ -9476,74 +9339,24 @@ def _render_qa_scorecard_audit(legend_map, fname):
                     "QA": _f_auditor.strip(),
                     "Client": _f_client.strip(),
                     "Campaign Name": _f_campaign.strip(),
-                    "PM / CSM": _f_pm_csm.strip(),
-                    "Bot Name": _f_bot_name.strip(),
-                    "Lead Number": _f_lead_no.strip(),
-                    "Lead Link": _f_lead_link.strip(),
-                    "Disposition": _f_disposition if _f_disposition != "— select —" else "",
+                    "PM / CSM": _f_pm.strip(),
+                    "Bot Name": _f_bot.strip(),
+                    "Disposition": _f_disposition,
                     "Conversation Link": _f_conv_link.strip(),
                     "Audit Type": "QA Scorecard",
                     **_full_pv,
-                    "Lead Score": _computed["Lead Score"],
-                    "Lead Composite": _computed["Lead Composite"],
                     "Bot Score": _computed["Bot Score"],
-                    "Intelligence Score": _computed["Intelligence Score"],
                     "Status": _computed["Status"],
                     "Fatal?": _computed["Fatal?"],
                     "Notes": _f_notes,
-                    "Improvement Suggestion": _f_suggestion,
                 }
 
                 _save_err = audit_store.append(_rec)
-
                 if _save_err:
-                    st.error(f"⚠️ Failed to save audit to database: {_save_err}")
-                    st.stop()
-
-                st.session_state["qa_last_result"] = {
-                    **_computed,
-                    "_disposition": _f_disposition if _f_disposition != "— select —" else "—",
-                    "_correct_disp": _f_correct_disp,
-                    "_correct_disp_text": _f_correct_disp_text,
-                }
-
-                st.session_state.pop("_qs_pf_sig", None)
-                st.session_state["sense_audit_log"] = audit_store.load()
-                st.success("✅ QA Scorecard Audit submitted and auto-scored")
-
-                if _q_idx >= 0 and _lead_q_form:
-                    _done_item = _lead_q_form[_q_idx]
-                    _pending_rid = _done_item.get("_pending_id")
-                    if _pending_rid:
-                        pending_store.mark_done(_pending_rid)
-                    _lead_q_form.pop(_q_idx)
-                    st.session_state["sense_lead_queue"] = _lead_q_form
-
-                st.rerun()
-
-    if st.session_state.get("qa_last_result"):
-        _lr = st.session_state["qa_last_result"]
-        _sc = _lr["Bot Score"]
-        _sgc = _qa_status_color(_lr["Status"])
-        st.markdown(
-            f'<div style="background:{_sgc}0d;border:1px solid {_sgc}44;border-left:4px solid {_sgc};'
-            f'border-radius:10px;padding:14px 18px;margin-bottom:1rem;">'
-            f'<div style="font-size:0.7rem;font-weight:700;color:{_sgc};text-transform:uppercase;'
-            f'letter-spacing:0.08em;margin-bottom:8px;">✅ Last Audit Result</div>'
-            f'<div style="display:flex;gap:28px;flex-wrap:wrap;">'
-            f'<div><div style="font-size:1.8rem;font-weight:900;color:{_sgc};">{_sc}%</div>'
-            f'<div style="font-size:0.62rem;color:#5588bb;">Bot Score</div></div>'
-            f'<div><div style="font-size:1.4rem;font-weight:800;color:{_sgc};">{_lr["Status"]}</div>'
-            f'<div style="font-size:0.62rem;color:#5588bb;">Status</div></div>'
-            f'<div><div style="font-size:1.4rem;font-weight:800;color:#0ebc6e;">{"—" if not _lr.get("Lead Composite") else _lr.get("Lead Composite")}</div>'
-            f'<div style="font-size:0.62rem;color:#5588bb;">Lead Composite</div></div>'
-            f'<div><div style="font-size:1.4rem;font-weight:800;color:{"#dc2626" if _lr["Fatal?"]=="YES" else "#0ebc6e"};">{_lr["Fatal?"]}</div>'
-            f'<div style="font-size:0.62rem;color:#5588bb;">Fatal?</div></div>'
-            f'<div><div style="font-size:1.1rem;font-weight:800;color:{"#dc2626" if _lr.get("_disposition")=="Hot" else "#f59e0b" if _lr.get("_disposition")=="Warm" else "#2563EB" if _lr.get("_disposition")=="Cold" else "#0B1F3A"};">{_lr.get("_disposition","—")}</div>'
-            f'<div style="font-size:0.62rem;color:#5588bb;">Disposition</div></div>'
-            f'</div></div>',
-            unsafe_allow_html=True,
-        )
+                    st.error(f"Save failed: {_save_err}")
+                else:
+                    st.success(f"✅ Audit submitted - Score: {_computed['Bot Score']}% ({_computed['Status']})")
+                    st.rerun()
 
 
 def _render_legend_page():
