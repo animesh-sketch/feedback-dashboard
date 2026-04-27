@@ -9297,7 +9297,7 @@ def _render_qa_scorecard_audit(legend_map, fname):
 
         _pv = {}
         for _ti, _tier in enumerate(_QA_SCHEMA["tiers"]):
-            st.markdown(f"### {_tier['label']} ({_tier['weight_pct']}%)", divider="blue" if _ti == 0 else ("orange" if _ti == 1 else "violet"))
+            st.markdown(f"### {_tier['label']} ({_tier['weight_pct']}%)")
 
             _params = _tier["params"]
             for _pi, _p in enumerate(_params):
