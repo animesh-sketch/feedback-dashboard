@@ -3898,13 +3898,6 @@ _QA_SCHEMA = {
                     "guide": "2 = Approved script followed correctly  |  0 = Bot deviated from script / used incorrect phrasing",
                 },
                 {
-                    "col": "TTS Issues (Voice)",
-                    "weight": 0.02,
-                    "options": ["0", "2"],
-                    "fatal": False,
-                    "guide": "2 = No voice quality issues  |  0 = Tempo inconsistency, sudden voice change, giggles, or volume issues",
-                },
-                {
                     "col": "Template Issues",
                     "weight": 0.01,
                     "options": ["0", "2"],
@@ -5010,7 +5003,6 @@ def _render_sense_scorecard(sheets, legend_map):
                 f'border-top:3px solid {_tc};border-radius:10px;padding:12px 16px;">'
                 f'<div style="font-size:0.62rem;font-weight:700;color:{_tc};letter-spacing:0.08em;'
                 f'text-transform:uppercase;margin-bottom:4px;">{_tier["label"]}</div>'
-                f'<div style="font-size:0.62rem;color:#aabbcc;margin-bottom:8px;">{_tier["weight_pct"]}% of score</div>'
                 f'<div style="font-size:1.9rem;font-weight:900;color:{_tc};">{"—" if _tier_avg is None else f"{_tier_avg}%"}</div>'
                 f'<div style="height:5px;background:#f0f2f5;border-radius:3px;margin-top:6px;overflow:hidden;">'
                 f'<div style="width:{_tier_avg or 0}%;height:100%;background:{_tc};border-radius:3px;"></div></div>'
@@ -8599,7 +8591,7 @@ def _render_audit_form(legend_map, fname):
             f'<div style="flex:1;min-width:210px;background:#fff;border:1px solid {_tc}33;'
             f'border-top:3px solid {_tc};border-radius:10px;padding:10px 14px;">'
             f'<div style="font-size:0.68rem;font-weight:800;letter-spacing:0.08em;color:{_tc};'
-            f'text-transform:uppercase;margin-bottom:4px;">{_tier["label"]} ({_tier["weight_pct"]}%)</div>'
+            f'text-transform:uppercase;margin-bottom:4px;">{_tier["label"]}</div>'
             f'<div style="font-size:0.63rem;color:#5588bb;line-height:1.7;">{_params_list}</div>'
             f'{_ip_badge}'
             f'</div>'
@@ -9040,7 +9032,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             st.markdown(
                 f'<div style="display:flex;align-items:center;gap:8px;font-size:0.68rem;font-weight:700;'
                 f'letter-spacing:0.08em;text-transform:uppercase;color:{_tc};margin:12px 0 6px;">'
-                f'{_tier["label"]} ({_tier["weight_pct"]}%){_ip_badge_inline}</div>',
+                f'{_tier["label"]}{_ip_badge_inline}</div>',
                 unsafe_allow_html=True,
             )
 
@@ -9436,7 +9428,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
 def _render_qa_scorecard_audit(legend_map, fname):
     """QA Scorecard Audit — simplified tier-organized form."""
     st.markdown('<div class="section-chip">📋 QA Scorecard Audit</div>', unsafe_allow_html=True)
-    st.info("📊 Tier-based QA scoring with explicit weights: CRITICAL (63%) · IMPORTANT (29%) · QUALITY (8%)")
 
     # ── Batch file upload ──────────────────────────────────────────────────────
     _batch_file = st.file_uploader("📤 Bulk Upload QA Data (CSV/Excel)", type=["csv", "xlsx"], key="qa_batch_upload")
@@ -9546,7 +9537,7 @@ def _render_qa_scorecard_audit(legend_map, fname):
 
         _pv = {}
         for _ti, _tier in enumerate(_QA_SCHEMA["tiers"]):
-            st.markdown(f"### {_tier['label']} ({_tier['weight_pct']}%)")
+            st.markdown(f"### {_tier['label']}")
 
             _params = _tier["params"]
             for _pi, _p in enumerate(_params):
@@ -9669,11 +9660,11 @@ def _render_legend_page():
         f'</div>'
         f'<div class="stat-card" style="border-top:2px solid #dc2626;">'
         f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Tier 1 · Critical</div>'
-        f'<div style="color:#dc2626;font-size:1.6rem;font-weight:800;">{_t1_params} <span style="font-size:0.9rem;font-weight:600;">({_QA_SCHEMA["tiers"][0]["weight_pct"]}%)</span></div>'
+        f'<div style="color:#dc2626;font-size:1.6rem;font-weight:800;">{_t1_params}</div>'
         f'</div>'
         f'<div class="stat-card" style="border-top:2px solid #f59e0b;">'
         f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Tier 2 · Important</div>'
-        f'<div style="color:#f59e0b;font-size:1.6rem;font-weight:800;">{_t2_params} <span style="font-size:0.9rem;font-weight:600;">({_QA_SCHEMA["tiers"][1]["weight_pct"]}%)</span></div>'
+        f'<div style="color:#f59e0b;font-size:1.6rem;font-weight:800;">{_t2_params}</div>'
         f'</div>'
         f'<div class="stat-card" style="border-top:2px solid #2563EB;">'
         f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Tier 3 · Quality</div>'
