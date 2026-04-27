@@ -9377,9 +9377,10 @@ def _render_qa_scorecard_audit(legend_map, fname):
 
         _ld1, _ld2, _ld3 = st.columns(3)
         with _ld1:
+            _registry_init()
             _reg_client_map = {c["client"]: c for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)}
             _pm_opts = [""] + st.session_state.get("sense_registry_pms", sorted(set(r["pm"] for r in _SENSE_CLIENTS)))
-            if not st.session_state.get("f_qs_pm_csm_sel"):
+            if not st.session_state.get("f_qs_pm_csm_sel") and _f_client:
                 _auto_pm = _reg_client_map.get(_f_client, {}).get("pm", "") or _SENSE_CLIENT_MAP.get(_f_client, {}).get("pm", "")
                 if _auto_pm in _pm_opts:
                     st.session_state["f_qs_pm_csm_sel"] = _auto_pm
