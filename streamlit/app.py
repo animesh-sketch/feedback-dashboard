@@ -9279,17 +9279,41 @@ def _render_qa_scorecard_audit(legend_map, fname):
                 _batch_df = pd.read_csv(_batch_file)
             else:
                 _batch_df = pd.read_excel(_batch_file)
+
+            # Normalize column names (strip whitespace, case-insensitive matching)
+            _batch_df.columns = _batch_df.columns.str.strip()
+
             st.session_state["qa_batch_data"] = _batch_df.to_dict('records')
             st.session_state["qa_batch_index"] = 0
+
+            # Show what was loaded
             st.success(f"✅ Loaded {len(_batch_df)} records")
+            with st.expander("📋 Columns loaded:", expanded=False):
+                st.write(f"Columns: {list(_batch_df.columns)}")
+                st.dataframe(_batch_df.head(3), use_container_width=True)
         except Exception as e:
             st.error(f"❌ Error loading file: {e}")
+            st.write(f"Debug: {str(e)}")
 
     # ── Progress indicator for batch processing ─────────────────────────────────
     if st.session_state.get("qa_batch_data"):
         _total = len(st.session_state["qa_batch_data"])
         _current = st.session_state.get("qa_batch_index", 0) + 1
         st.progress(_current / _total, text=f"Processing {_current} of {_total}")
+
+    # ── Helper to find column value with flexible matching ────────────────────
+    def _get_col_val(rec, col_name, default=""):
+        if not rec:
+            return default
+        # Try exact match first
+        if col_name in rec:
+            val = rec[col_name]
+            return "" if (val is None or (isinstance(val, float) and val != val)) else str(val).strip()
+        # Try case-insensitive match
+        for k, v in rec.items():
+            if k.lower() == col_name.lower():
+                return "" if (v is None or (isinstance(v, float) and v != v)) else str(v).strip()
+        return default
 
     # ── Get current batch record if processing ────────────────────────────────
     _batch_record = None
@@ -9304,32 +9328,36 @@ def _render_qa_scorecard_audit(legend_map, fname):
     with st.form(_form_key, clear_on_submit=True):
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            _def_date = pd.Timestamp(_batch_record["Audit Date"]).date() if _batch_record and "Audit Date" in _batch_record else pd.Timestamp.now().date()
+            _def_date_str = _get_col_val(_batch_record, "Audit Date")
+            try:
+                _def_date = pd.Timestamp(_def_date_str).date() if _def_date_str else pd.Timestamp.now().date()
+            except:
+                _def_date = pd.Timestamp.now().date()
             _f_audit_date = st.date_input("Audit Date *", value=_def_date, key=f"f_qs_audit_date_{_batch_idx}")
         with col2:
-            _def_auditor = _batch_record.get("QA Name", "") if _batch_record else ""
+            _def_auditor = _get_col_val(_batch_record, "QA Name")
             _f_auditor = st.text_input("QA Name *", value=_def_auditor, key=f"f_qs_auditor_{_batch_idx}", placeholder="e.g. Animesh")
         with col3:
-            _def_client = _batch_record.get("Client", "") if _batch_record else ""
+            _def_client = _get_col_val(_batch_record, "Client")
             _f_client = st.text_input("Client *", value=_def_client, key=f"f_qs_client_{_batch_idx}", placeholder="e.g. Acme Corp")
         with col4:
-            _def_campaign = _batch_record.get("Campaign", "") if _batch_record else ""
+            _def_campaign = _get_col_val(_batch_record, "Campaign")
             _f_campaign = st.text_input("Campaign *", value=_def_campaign, key=f"f_qs_campaign_{_batch_idx}", placeholder="e.g. Q2 Outreach")
 
         col1, col2, col3 = st.columns(3)
         with col1:
-            _def_pm = _batch_record.get("PM / CSM", "") if _batch_record else ""
+            _def_pm = _get_col_val(_batch_record, "PM / CSM")
             _f_pm = st.text_input("PM / CSM *", value=_def_pm, key=f"f_qs_pm_{_batch_idx}", placeholder="e.g. John Doe")
         with col2:
-            _def_bot = _batch_record.get("Bot Name", "") if _batch_record else ""
+            _def_bot = _get_col_val(_batch_record, "Bot Name")
             _f_bot = st.text_input("Bot Name *", value=_def_bot, key=f"f_qs_bot_{_batch_idx}", placeholder="e.g. Bot-v2")
         with col3:
             _disp_opts = ["Hot", "Warm", "Cold", "Interested", "Not Interested", "Other"]
-            _def_disp = _batch_record.get("Disposition", "Hot") if _batch_record else "Hot"
+            _def_disp = _get_col_val(_batch_record, "Disposition", "Hot")
             _def_disp_idx = _disp_opts.index(_def_disp) if _def_disp in _disp_opts else 0
             _f_disposition = st.selectbox("Disposition *", _disp_opts, index=_def_disp_idx, key=f"f_qs_disp_{_batch_idx}")
 
-        _def_conv_link = _batch_record.get("Conversation Link", "") if _batch_record else ""
+        _def_conv_link = _get_col_val(_batch_record, "Conversation Link")
         _f_conv_link = st.text_input("Conversation Link", value=_def_conv_link, key=f"f_qs_conv_link_{_batch_idx}", placeholder="https://...")
 
         st.markdown('---')
@@ -9346,10 +9374,9 @@ def _render_qa_scorecard_audit(legend_map, fname):
 
                 # ── Auto-fill from batch record if available ───────────────────
                 _def_idx = len(_opts) - 1  # Default to "NA"
-                if _batch_record and _p["col"] in _batch_record:
-                    _batch_val = str(_batch_record[_p["col"]]).strip()
-                    if _batch_val in _opts:
-                        _def_idx = _opts.index(_batch_val)
+                _batch_val = _get_col_val(_batch_record, _p["col"])
+                if _batch_val and _batch_val in _opts:
+                    _def_idx = _opts.index(_batch_val)
 
                 _pv[_p["col"]] = st.radio(
                     f"{_p['col']} {_wt}",
@@ -9359,7 +9386,7 @@ def _render_qa_scorecard_audit(legend_map, fname):
                     key=f"{_key}_{_batch_idx}",
                 )
 
-        _def_notes = _batch_record.get("Notes", "") if _batch_record else ""
+        _def_notes = _get_col_val(_batch_record, "Notes")
         _f_notes = st.text_area("Reviewer Notes", value=_def_notes, placeholder="Optional...", height=50, key=f"f_qs_notes_{_batch_idx}")
 
         _sub = st.form_submit_button("✅ Submit QA Scorecard Audit", use_container_width=True, type="primary")
