@@ -8558,6 +8558,52 @@ def _render_audit_form(legend_map, fname):
 
             if _filtered_audits:
                 st.markdown("##### Recent Audits")
+
+                # ── Bulk selection controls ────────────────────────────────────
+                _bulk_col1, _bulk_col2, _bulk_col3 = st.columns([2, 1, 1])
+                with _bulk_col1:
+                    if st.button("☑️ Select All", use_container_width=True, key="select_all_audits"):
+                        if "selected_audits" not in st.session_state:
+                            st.session_state["selected_audits"] = set()
+                        for _a in _filtered_audits:
+                            st.session_state["selected_audits"].add(_a.get("_row_id", ""))
+                        st.rerun()
+                with _bulk_col2:
+                    if st.button("☐ Deselect All", use_container_width=True, key="deselect_all_audits"):
+                        st.session_state["selected_audits"] = set()
+                        st.rerun()
+                with _bulk_col3:
+                    if st.session_state.get("selected_audits"):
+                        if st.button(f"🗑️ Delete {len(st.session_state['selected_audits'])}", use_container_width=True, key="bulk_delete_btn", type="secondary"):
+                            st.session_state["confirm_bulk_delete"] = True
+
+                # ── Bulk delete confirmation ───────────────────────────────────
+                if st.session_state.get("confirm_bulk_delete"):
+                    st.warning(f"⚠️ Delete {len(st.session_state['selected_audits'])} selected audits? This cannot be undone!")
+                    _confirm_col1, _confirm_col2 = st.columns(2)
+                    with _confirm_col1:
+                        if st.button("✅ Yes, Delete All", key="confirm_bulk_del_yes", use_container_width=True, type="primary"):
+                            _del_count = 0
+                            for _del_id in st.session_state["selected_audits"]:
+                                _err = audit_store.delete(_del_id)
+                                if not _err:
+                                    _del_count += 1
+                            st.session_state["sense_audit_log"] = audit_store.load()
+                            st.session_state["selected_audits"] = set()
+                            st.session_state.pop("confirm_bulk_delete", None)
+                            st.success(f"✅ Deleted {_del_count} audits")
+                            st.rerun()
+                    with _confirm_col2:
+                        if st.button("❌ Cancel", key="confirm_bulk_del_no", use_container_width=True):
+                            st.session_state.pop("confirm_bulk_delete", None)
+                            st.rerun()
+
+                st.markdown("---")
+
+                # ── Audit list with checkboxes ────────────────────────────────
+                if "selected_audits" not in st.session_state:
+                    st.session_state["selected_audits"] = set()
+
                 for _audit in _filtered_audits:
                     _audit_id = _audit.get("_row_id", "?")
                     _client = _audit.get("Client", "—")
@@ -8567,7 +8613,14 @@ def _render_audit_form(legend_map, fname):
                     _date = _audit.get("Audit Date", "—")
                     _disp = _audit.get("Disposition", "—")
 
-                    _acol1, _acol2, _acol3, _acol4 = st.columns([3, 1, 1, 1])
+                    _acol0, _acol1, _acol2, _acol3, _acol4 = st.columns([0.5, 3.5, 1, 1, 1])
+
+                    with _acol0:
+                        _is_selected = _audit_id in st.session_state["selected_audits"]
+                        if st.checkbox("", value=_is_selected, key=f"audit_check_{_audit_id}"):
+                            st.session_state["selected_audits"].add(_audit_id)
+                        else:
+                            st.session_state["selected_audits"].discard(_audit_id)
 
                     with _acol1:
                         st.markdown(
@@ -8603,6 +8656,7 @@ def _render_audit_form(legend_map, fname):
                                         st.error(f"Delete failed: {_del_err}")
                                     else:
                                         st.session_state["sense_audit_log"] = audit_store.load()
+                                        st.session_state["selected_audits"].discard(_audit_id)
                                         st.session_state.pop("audit_del_confirm", None)
                                         st.success(f"✅ Audit {_audit_id} deleted")
                                         st.rerun()
