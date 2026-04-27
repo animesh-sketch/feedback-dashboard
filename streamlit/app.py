@@ -46,6 +46,15 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# ─── Parameter type definitions ───────────────────────────────────────────────
+_TYPE_LABELS = {
+    "dropdown": "📋 Dropdown",
+    "scoring":  "⭐ Scoring (1–5)",
+    "number":   "🔢 Number",
+    "text":     "✏️ Text",
+}
+_TYPE_KEYS = list(_TYPE_LABELS.keys())
+
 # ─── Session state defaults ───────────────────────────────────────────────────
 
 def _blank_draft(idx: int) -> dict:
@@ -8281,16 +8290,6 @@ def _render_registry():
                     st.session_state["sense_registry_clients"] = [c for c in _clients_reg if c["client"] != _del_cli_sel]
                     _registry_persist()
                     st.rerun()
-
-
-
-_TYPE_LABELS = {
-    "dropdown": "📋 Dropdown",
-    "scoring":  "⭐ Scoring (1–5)",
-    "number":   "🔢 Number",
-    "text":     "✏️ Text",
-}
-_TYPE_KEYS = list(_TYPE_LABELS.keys())
 
 
 def _render_param_manager(key_sfx=""):
