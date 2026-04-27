@@ -860,6 +860,140 @@ with st.sidebar:
             else:
                 st.error("Enter your Google address and the 16-character App Password.")
 
+    # ── Custom Parameters Manager ──────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">Custom Audit Parameters</div>', unsafe_allow_html=True)
+
+    if "sense_custom_audit_params" not in st.session_state:
+        st.session_state["sense_custom_audit_params"] = param_store.load()
+    _sb_cps = st.session_state["sense_custom_audit_params"]
+
+    if _sb_cps:
+        st.caption(f"{len(_sb_cps)} parameters configured")
+    else:
+        st.caption("No custom parameters yet")
+
+    with st.expander("➕ Manage Parameters", expanded=False):
+        # Existing params
+        if _sb_cps:
+            for _sbcpi, _sbcp in enumerate(_sb_cps):
+                _sb_itype   = _sbcp.get("input_type", "dropdown")
+                _sb_lbl     = _TYPE_LABELS.get(_sb_itype, _sb_itype)
+                _sb_editing = st.session_state.get(f"sbpm_editing_{_sbcpi}", False)
+
+                _sb_ca, _sb_cb, _sb_cc = st.columns([5, 1, 1])
+                with _sb_ca:
+                    _sb_guide_txt = f' — {_sbcp["guide"]}' if _sbcp.get("guide") else ""
+                    st.markdown(f'⭐ **{_sbcp["name"]}** {_sb_lbl}{_sb_guide_txt}', help=_sbcp.get("guide", ""))
+                with _sb_cb:
+                    if st.button("✏️", key=f"sbpm_edit_{_sbcpi}", help="Edit", use_container_width=True):
+                        st.session_state[f"sbpm_editing_{_sbcpi}"] = not _sb_editing
+                        st.rerun()
+                with _sb_cc:
+                    if st.button("🗑", key=f"sbpm_del_{_sbcpi}", help=f"Delete '{_sbcp['name']}'", use_container_width=True):
+                        _del_err = param_store.remove(_sbcp["name"])
+                        if _del_err:
+                            st.error(f"Delete failed: {_del_err}")
+                        else:
+                            st.session_state["sense_custom_audit_params"] = [
+                                p for p in _sb_cps if p["name"] != _sbcp["name"]
+                            ]
+                            st.session_state.pop(f"sbpm_editing_{_sbcpi}", None)
+                            st.rerun()
+
+                if st.session_state.get(f"sbpm_editing_{_sbcpi}", False):
+                    st.divider()
+                    _sb_e1, _sb_e2 = st.columns([1, 1])
+                    with _sb_e1:
+                        _sb_e_type = st.selectbox(
+                            "Type",
+                            _TYPE_KEYS,
+                            index=_TYPE_KEYS.index(_sb_itype) if _sb_itype in _TYPE_KEYS else 0,
+                            format_func=lambda k: _TYPE_LABELS[k],
+                            key=f"sbpm_e_type_{_sbcpi}",
+                            label_visibility="collapsed",
+                        )
+                    with _sb_e2:
+                        _sb_e_guide = st.text_input("Remarks", value=_sbcp.get("guide", ""), key=f"sbpm_e_guide_{_sbcpi}", placeholder="Guidance", label_visibility="collapsed")
+                    if _sb_e_type == "dropdown":
+                        _sb_e_opts_raw = st.text_input(
+                            "Options",
+                            value=", ".join(_sbcp.get("options", ["Yes", "No"])),
+                            key=f"sbpm_e_opts_{_sbcpi}",
+                            placeholder="Yes, No, NA",
+                            label_visibility="collapsed",
+                        )
+                        _sb_e_opts = [o.strip() for o in _sb_e_opts_raw.split(",") if o.strip()] or ["Yes", "No"]
+                    else:
+                        _sb_e_opts = _sbcp.get("options", ["Yes", "No"])
+
+                    _sb_save_col, _sb_cancel_col = st.columns([1, 1])
+                    with _sb_save_col:
+                        if st.button("💾 Save", key=f"sbpm_e_save_{_sbcpi}", use_container_width=True, type="primary"):
+                            _upd_err = param_store.update(_sbcp["name"], _sb_e_opts, _sb_e_guide, _sb_e_type)
+                            if _upd_err:
+                                st.error(f"Save failed: {_upd_err}")
+                            else:
+                                st.session_state["sense_custom_audit_params"][_sbcpi] = {
+                                    **_sbcp,
+                                    "options":    _sb_e_opts,
+                                    "guide":      _sb_e_guide,
+                                    "input_type": _sb_e_type,
+                                }
+                                st.session_state[f"sbpm_editing_{_sbcpi}"] = False
+                                st.rerun()
+                    with _sb_cancel_col:
+                        if st.button("✕ Cancel", key=f"sbpm_e_cancel_{_sbcpi}", use_container_width=True):
+                            st.session_state[f"sbpm_editing_{_sbcpi}"] = False
+                            st.rerun()
+                    st.divider()
+
+        # Add form
+        st.markdown("**Add New Parameter**", help="Create a new custom audit parameter")
+        _sbpa, _sbpb = st.columns([1, 1])
+        with _sbpa:
+            _sb_new_name = st.text_input("Name", placeholder="e.g. Empathy Check", key="sbpm_new_name", label_visibility="collapsed")
+        with _sbpb:
+            _sb_new_type = st.selectbox(
+                "Type",
+                _TYPE_KEYS,
+                format_func=lambda k: _TYPE_LABELS[k],
+                key="sbpm_new_type",
+                label_visibility="collapsed",
+            )
+
+        _sb_new_remarks = st.text_input("Remarks (optional)", placeholder="Auditor guidance", key="sbpm_new_remarks", label_visibility="collapsed")
+
+        if _sb_new_type == "dropdown":
+            _sb_new_opts_raw = st.text_input(
+                "Options",
+                placeholder="Yes, No, NA",
+                key="sbpm_new_opts",
+                help="Comma-separated values",
+                label_visibility="collapsed",
+            )
+            _sb_new_opts = [o.strip() for o in _sb_new_opts_raw.split(",") if o.strip()] or ["Yes", "No"]
+        else:
+            _sb_new_opts = ["Yes", "No"]
+
+        if st.button("➕ Add", key="sbpm_add_param", use_container_width=True, type="primary"):
+            if not _sb_new_name.strip():
+                st.warning("Enter a parameter name.")
+            elif _sb_new_name.strip().lower() in [p["name"].lower() for p in _sb_cps]:
+                st.warning("A parameter with that name already exists.")
+            else:
+                _err = param_store.add(_sb_new_name.strip(), _sb_new_opts, _sb_new_remarks.strip(), _sb_new_type)
+                if _err:
+                    st.error(f"Could not save: {_err}")
+                else:
+                    st.session_state["sense_custom_audit_params"].append({
+                        "name":       _sb_new_name.strip(),
+                        "options":    _sb_new_opts,
+                        "guide":      _sb_new_remarks.strip(),
+                        "input_type": _sb_new_type,
+                    })
+                    st.rerun()
+
     st.markdown("---")
     st.markdown('<div style="color:#444460;font-size:0.68rem;font-weight:500;">Feb 2026 · v1.0</div>', unsafe_allow_html=True)
 
@@ -8070,11 +8204,28 @@ def _render_registry():
                 _new_cli_cm = st.selectbox("CM", [""] + _cms_reg, key="reg_new_cli_cm") if _cms_reg else st.text_input("CM", key="reg_new_cli_cm_txt")
             with _clc4:
                 _new_cli_status = st.selectbox("Status", _status_opts, key="reg_new_cli_status")
+
+            _clc_e1, _clc_e2 = st.columns(2)
+            with _clc_e1:
+                _new_cli_email = st.text_input("Contact Email", placeholder="e.g. contact@client.com", key="reg_new_cli_email")
+            with _clc_e2:
+                _new_cli_region = st.text_input("Region/Territory", placeholder="e.g. North India", key="reg_new_cli_region")
+
+            _new_cli_notes = st.text_area("Notes", placeholder="Additional notes about the client", key="reg_new_cli_notes", height=60)
+
             if st.button("➕ Add Client", key="reg_add_cli", type="primary"):
                 _n = _new_cli_name.strip()
                 _existing_names = [c["client"] for c in _clients_reg]
                 if _n and _n not in _existing_names:
-                    _clients_reg.append({"client": _n, "pm": _new_cli_pm, "cm": _new_cli_cm if isinstance(_new_cli_cm, str) else "", "status": _new_cli_status})
+                    _clients_reg.append({
+                        "client": _n,
+                        "pm": _new_cli_pm,
+                        "cm": _new_cli_cm if isinstance(_new_cli_cm, str) else "",
+                        "status": _new_cli_status,
+                        "email": _new_cli_email.strip(),
+                        "region": _new_cli_region.strip(),
+                        "notes": _new_cli_notes.strip(),
+                    })
                     st.session_state["sense_registry_clients"] = _clients_reg
                     _registry_persist()
                     st.rerun()
@@ -8101,8 +8252,25 @@ def _render_registry():
                     with _ec4:
                         _edit_st_idx  = _status_opts.index(_ec.get("status","Active")) if _ec.get("status","Active") in _status_opts else 0
                         _edit_cli_st  = st.selectbox("Status", _status_opts, index=_edit_st_idx, key="reg_edit_cli_st")
+
+                    _ec_e1, _ec_e2 = st.columns(2)
+                    with _ec_e1:
+                        _edit_cli_email = st.text_input("Contact Email", value=_ec.get("email",""), key="reg_edit_cli_email")
+                    with _ec_e2:
+                        _edit_cli_region = st.text_input("Region/Territory", value=_ec.get("region",""), key="reg_edit_cli_region")
+
+                    _edit_cli_notes = st.text_area("Notes", value=_ec.get("notes",""), key="reg_edit_cli_notes", height=60)
+
                     if st.button("💾 Save Changes", key="reg_edit_cli_save", type="primary"):
-                        _clients_reg[_edit_idx] = {"client": _edit_cli_name.strip() or _edit_cli_sel, "pm": _edit_cli_pm, "cm": _edit_cli_cm if isinstance(_edit_cli_cm, str) else "", "status": _edit_cli_st}
+                        _clients_reg[_edit_idx] = {
+                            "client": _edit_cli_name.strip() or _edit_cli_sel,
+                            "pm": _edit_cli_pm,
+                            "cm": _edit_cli_cm if isinstance(_edit_cli_cm, str) else "",
+                            "status": _edit_cli_st,
+                            "email": _edit_cli_email.strip(),
+                            "region": _edit_cli_region.strip(),
+                            "notes": _edit_cli_notes.strip(),
+                        }
                         st.session_state["sense_registry_clients"] = _clients_reg
                         _registry_persist()
                         st.rerun()
@@ -8348,381 +8516,96 @@ def _render_audit_form(legend_map, fname):
     _tier_html += '</div>'
     st.markdown(_tier_html, unsafe_allow_html=True)
 
-    # ── Bulk Upload Audit Queue (admin only) ────────────────────────────────
+    # ── Admin Audit Management (admin only) ────────────────────────────────────
     _sense_role = auth.current_user().get("role", "admin")
     _sense_qa_name = auth.current_name()
-    _pending_db_count = len(_pending_db_all)
-    _bulk_expander_label = (
-        f"📤 Bulk Upload Audit Queue  ·  {_pending_db_count} pending"
-        if _pending_db_count else "📤 Bulk Upload Audit Queue"
-    )
-    with st.expander(_bulk_expander_label, expanded=bool(_pending_db_count) and _sense_role in ("admin", "tl")):
-        if _sense_role == "qa":
-            st.info("🔒 Case uploads are managed by an admin. Your pending cases appear in the Bulk Audit Grid below.")
-        else:
-            # ── Sample template download ──────────────────────────────────────────
-            _tmpl_cols = [
-                "Audit Date", "QA", "Client", "Campaign Name", "PM / CSM",
-                "Lead Number", "Lead Link", "Conversation Link",
-                "Disposition", "Bot Name",
-                "Correct Disposition?", "Correct Disposition Text",
-                "Notes",
-            ]
-            _tmpl_csv = pd.DataFrame(columns=_tmpl_cols).to_csv(index=False)
-            _tpl_c1, _tpl_c2 = st.columns([2, 5])
-            with _tpl_c1:
-                st.download_button(
-                    "⬇ Download Sample Template",
-                    data=_tmpl_csv,
-                    file_name="qa_audit_bulk_template.csv",
-                    mime="text/csv",
-                    key="bulk_dl_template",
-                    use_container_width=True,
-                )
-            with _tpl_c2:
-                st.markdown(
-                    '<div style="font-size:0.70rem;color:#5588bb;margin-top:6px;">'
-                    'Fill all audit detail columns. <strong>Client</strong> and <strong>Campaign Name</strong> are required. '
-                    'QA scoring parameters are captured by the auditor during review.</div>',
-                    unsafe_allow_html=True,
-                )
-    
-            # ── Assign to QA ──────────────────────────────────────────────────────
-            _registry_init()
-            _bulk_qa_list = st.session_state.get("sense_registry_qas", ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
-            _bulk_assign_qa = st.selectbox(
-                "Assign to QA",
-                _bulk_qa_list,
-                key="bulk_assign_qa_sel",
-                help="Uploaded leads will be assigned to this QA's audit queue",
-            )
-    
-            # ── Upload ────────────────────────────────────────────────────────────
-            _bulk_file = st.file_uploader(
-                "Upload CSV or Excel", type=["csv", "xlsx", "xls"], key="bulk_lead_upload_v2"
-            )
-            if _bulk_file:
-                try:
-                    if _bulk_file.name.endswith((".xlsx", ".xls")):
-                        _bulk_raw_df = pd.read_excel(_bulk_file)
-                    else:
-                        _bulk_raw_df = pd.read_csv(_bulk_file)
-                    _bulk_raw_df.columns = [str(c).strip() for c in _bulk_raw_df.columns]
 
-                    _valid_rows, _invalid_rows = [], []
-                    for _bidx, _brow in _bulk_raw_df.iterrows():
-                        _berrs = []
-                        _cv = str(_brow.get("Client", "")).strip()
-                        _kv = str(_brow.get("Campaign Name", "")).strip()
-                        if not _cv or _cv in ("nan", "None", ""):
-                            _berrs.append("Client required")
-                        if not _kv or _kv in ("nan", "None", ""):
-                            _berrs.append("Campaign Name required")
-                        for _ucol in ("Lead Link", "Conversation Link"):
-                            _uv = str(_brow.get(_ucol, "")).strip()
-                            if _uv and _uv not in ("nan", "None", "") and not _uv.startswith(("http://", "https://")):
-                                _berrs.append(f"{_ucol} must start with http(s)://")
-                        if _berrs:
-                            _invalid_rows.append({"Row": int(_bidx) + 2, "Errors": "; ".join(_berrs)})
-                        else:
-                            _clean = {
-                                k: ("" if (str(v) in ("nan", "None") or v != v) else str(v).strip())
-                                for k, v in _brow.items()
-                            }
-                            _valid_rows.append(_clean)
+    if _sense_role == "admin":
+        st.markdown('<div class="section-chip">⚙️ Admin Audit Management</div>', unsafe_allow_html=True)
 
-                    st.markdown(
-                        f'<div style="display:flex;gap:14px;margin:6px 0 8px;">'
-                        f'<span style="font-size:0.72rem;color:#16a34a;font-weight:700;">'
-                        f'✓ {len(_valid_rows)} valid</span>'
-                        + (f'<span style="font-size:0.72rem;color:#dc2626;font-weight:700;">'
-                           f'⚠ {len(_invalid_rows)} invalid</span>' if _invalid_rows else "")
-                        + f'</div>',
-                        unsafe_allow_html=True,
-                    )
-                    if _valid_rows:
-                        _prev_df  = pd.DataFrame(_valid_rows)
-                        _prev_cols = [c for c in ["Client", "Campaign Name", "Bot Name", "Lead Number", "Conversation Link"] if c in _prev_df.columns]
-                        st.dataframe(_prev_df[_prev_cols].head(10), use_container_width=True, hide_index=True, height=160)
-                    if _invalid_rows:
-                        with st.expander(f"⚠️ {len(_invalid_rows)} rows with errors"):
-                            st.dataframe(pd.DataFrame(_invalid_rows), use_container_width=True, hide_index=True)
+        # Load all audits
+        _all_audits = audit_store.load()
 
-                    if _valid_rows and st.button(
-                        f"📥 Upload {len(_valid_rows)} leads → {_bulk_assign_qa}'s queue",
-                        key="bulk_upload_save_btn",
-                        type="primary",
-                    ):
-                        _ok_cnt, _db_errs = pending_store.add_batch(_valid_rows, _bulk_assign_qa)
-                        if _ok_cnt:
-                            st.success(f"✅ {_ok_cnt} leads added to {_bulk_assign_qa}'s audit queue.")
-                            st.session_state.pop("bag_data_editor", None)
-                            st.session_state["bag_rows"]    = pending_store.load_for_qa(_bulk_assign_qa)
-                            st.session_state["bag_qa_sel"]  = _bulk_assign_qa
-                            st.session_state["_bag_qa_prev"] = _bulk_assign_qa
-                        if _db_errs:
-                            st.warning(f"⚠️ {len(_db_errs)} rows failed to save to database.")
-                        st.rerun()
-                except Exception as _be:
-                    st.error(f"Error reading file: {_be}")
-    
-            # ── Queue summary ─────────────────────────────────────────────────────
-            st.markdown(
-                '<hr style="border:none;border-top:1px solid #e4e7ec;margin:12px 0 8px;">',
-                unsafe_allow_html=True,
-            )
-            _all_q_now  = st.session_state.get("sense_lead_queue", [])
-            _db_q_items = [r for r in _all_q_now if r.get("_pending_id")]
-            _ss_q_items = [r for r in _all_q_now if not r.get("_pending_id")]
-    
-            if _db_q_items:
-                st.markdown(
-                    f'<div style="font-size:0.72rem;font-weight:700;color:#1d4ed8;margin-bottom:6px;">'
-                    f'🗂 {len(_db_q_items)} Pending — Ready for Audit</div>',
-                    unsafe_allow_html=True,
-                )
-                for _pqi, _pq_r in enumerate(_db_q_items):
-                    _pq_pid = _pq_r.get("_pending_id")
-                    _pq_qa  = _pq_r.get("_assigned_qa", "")
-                    _pc1, _pc2 = st.columns([6, 1])
-                    with _pc1:
+        if _all_audits:
+            # Search and filter
+            _search_col, _filter_col = st.columns([2, 1])
+            with _search_col:
+                _audit_search = st.text_input("🔍 Search audits (Client, Campaign, QA, Bot Name)", key="audit_search_input")
+            with _filter_col:
+                _show_limit = st.number_input("Show last N audits", min_value=5, max_value=100, value=20, step=5)
+
+            # Filter audits based on search and limit
+            _filtered_audits = _all_audits[:_show_limit]
+            if _audit_search.strip():
+                _search_lower = _audit_search.lower()
+                _filtered_audits = [
+                    a for a in _filtered_audits
+                    if any(_search_lower in str(a.get(field, "")).lower()
+                           for field in ["Client", "Campaign Name", "QA", "Bot Name"])
+                ]
+
+            if _filtered_audits:
+                st.markdown("##### Recent Audits")
+                for _audit in _filtered_audits:
+                    _audit_id = _audit.get("_row_id", "?")
+                    _client = _audit.get("Client", "—")
+                    _campaign = _audit.get("Campaign Name", "—")
+                    _qa = _audit.get("QA", "—")
+                    _bot = _audit.get("Bot Name", "—")
+                    _date = _audit.get("Audit Date", "—")
+                    _disp = _audit.get("Disposition", "—")
+
+                    _acol1, _acol2, _acol3, _acol4 = st.columns([3, 1, 1, 1])
+
+                    with _acol1:
                         st.markdown(
-                            f'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">'
-                            f'<span style="background:#dbeafe;border:1px solid #93c5fd;border-radius:5px;'
-                            f'padding:1px 7px;font-size:0.60rem;font-weight:700;color:#1d4ed8;">READY</span>'
-                            f'<span style="font-size:0.72rem;color:#334155;">'
-                            f'{_pq_r.get("Client","—")} · {_pq_r.get("Campaign Name","—")}'
-                            f'{(" · " + _pq_r.get("Lead Number","")) if _pq_r.get("Lead Number") else ""}'
-                            f'</span>'
-                            + (f'<span style="font-size:0.62rem;color:#5588bb;"> → {_pq_qa}</span>' if _pq_qa else "")
-                            + f'</div>',
+                            f'<div style="font-size:0.78rem;color:#0d1d3a;padding:8px 0;">'
+                            f'<strong>{_client}</strong> · {_campaign}<br/>'
+                            f'<span style="font-size:0.70rem;color:#667085;">QA: {_qa} | Bot: {_bot} | {_date} | {_disp}</span>'
+                            f'</div>',
                             unsafe_allow_html=True,
                         )
-                    with _pc2:
-                        if st.button("✕", key=f"bulk_rm_pend_{_pqi}_{_pq_pid}", help="Remove from queue"):
-                            pending_store.remove(_pq_pid)
+
+                    with _acol2:
+                        if st.button("✏️ Edit", key=f"audit_edit_{_audit_id}", use_container_width=True):
+                            st.session_state["audit_edit_mode"] = True
+                            st.session_state["audit_edit_id"] = _audit_id
+                            st.session_state["audit_edit_data"] = _audit
                             st.rerun()
-    
-            if _ss_q_items:
-                st.markdown(
-                    f'<div style="font-size:0.72rem;font-weight:700;color:#0ebc6e;margin-top:8px;margin-bottom:6px;">'
-                    f'📋 {len(_ss_q_items)} Manually Added</div>',
-                    unsafe_allow_html=True,
-                )
-                _sq_df = pd.DataFrame(_ss_q_items)
-                _sq_show_cols = [c for c in ["Client", "Campaign Name", "Lead Number", "Bot Name", "Lead Link"] if c in _sq_df.columns]
-                if _sq_show_cols:
-                    st.dataframe(_sq_df[_sq_show_cols].head(20), use_container_width=True, hide_index=True, height=150)
-    
-            if _ss_q_items:
-                _qcl1, _ = st.columns([1, 4])
-                with _qcl1:
-                    if st.button("🗑️ Clear Manual Queue", key="bulk_clear_queue_v2", type="secondary", use_container_width=True):
-                        st.session_state["sense_lead_queue"] = _db_q_items
-                        st.rerun()
-    
-    # ── Bulk Audit Grid ──────────────────────────────────────────────────────
-    # Step 1 — admin uploads metadata (Client, Campaign, Lead #, etc.) once via
-    # the Bulk Upload Audit Queue above.  Step 2 — QA selects their name here,
-    # loads all pending cases into an editable grid, scores every row via
-    # dropdowns, and submits everything in one click.
-    # ── Bulk Audit Grid rows — reuse already-loaded _pending_db_all ──────────
-    # Admin/TL: all pending cases. QA: only their own.
-    if _sense_role == "qa":
-        _bag_rows = [r for r in _pending_db_all if r.get("_assigned_qa") == _sense_qa_name]
-    else:
-        _bag_rows = _pending_db_all   # already loaded at top of this function
 
-    # Dynamic editor key — changes when the set of pending IDs changes,
-    # which forces Streamlit to create a fresh data_editor (no stale edit state).
-    _bag_editor_key = "bag_editor_" + str(hash(tuple(r.get("_pending_id", 0) for r in _bag_rows)))
+                    with _acol3:
+                        if st.button("🗑️ Del", key=f"audit_del_{_audit_id}", use_container_width=True):
+                            st.session_state["audit_del_confirm"] = _audit_id
 
-    _bag_label = f"📊 Bulk Audit Grid — {len(_bag_rows)} pending" if _bag_rows else "📊 Bulk Audit Grid"
-    with st.expander(_bag_label, expanded=bool(_bag_rows)):
-        if not _bag_rows:
-            st.caption("No pending cases. Admin/TL uploads leads via the Bulk Upload Queue above.")
+                    with _acol4:
+                        if st.session_state.get("audit_del_confirm") == _audit_id:
+                            st.markdown(
+                                f'<div style="font-size:0.70rem;color:#dc2626;font-weight:700;padding:8px 0;">Confirm?</div>',
+                                unsafe_allow_html=True,
+                            )
+                            _del_yes, _del_no = st.columns(2)
+                            with _del_yes:
+                                if st.button("Yes", key=f"audit_del_yes_{_audit_id}", use_container_width=True):
+                                    _del_err = audit_store.delete(_audit_id)
+                                    if _del_err:
+                                        st.error(f"Delete failed: {_del_err}")
+                                    else:
+                                        st.session_state["sense_audit_log"] = audit_store.load()
+                                        st.session_state.pop("audit_del_confirm", None)
+                                        st.success(f"✅ Audit {_audit_id} deleted")
+                                        st.rerun()
+                            with _del_no:
+                                if st.button("No", key=f"audit_del_no_{_audit_id}", use_container_width=True):
+                                    st.session_state.pop("audit_del_confirm", None)
+                                    st.rerun()
+
+                st.markdown('<hr style="border:none;border-top:1px solid #e4e7ec;margin:12px 0 8px;">', unsafe_allow_html=True)
+            else:
+                st.info("No audits match your search.")
         else:
-            _bag_param_defs = [
-                {"col": p["col"], "options": p["options"]}
-                for tier in _QA_SCHEMA["tiers"]
-                for p in tier["params"]
-            ]
+            st.info("No audits created yet.")
 
-            # Admin/TL: Assigned QA column visible + meta cols editable + rows deletable
-            # QA: meta cols read-only, no delete
-            _bag_meta_cols = ["Client", "Campaign Name", "Bot Name", "Lead Number", "Disposition", "Conversation Link"]
-            _show_qa_col = (_sense_role != "qa")
-            _is_privileged_grid = (_sense_role != "qa")
-
-            _bag_df_data = []
-            for _br in _bag_rows:
-                _row = {}
-                if _show_qa_col:
-                    _row["Assigned QA"] = _br.get("_assigned_qa", "")
-                for _c in _bag_meta_cols:
-                    _row[_c] = _br.get(_c, "")
-                for _pd in _bag_param_defs:
-                    _row[_pd["col"]] = ""
-                _row["Correct Disposition"] = ""
-                _row["Notes"] = ""
-                _bag_df_data.append(_row)
-
-            _bag_df = pd.DataFrame(_bag_df_data)
-
-            _all_meta = (["Assigned QA"] if _show_qa_col else []) + _bag_meta_cols
-            # Admin/TL can edit meta cols; QA cannot
-            _bag_col_cfg = {c: st.column_config.TextColumn(c, disabled=not _is_privileged_grid) for c in _all_meta}
-            if _show_qa_col:
-                _all_qa_names = st.session_state.get("sense_registry_qas", ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
-                _bag_col_cfg["Assigned QA"] = st.column_config.SelectboxColumn("Assigned QA", options=_all_qa_names, required=False)
-            for _pd in _bag_param_defs:
-                _opts = [""] + _pd["options"] + (["NA"] if "NA" not in _pd["options"] else [])
-                _bag_col_cfg[_pd["col"]] = st.column_config.SelectboxColumn(_pd["col"], options=_opts, required=False)
-            _bag_col_cfg["Correct Disposition"] = st.column_config.SelectboxColumn(
-                "Correct Disposition", options=["", "Yes", "No"], required=False
-            )
-            _bag_col_cfg["Notes"] = st.column_config.TextColumn("Notes", disabled=False)
-
-            st.caption(f"📋 {len(_bag_rows)} cases — score each row then Submit All.")
-
-            _bag_edited = st.data_editor(
-                _bag_df,
-                column_config=_bag_col_cfg,
-                use_container_width=True,
-                hide_index=True,
-                num_rows="dynamic" if _is_privileged_grid else "fixed",
-                height=min(500, 50 + len(_bag_rows) * 38),
-                key=_bag_editor_key,
-            )
-
-            # Admin delete: rows removed in the editor → remove from Supabase queue
-            if _is_privileged_grid:
-                _edited_records = _bag_edited.to_dict("records")
-                _kept_ids = set()
-                for _i, _er in enumerate(_edited_records):
-                    if _i < len(_bag_rows):
-                        _kept_ids.add(_bag_rows[_i].get("_pending_id"))
-                _removed_rows = [r for r in _bag_rows if r.get("_pending_id") not in _kept_ids]
-                if _removed_rows:
-                    for _rr in _removed_rows:
-                        pending_store.remove(_rr["_pending_id"])
-                    st.rerun()
-
-            if st.button(f"✅ Submit all {len(_bag_edited)} audits", key="bag_submit_btn", type="primary"):
-                _bag_ok, _bag_errs = 0, []
-                _edited_list = _bag_edited.to_dict("records")
-                for _brow_edit, _brow_meta in zip(_edited_list, _bag_rows[:len(_edited_list)]):
-                    _bpv = {p["col"]: str(_brow_edit.get(p["col"], "") or "").strip() for tier in _QA_SCHEMA["tiers"] for p in tier["params"]}
-                    _bpv["Correct Disposition"]            = str(_brow_edit.get("Correct Disposition", "") or "").strip()
-                    _bpv["Correct Disposition (Expected)"] = ""
-                    _bcomputed = _compute_qa_score(_bpv)
-                    # Admin edits override meta cols; QA reads from original meta
-                    _eff_client   = str(_brow_edit.get("Client", "") or _brow_meta.get("Client", ""))
-                    _eff_campaign = str(_brow_edit.get("Campaign Name", "") or _brow_meta.get("Campaign Name", ""))
-                    _eff_bot      = str(_brow_edit.get("Bot Name", "") or _brow_meta.get("Bot Name", ""))
-                    _eff_lead     = str(_brow_edit.get("Lead Number", "") or _brow_meta.get("Lead Number", ""))
-                    _eff_disp     = str(_brow_edit.get("Disposition", "") or _brow_meta.get("Disposition", ""))
-                    _eff_conv     = str(_brow_edit.get("Conversation Link", "") or _brow_meta.get("Conversation Link", ""))
-                    _eff_qa       = str(_brow_edit.get("Assigned QA", "") or _brow_meta.get("_assigned_qa", _sense_qa_name))
-                    _brec = {
-                        "Audit Date":        str(_brow_meta.get("Audit Date", datetime.now(timezone.utc).date())),
-                        "QA":                _eff_qa,
-                        "Client":            _eff_client,
-                        "Campaign Name":     _eff_campaign,
-                        "PM / CSM":          _brow_meta.get("PM / CSM", ""),
-                        "Bot Name":          _eff_bot,
-                        "Lead Number":       _eff_lead,
-                        "Lead Link":         _brow_meta.get("Lead Link", ""),
-                        "Disposition":       _eff_disp,
-                        "Conversation Link": _eff_conv,
-                        **_bpv,
-                        "Lead Score":             _bcomputed["Lead Score"],
-                        "Lead Composite":         _bcomputed["Lead Composite"],
-                        "Bot Score":              _bcomputed["Bot Score"],
-                        "Intelligence Score":     _bcomputed["Intelligence Score"],
-                        "Status":                 _bcomputed["Status"],
-                        "Fatal?":                 _bcomputed["Fatal?"],
-                        "Notes":                  str(_brow_edit.get("Notes", "") or ""),
-                        "Improvement Suggestion": "",
-                        "Call Drop Stage":        "",
-                    }
-                    _berr = audit_store.append(_brec)
-                    if _berr:
-                        _bag_errs.append(_berr)
-                    else:
-                        pending_store.mark_done(_brow_meta["_pending_id"])
-                        _bag_ok += 1
-
-                if _bag_ok:
-                    st.success(f"✅ {_bag_ok} audits saved.")
-                if _bag_errs:
-                    st.warning(f"⚠️ {len(_bag_errs)} rows failed.")
-                if _bag_ok:
-                    st.session_state["sense_audit_log"] = _audit_log_load()
-                    st.rerun()
-
-    # ── AI Suggestion Builder (outside form — AI calls need rerun) ───────────
-    with st.expander("✨ AI Suggestion Builder — draft & improve before submitting", expanded=False):
-        st.markdown(
-            '<div style="font-size:0.72rem;color:#5588bb;margin-bottom:8px;">'
-            'Type an improvement suggestion (bot script, coaching note, fix idea). '
-            'Click <strong>🤖 AI Improve</strong> to have Claude rewrite it as a crisp, actionable recommendation — '
-            'then it auto-fills the Improvement Suggestion field in the audit form below.</div>',
-            unsafe_allow_html=True,
-        )
-        _sug_draft = st.text_area(
-            "Draft suggestion",
-            value=st.session_state.get("_audit_suggestion_draft", ""),
-            placeholder="e.g. 'bot misses DM confirmation — it should ask clearly if the decision maker is available before continuing'",
-            height=80,
-            key="sug_draft_input",
-        )
-        _sug_c1, _sug_c2, _sug_c3 = st.columns([2, 2, 3])
-        with _sug_c1:
-            if st.button("🤖 AI Verify & Improve", key="sug_ai_improve_btn", use_container_width=True, type="primary"):
-                _raw_draft = _sug_draft.strip()
-                if not _raw_draft:
-                    st.warning("Type a suggestion first.")
-                else:
-                    _api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
-                    if not _api_key:
-                        st.error("ANTHROPIC_API_KEY not found in secrets.")
-                    else:
-                        try:
-                            import anthropic as _anth
-                            _anth_client = _anth.Anthropic(api_key=_api_key)
-                            with st.spinner("Improving with Claude…"):
-                                _sug_msg = _anth_client.messages.create(
-                                    model="claude-haiku-4-5-20251001",
-                                    max_tokens=300,
-                                    messages=[{"role": "user", "content": (
-                                        "You are a QA lead for a voice-bot team. "
-                                        "Rewrite the following raw suggestion as a single, crisp, actionable improvement recommendation (2-3 sentences max). "
-                                        "Keep it concrete — name the bot behaviour to fix, the desired behaviour, and the expected outcome. "
-                                        "Do NOT add greetings or preamble.\n\n"
-                                        f"Raw suggestion: {_raw_draft}"
-                                    )}],
-                                )
-                            _improved = _sug_msg.content[0].text.strip()
-                            st.session_state["_audit_suggestion_draft"]    = _improved
-                            st.session_state["_audit_suggestion_improved"] = True
-                            st.rerun()
-                        except Exception as _sug_e:
-                            st.error(f"AI error: {_sug_e}")
-        with _sug_c2:
-            if st.button("✕ Clear", key="sug_clear_btn", use_container_width=True):
-                st.session_state.pop("_audit_suggestion_draft", None)
-                st.session_state.pop("_audit_suggestion_improved", None)
-                st.rerun()
-        if st.session_state.get("_audit_suggestion_improved") and st.session_state.get("_audit_suggestion_draft"):
-            st.markdown(
-                f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid #0ebc6e;'
-                f'border-radius:8px;padding:10px 14px;margin-top:8px;">'
-                f'<div style="font-size:0.65rem;font-weight:700;color:#14532d;margin-bottom:4px;">✅ AI-Improved — will auto-fill below</div>'
-                f'<div style="font-size:0.78rem;color:#166534;line-height:1.6;">{st.session_state["_audit_suggestion_draft"]}</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
+        st.markdown("##### Add New Audit")
 
     # ── Audit form ────────────────────────────────────────────────────────────
     st.markdown("""
@@ -8813,7 +8696,8 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
     color: #ffffff !important;
 }
 </style>""", unsafe_allow_html=True)
-    st.markdown('<div class="section-chip">✍️ New QA Audit — Convin.ai Standard Sheet</div>', unsafe_allow_html=True)
+    _form_title = f"✏️ Edit Audit #{_edit_id}" if (_edit_mode and _edit_id) else "✍️ New QA Audit — Convin.ai Standard Sheet"
+    st.markdown(f'<div class="section-chip">{_form_title}</div>', unsafe_allow_html=True)
 
     # ── Queue selector — OUTSIDE form so selection triggers rerun & auto-fill ──
     def _qv(rec, key):
@@ -8887,7 +8771,43 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 unsafe_allow_html=True,
             )
 
+    # ── Edit mode detection and pre-fill ──────────────────────────────────────
+    _edit_mode = st.session_state.get("audit_edit_mode", False)
+    _edit_id = st.session_state.get("audit_edit_id")
+    _edit_data = st.session_state.get("audit_edit_data", {})
+
+    if _edit_mode and _edit_data:
+        # Pre-fill form fields from audit data
+        if "f_audit_date" not in st.session_state or not st.session_state.get("_prefill_from_edit"):
+            try:
+                st.session_state["f_audit_date"] = pd.Timestamp(_edit_data.get("Audit Date", pd.Timestamp.now().date())).date()
+            except:
+                st.session_state["f_audit_date"] = pd.Timestamp.now().date()
+            st.session_state["f_auditor_sel"] = _edit_data.get("QA", "")
+            st.session_state["f_client_sel"] = _edit_data.get("Client", "")
+            st.session_state["f_campaign"] = _edit_data.get("Campaign Name", "")
+            st.session_state["f_pm_csm_sel"] = _edit_data.get("PM / CSM", "")
+            st.session_state["f_lead_no"] = _edit_data.get("Lead Number", "")
+            st.session_state["f_conv_link"] = _edit_data.get("Conversation Link", "")
+            st.session_state["f_lead_link"] = _edit_data.get("Lead Link", "")
+            st.session_state["f_disposition_sel"] = _edit_data.get("Disposition", "— select —")
+            st.session_state["f_bot_name"] = _edit_data.get("Bot Name", "")
+            st.session_state["f_correct_disp"] = _edit_data.get("Correct Disposition?", "NA")
+            st.session_state["f_correct_disp_text"] = _edit_data.get("Correct Disposition (leave blank if correct)", "")
+            st.session_state["f_notes"] = _edit_data.get("Notes", "")
+            st.session_state["f_suggestion_field"] = _edit_data.get("Improvement Suggestion", "")
+            st.session_state["_prefill_from_edit"] = True
+
     with st.form("qa_audit_form_v2", clear_on_submit=False):
+
+        # ── Form mode indicator ───────────────────────────────────────────────
+        if _edit_mode and _edit_id:
+            st.markdown(
+                f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;margin-bottom:12px;">'
+                f'<strong style="color:#92400e;">✏️ Editing Audit #{_edit_id}</strong>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
         # ── Audit & Lead details ──────────────────────────────────────────────
         st.markdown(
@@ -9033,7 +8953,8 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 _cp_key = f"af_cp_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
                 _cp_cmt_key = f"af_cp_cmt_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
                 _cp_stage_key = f"af_cp_stage_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
-                _cpa, _cpb, _cpb2, _cpc = st.columns([3, 1, 1, 3])
+                _cp_notcap_key = f"af_cp_notcap_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
+                _cpa, _cpb, _cpb2, _cpc, _cpd = st.columns([3, 1, 1, 3, 3])
                 with _cpa:
                     _guide = _cp.get("guide", "")
                     _guide_html = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:2px;">{_guide}</div>' if _guide else ""
@@ -9064,6 +8985,13 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                         key=_cp_cmt_key,
                         label_visibility="collapsed",
                     )
+                with _cpd:
+                    _pv[f"{_cp['name']} Not Captured"] = st.text_input(
+                        "What was not captured",
+                        placeholder="Missing info…",
+                        key=_cp_notcap_key,
+                        label_visibility="collapsed",
+                    )
 
         _f_notes = st.text_area("Reviewer Notes", placeholder="Optional observations…", height=56)
         _f_suggestion = st.text_area(
@@ -9073,7 +9001,17 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             height=72,
             key="f_suggestion_field",
         )
-        _sub     = st.form_submit_button("✅ Submit Audit  — Auto-Score", use_container_width=True, type="primary")
+        # Submit button text depends on mode
+        _sub_text = f"💾 Save Changes" if _edit_mode and _edit_id else "✅ Submit Audit  — Auto-Score"
+        _sub = st.form_submit_button(_sub_text, use_container_width=True, type="primary")
+
+        if _edit_mode and _edit_id:
+            if st.form_submit_button("✕ Cancel Edit", use_container_width=True):
+                st.session_state.pop("audit_edit_mode", None)
+                st.session_state.pop("audit_edit_id", None)
+                st.session_state.pop("audit_edit_data", None)
+                st.session_state.pop("_prefill_from_edit", None)
+                st.rerun()
 
         if _sub:
             # Mandatory validation
@@ -9131,7 +9069,14 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                     "Improvement Suggestion": _f_suggestion,
                     "Call Drop Stage":     _f_call_drop_stage if _f_call_drop_stage != "NA" else "",
                 }
-                _save_err = audit_store.append(_rec)
+                # Save audit (update if editing, append if new)
+                if _edit_mode and _edit_id:
+                    _save_err = audit_store.update(_edit_id, _rec)
+                    _success_msg = f"✅ Audit #{_edit_id} updated"
+                else:
+                    _save_err = audit_store.append(_rec)
+                    _success_msg = "✅ Audit submitted and auto-scored"
+
                 if _save_err:
                     st.error(f"⚠️ Failed to save audit to database: {_save_err}")
                     st.stop()
@@ -9147,6 +9092,12 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 st.session_state.pop("_audit_suggestion_draft", None)
                 st.session_state.pop("_audit_suggestion_improved", None)
                 st.session_state.pop("_q_pf_sig", None)  # reset prefill sig so next pick triggers auto-fill
+                st.session_state.pop("audit_edit_mode", None)
+                st.session_state.pop("audit_edit_id", None)
+                st.session_state.pop("audit_edit_data", None)
+                st.session_state.pop("_prefill_from_edit", None)
+                st.session_state["sense_audit_log"] = audit_store.load()
+                st.success(_success_msg)
 
                 if _q_idx >= 0 and _lead_q_form:
                     _done_item   = _lead_q_form[_q_idx]
@@ -9310,6 +9261,288 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 f'</div>',
                 unsafe_allow_html=True,
             )
+
+
+def _render_qa_scorecard_audit(legend_map, fname):
+    """QA Scorecard Audit — tier-organized form with explicit weight display."""
+    st.session_state["sense_audit_log"] = _audit_log_load()
+    audit_log = st.session_state["sense_audit_log"]
+
+    try:
+        _pending_db_all = pending_store.load_all()
+    except Exception:
+        _pending_db_all = []
+    _manual_q_items = [r for r in st.session_state.get("sense_lead_queue", []) if not r.get("_pending_id")]
+    st.session_state["sense_lead_queue"] = _pending_db_all + _manual_q_items
+
+    st.markdown("""
+<div style="background:linear-gradient(120deg,#1a2d50 0%,#0f1f3a 50%,#1e3a5f 100%);
+  border-radius:14px;padding:20px 24px;margin-bottom:1.4rem;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;
+    background:rgba(37,99,235,0.12);border-radius:50%;"></div>
+  <div style="position:absolute;bottom:-30px;left:40%;width:180px;height:180px;
+    background:rgba(37,99,235,0.07);border-radius:50%;"></div>
+  <div style="display:flex;align-items:flex-start;gap:16px;position:relative;">
+    <div style="background:linear-gradient(135deg,#0B1F3A,#2563EB);border-radius:10px;
+      padding:10px;flex-shrink:0;font-size:1.3rem;">📋</div>
+    <div>
+      <div style="font-size:1rem;font-weight:900;color:#fff;letter-spacing:-0.01em;margin-bottom:4px;">
+        QA Scorecard Audit</div>
+      <div style="font-size:0.74rem;color:#93c5fd;margin-bottom:12px;">
+        Explicit tier-based scoring · Clear metric definitions · Real-time results</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <span style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);
+          border-radius:6px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:#fca5a5;">
+          🔴 CRITICAL 63%</span>
+        <span style="background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.3);
+          border-radius:6px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:#fed7aa;">
+          🟠 IMPORTANT 29%</span>
+        <span style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);
+          border-radius:6px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:#93c5fd;">
+          🔵 QUALITY 8%</span>
+        <span style="background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);
+          border-radius:6px;padding:4px 10px;font-size:0.66rem;font-weight:700;color:#c4b5fd;">
+          🎯 Pass ≥80 · Review 60-79 · Fail &lt;60</span>
+      </div>
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
+
+    def _qv(rec, key):
+        v = rec.get(key, "")
+        return "" if (v is None or (isinstance(v, float) and v != v) or str(v).strip() in ("nan","None","")) else str(v).strip()
+
+    _lead_q_form = st.session_state.get("sense_lead_queue", [])
+    _q_idx = -1
+    _q_rec = {}
+    if _lead_q_form:
+        _q_labels = ["— type manually —"] + [
+            f"{r.get('Client','?')} · {r.get('Campaign Name','?')} · {r.get('Lead Number', r.get('Phone Number','#'+str(i+1)))}"
+            for i, r in enumerate(_lead_q_form)
+        ]
+        _q_sel = st.selectbox("📋 Pick lead from queue (auto-fills form)", _q_labels, key="f_qs_queue_sel")
+        _q_idx = _q_labels.index(_q_sel) - 1
+        _q_rec = _lead_q_form[_q_idx] if _q_idx >= 0 else {}
+
+        _pf_sig = f"{_q_idx}_{_qv(_q_rec,'Client')}_{_qv(_q_rec,'Campaign Name')}_{_qv(_q_rec,'Lead Number')}"
+        if _q_idx >= 0 and st.session_state.get("_qs_pf_sig") != _pf_sig:
+            st.session_state["_qs_pf_sig"] = _pf_sig
+            st.session_state["f_qs_campaign"] = _qv(_q_rec, "Campaign Name")
+            st.session_state["f_qs_lead_no"] = _qv(_q_rec, "Lead Number")
+            st.session_state["f_qs_conv_link"] = _qv(_q_rec, "Conversation Link")
+            st.session_state["f_qs_lead_link"] = _qv(_q_rec, "Lead Link")
+            st.session_state["f_qs_bot_name"] = _qv(_q_rec, "Bot Name")
+            st.session_state["f_qs_correct_disp_text"] = _qv(_q_rec, "Correct Disposition Text")
+            _reg_cl_pre = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
+            _cl_pre = _qv(_q_rec, "Client")
+            st.session_state["f_qs_client_sel"] = _cl_pre if _cl_pre in _reg_cl_pre else ""
+            _qa_pre = _qv(_q_rec, "QA") or _qv(_q_rec, "Assigned QA")
+            _qa_opts_pre = [""] + st.session_state.get("sense_registry_qas", ["Animesh","Navya","Shubham Sharma","Nora","Alan"])
+            st.session_state["f_qs_auditor_sel"] = _qa_pre if _qa_pre in _qa_opts_pre else ""
+            _pm_pre = _qv(_q_rec, "PM / CSM")
+            _pm_opts_pre = [""] + st.session_state.get("sense_registry_pms", sorted(set(r["pm"] for r in _SENSE_CLIENTS)))
+            st.session_state["f_qs_pm_csm_sel"] = _pm_pre if _pm_pre in _pm_opts_pre else ""
+            _disp_pre = _qv(_q_rec, "Disposition")
+            _disp_opts_pre = ["— select —", "Hot", "Warm", "Cold", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
+            st.session_state["f_qs_disposition_sel"] = _disp_pre if _disp_pre in _disp_opts_pre else "— select —"
+            _cd_pre = _qv(_q_rec, "Correct Disposition?")
+            if _cd_pre in ("Yes", "No", "NA"):
+                st.session_state["f_qs_correct_disp"] = _cd_pre
+            _ad_pre = _qv(_q_rec, "Audit Date")
+            if _ad_pre:
+                try:
+                    st.session_state["f_qs_audit_date"] = pd.Timestamp(_ad_pre).date()
+                except Exception:
+                    pass
+
+        if _q_idx >= 0:
+            st.markdown('<div style="font-size:0.65rem;color:#0ebc6e;margin-bottom:6px;">✅ Pre-filling from queue record ' + str(_q_idx + 1) + '</div>', unsafe_allow_html=True)
+
+    with st.form("qa_scorecard_form", clear_on_submit=False):
+        st.markdown('<div style="font-size:0.68rem;font-weight:700;color:#2a5080;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">Audit Metadata</div>', unsafe_allow_html=True)
+
+        _ad1, _ad2, _ad3, _ad4 = st.columns(4)
+        with _ad1:
+            _f_audit_date = st.date_input("Audit Date *", key="f_qs_audit_date", value=pd.Timestamp.now().date())
+        with _ad2:
+            _registry_init()
+            _reg_qas = [""] + st.session_state.get("sense_registry_qas", ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
+            _f_auditor = st.selectbox("QA *", _reg_qas, key="f_qs_auditor_sel")
+        with _ad3:
+            _registry_init()
+            _reg_clients = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
+            _f_client = st.selectbox("Client *", _reg_clients, key="f_qs_client_sel")
+        with _ad4:
+            _f_campaign = st.text_input("Campaign Name *", key="f_qs_campaign", placeholder="e.g. Q2 Outreach")
+
+        _ld1, _ld2, _ld3 = st.columns(3)
+        with _ld1:
+            _reg_client_map = {c["client"]: c for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)}
+            _pm_opts = [""] + st.session_state.get("sense_registry_pms", sorted(set(r["pm"] for r in _SENSE_CLIENTS)))
+            if not st.session_state.get("f_qs_pm_csm_sel"):
+                _auto_pm = _reg_client_map.get(_f_client, {}).get("pm", "") or _SENSE_CLIENT_MAP.get(_f_client, {}).get("pm", "")
+                if _auto_pm in _pm_opts:
+                    st.session_state["f_qs_pm_csm_sel"] = _auto_pm
+            _f_pm_csm = st.selectbox("PM / CSM *", _pm_opts, key="f_qs_pm_csm_sel")
+        with _ld2:
+            _f_lead_no = st.text_input("Lead Number", key="f_qs_lead_no", placeholder="e.g. LD-20250422")
+        with _ld3:
+            _f_conv_link = st.text_input("Conversation Link", key="f_qs_conv_link", placeholder="https://...")
+
+        _ll1, _ll2, _ll3, _ll4 = st.columns(4)
+        with _ll1:
+            _f_lead_link = st.text_input("Lead Link", key="f_qs_lead_link", placeholder="https://...")
+        with _ll2:
+            _disp_opts = ["— select —", "Hot", "Warm", "Cold", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
+            _f_disposition = st.selectbox("Disposition *", _disp_opts, key="f_qs_disposition_sel")
+        with _ll3:
+            _f_bot_name = st.text_input("Bot Name *", key="f_qs_bot_name", placeholder="e.g. Convin-LeadBot-v2")
+        with _ll4:
+            _f_correct_disp = st.radio("Correct Disposition? *", ["Yes", "No", "NA"], index=2, horizontal=True, key="f_qs_correct_disp")
+
+        _f_correct_disp_text = st.text_input("Correct Disposition (leave blank if correct)", placeholder="e.g. Not Interested, Warm Follow-up…", key="f_qs_correct_disp_text")
+
+        st.markdown('<hr style="border:none;border-top:1px solid rgba(61,130,245,0.1);margin:10px 0 4px;">', unsafe_allow_html=True)
+
+        _pv = {}
+
+        for _ti, _tier in enumerate(_QA_SCHEMA["tiers"]):
+            _tc = _tier["color"]
+            _tier_label = _tier["label"]
+            _weight_pct = _tier["weight_pct"]
+
+            st.markdown(
+                f'<div style="display:flex;align-items:center;gap:8px;font-size:0.72rem;font-weight:800;'
+                f'letter-spacing:0.1em;text-transform:uppercase;color:{_tc};margin:14px 0 8px;">'
+                f'{_tier_label} · {_weight_pct}% Weight</div>',
+                unsafe_allow_html=True,
+            )
+
+            _params = _tier["params"]
+            for _ri in range(0, len(_params), 2):
+                _batch = _params[_ri: _ri + 2]
+                _wcols = st.columns(len(_batch))
+
+                for _wc, _p in zip(_wcols, _batch):
+                    with _wc:
+                        _wt = f"({int(_p['weight']*100)}%)" if _p["weight"] > 0 else "⚠️ FATAL"
+                        _key = f"qs_t_{_p['col'][:22].replace(' ','_').replace('/','_').replace('(','').replace(')','')}"
+                        _tick_opts = _p["options"] + ["NA"]
+                        _pv[_p["col"]] = st.radio(
+                            f"{_p['col']} {_wt} *",
+                            _tick_opts,
+                            index=len(_tick_opts) - 1,
+                            horizontal=True,
+                            key=_key,
+                            help=_p.get("guide", ""),
+                        )
+
+        _f_notes = st.text_area("Reviewer Notes", placeholder="Optional observations…", height=56, key="f_qs_notes")
+        _f_suggestion = st.text_area("💡 Improvement Suggestion", placeholder="What could the bot improve?", height=72, key="f_qs_suggestion")
+
+        _sub = st.form_submit_button("✅ Submit QA Scorecard Audit — Auto-Score", use_container_width=True, type="primary")
+
+        if _sub:
+            _errs = []
+            if not _f_auditor.strip():
+                _errs.append("QA name is required")
+            if not _f_client.strip():
+                _errs.append("Client is required")
+            if not _f_campaign.strip():
+                _errs.append("Campaign Name is required")
+            if not _f_bot_name.strip():
+                _errs.append("Bot Name is required")
+            if not _f_pm_csm.strip():
+                _errs.append("PM / CSM is required")
+            for _col, _val in _pv.items():
+                if not _val or str(_val).strip() in ("— select —", "—"):
+                    _errs.append(f"'{_col}' must be selected")
+            if _f_disposition == "— select —":
+                _errs.append("Disposition must be selected")
+
+            if _errs:
+                for _e in _errs:
+                    st.error(_e)
+            else:
+                _full_pv = dict(_pv)
+                _full_pv["Correct Disposition"] = _f_correct_disp
+                _full_pv["Correct Disposition (Expected)"] = _f_correct_disp_text
+
+                _computed = _compute_qa_score(_full_pv)
+
+                _rec = {
+                    "Audit Date": str(_f_audit_date),
+                    "QA": _f_auditor.strip(),
+                    "Client": _f_client.strip(),
+                    "Campaign Name": _f_campaign.strip(),
+                    "PM / CSM": _f_pm_csm.strip(),
+                    "Bot Name": _f_bot_name.strip(),
+                    "Lead Number": _f_lead_no.strip(),
+                    "Lead Link": _f_lead_link.strip(),
+                    "Disposition": _f_disposition if _f_disposition != "— select —" else "",
+                    "Conversation Link": _f_conv_link.strip(),
+                    "Audit Type": "QA Scorecard",
+                    **_full_pv,
+                    "Lead Score": _computed["Lead Score"],
+                    "Lead Composite": _computed["Lead Composite"],
+                    "Bot Score": _computed["Bot Score"],
+                    "Intelligence Score": _computed["Intelligence Score"],
+                    "Status": _computed["Status"],
+                    "Fatal?": _computed["Fatal?"],
+                    "Notes": _f_notes,
+                    "Improvement Suggestion": _f_suggestion,
+                }
+
+                _save_err = audit_store.append(_rec)
+
+                if _save_err:
+                    st.error(f"⚠️ Failed to save audit to database: {_save_err}")
+                    st.stop()
+
+                st.session_state["qa_last_result"] = {
+                    **_computed,
+                    "_disposition": _f_disposition if _f_disposition != "— select —" else "—",
+                    "_correct_disp": _f_correct_disp,
+                    "_correct_disp_text": _f_correct_disp_text,
+                }
+
+                st.session_state.pop("_qs_pf_sig", None)
+                st.session_state["sense_audit_log"] = audit_store.load()
+                st.success("✅ QA Scorecard Audit submitted and auto-scored")
+
+                if _q_idx >= 0 and _lead_q_form:
+                    _done_item = _lead_q_form[_q_idx]
+                    _pending_rid = _done_item.get("_pending_id")
+                    if _pending_rid:
+                        pending_store.mark_done(_pending_rid)
+                    _lead_q_form.pop(_q_idx)
+                    st.session_state["sense_lead_queue"] = _lead_q_form
+
+                st.rerun()
+
+    if st.session_state.get("qa_last_result"):
+        _lr = st.session_state["qa_last_result"]
+        _sc = _lr["Bot Score"]
+        _sgc = _qa_status_color(_lr["Status"])
+        st.markdown(
+            f'<div style="background:{_sgc}0d;border:1px solid {_sgc}44;border-left:4px solid {_sgc};'
+            f'border-radius:10px;padding:14px 18px;margin-bottom:1rem;">'
+            f'<div style="font-size:0.7rem;font-weight:700;color:{_sgc};text-transform:uppercase;'
+            f'letter-spacing:0.08em;margin-bottom:8px;">✅ Last Audit Result</div>'
+            f'<div style="display:flex;gap:28px;flex-wrap:wrap;">'
+            f'<div><div style="font-size:1.8rem;font-weight:900;color:{_sgc};">{_sc}%</div>'
+            f'<div style="font-size:0.62rem;color:#5588bb;">Bot Score</div></div>'
+            f'<div><div style="font-size:1.4rem;font-weight:800;color:{_sgc};">{_lr["Status"]}</div>'
+            f'<div style="font-size:0.62rem;color:#5588bb;">Status</div></div>'
+            f'<div><div style="font-size:1.4rem;font-weight:800;color:#0ebc6e;">{"—" if not _lr.get("Lead Composite") else _lr.get("Lead Composite")}</div>'
+            f'<div style="font-size:0.62rem;color:#5588bb;">Lead Composite</div></div>'
+            f'<div><div style="font-size:1.4rem;font-weight:800;color:{"#dc2626" if _lr["Fatal?"]=="YES" else "#0ebc6e"};">{_lr["Fatal?"]}</div>'
+            f'<div style="font-size:0.62rem;color:#5588bb;">Fatal?</div></div>'
+            f'<div><div style="font-size:1.1rem;font-weight:800;color:{"#dc2626" if _lr.get("_disposition")=="Hot" else "#f59e0b" if _lr.get("_disposition")=="Warm" else "#2563EB" if _lr.get("_disposition")=="Cold" else "#0B1F3A"};">{_lr.get("_disposition","—")}</div>'
+            f'<div style="font-size:0.62rem;color:#5588bb;">Disposition</div></div>'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
 
 
 def _render_legend_page():
@@ -10237,7 +10470,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         lock = " 🔒" if _is_protected_sheet(name) else ""
         return f"{icon}  {name}{lock}"
 
-    _tab_labels = ["📊  Scorecard", "✍️  New Audit", "📖  Legend"] + [_tab_label(s) for s in sheets] + ["🗂️  Registry", "🤖  Insights"]
+    _tab_labels = ["📊  Scorecard", "✍️  New Audit", "📋  QA Scorecard Audit", "📖  Legend"] + [_tab_label(s) for s in sheets] + ["🗂️  Registry", "🤖  Insights"]
     _tabs = st.tabs(_tab_labels)
 
     with _tabs[0]:
@@ -10247,10 +10480,13 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         _render_audit_form(_legend_map, fname)
 
     with _tabs[2]:
+        _render_qa_scorecard_audit(_legend_map, fname)
+
+    with _tabs[3]:
         _render_legend_page()
 
     for i, (sheet_name, df) in enumerate(sheets.items()):
-        with _tabs[i + 3]:
+        with _tabs[i + 4]:
             _render_sense_sheet(df, sheet_name, fname, sheets=sheets)
 
     with _tabs[-2]:
