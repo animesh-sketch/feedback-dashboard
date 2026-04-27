@@ -9021,6 +9021,10 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             _disp_opts = ["— select —", "Hot", "Warm", "Cold", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
             _f_disposition = st.selectbox("Disposition *", _disp_opts, key="f_disposition_sel")
 
+        _conv_col1, _conv_col2 = st.columns(2)
+        with _conv_col1:
+            _f_conv_link = st.text_input("Conversation Link", key="f_conv_link", placeholder="https://...")
+
         # ── Disposition correction ─────────────────────────────────────────────
         _ll1, _ll2 = st.columns(2)
         with _ll1:
