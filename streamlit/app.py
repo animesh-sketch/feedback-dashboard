@@ -9328,14 +9328,12 @@ def _render_qa_scorecard_audit(legend_map, fname):
     with st.form(_form_key, clear_on_submit=True):
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            _def_date_str = _get_col_val(_batch_record, "Audit Date")
-            try:
-                _def_date = pd.Timestamp(_def_date_str).date() if _def_date_str else pd.Timestamp.now().date()
-            except:
-                _def_date = pd.Timestamp.now().date()
-            _f_audit_date = st.date_input("Audit Date *", value=_def_date, key=f"f_qs_audit_date_{_batch_idx}")
+            # Audit Date always defaults to today (not from batch file)
+            _f_audit_date = st.date_input("Audit Date *", value=pd.Timestamp.now().date(), key=f"f_qs_audit_date_{_batch_idx}")
         with col2:
-            _def_auditor = _get_col_val(_batch_record, "QA Name")
+            # QA Name defaults to logged-in user, can be overridden from batch file
+            _logged_in_user = st.session_state.get("auth_user", {}).get("name", "")
+            _def_auditor = _get_col_val(_batch_record, "QA Name", _logged_in_user)
             _f_auditor = st.text_input("QA Name *", value=_def_auditor, key=f"f_qs_auditor_{_batch_idx}", placeholder="e.g. Animesh")
         with col3:
             _def_client = _get_col_val(_batch_record, "Client")
