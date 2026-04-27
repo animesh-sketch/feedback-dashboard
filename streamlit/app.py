@@ -9325,38 +9325,55 @@ def _render_qa_scorecard_audit(legend_map, fname):
     # ── Form key includes batch index to force re-render on each record ────────
     _form_key = f"qa_scorecard_form_{_batch_idx}"
 
+    # ── Show batch record info with blue styling ──────────────────────────────
+    if _batch_record:
+        st.markdown("""
+        <div style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);border:2px solid #2563EB;border-radius:12px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:0.9rem;color:#1e40af;font-weight:600;">📋 Batch Record Auto-Filled</div>
+        <div style="font-size:0.75rem;color:#1e3a8a;margin-top:4px;">Fields below are pre-populated from uploaded data</div>
+        </div>
+        """, unsafe_allow_html=True)
+
     with st.form(_form_key, clear_on_submit=True):
+        # ── Audit Date with blue styling (always today) ──────────────────────
+        st.markdown('<div style="background:#eff6ff;border-left:4px solid #2563EB;padding:12px;border-radius:6px;margin-bottom:16px;"><strong style="color:#1e40af;">📅 Audit Date: ' + pd.Timestamp.now().strftime("%d %b %Y") + '</strong></div>', unsafe_allow_html=True)
+        _f_audit_date = st.date_input("Audit Date *", value=pd.Timestamp.now().date(), key=f"f_qs_audit_date_{_batch_idx}", disabled=True)
+
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            # Audit Date always defaults to today (not from batch file)
-            _f_audit_date = st.date_input("Audit Date *", value=pd.Timestamp.now().date(), key=f"f_qs_audit_date_{_batch_idx}")
-        with col2:
-            # QA Name defaults to logged-in user, can be overridden from batch file
+            # QA Name defaults to logged-in user
             _logged_in_user = st.session_state.get("auth_user", {}).get("name", "")
             _def_auditor = _get_col_val(_batch_record, "QA Name", _logged_in_user)
-            _f_auditor = st.text_input("QA Name *", value=_def_auditor, key=f"f_qs_auditor_{_batch_idx}", placeholder="e.g. Animesh")
-        with col3:
+            _indicator1 = "✅" if _batch_record and _def_auditor != _logged_in_user else "•"
+            _f_auditor = st.text_input(f"{_indicator1} QA Name *", value=_def_auditor, key=f"f_qs_auditor_{_batch_idx}", placeholder="e.g. Animesh")
+        with col2:
             _def_client = _get_col_val(_batch_record, "Client")
-            _f_client = st.text_input("Client *", value=_def_client, key=f"f_qs_client_{_batch_idx}", placeholder="e.g. Acme Corp")
-        with col4:
+            _indicator2 = "✅" if _def_client else "•"
+            _f_client = st.text_input(f"{_indicator2} Client *", value=_def_client, key=f"f_qs_client_{_batch_idx}", placeholder="e.g. Acme Corp")
+        with col3:
             _def_campaign = _get_col_val(_batch_record, "Campaign")
-            _f_campaign = st.text_input("Campaign *", value=_def_campaign, key=f"f_qs_campaign_{_batch_idx}", placeholder="e.g. Q2 Outreach")
+            _indicator3 = "✅" if _def_campaign else "•"
+            _f_campaign = st.text_input(f"{_indicator3} Campaign *", value=_def_campaign, key=f"f_qs_campaign_{_batch_idx}", placeholder="e.g. Q2 Outreach")
+        with col4:
+            _def_pm = _get_col_val(_batch_record, "PM / CSM")
+            _indicator4 = "✅" if _def_pm else "•"
+            _f_pm = st.text_input(f"{_indicator4} PM / CSM *", value=_def_pm, key=f"f_qs_pm_{_batch_idx}", placeholder="e.g. John Doe")
 
         col1, col2, col3 = st.columns(3)
         with col1:
-            _def_pm = _get_col_val(_batch_record, "PM / CSM")
-            _f_pm = st.text_input("PM / CSM *", value=_def_pm, key=f"f_qs_pm_{_batch_idx}", placeholder="e.g. John Doe")
-        with col2:
             _def_bot = _get_col_val(_batch_record, "Bot Name")
-            _f_bot = st.text_input("Bot Name *", value=_def_bot, key=f"f_qs_bot_{_batch_idx}", placeholder="e.g. Bot-v2")
-        with col3:
+            _indicator5 = "✅" if _def_bot else "•"
+            _f_bot = st.text_input(f"{_indicator5} Bot Name *", value=_def_bot, key=f"f_qs_bot_{_batch_idx}", placeholder="e.g. Bot-v2")
+        with col2:
             _disp_opts = ["Hot", "Warm", "Cold", "Interested", "Not Interested", "Other"]
             _def_disp = _get_col_val(_batch_record, "Disposition", "Hot")
+            _indicator6 = "✅" if _def_disp != "Hot" else "•"
             _def_disp_idx = _disp_opts.index(_def_disp) if _def_disp in _disp_opts else 0
-            _f_disposition = st.selectbox("Disposition *", _disp_opts, index=_def_disp_idx, key=f"f_qs_disp_{_batch_idx}")
-
-        _def_conv_link = _get_col_val(_batch_record, "Conversation Link")
-        _f_conv_link = st.text_input("Conversation Link", value=_def_conv_link, key=f"f_qs_conv_link_{_batch_idx}", placeholder="https://...")
+            _f_disposition = st.selectbox(f"{_indicator6} Disposition *", _disp_opts, index=_def_disp_idx, key=f"f_qs_disp_{_batch_idx}")
+        with col3:
+            _def_conv_link = _get_col_val(_batch_record, "Conversation Link")
+            _indicator7 = "✅" if _def_conv_link else "•"
+            _f_conv_link = st.text_input(f"{_indicator7} Conversation Link", value=_def_conv_link, key=f"f_qs_conv_link_{_batch_idx}", placeholder="https://...")
 
         st.markdown('---')
 
