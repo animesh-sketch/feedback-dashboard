@@ -9228,7 +9228,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                     "PM / CSM":           _f_pm_csm.strip(),
                     "Bot Name":           _f_bot_name.strip(),
                     "Lead Number":        _f_lead_no.strip(),
-                    "Lead Link":          _f_lead_link.strip(),
                     "Disposition":        _f_disposition if _f_disposition != "— select —" else "",
                     "Conversation Link":  _f_conv_link.strip(),
                     **_full_pv,
