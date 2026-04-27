@@ -8440,6 +8440,10 @@ def _render_param_manager(key_sfx=""):
 
 def _render_audit_form(legend_map, fname):
     """Convin Sense QA audit form — exact Convin.ai schema, all fields mandatory, auto-scoring."""
+    # Initialize edit mode variables early
+    _edit_mode = st.session_state.get("audit_edit_mode", False)
+    _edit_id = st.session_state.get("audit_edit_id")
+
     # Always reload from Supabase on each render so data is never stale
     st.session_state["sense_audit_log"] = _audit_log_load()
     audit_log = st.session_state["sense_audit_log"]
@@ -8773,8 +8777,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             )
 
     # ── Edit mode detection and pre-fill ──────────────────────────────────────
-    _edit_mode = st.session_state.get("audit_edit_mode", False)
-    _edit_id = st.session_state.get("audit_edit_id")
     _edit_data = st.session_state.get("audit_edit_data", {})
 
     if _edit_mode and _edit_data:
