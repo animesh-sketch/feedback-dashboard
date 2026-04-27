@@ -46,6 +46,15 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# ─── Type definitions ────────────────────────────────────────────────────────
+_TYPE_LABELS = {
+    "dropdown": "📋 Dropdown",
+    "scoring":  "⭐ Scoring (1–5)",
+    "number":   "🔢 Number",
+    "text":     "✏️ Text",
+}
+_TYPE_KEYS = list(_TYPE_LABELS.keys())
+
 # ─── Session state defaults ───────────────────────────────────────────────────
 
 def _blank_draft(idx: int) -> dict:
@@ -8283,14 +8292,6 @@ def _render_registry():
                     st.rerun()
 
 
-
-_TYPE_LABELS = {
-    "dropdown": "📋 Dropdown",
-    "scoring":  "⭐ Scoring (1–5)",
-    "number":   "🔢 Number",
-    "text":     "✏️ Text",
-}
-_TYPE_KEYS = list(_TYPE_LABELS.keys())
 
 
 def _render_param_manager(key_sfx=""):
