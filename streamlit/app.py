@@ -4515,6 +4515,36 @@ def _render_sense_scorecard(sheets, legend_map):
     # ── Merge built-in Convin Sense params into legend map ────────────────────
     legend_map = _merge_builtin_params(legend_map)
 
+    # ── Date range filter ──────────────────────────────────────────────────────
+    st.markdown('<div class="section-chip">📅 Date Range Filter</div>', unsafe_allow_html=True)
+    _date_range_cols = st.columns(5)
+    with _date_range_cols[0]:
+        _date_preset = st.radio("Filter by:", ["All", "Daily", "Weekly", "Monthly", "Custom"], horizontal=True, key="scorecard_date_filter")
+
+    _filter_start_date = None
+    _filter_end_date = None
+
+    if _date_preset == "Daily":
+        _filter_start_date = pd.Timestamp.now().date()
+        _filter_end_date = pd.Timestamp.now().date()
+    elif _date_preset == "Weekly":
+        _today = pd.Timestamp.now().date()
+        _filter_start_date = _today - pd.Timedelta(days=7)
+        _filter_end_date = _today
+    elif _date_preset == "Monthly":
+        _today = pd.Timestamp.now().date()
+        _filter_start_date = _today - pd.Timedelta(days=30)
+        _filter_end_date = _today
+    elif _date_preset == "Custom":
+        _custom_cols = st.columns(2)
+        with _custom_cols[0]:
+            _filter_start_date = st.date_input("From Date:", key="custom_start_date")
+        with _custom_cols[1]:
+            _filter_end_date = st.date_input("To Date:", key="custom_end_date")
+
+    if _filter_start_date and _filter_end_date:
+        st.info(f"📊 Showing data from {_filter_start_date} to {_filter_end_date}")
+
     # ── Find audit sheet (prefer name match, then column-content fallback) ──────
     audit_df   = None
     audit_name = None
@@ -4562,6 +4592,20 @@ def _render_sense_scorecard(sheets, legend_map):
             unsafe_allow_html=True,
         )
         return
+
+    # ── Apply date range filter ────────────────────────────────────────────────
+    if _filter_start_date and _filter_end_date and "Audit Date" in audit_df.columns:
+        try:
+            audit_df["Audit Date"] = pd.to_datetime(audit_df["Audit Date"], errors="coerce")
+            audit_df = audit_df[
+                (audit_df["Audit Date"].dt.date >= _filter_start_date) &
+                (audit_df["Audit Date"].dt.date <= _filter_end_date)
+            ].reset_index(drop=True)
+            if audit_df.empty:
+                st.info(f"ℹ️ No data found for the selected date range ({_filter_start_date} to {_filter_end_date})")
+                return
+        except:
+            pass
 
     # ── Inject missing built-in columns ───────────────────────────────────────
     for param in _SENSE_BUILTIN_PARAMS:
@@ -6109,6 +6153,34 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
     legend_map = _merge_builtin_params(legend_map or {})
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
+    # ── Date range filter for Insights ─────────────────────────────────────────
+    st.markdown('<div class="section-chip">📅 Date Range Filter</div>', unsafe_allow_html=True)
+    _ins_date_preset = st.radio("Filter by:", ["All", "Daily", "Weekly", "Monthly", "Custom"], horizontal=True, key="insights_date_filter")
+
+    _ins_filter_start = None
+    _ins_filter_end = None
+
+    if _ins_date_preset == "Daily":
+        _ins_filter_start = pd.Timestamp.now().date()
+        _ins_filter_end = pd.Timestamp.now().date()
+    elif _ins_date_preset == "Weekly":
+        _today = pd.Timestamp.now().date()
+        _ins_filter_start = _today - pd.Timedelta(days=7)
+        _ins_filter_end = _today
+    elif _ins_date_preset == "Monthly":
+        _today = pd.Timestamp.now().date()
+        _ins_filter_start = _today - pd.Timedelta(days=30)
+        _ins_filter_end = _today
+    elif _ins_date_preset == "Custom":
+        _custom_cols = st.columns(2)
+        with _custom_cols[0]:
+            _ins_filter_start = st.date_input("From Date:", key="insights_custom_start")
+        with _custom_cols[1]:
+            _ins_filter_end = st.date_input("To Date:", key="insights_custom_end")
+
+    if _ins_filter_start and _ins_filter_end:
+        st.info(f"📊 Showing data from {_ins_filter_start} to {_ins_filter_end}")
+
     # ── Build audit_df — always seeds from form log / seed records ────────────
     _form_log_ins = st.session_state.get("sense_audit_log")
     if _form_log_ins is None:
@@ -6153,6 +6225,20 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
     _has_qa_ins = (_audit_df_ins is not None and
                    "Bot Score" in (_audit_df_ins.columns if _audit_df_ins is not None else []) and
                    "Status"    in (_audit_df_ins.columns if _audit_df_ins is not None else []))
+
+    # ── Apply date range filter to insights data ───────────────────────────────
+    if _ins_filter_start and _ins_filter_end and _audit_df_ins is not None and "Audit Date" in _audit_df_ins.columns:
+        try:
+            _audit_df_ins["Audit Date"] = pd.to_datetime(_audit_df_ins["Audit Date"], errors="coerce")
+            _audit_df_ins = _audit_df_ins[
+                (_audit_df_ins["Audit Date"].dt.date >= _ins_filter_start) &
+                (_audit_df_ins["Audit Date"].dt.date <= _ins_filter_end)
+            ].reset_index(drop=True)
+            if _audit_df_ins.empty:
+                st.info(f"ℹ️ No insights data found for the selected date range ({_ins_filter_start} to {_ins_filter_end})")
+                return
+        except:
+            pass
 
     # ── TABS ──────────────────────────────────────────────────────────────────
     _itab_labels = ["📊 Overview", "🏆 Performance", "📈 Trends", "🔬 Parameters", "📋 Reports"]
