@@ -3753,6 +3753,8 @@ _SENSE_CLIENTS = [
 ]
 _SENSE_CLIENT_MAP = {r["client"]: r for r in _SENSE_CLIENTS}
 _SENSE_CLIENT_NAMES = [""] + [r["client"] for r in _SENSE_CLIENTS]
+_SENSE_PM_LIST = [""] + sorted(set(list(set(r["pm"] for r in _SENSE_CLIENTS)) + ["Sayani", "Utsav"]))
+_SENSE_BOT_LIST = ["", "Tara", "Mmyra"]
 
 # ── Convin Sense built-in tier parameters (formerly "intelligence") ──────────
 # Now scored 0–2 like all tier params: 2 = best, 0 = worst.
@@ -9004,7 +9006,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         _ld1, _ld2, _ld3, _ld4 = st.columns(4)
         with _ld1:
             _reg_client_map_form = {c["client"]: c for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)}
-            _pm_opts = [""] + st.session_state.get("sense_registry_pms", sorted(set(r["pm"] for r in _SENSE_CLIENTS)))
+            _pm_opts = st.session_state.get("sense_registry_pms", _SENSE_PM_LIST)
             # Auto-fill PM from client only when no queue prefill is active
             if not st.session_state.get("f_pm_csm_sel"):
                 _auto_pm = _reg_client_map_form.get(_f_client, {}).get("pm", "") or _SENSE_CLIENT_MAP.get(_f_client, {}).get("pm", "")
@@ -9014,7 +9016,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         with _ld2:
             _f_lead_no   = st.text_input("Lead Number", key="f_lead_no", placeholder="e.g. LD-20250422")
         with _ld3:
-            _f_bot_name = st.text_input("Bot Name *", key="f_bot_name", placeholder="e.g. Convin-LeadBot-v2")
+            _f_bot_name = st.selectbox("Bot Name *", _SENSE_BOT_LIST, key="f_bot_name")
         with _ld4:
             _disp_opts = ["— select —", "Hot", "Warm", "Cold", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
             _f_disposition = st.selectbox("Disposition *", _disp_opts, key="f_disposition_sel")
