@@ -8965,13 +8965,16 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             'text-transform:uppercase;margin-bottom:6px;">Audit Details</div>',
             unsafe_allow_html=True,
         )
+        # ── Get logged-in user's PIN/ID ───────────────────────────────────────
+        _logged_in_pin = st.session_state.get("auth_user", {}).get("pin") or st.session_state.get("auth_user", {}).get("name", "")
+
         _ad1, _ad2, _ad3, _ad4 = st.columns(4)
         with _ad1:
-            _f_audit_date = st.date_input("Audit Date *", key="f_audit_date", value=pd.Timestamp.now().date())
+            st.markdown('<div style="background:#eff6ff;border-left:4px solid #2563EB;padding:8px;border-radius:4px;"><strong style="color:#1e40af;font-size:0.8rem;">📅 ' + pd.Timestamp.now().strftime("%d %b %Y") + '</strong></div>', unsafe_allow_html=True)
+            _f_audit_date = st.date_input("Audit Date *", key="f_audit_date", value=pd.Timestamp.now().date(), disabled=True, label_visibility="collapsed")
         with _ad2:
-            _registry_init()
-            _reg_qas_form = [""] + st.session_state.get("sense_registry_qas", ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"])
-            _f_auditor = st.selectbox("QA *", _reg_qas_form, key="f_auditor_sel")
+            st.markdown(f'<div style="background:#dcfce7;border-left:4px solid #22c55e;padding:8px;border-radius:4px;"><strong style="color:#166534;font-size:0.8rem;">👤 {_logged_in_pin}</strong></div>', unsafe_allow_html=True)
+            _f_auditor = st.text_input("QA *", key="f_auditor_sel", value=_logged_in_pin, disabled=True, label_visibility="collapsed")
         with _ad3:
             _registry_init()
             _reg_clients_form = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
@@ -8979,7 +8982,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         with _ad4:
             _f_campaign = st.text_input("Campaign Name *", key="f_campaign", placeholder="e.g. Q2 Outreach")
 
-        _ld1, _ld2, _ld3 = st.columns(3)
+        _ld1, _ld2, _ld3, _ld4 = st.columns(4)
         with _ld1:
             _reg_client_map_form = {c["client"]: c for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)}
             _pm_opts = [""] + st.session_state.get("sense_registry_pms", sorted(set(r["pm"] for r in _SENSE_CLIENTS)))
@@ -8992,17 +8995,14 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         with _ld2:
             _f_lead_no   = st.text_input("Lead Number", key="f_lead_no", placeholder="e.g. LD-20250422")
         with _ld3:
-            _f_conv_link = st.text_input("Conversation Link", key="f_conv_link", placeholder="https://...")
-
-        _ll1, _ll2, _ll3, _ll4 = st.columns(4)
-        with _ll1:
-            _f_lead_link = st.text_input("Lead Link", key="f_lead_link", placeholder="https://...")
-        with _ll2:
+            _f_bot_name = st.text_input("Bot Name *", key="f_bot_name", placeholder="e.g. Convin-LeadBot-v2")
+        with _ld4:
             _disp_opts = ["— select —", "Hot", "Warm", "Cold", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
             _f_disposition = st.selectbox("Disposition *", _disp_opts, key="f_disposition_sel")
-        with _ll3:
-            _f_bot_name = st.text_input("Bot Name *", key="f_bot_name", placeholder="e.g. Convin-LeadBot-v2")
-        with _ll4:
+
+        # ── Disposition correction ─────────────────────────────────────────────
+        _ll1, _ll2 = st.columns(2)
+        with _ll1:
             _f_correct_disp = st.radio(
                 "Correct Disposition? *",
                 ["Yes", "No", "NA"],
@@ -9010,6 +9010,8 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 horizontal=True,
                 key="f_correct_disp",
             )
+        with _ll2:
+            st.markdown("")  # Spacer
 
         _f_correct_disp_text = st.text_input(
             "Correct Disposition (leave blank if correct)",
@@ -9258,6 +9260,24 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                     st.session_state["sense_lead_queue"] = _lead_q_form
 
                 st.rerun()
+
+    # ── Clear form button (outside form) ────────────────────────────────────────
+    _clear_col1, _clear_col2 = st.columns([4, 1])
+    with _clear_col2:
+        if st.button("🗑️ Clear Form", use_container_width=True, key="clear_audit_form"):
+            st.session_state.pop("f_auditor_sel", None)
+            st.session_state.pop("f_client_sel", None)
+            st.session_state.pop("f_campaign", None)
+            st.session_state.pop("f_pm_csm_sel", None)
+            st.session_state.pop("f_lead_no", None)
+            st.session_state.pop("f_bot_name", None)
+            st.session_state.pop("f_disposition_sel", None)
+            st.session_state.pop("f_correct_disp", None)
+            st.session_state.pop("f_correct_disp_text", None)
+            st.session_state.pop("f_call_drop_stage_sel", None)
+            st.session_state.pop("f_notes", None)
+            st.success("✅ Form cleared")
+            st.rerun()
 
     # ── Last submission result ─────────────────────────────────────────────────
     if st.session_state.get("qa_last_result"):
