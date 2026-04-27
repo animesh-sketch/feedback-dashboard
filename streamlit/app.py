@@ -10323,14 +10323,35 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
 
     if not sheets:
         # No file yet — still allow all tabs; Insights uses seed data
-        _tabs_empty = st.tabs(["📊  Scorecard", "✍️  New Audit", "📖  Legend", "🤖  Insights"])
-        with _tabs_empty[0]:
+        _show_new_audit_empty = st.session_state.get("show_new_audit_tab", True)
+        st.sidebar.markdown("### ⚙️ Tab Settings")
+        _toggle_new_audit_empty = st.sidebar.checkbox("Show ✍️ New Audit Tab", value=_show_new_audit_empty, key="toggle_new_audit_empty")
+        if _toggle_new_audit_empty != _show_new_audit_empty:
+            st.session_state["show_new_audit_tab"] = _toggle_new_audit_empty
+            st.rerun()
+
+        _empty_tabs = ["📊  Scorecard"]
+        if st.session_state.get("show_new_audit_tab", True):
+            _empty_tabs.append("✍️  New Audit")
+        _empty_tabs.extend(["📖  Legend", "🤖  Insights"])
+
+        _tabs_empty = st.tabs(_empty_tabs)
+        _idx = 0
+
+        with _tabs_empty[_idx]:
             _render_sense_scorecard({}, {})
-        with _tabs_empty[1]:
-            _render_audit_form(_legend_map_pre, "")
-        with _tabs_empty[2]:
+        _idx += 1
+
+        if st.session_state.get("show_new_audit_tab", True):
+            with _tabs_empty[_idx]:
+                _render_audit_form(_legend_map_pre, "")
+            _idx += 1
+
+        with _tabs_empty[_idx]:
             _render_legend_page()
-        with _tabs_empty[3]:
+        _idx += 1
+
+        with _tabs_empty[_idx]:
             _render_sense_insights(pd.DataFrame(), "Seed Data", {}, legend_map=_legend_map_pre)
         return
 
@@ -10387,35 +10408,58 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     # Legend map already built above (_legend_map_pre); reuse it
     _legend_map = _legend_map_pre
 
+    # ── Tab visibility settings ───────────────────────────────────────────────
+    _show_new_audit = st.session_state.get("show_new_audit_tab", True)
+    st.sidebar.markdown("### ⚙️ Tab Settings")
+    _toggle_new_audit = st.sidebar.checkbox("Show ✍️ New Audit Tab", value=_show_new_audit, key="toggle_new_audit")
+    if _toggle_new_audit != _show_new_audit:
+        st.session_state["show_new_audit_tab"] = _toggle_new_audit
+        st.rerun()
+
     # ── Dynamic tabs: Scorecard, New Audit, one per sheet, AI Insights ───────
     def _tab_label(name):
         icon = _sheet_icon(name)
         lock = " 🔒" if _is_protected_sheet(name) else ""
         return f"{icon}  {name}{lock}"
 
-    _tab_labels = ["📊  Scorecard", "✍️  New Audit", "📋  QA Scorecard Audit", "📖  Legend"] + [_tab_label(s) for s in sheets] + ["🗂️  Registry", "🤖  Insights"]
+    # Build tab list based on settings
+    _base_tabs = ["📊  Scorecard"]
+    if st.session_state.get("show_new_audit_tab", True):
+        _base_tabs.append("✍️  New Audit")
+    _base_tabs.extend(["📋  QA Scorecard Audit", "📖  Legend"])
+
+    _tab_labels = _base_tabs + [_tab_label(s) for s in sheets] + ["🗂️  Registry", "🤖  Insights"]
     _tabs = st.tabs(_tab_labels)
 
-    with _tabs[0]:
+    _tab_idx = 0
+
+    with _tabs[_tab_idx]:
         _render_sense_scorecard(sheets, _legend_map)
+    _tab_idx += 1
 
-    with _tabs[1]:
-        _render_audit_form(_legend_map, fname)
+    # ── New Audit tab (conditional) ────────────────────────────────────────────
+    if st.session_state.get("show_new_audit_tab", True):
+        with _tabs[_tab_idx]:
+            _render_audit_form(_legend_map, fname)
+        _tab_idx += 1
 
-    with _tabs[2]:
+    with _tabs[_tab_idx]:
         _render_qa_scorecard_audit(_legend_map, fname)
+    _tab_idx += 1
 
-    with _tabs[3]:
+    with _tabs[_tab_idx]:
         _render_legend_page()
+    _tab_idx += 1
 
     for i, (sheet_name, df) in enumerate(sheets.items()):
-        with _tabs[i + 4]:
+        with _tabs[_tab_idx + i]:
             _render_sense_sheet(df, sheet_name, fname, sheets=sheets)
 
-    with _tabs[-2]:
+    _registry_idx = _tab_idx + len(sheets)
+    with _tabs[_registry_idx]:
         _render_registry()
 
-    with _tabs[-1]:
+    with _tabs[_registry_idx + 1]:
         # Prefer the Audit sheet as the primary df; fall back to first sheet
         _primary_df = next(
             (v for k, v in sheets.items() if any(kw in k.lower() for kw in ("audit","qa","review","score"))),
