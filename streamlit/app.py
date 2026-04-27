@@ -9499,7 +9499,7 @@ def _render_legend_page():
         f'</div>'
         f'<div class="stat-card" style="border-top:2px solid #2563EB;">'
         f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Tier 3 · Quality</div>'
-        f'<div style="color:#2563EB;font-size:1.6rem;font-weight:800;">{_t3_params} <span style="font-size:0.9rem;font-weight:600;">({_QA_SCHEMA["tiers"][2]["weight_pct"]}%)</span></div>'
+        f'<div style="color:#2563EB;font-size:1.6rem;font-weight:800;">{_t3_params}</div>'
         f'</div>'
         f'<div class="stat-card" style="border-top:2px solid #059669;">'
         f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Pass Threshold</div>'
@@ -9523,8 +9523,7 @@ def _render_legend_page():
             f'letter-spacing:0.12em;text-transform:uppercase;border-radius:6px;padding:4px 12px;">'
             f'{_tier["label"]}</div>'
             f'<div style="font-size:0.7rem;color:#5588bb;">'
-            f'Weight: <strong style="color:{_tc};">{_tier["weight_pct"]}%</strong>'
-            f' &nbsp;·&nbsp; {len(_tier_params)} param{"s" if len(_tier_params)!=1 else ""}'
+            f'{len(_tier_params)} param{"s" if len(_tier_params)!=1 else ""}'
             f'{_ip_hdr}</div>'
             f'</div>',
             unsafe_allow_html=True,
@@ -10415,7 +10414,6 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     _base_tabs = ["📊  Scorecard"]
     if st.session_state.get("show_new_audit_tab", True):
         _base_tabs.append("✍️  New Audit")
-    _base_tabs.append("📖  Legend")
 
     _tab_labels = _base_tabs + [_tab_label(s) for s in sheets] + ["🗂️  Registry", "🤖  Insights"]
     _tabs = st.tabs(_tab_labels)
@@ -10431,10 +10429,6 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         with _tabs[_tab_idx]:
             _render_audit_form(_legend_map, fname)
         _tab_idx += 1
-
-    with _tabs[_tab_idx]:
-        _render_legend_page()
-    _tab_idx += 1
 
     for i, (sheet_name, df) in enumerate(sheets.items()):
         with _tabs[_tab_idx + i]:
