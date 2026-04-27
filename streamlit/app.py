@@ -8525,7 +8525,14 @@ def _render_audit_form(legend_map, fname):
     _sense_role = auth.current_user().get("role", "admin")
     _sense_qa_name = auth.current_name()
 
+    # Add sidebar toggle for admin management
     if _sense_role == "admin":
+        st.sidebar.markdown("---")
+        _show_admin_mgmt = st.sidebar.checkbox("⚙️ Show Admin Audit Management", value=False, key="show_admin_audit_mgmt")
+    else:
+        _show_admin_mgmt = False
+
+    if _sense_role == "admin" and _show_admin_mgmt:
         st.markdown('<div class="section-chip">⚙️ Admin Audit Management</div>', unsafe_allow_html=True)
 
         # Load all audits
