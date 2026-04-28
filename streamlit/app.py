@@ -120,9 +120,8 @@ if "gmail_secrets_loaded" not in st.session_state:
         if pw:
             st.session_state["gmail_app_password"] = pw
     if not st.session_state.get("user_email"):
-        sender = st.secrets.get("GMAIL_SENDER", "")
-        if sender:
-            st.session_state["user_email"] = sender
+        sender = st.secrets.get("GMAIL_SENDER", "") or "convinlabs@convin.ai"
+        st.session_state["user_email"] = sender
 
 # ─── Feedback landing page (from email star links) ────────────────────────────
 
