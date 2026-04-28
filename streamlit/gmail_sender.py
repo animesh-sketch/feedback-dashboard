@@ -53,14 +53,15 @@ def send_report_email(
     attachment_mime: str = None,
     html_builder=None,
 ) -> dict:
-    gmail_user   = st.session_state.get("user_email") or from_email or "convinlabs@convin.ai"
-    app_password = (st.session_state.get("gmail_app_password", "") or
-                    st.secrets.get("GMAIL_APP_PASSWORD", "")).replace(" ", "")
+    gmail_user   = (st.session_state.get("user_email") or from_email or "convinlabs@convin.ai").strip()
+    try:
+        _sec_pw = st.secrets.get("GMAIL_APP_PASSWORD", "")
+    except Exception:
+        _sec_pw = ""
+    app_password = (st.session_state.get("gmail_app_password", "") or _sec_pw).replace(" ", "")
 
     if not app_password:
         return {"sent": [], "failed": [{"email": "config", "error": "Gmail App Password not set. Add it in the sidebar."}]}
-    if not gmail_user or "@" not in gmail_user:
-        return {"sent": [], "failed": [{"email": "config", "error": "Gmail address not set. Add it in the sidebar."}]}
 
     sent, failed = [], []
 
