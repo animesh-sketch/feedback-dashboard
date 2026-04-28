@@ -9158,7 +9158,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                             label_visibility="collapsed",
                         )
                 else:
-                    _cpa, _cpb, _cpc, _cpd = st.columns([3, 1, 3, 3])
+                    _cpa, _cpb = st.columns([3, 7])
                     with _cpa:
                         st.markdown(
                             f'<div style="padding:8px 0 4px;">'
@@ -9168,12 +9168,16 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                         )
                     with _cpb:
                         _cp_opts = _cp.get("options", ["Yes", "No"])
-                        _pv[_cp["name"]] = st.selectbox(
+                        _cp_radio_opts = _cp_opts + (["NA"] if "NA" not in _cp_opts else [])
+                        _pv[_cp["name"]] = st.radio(
                             _cp["name"],
-                            ["—"] + _cp_opts + (["NA"] if "NA" not in _cp_opts else []),
+                            _cp_radio_opts,
+                            index=None,
+                            horizontal=True,
                             key=_cp_key,
                             label_visibility="collapsed",
                         )
+                    _cpc, _cpd = st.columns([1, 1])
                     with _cpc:
                         _pv[f"{_cp['name']} Comment"] = st.text_input(
                             "Comment",
