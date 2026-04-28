@@ -11078,114 +11078,290 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         return _em_tbl("Priority Actions", "🎯", ["Priority", "Action", "Impact"], _erows15, "#dc2626")
     _add_section("actions", "Priority Actions", "🎯", True, _s15_prev, _s15_eml)
 
-    # ── Render all sections with tick/untick ─────────────────────────────────
+    # ── Render sections + tabs (Compose | Preview | Gallery) ────────────────
     st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
 
-    # Select / Deselect All row
-    _sel_all_col, _desel_all_col, _sel_count_col = st.columns([1, 1, 4])
-    if _sel_all_col.button("☑ Select All", key="dash_sel_all", use_container_width=True):
-        for _s in _ALL_SECTIONS:
-            st.session_state[f"dbsec_{_s['id']}"] = True
-        st.rerun()
-    if _desel_all_col.button("☐ Deselect All", key="dash_desel_all", use_container_width=True):
-        for _s in _ALL_SECTIONS:
-            st.session_state[f"dbsec_{_s['id']}"] = False
-        st.rerun()
+    _em_client = _sel_client if _sel_client != "All" else "Your Client"
 
-    _selected_section_ids = []
-    _chunks = [_ALL_SECTIONS[i:i+2] for i in range(0, len(_ALL_SECTIONS), 2)]
-    for _chunk in _chunks:
-        _rc1, _rc2 = st.columns(2)
-        for _s, _rc in zip(_chunk, [_rc1, _rc2]):
-            with _rc:
-                _default_val = st.session_state.get(f"dbsec_{_s['id']}", _s["default"])
-                _is_checked = st.checkbox(
-                    f'{_s["icon"]} {_s["label"]}',
-                    value=_default_val,
-                    key=f"dbsec_{_s['id']}",
-                )
-                if _is_checked:
-                    _selected_section_ids.append(_s["id"])
-                if _is_checked or _s["default"]:
-                    st.markdown(
-                        f'<div style="background:#f8faff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;margin-bottom:4px;">'
-                        f'{_s["preview"]}</div>',
-                        unsafe_allow_html=True
+    _db_tab_compose, _db_tab_preview, _db_tab_gallery = st.tabs(
+        ["📤 Compose & Send", "👁 Preview Email", "🎨 Draft Gallery"]
+    )
+
+    # ── TAB 1: Compose & Send ─────────────────────────────────────────────────
+    with _db_tab_compose:
+        _sel_all_col2, _desel_all_col2, _sel_count_col2 = st.columns([1, 1, 4])
+        if _sel_all_col2.button("☑ Select All", key="dash_sel_all", use_container_width=True):
+            for _s in _ALL_SECTIONS:
+                st.session_state[f"dbsec_{_s['id']}"] = True
+            st.rerun()
+        if _desel_all_col2.button("☐ Deselect All", key="dash_desel_all", use_container_width=True):
+            for _s in _ALL_SECTIONS:
+                st.session_state[f"dbsec_{_s['id']}"] = False
+            st.rerun()
+
+        _selected_section_ids = []
+        _chunks = [_ALL_SECTIONS[i:i+2] for i in range(0, len(_ALL_SECTIONS), 2)]
+        for _chunk in _chunks:
+            _rc1, _rc2 = st.columns(2)
+            for _s, _rc in zip(_chunk, [_rc1, _rc2]):
+                with _rc:
+                    _default_val = st.session_state.get(f"dbsec_{_s['id']}", _s["default"])
+                    _is_checked = st.checkbox(
+                        f'{_s["icon"]} {_s["label"]}',
+                        value=_default_val,
+                        key=f"dbsec_{_s['id']}",
                     )
-                st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+                    if _is_checked:
+                        _selected_section_ids.append(_s["id"])
+                    if _is_checked or _s["default"]:
+                        st.markdown(
+                            f'<div style="background:#f8faff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;margin-bottom:4px;">'
+                            f'{_s["preview"]}</div>',
+                            unsafe_allow_html=True
+                        )
+                    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-    # ── Email controls ────────────────────────────────────────────────────────
-    st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-chip">✉️ Send Selected Dashboard Sections via Email</div>', unsafe_allow_html=True)
+        st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
+        _sel_sections_c = [s for s in _ALL_SECTIONS if s["id"] in _selected_section_ids]
+        st.markdown(f'<div style="font-size:0.68rem;color:#64748b;margin-bottom:8px;">{len(_sel_sections_c)} of {len(_ALL_SECTIONS)} sections selected</div>', unsafe_allow_html=True)
 
-    _em_c1, _em_c2, _em_c3 = st.columns([3, 2, 1])
-    with _em_c1:
-        _em_to = st.text_input("Recipient email(s)", placeholder="email1@co.com, email2@co.com", key="dbem_to")
-    with _em_c2:
-        _em_client = _sel_client if _sel_client != "All" else "Your Client"
-        _em_subj = st.text_input("Subject",
-            value=f"{_em_client} — Dashboard Report · {pd.Timestamp.now().strftime('%b %d, %Y')}",
-            key="dbem_subj")
-    with _em_c3:
-        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-        _em_send_btn = st.button("📤 Send", key="dbem_send", type="primary", use_container_width=True)
+        _em_c1, _em_c2, _em_c3 = st.columns([3, 2, 1])
+        with _em_c1:
+            _em_to = st.text_input("Recipient email(s)", placeholder="email1@co.com, email2@co.com", key="dbem_to")
+        with _em_c2:
+            _em_subj = st.text_input("Subject",
+                value=f"{_em_client} — Dashboard Report · {pd.Timestamp.now().strftime('%b %d, %Y')}",
+                key="dbem_subj")
+        with _em_c3:
+            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+            _em_send_btn = st.button("📤 Send", key="dbem_send", type="primary", use_container_width=True)
 
-    _sel_sections = [s for s in _ALL_SECTIONS if s["id"] in _selected_section_ids]
-    st.markdown(f'<div style="font-size:0.68rem;color:#64748b;margin-top:4px;">{len(_sel_sections)} of {len(_ALL_SECTIONS)} sections selected</div>', unsafe_allow_html=True)
-
-    if _em_send_btn:
-        if not _sel_sections:
-            st.warning("No sections selected — tick at least one above.")
-        elif not _em_to.strip():
-            st.warning("Enter at least one recipient email.")
-        else:
-            _to_list_em = [e.strip() for e in _em_to.replace(";", ",").split(",") if e.strip() and "@" in e]
-            if not _to_list_em:
-                st.error("No valid email addresses found.")
-            else:
-                _sections_html = "".join(s["email"] for s in _sel_sections if s["email"])
-                _full_em_html = f"""
-<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;background:#f8faff;padding:0;">
+        def _build_dashboard_email_html(sel_secs, client_name):
+            _sh = "".join(s["email"] for s in sel_secs if s["email"])
+            return f"""<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;background:#f8faff;padding:0;">
   <div style="background:linear-gradient(135deg,#0B1F3A 0%,#1a62f2 100%);padding:28px 30px;border-radius:10px 10px 0 0;">
     <div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.02em;">📊 Dashboard Report</div>
     <div style="font-size:13px;color:#93c5fd;margin-top:5px;">
-      {_em_client} · Generated {pd.Timestamp.now().strftime("%B %d, %Y at %H:%M")} ·
+      {client_name} · Generated {pd.Timestamp.now().strftime("%B %d, %Y at %H:%M")} ·
       {_total_d} audits · Avg {_avg_d or "—"}% · Pass rate {_pr_d}%
     </div>
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-      <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;
-        padding:3px 10px;border-radius:20px;letter-spacing:0.05em;">{_sel_client}</span>
-      <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;
-        padding:3px 10px;border-radius:20px;letter-spacing:0.05em;">{_sel_camp}</span>
-      <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;
-        padding:3px 10px;border-radius:20px;letter-spacing:0.05em;">{_sel_period}</span>
+      <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">{_sel_client}</span>
+      <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">{_sel_camp}</span>
+      <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">{_sel_period}</span>
     </div>
   </div>
-  <div style="padding:20px 24px;">
-    {_sections_html}
-    <div style="margin-top:24px;padding-top:14px;border-top:1px solid #e2e8f0;
-      font-size:11px;color:#94a3b8;text-align:center;">
-      Sent via Convin Data Labs QA Dashboard ·
-      {pd.Timestamp.now().strftime("%B %Y")} ·
-      {len(_sel_sections)} sections
+  <div style="padding:20px 24px;">{_sh}
+    <div style="margin-top:24px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;text-align:center;">
+      Sent via Convin Data Labs QA Dashboard · {pd.Timestamp.now().strftime("%B %Y")} · {len(sel_secs)} sections
     </div>
   </div>
 </div>"""
-                try:
-                    import gmail_sender as _gs_em
-                    _em_result = _gs_em.send_report_email(
-                        credentials_dict={},
-                        to_emails=_to_list_em,
-                        subject=_em_subj,
-                        html_body=_full_em_html,
-                        from_email=st.session_state.get("user_email", ""),
+
+        if _em_send_btn:
+            if not _sel_sections_c:
+                st.warning("No sections selected — tick at least one above.")
+            elif not _em_to.strip():
+                st.warning("Enter at least one recipient email.")
+            else:
+                _to_list_em = [e.strip() for e in _em_to.replace(";", ",").split(",") if e.strip() and "@" in e]
+                if not _to_list_em:
+                    st.error("No valid email addresses found.")
+                else:
+                    _full_em_html = _build_dashboard_email_html(_sel_sections_c, _em_client)
+                    try:
+                        import gmail_sender as _gs_em
+                        _em_result = _gs_em.send_report_email(
+                            credentials_dict={},
+                            to_emails=_to_list_em,
+                            subject=_em_subj,
+                            html_body=_full_em_html,
+                            from_email=st.session_state.get("user_email", "convinlabs@convin.ai"),
+                        )
+                        if _em_result.get("sent"):
+                            st.success(f"✅ Sent to: {', '.join(_em_result['sent'])}  ({len(_sel_sections_c)} sections)")
+                        for _sf_em in _em_result.get("failed", []):
+                            st.error(f"Failed → {_sf_em.get('email','?')}: {_sf_em.get('error','')}")
+                    except Exception as _em_exc:
+                        st.error(f"Send error: {_em_exc}")
+
+    # ── TAB 2: Preview Email ──────────────────────────────────────────────────
+    with _db_tab_preview:
+        _prev_sel_ids = [_s["id"] for _s in _ALL_SECTIONS if st.session_state.get(f"dbsec_{_s['id']}", _s["default"])]
+        _prev_sel_secs = [s for s in _ALL_SECTIONS if s["id"] in _prev_sel_ids]
+        if not _prev_sel_secs:
+            st.info("No sections selected in Compose tab — select at least one to preview.")
+        else:
+            _prev_html = _build_dashboard_email_html(_prev_sel_secs, _em_client)
+            st.markdown(f'<div style="font-size:0.72rem;color:#64748b;margin-bottom:8px;">Previewing {len(_prev_sel_secs)} selected sections as they will appear in the email.</div>', unsafe_allow_html=True)
+            _prev_wrapped = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>body{{margin:0;padding:16px;background:#e8ecf4;font-family:Arial,sans-serif;}}</style></head>
+<body>{_prev_html}</body></html>"""
+            import base64 as _b64_prev
+            _prev_b64 = _b64_prev.b64encode(_prev_wrapped.encode()).decode()
+            st.markdown(
+                f'<iframe src="data:text/html;base64,{_prev_b64}" width="100%" height="700" style="border:1px solid #E2EAF6;border-radius:10px;background:#e8ecf4;"></iframe>',
+                unsafe_allow_html=True
+            )
+
+    # ── TAB 3: Draft Gallery (10 preset classy emails) ───────────────────────
+    with _db_tab_gallery:
+        st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:12px;">10 pre-built professional email drafts. Click <b>👁 Preview</b> to see the full email or <b>📋 Load</b> to populate the Compose tab.</div>', unsafe_allow_html=True)
+
+        # Helper: build a gallery draft HTML using current dashboard data
+        def _gallery_email(header_bg, header_color, accent, title, subtitle, sec_ids):
+            _gsh = "".join(s["email"] for s in _ALL_SECTIONS if s["id"] in sec_ids and s["email"])
+            return f"""<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;background:#f8faff;">
+  <div style="background:{header_bg};padding:30px;border-radius:10px 10px 0 0;">
+    <div style="font-size:24px;font-weight:900;color:{header_color};letter-spacing:-0.02em;">{title}</div>
+    <div style="font-size:13px;color:{header_color};opacity:0.8;margin-top:6px;">{subtitle} · {_em_client} · {pd.Timestamp.now().strftime("%B %Y")}</div>
+    <div style="margin-top:12px;">
+      <span style="background:rgba(255,255,255,0.2);color:{header_color};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-right:6px;">{_total_d} Audits</span>
+      <span style="background:rgba(255,255,255,0.2);color:{header_color};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-right:6px;">Avg {_avg_d or "—"}%</span>
+      <span style="background:rgba(255,255,255,0.2);color:{header_color};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">Pass {_pr_d}%</span>
+    </div>
+  </div>
+  <div style="padding:22px 26px;background:#ffffff;border:1px solid {accent}22;border-top:3px solid {accent};border-radius:0 0 10px 10px;">
+    {_gsh}
+    <div style="margin-top:20px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;text-align:center;">
+      Powered by Convin Data Labs · {pd.Timestamp.now().strftime("%B %d, %Y")}
+    </div>
+  </div>
+</div>"""
+
+        _GALLERY_PRESETS = [
+            {
+                "title": "Executive Performance Report",
+                "desc": "High-level KPIs, score trend & priority actions. Best for C-suite monthly reviews.",
+                "tag": "Monthly · Executive",
+                "hdr_bg": "linear-gradient(135deg,#0B1F3A 0%,#1e40af 100%)",
+                "hdr_color": "#ffffff",
+                "accent": "#1e40af",
+                "sec_ids": ["kpi", "score_trend", "campaign_lb", "actions"],
+            },
+            {
+                "title": "Weekly QA Digest",
+                "desc": "QA leaderboard, auditor calibration & what went right vs needs attention.",
+                "tag": "Weekly · QA Team",
+                "hdr_bg": "linear-gradient(135deg,#0f766e 0%,#14b8a6 100%)",
+                "hdr_color": "#ffffff",
+                "accent": "#0f766e",
+                "sec_ids": ["kpi", "qa_lb", "auditor_cal", "params"],
+            },
+            {
+                "title": "Red Alert — Critical Issues",
+                "desc": "Co-failure analysis, bottom parameters & priority actions. Use for urgent escalations.",
+                "tag": "Alert · Urgent",
+                "hdr_bg": "linear-gradient(135deg,#991b1b 0%,#ef4444 100%)",
+                "hdr_color": "#ffffff",
+                "accent": "#dc2626",
+                "sec_ids": ["kpi", "cofail", "params", "actions"],
+            },
+            {
+                "title": "Campaign Deep Dive",
+                "desc": "Campaign rankings, score divergence & disposition breakdown for campaign managers.",
+                "tag": "Campaign · Analysis",
+                "hdr_bg": "linear-gradient(135deg,#1d4ed8 0%,#60a5fa 100%)",
+                "hdr_color": "#ffffff",
+                "accent": "#1d4ed8",
+                "sec_ids": ["kpi", "campaign_lb", "disposition", "lead_stage"],
+            },
+            {
+                "title": "Client Success Report",
+                "desc": "Client health matrix, KPIs & call performance insights. Share with account managers.",
+                "tag": "Client · Success",
+                "hdr_bg": "linear-gradient(135deg,#065f46 0%,#34d399 100%)",
+                "hdr_color": "#ffffff",
+                "accent": "#059669",
+                "sec_ids": ["kpi", "client_health", "call_insights", "actions"],
+            },
+            {
+                "title": "Bot Quality Scorecard",
+                "desc": "Full parameter scores, tier breakdown & co-failure pairs. For technical QA reviews.",
+                "tag": "Technical · QA",
+                "hdr_bg": "linear-gradient(135deg,#4c1d95 0%,#8b5cf6 100%)",
+                "hdr_color": "#ffffff",
+                "accent": "#7c3aed",
+                "sec_ids": ["kpi", "tier_breakdown", "params", "cofail"],
+            },
+            {
+                "title": "Lead Performance Brief",
+                "desc": "Lead stage funnel, disposition accuracy & conversion insights for sales teams.",
+                "tag": "Sales · Leads",
+                "hdr_bg": "linear-gradient(135deg,#92400e 0%,#f59e0b 100%)",
+                "hdr_color": "#ffffff",
+                "accent": "#d97706",
+                "sec_ids": ["kpi", "lead_stage", "disposition", "call_insights"],
+            },
+            {
+                "title": "Monthly Full Audit Review",
+                "desc": "All 15 sections — the complete end-of-month audit package for stakeholders.",
+                "tag": "Monthly · Full",
+                "hdr_bg": "linear-gradient(135deg,#1e1b4b 0%,#3730a3 100%)",
+                "hdr_color": "#ffffff",
+                "accent": "#4338ca",
+                "sec_ids": [s["id"] for s in _ALL_SECTIONS],
+            },
+            {
+                "title": "Performance Snapshot",
+                "desc": "Quick 5-section snapshot: KPIs, status, trend, leaderboard, actions.",
+                "tag": "Quick · Snapshot",
+                "hdr_bg": "linear-gradient(135deg,#0c4a6e 0%,#0ea5e9 100%)",
+                "hdr_color": "#ffffff",
+                "accent": "#0284c7",
+                "sec_ids": ["kpi", "status_dist", "score_trend", "qa_lb", "actions"],
+            },
+            {
+                "title": "Operations Intelligence Report",
+                "desc": "Auditor calibration, client health, campaign divergence & priority actions.",
+                "tag": "Ops · Intelligence",
+                "hdr_bg": "linear-gradient(135deg,#374151 0%,#6b7280 100%)",
+                "hdr_color": "#ffffff",
+                "accent": "#4b5563",
+                "sec_ids": ["kpi", "auditor_cal", "client_health", "campaign_lb", "actions"],
+            },
+        ]
+
+        _gal_chunks = [_GALLERY_PRESETS[i:i+2] for i in range(0, len(_GALLERY_PRESETS), 2)]
+        for _gi, _gchunk in enumerate(_gal_chunks):
+            _gc1, _gc2 = st.columns(2)
+            for _gp, _gcol in zip(_gchunk, [_gc1, _gc2]):
+                with _gcol:
+                    _gidx = _GALLERY_PRESETS.index(_gp)
+                    st.markdown(
+                        f'<div style="background:{_gp["hdr_bg"]};border-radius:10px 10px 0 0;padding:14px 16px;">'
+                        f'<div style="font-size:0.85rem;font-weight:800;color:#fff;">{_gp["title"]}</div>'
+                        f'<div style="font-size:0.65rem;color:rgba(255,255,255,0.75);margin-top:3px;">{_gp["tag"]}</div>'
+                        f'</div>'
+                        f'<div style="border:1px solid #E2EAF6;border-top:none;border-radius:0 0 10px 10px;padding:10px 14px;background:#fff;margin-bottom:12px;">'
+                        f'<div style="font-size:0.68rem;color:#374151;margin-bottom:8px;">{_gp["desc"]}</div>'
+                        f'<div style="font-size:0.62rem;color:#64748b;">{len(_gp["sec_ids"])} sections included</div>'
+                        f'</div>',
+                        unsafe_allow_html=True
                     )
-                    if _em_result.get("sent"):
-                        st.success(f"✅ Dashboard report sent to: {', '.join(_em_result['sent'])}  ({len(_sel_sections)} sections)")
-                    for _sf_em in _em_result.get("failed", []):
-                        st.error(f"Failed → {_sf_em.get('email','?')}: {_sf_em.get('error','')}")
-                except Exception as _em_exc:
-                    st.error(f"Send error: {_em_exc}")
+                    _gpv_col, _gld_col = st.columns(2)
+                    if _gpv_col.button("👁 Preview", key=f"gal_prev_{_gidx}", use_container_width=True):
+                        st.session_state[f"gal_show_{_gidx}"] = not st.session_state.get(f"gal_show_{_gidx}", False)
+                        st.rerun()
+                    if _gld_col.button("📋 Load", key=f"gal_load_{_gidx}", use_container_width=True):
+                        for _s in _ALL_SECTIONS:
+                            st.session_state[f"dbsec_{_s['id']}"] = _s["id"] in _gp["sec_ids"]
+                        st.toast(f'Loaded "{_gp["title"]}" into Compose tab', icon="✅")
+                        st.rerun()
+                    if st.session_state.get(f"gal_show_{_gidx}", False):
+                        _gh = _gallery_email(
+                            _gp["hdr_bg"], _gp["hdr_color"], _gp["accent"],
+                            _gp["title"], _gp["tag"], _gp["sec_ids"]
+                        )
+                        _gw = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>body{{margin:0;padding:16px;background:#e8ecf4;font-family:Arial,sans-serif;}}</style></head>
+<body>{_gh}</body></html>"""
+                        import base64 as _b64g
+                        _gb64 = _b64g.b64encode(_gw.encode()).decode()
+                        st.markdown(
+                            f'<iframe src="data:text/html;base64,{_gb64}" width="100%" height="520" style="border:1px solid #E2EAF6;border-radius:8px;margin-top:4px;"></iframe>',
+                            unsafe_allow_html=True
+                        )
 
     # ── Section 16 — Download ─────────────────────────────────────────────────
     try:
