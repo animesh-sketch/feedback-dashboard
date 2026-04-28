@@ -4175,7 +4175,7 @@ def _sense_clear_cache():
 def _audit_log_save(records):
     pass  # no-op — writes go through audit_store.append() directly
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=15)
 def _audit_log_load():
     return audit_store.load()
 
@@ -6314,12 +6314,19 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
         _src_parts_ins.append(f'<span style="background:#EBF5FF;color:#2563EB;border:1px solid #BFDBFE;border-radius:6px;padding:2px 10px;font-size:0.67rem;font-weight:700;">📂 {_upload_count_ins} from Upload</span>')
     if not _src_parts_ins:
         _src_parts_ins.append('<span style="background:#F1F5F9;color:#64748b;border:1px solid #E2E8F0;border-radius:6px;padding:2px 10px;font-size:0.67rem;">No records yet — submit audits via ✍️ New Audit</span>')
+    _live_ts = pd.Timestamp.now().strftime("%H:%M:%S")
     st.markdown(
         f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:8px 16px;'
         f'background:#fff;border:1px solid #E2EAF6;border-radius:10px;box-shadow:0 1px 4px rgba(11,31,58,0.06);">'
-        f'<div style="font-size:0.62rem;font-weight:700;color:#475569;letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;">Data Source</div>'
+        f'<div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">'
+        f'<span style="width:7px;height:7px;border-radius:50%;background:#10b981;'
+        f'box-shadow:0 0 0 2px rgba(16,185,129,0.3);display:inline-block;flex-shrink:0;"></span>'
+        f'<span style="font-size:0.62rem;font-weight:800;color:#059669;letter-spacing:0.08em;text-transform:uppercase;">Live</span>'
+        f'</div>'
+        f'<div style="width:1px;height:16px;background:#E2EAF6;flex-shrink:0;"></div>'
         f'<div style="display:flex;gap:8px;flex-wrap:wrap;">{"".join(_src_parts_ins)}</div>'
-        f'<div style="margin-left:auto;font-size:0.62rem;color:#94a3b8;flex-shrink:0;white-space:nowrap;">{_total_recs_ins:,} total records</div>'
+        f'<div style="margin-left:auto;font-size:0.62rem;color:#94a3b8;flex-shrink:0;white-space:nowrap;">'
+        f'{_total_recs_ins:,} records &nbsp;·&nbsp; updated {_live_ts}</div>'
         f'</div>',
         unsafe_allow_html=True
     )
@@ -6335,11 +6342,11 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
         if not _has_qa_ins:
             st.info("No QA schema data found. Submit audits via the ✍️ New Audit tab first.")
         else:
-            if not sheets:
+            if not sheets and not _log_count_ins:
                 st.markdown(
                     '<div style="background:rgba(61,130,245,0.08);border:1px solid rgba(61,130,245,0.2);'
                     'border-radius:8px;padding:9px 16px;margin-bottom:12px;font-size:0.73rem;color:#2563EB;">'
-                    '📊 <strong>Demo data</strong> — showing seed audits. Upload a file or submit audits via ✍️ New Audit to see your own data.</div>',
+                    '📊 <strong>No data yet</strong> — submit audits via ✍️ New Audit or upload a file to see insights.</div>',
                     unsafe_allow_html=True,
                 )
             # ── Client / Campaign / Bot Name filter bar ──────────────────────
@@ -7689,11 +7696,11 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
         if not _has_qa_ins or _audit_df_ins is None:
             st.info("No QA data available.")
         else:
-            if not sheets:
+            if not sheets and not _log_count_ins:
                 st.markdown(
                     '<div style="background:rgba(37,99,235,0.07);border:1px solid rgba(37,99,235,0.18);'
                     'border-radius:8px;padding:9px 16px;margin-bottom:14px;font-size:0.73rem;color:#2563EB;">'
-                    '📊 <strong>Demo data</strong> — showing 25 seed audits across 4 auditors & 3 campaigns.</div>',
+                    '📊 <strong>No data yet</strong> — submit audits via ✍️ New Audit to see trends.</div>',
                     unsafe_allow_html=True,
                 )
 
@@ -10717,7 +10724,11 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         _idx += 1
 
         with _tabs_empty[_idx]:
-            _render_sense_insights(pd.DataFrame(), "Seed Data", {}, legend_map=_legend_map_pre)
+            @st.fragment(run_every=30)
+            def _insights_live_empty():
+                _audit_log_load.clear()
+                _render_sense_insights(pd.DataFrame(), "Seed Data", {}, legend_map=_legend_map_pre)
+            _insights_live_empty()
         return
 
     # ── File info bar ─────────────────────────────────────────────────────────
@@ -10846,17 +10857,15 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         _render_registry()
 
     with _tabs[_registry_idx + 1]:
-        _ins_col1, _ins_col2 = st.columns([10, 1])
-        with _ins_col2:
-            if st.button("🔄", help="Refresh audit data", key="insights_refresh"):
-                _audit_log_load.clear()
-                st.rerun()
-        # Prefer the Audit sheet as the primary df; fall back to first sheet
-        _primary_df = next(
-            (v for k, v in sheets.items() if any(kw in k.lower() for kw in ("audit","qa","review","score"))),
-            next(iter(sheets.values()))
-        )
-        _render_sense_insights(_primary_df, fname, sheets, legend_map=_legend_map)
+        @st.fragment(run_every=30)
+        def _insights_live_frag():
+            _audit_log_load.clear()
+            _pdf = next(
+                (v for k, v in sheets.items() if any(kw in k.lower() for kw in ("audit","qa","review","score"))),
+                next(iter(sheets.values())) if sheets else pd.DataFrame()
+            )
+            _render_sense_insights(_pdf, fname, sheets, legend_map=_legend_map)
+        _insights_live_frag()
 
 
 if not st.session_state["show_sidebar"]:
