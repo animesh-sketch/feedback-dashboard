@@ -9882,1589 +9882,1594 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         f'</div></div>',
         unsafe_allow_html=True
     )
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    _tab_analytics, _tab_email = st.tabs(["📊 Analytics & Charts", "📧 Email Builder"])
 
-    # ── Section 2 — Status Distribution + Score Histogram ────────────────────
-    _s2l, _s2r = st.columns([55, 45])
-    with _s2l:
-        st.markdown('<div class="section-chip">📊 Status Distribution</div>', unsafe_allow_html=True)
-        _sd_cfg = [("✅ Pass", "#0ebc6e", _pass_d), ("🟡 Needs Review", "#f59e0b", _rev_d),
-                   ("❌ Fail", "#ef4444", _fail_d), ("🚨 Auto-Fail", "#dc2626", _fatal_d)]
-        _sd_html = ""
-        for _sn, _sc, _sv in _sd_cfg:
-            _sp = round(_sv / _total_d * 100, 1) if _total_d else 0
-            _sd_html += (
-                f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;">'
-                f'<div style="width:110px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;">{_sn}</div>'
-                f'<div style="flex:1;height:14px;background:#f0f2f5;border-radius:7px;overflow:hidden;">'
-                f'<div style="width:{_sp}%;height:100%;background:{_sc};border-radius:7px;transition:width 0.5s;"></div></div>'
-                f'<div style="width:50px;font-size:0.71rem;font-weight:800;color:{_sc};flex-shrink:0;text-align:right;">{_sv} ({_sp}%)</div>'
-                f'</div>'
-            )
-        st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:16px;">{_sd_html}</div>', unsafe_allow_html=True)
+    with _tab_analytics:
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-    with _s2r:
-        st.markdown('<div class="section-chip">📈 Score Distribution</div>', unsafe_allow_html=True)
-        if not _bs_d.dropna().empty:
-            try:
-                _hist_fig = go.Figure()
-                _hist_fig.add_trace(go.Histogram(x=_bs_d.dropna(), nbinsx=20, marker_color="#2563EB", opacity=0.8, name="Score"))
-                _hist_fig.add_vline(x=80, line_dash="dot", line_color="#dc2626", annotation_text="80%")
-                _hist_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font=dict(family="Inter,sans-serif", size=11),
-                    margin=dict(l=10, r=10, t=20, b=10), height=240,
-                    showlegend=False, xaxis_title="Bot Score", yaxis_title="Count")
-                st.plotly_chart(_hist_fig, use_container_width=True, config={"displayModeBar": False})
-            except Exception:
-                pass
-        else:
-            st.info("No Bot Score data available.")
+        # ── Section 2 — Status Distribution + Score Histogram ────────────────────
+        _s2l, _s2r = st.columns([55, 45])
+        with _s2l:
+            st.markdown('<div class="section-chip">📊 Status Distribution</div>', unsafe_allow_html=True)
+            _sd_cfg = [("✅ Pass", "#0ebc6e", _pass_d), ("🟡 Needs Review", "#f59e0b", _rev_d),
+                       ("❌ Fail", "#ef4444", _fail_d), ("🚨 Auto-Fail", "#dc2626", _fatal_d)]
+            _sd_html = ""
+            for _sn, _sc, _sv in _sd_cfg:
+                _sp = round(_sv / _total_d * 100, 1) if _total_d else 0
+                _sd_html += (
+                    f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;">'
+                    f'<div style="width:110px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;">{_sn}</div>'
+                    f'<div style="flex:1;height:14px;background:#f0f2f5;border-radius:7px;overflow:hidden;">'
+                    f'<div style="width:{_sp}%;height:100%;background:{_sc};border-radius:7px;transition:width 0.5s;"></div></div>'
+                    f'<div style="width:50px;font-size:0.71rem;font-weight:800;color:{_sc};flex-shrink:0;text-align:right;">{_sv} ({_sp}%)</div>'
+                    f'</div>'
+                )
+            st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:16px;">{_sd_html}</div>', unsafe_allow_html=True)
 
-    # ── Section 3 — Score Trend + Fatal Rate Trend ───────────────────────────
-    if "Audit Date" in _dash_df.columns:
-        _s3ta, _s3tb = st.columns(2)
-        with _s3ta:
-            st.markdown('<div class="section-chip">📅 Score Trend Over Time</div>', unsafe_allow_html=True)
-            if "Bot Score" in _dash_df.columns:
+        with _s2r:
+            st.markdown('<div class="section-chip">📈 Score Distribution</div>', unsafe_allow_html=True)
+            if not _bs_d.dropna().empty:
                 try:
-                    _tr_df = _dash_df[["Audit Date", "Bot Score"]].copy()
-                    _tr_df["Audit Date"] = pd.to_datetime(_tr_df["Audit Date"], errors="coerce")
-                    _tr_df["Bot Score"] = pd.to_numeric(_tr_df["Bot Score"], errors="coerce")
-                    _tr_df = _tr_df.dropna().sort_values("Audit Date")
-                    if not _tr_df.empty:
-                        _daily = _tr_df.groupby("Audit Date")["Bot Score"].mean().reset_index()
-                        _roll = _daily["Bot Score"].rolling(3, min_periods=1).mean()
-                        _tf = go.Figure()
-                        _tf.add_trace(go.Scatter(x=_daily["Audit Date"], y=_daily["Bot Score"],
-                            mode="lines+markers+text", line=dict(color="#93c5fd", width=1.5),
-                            marker=dict(size=5), name="Daily Avg Bot Score", opacity=0.8,
-                            text=[f"{v:.0f}%" for v in _daily["Bot Score"]],
-                            textposition="top center", textfont=dict(size=9, color="#6b7280")))
-                        _tf.add_trace(go.Scatter(x=_daily["Audit Date"], y=_roll,
-                            mode="lines", line=dict(color="#2563EB", width=2.5),
-                            name="3-Period Moving Average"))
-                        _tf.add_hline(y=80, line_dash="dot", line_color="#dc2626",
-                            annotation_text="Target: 80%", annotation_position="bottom right",
-                            annotation_font=dict(size=10, color="#dc2626"))
-                        _tf.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    _hist_fig = go.Figure()
+                    _hist_fig.add_trace(go.Histogram(x=_bs_d.dropna(), nbinsx=20, marker_color="#2563EB", opacity=0.8, name="Score"))
+                    _hist_fig.add_vline(x=80, line_dash="dot", line_color="#dc2626", annotation_text="80%")
+                    _hist_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                        font=dict(family="Inter,sans-serif", size=11),
+                        margin=dict(l=10, r=10, t=20, b=10), height=240,
+                        showlegend=False, xaxis_title="Bot Score", yaxis_title="Count")
+                    st.plotly_chart(_hist_fig, use_container_width=True, config={"displayModeBar": False})
+                except Exception:
+                    pass
+            else:
+                st.info("No Bot Score data available.")
+
+        # ── Section 3 — Score Trend + Fatal Rate Trend ───────────────────────────
+        if "Audit Date" in _dash_df.columns:
+            _s3ta, _s3tb = st.columns(2)
+            with _s3ta:
+                st.markdown('<div class="section-chip">📅 Score Trend Over Time</div>', unsafe_allow_html=True)
+                if "Bot Score" in _dash_df.columns:
+                    try:
+                        _tr_df = _dash_df[["Audit Date", "Bot Score"]].copy()
+                        _tr_df["Audit Date"] = pd.to_datetime(_tr_df["Audit Date"], errors="coerce")
+                        _tr_df["Bot Score"] = pd.to_numeric(_tr_df["Bot Score"], errors="coerce")
+                        _tr_df = _tr_df.dropna().sort_values("Audit Date")
+                        if not _tr_df.empty:
+                            _daily = _tr_df.groupby("Audit Date")["Bot Score"].mean().reset_index()
+                            _roll = _daily["Bot Score"].rolling(3, min_periods=1).mean()
+                            _tf = go.Figure()
+                            _tf.add_trace(go.Scatter(x=_daily["Audit Date"], y=_daily["Bot Score"],
+                                mode="lines+markers+text", line=dict(color="#93c5fd", width=1.5),
+                                marker=dict(size=5), name="Daily Avg Bot Score", opacity=0.8,
+                                text=[f"{v:.0f}%" for v in _daily["Bot Score"]],
+                                textposition="top center", textfont=dict(size=9, color="#6b7280")))
+                            _tf.add_trace(go.Scatter(x=_daily["Audit Date"], y=_roll,
+                                mode="lines", line=dict(color="#2563EB", width=2.5),
+                                name="3-Period Moving Average"))
+                            _tf.add_hline(y=80, line_dash="dot", line_color="#dc2626",
+                                annotation_text="Target: 80%", annotation_position="bottom right",
+                                annotation_font=dict(size=10, color="#dc2626"))
+                            _tf.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                                font=dict(family="Inter,sans-serif", size=11),
+                                margin=dict(l=10, r=10, t=30, b=10), height=280,
+                                legend=dict(orientation="h", y=1.12, x=0, font=dict(size=10)),
+                                xaxis_title="Audit Date", yaxis_title="Avg Bot Score (%)",
+                                yaxis=dict(ticksuffix="%"))
+                            st.plotly_chart(_tf, use_container_width=True, config={"displayModeBar": False})
+                    except Exception:
+                        pass
+            with _s3tb:
+                st.markdown('<div class="section-chip">🚨 Fatal Rate Over Time</div>', unsafe_allow_html=True)
+                if "Status" in _dash_df.columns:
+                    try:
+                        _fat_df = _dash_df[["Audit Date", "Status"]].copy()
+                        _fat_df["Audit Date"] = pd.to_datetime(_fat_df["Audit Date"], errors="coerce")
+                        _fat_df = _fat_df.dropna(subset=["Audit Date"])
+                        _fat_df["is_fatal"] = (_fat_df["Status"].astype(str).str.strip() == "Auto-Fail").astype(int)
+                        _fat_daily = _fat_df.groupby("Audit Date").agg(
+                            total=("is_fatal", "count"), fatals=("is_fatal", "sum")
+                        ).reset_index()
+                        _fat_daily["fatal_rate"] = round(_fat_daily["fatals"] / _fat_daily["total"] * 100, 1)
+                        _ff = go.Figure()
+                        _ff.add_trace(go.Bar(x=_fat_daily["Audit Date"], y=_fat_daily["fatals"],
+                            marker_color="#dc2626", name="Auto-Fails", opacity=0.7))
+                        _ff.add_trace(go.Scatter(x=_fat_daily["Audit Date"], y=_fat_daily["fatal_rate"],
+                            mode="lines+markers", line=dict(color="#7c3aed", width=2),
+                            marker=dict(size=5), name="Fatal Rate %", yaxis="y2"))
+                        _ff.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                            font=dict(family="Inter,sans-serif", size=11),
+                            margin=dict(l=10, r=10, t=20, b=10), height=260,
+                            legend=dict(orientation="h", y=1.12, x=0, font=dict(size=10)),
+                            yaxis=dict(title="Auto-Fail Count"),
+                            yaxis2=dict(title="Fatal Rate %", overlaying="y", side="right"))
+                        st.plotly_chart(_ff, use_container_width=True, config={"displayModeBar": False})
+                    except Exception:
+                        pass
+
+        # ── Section 4 — QA Leaderboard + Campaign Rankings ───────────────────────
+        _s4l, _s4r = st.columns(2)
+        with _s4l:
+            st.markdown('<div class="section-chip">👤 QA Leaderboard</div>', unsafe_allow_html=True)
+            if "QA" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+                _lb_rows = []
+                for _qa_n, _qa_g in _dash_df.groupby("QA"):
+                    _qa_bs = pd.to_numeric(_qa_g["Bot Score"], errors="coerce").dropna()
+                    _qa_st = _qa_g["Status"].astype(str).str.strip() if "Status" in _qa_g.columns else pd.Series([])
+                    _lb_rows.append({
+                        "QA": str(_qa_n),
+                        "Audits": len(_qa_g),
+                        "Avg Score": round(_qa_bs.mean(), 1) if not _qa_bs.empty else 0,
+                        "Pass Rate": f"{round(int((_qa_st=='Pass').sum())/len(_qa_g)*100,1) if len(_qa_g) else 0}%",
+                        "Auto-Fails": int((_qa_st == "Auto-Fail").sum()),
+                    })
+                _lb_rows.sort(key=lambda x: -x["Avg Score"])
+                _lb_html = '<table style="width:100%;border-collapse:collapse;font-size:0.71rem;">'
+                _lb_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["QA", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"]) + "</tr>"
+                for _ri, _r in enumerate(_lb_rows):
+                    _medal = ["🥇", "🥈", "🥉"][_ri] if _ri < 3 else ""
+                    _lb_html += f'<tr style="border-bottom:1px solid #f0f4fa;"><td style="padding:5px 8px;font-weight:600;color:#0B1F3A;">{_medal} {_r["QA"]}</td><td style="padding:5px 8px;color:#2563EB;">{_r["Audits"]}</td><td style="padding:5px 8px;font-weight:700;color:#059669;">{_r["Avg Score"]}</td><td style="padding:5px 8px;">{_r["Pass Rate"]}</td><td style="padding:5px 8px;color:#dc2626;">{_r["Auto-Fails"]}</td></tr>'
+                _lb_html += "</table>"
+                st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_lb_html}</div>', unsafe_allow_html=True)
+            else:
+                st.info("No QA/Bot Score columns available.")
+
+        with _s4r:
+            st.markdown('<div class="section-chip">🎯 Campaign Rankings</div>', unsafe_allow_html=True)
+            if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+                _cr_rows = []
+                for _cn, _cg in _dash_df.groupby("Campaign Name"):
+                    _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                    _c_st = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
+                    _cr_rows.append({
+                        "Campaign": str(_cn),
+                        "Audits": len(_cg),
+                        "Avg Score": round(_c_bs.mean(), 1) if not _c_bs.empty else 0,
+                        "Pass Rate": f"{round(int((_c_st=='Pass').sum())/len(_cg)*100,1) if len(_cg) else 0}%",
+                        "Auto-Fails": int((_c_st == "Auto-Fail").sum()),
+                    })
+                _cr_rows.sort(key=lambda x: -x["Avg Score"])
+                _cr_html = '<table style="width:100%;border-collapse:collapse;font-size:0.71rem;">'
+                _cr_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["Campaign", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"]) + "</tr>"
+                for _r in _cr_rows:
+                    _cr_html += f'<tr style="border-bottom:1px solid #f0f4fa;"><td style="padding:5px 8px;font-weight:600;color:#0B1F3A;">{_r["Campaign"]}</td><td style="padding:5px 8px;color:#2563EB;">{_r["Audits"]}</td><td style="padding:5px 8px;font-weight:700;color:#059669;">{_r["Avg Score"]}</td><td style="padding:5px 8px;">{_r["Pass Rate"]}</td><td style="padding:5px 8px;color:#dc2626;">{_r["Auto-Fails"]}</td></tr>'
+                _cr_html += "</table>"
+                st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_cr_html}</div>', unsafe_allow_html=True)
+            else:
+                st.info("No Campaign Name/Bot Score columns available.")
+
+        # ── Section 5 — Auditor Calibration (std dev) + Tier Breakdown ──────────
+        _s5a, _s5b = st.columns(2)
+        with _s5a:
+            st.markdown('<div class="section-chip">📐 Auditor Calibration (Score Consistency)</div>', unsafe_allow_html=True)
+            if "QA" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+                try:
+                    _cal_rows = []
+                    for _qn, _qg in _dash_df.groupby("QA"):
+                        _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
+                        if len(_qbs) >= 2:
+                            _cal_rows.append({"QA": str(_qn), "Audits": len(_qbs),
+                                              "Avg": round(_qbs.mean(), 1), "StdDev": round(_qbs.std(), 1),
+                                              "Min": int(_qbs.min()), "Max": int(_qbs.max())})
+                    _cal_rows.sort(key=lambda x: x["StdDev"])
+                    if _cal_rows:
+                        _cal_fig = go.Figure()
+                        _cal_fig.add_trace(go.Bar(
+                            x=[r["QA"] for r in _cal_rows],
+                            y=[r["Avg"] for r in _cal_rows],
+                            name="Avg Score",
+                            marker_color="#2563EB",
+                            error_y=dict(type="data", array=[r["StdDev"] for r in _cal_rows],
+                                         visible=True, color="#64748b", thickness=1.5, width=6),
+                            text=[f"{r['Avg']}±{r['StdDev']}" for r in _cal_rows],
+                            textposition="outside",
+                        ))
+                        _cal_fig.add_hline(y=80, line_dash="dot", line_color="#dc2626")
+                        _cal_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
                             font=dict(family="Inter,sans-serif", size=11),
                             margin=dict(l=10, r=10, t=30, b=10), height=280,
-                            legend=dict(orientation="h", y=1.12, x=0, font=dict(size=10)),
-                            xaxis_title="Audit Date", yaxis_title="Avg Bot Score (%)",
-                            yaxis=dict(ticksuffix="%"))
-                        st.plotly_chart(_tf, use_container_width=True, config={"displayModeBar": False})
+                            showlegend=False, xaxis_title="QA Auditor", yaxis_title="Avg Score (±StdDev)",
+                            xaxis=dict(tickangle=-20))
+                        st.plotly_chart(_cal_fig, use_container_width=True, config={"displayModeBar": False})
+                        _cal_note = min(_cal_rows, key=lambda x: x["StdDev"])
+                        st.markdown(f'<div style="font-size:0.68rem;color:#059669;margin-top:-8px;">Most consistent: <b>{_cal_note["QA"]}</b> (σ={_cal_note["StdDev"]})</div>', unsafe_allow_html=True)
                 except Exception:
                     pass
-        with _s3tb:
-            st.markdown('<div class="section-chip">🚨 Fatal Rate Over Time</div>', unsafe_allow_html=True)
-            if "Status" in _dash_df.columns:
-                try:
-                    _fat_df = _dash_df[["Audit Date", "Status"]].copy()
-                    _fat_df["Audit Date"] = pd.to_datetime(_fat_df["Audit Date"], errors="coerce")
-                    _fat_df = _fat_df.dropna(subset=["Audit Date"])
-                    _fat_df["is_fatal"] = (_fat_df["Status"].astype(str).str.strip() == "Auto-Fail").astype(int)
-                    _fat_daily = _fat_df.groupby("Audit Date").agg(
-                        total=("is_fatal", "count"), fatals=("is_fatal", "sum")
-                    ).reset_index()
-                    _fat_daily["fatal_rate"] = round(_fat_daily["fatals"] / _fat_daily["total"] * 100, 1)
-                    _ff = go.Figure()
-                    _ff.add_trace(go.Bar(x=_fat_daily["Audit Date"], y=_fat_daily["fatals"],
-                        marker_color="#dc2626", name="Auto-Fails", opacity=0.7))
-                    _ff.add_trace(go.Scatter(x=_fat_daily["Audit Date"], y=_fat_daily["fatal_rate"],
-                        mode="lines+markers", line=dict(color="#7c3aed", width=2),
-                        marker=dict(size=5), name="Fatal Rate %", yaxis="y2"))
-                    _ff.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        font=dict(family="Inter,sans-serif", size=11),
-                        margin=dict(l=10, r=10, t=20, b=10), height=260,
-                        legend=dict(orientation="h", y=1.12, x=0, font=dict(size=10)),
-                        yaxis=dict(title="Auto-Fail Count"),
-                        yaxis2=dict(title="Fatal Rate %", overlaying="y", side="right"))
-                    st.plotly_chart(_ff, use_container_width=True, config={"displayModeBar": False})
-                except Exception:
-                    pass
-
-    # ── Section 4 — QA Leaderboard + Campaign Rankings ───────────────────────
-    _s4l, _s4r = st.columns(2)
-    with _s4l:
-        st.markdown('<div class="section-chip">👤 QA Leaderboard</div>', unsafe_allow_html=True)
-        if "QA" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-            _lb_rows = []
-            for _qa_n, _qa_g in _dash_df.groupby("QA"):
-                _qa_bs = pd.to_numeric(_qa_g["Bot Score"], errors="coerce").dropna()
-                _qa_st = _qa_g["Status"].astype(str).str.strip() if "Status" in _qa_g.columns else pd.Series([])
-                _lb_rows.append({
-                    "QA": str(_qa_n),
-                    "Audits": len(_qa_g),
-                    "Avg Score": round(_qa_bs.mean(), 1) if not _qa_bs.empty else 0,
-                    "Pass Rate": f"{round(int((_qa_st=='Pass').sum())/len(_qa_g)*100,1) if len(_qa_g) else 0}%",
-                    "Auto-Fails": int((_qa_st == "Auto-Fail").sum()),
-                })
-            _lb_rows.sort(key=lambda x: -x["Avg Score"])
-            _lb_html = '<table style="width:100%;border-collapse:collapse;font-size:0.71rem;">'
-            _lb_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["QA", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"]) + "</tr>"
-            for _ri, _r in enumerate(_lb_rows):
-                _medal = ["🥇", "🥈", "🥉"][_ri] if _ri < 3 else ""
-                _lb_html += f'<tr style="border-bottom:1px solid #f0f4fa;"><td style="padding:5px 8px;font-weight:600;color:#0B1F3A;">{_medal} {_r["QA"]}</td><td style="padding:5px 8px;color:#2563EB;">{_r["Audits"]}</td><td style="padding:5px 8px;font-weight:700;color:#059669;">{_r["Avg Score"]}</td><td style="padding:5px 8px;">{_r["Pass Rate"]}</td><td style="padding:5px 8px;color:#dc2626;">{_r["Auto-Fails"]}</td></tr>'
-            _lb_html += "</table>"
-            st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_lb_html}</div>', unsafe_allow_html=True)
-        else:
-            st.info("No QA/Bot Score columns available.")
-
-    with _s4r:
-        st.markdown('<div class="section-chip">🎯 Campaign Rankings</div>', unsafe_allow_html=True)
-        if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-            _cr_rows = []
-            for _cn, _cg in _dash_df.groupby("Campaign Name"):
-                _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
-                _c_st = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
-                _cr_rows.append({
-                    "Campaign": str(_cn),
-                    "Audits": len(_cg),
-                    "Avg Score": round(_c_bs.mean(), 1) if not _c_bs.empty else 0,
-                    "Pass Rate": f"{round(int((_c_st=='Pass').sum())/len(_cg)*100,1) if len(_cg) else 0}%",
-                    "Auto-Fails": int((_c_st == "Auto-Fail").sum()),
-                })
-            _cr_rows.sort(key=lambda x: -x["Avg Score"])
-            _cr_html = '<table style="width:100%;border-collapse:collapse;font-size:0.71rem;">'
-            _cr_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["Campaign", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"]) + "</tr>"
-            for _r in _cr_rows:
-                _cr_html += f'<tr style="border-bottom:1px solid #f0f4fa;"><td style="padding:5px 8px;font-weight:600;color:#0B1F3A;">{_r["Campaign"]}</td><td style="padding:5px 8px;color:#2563EB;">{_r["Audits"]}</td><td style="padding:5px 8px;font-weight:700;color:#059669;">{_r["Avg Score"]}</td><td style="padding:5px 8px;">{_r["Pass Rate"]}</td><td style="padding:5px 8px;color:#dc2626;">{_r["Auto-Fails"]}</td></tr>'
-            _cr_html += "</table>"
-            st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_cr_html}</div>', unsafe_allow_html=True)
-        else:
-            st.info("No Campaign Name/Bot Score columns available.")
-
-    # ── Section 5 — Auditor Calibration (std dev) + Tier Breakdown ──────────
-    _s5a, _s5b = st.columns(2)
-    with _s5a:
-        st.markdown('<div class="section-chip">📐 Auditor Calibration (Score Consistency)</div>', unsafe_allow_html=True)
-        if "QA" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-            try:
-                _cal_rows = []
-                for _qn, _qg in _dash_df.groupby("QA"):
-                    _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
-                    if len(_qbs) >= 2:
-                        _cal_rows.append({"QA": str(_qn), "Audits": len(_qbs),
-                                          "Avg": round(_qbs.mean(), 1), "StdDev": round(_qbs.std(), 1),
-                                          "Min": int(_qbs.min()), "Max": int(_qbs.max())})
-                _cal_rows.sort(key=lambda x: x["StdDev"])
-                if _cal_rows:
-                    _cal_fig = go.Figure()
-                    _cal_fig.add_trace(go.Bar(
-                        x=[r["QA"] for r in _cal_rows],
-                        y=[r["Avg"] for r in _cal_rows],
-                        name="Avg Score",
-                        marker_color="#2563EB",
-                        error_y=dict(type="data", array=[r["StdDev"] for r in _cal_rows],
-                                     visible=True, color="#64748b", thickness=1.5, width=6),
-                        text=[f"{r['Avg']}±{r['StdDev']}" for r in _cal_rows],
-                        textposition="outside",
-                    ))
-                    _cal_fig.add_hline(y=80, line_dash="dot", line_color="#dc2626")
-                    _cal_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        font=dict(family="Inter,sans-serif", size=11),
-                        margin=dict(l=10, r=10, t=30, b=10), height=280,
-                        showlegend=False, xaxis_title="QA Auditor", yaxis_title="Avg Score (±StdDev)",
-                        xaxis=dict(tickangle=-20))
-                    st.plotly_chart(_cal_fig, use_container_width=True, config={"displayModeBar": False})
-                    _cal_note = min(_cal_rows, key=lambda x: x["StdDev"])
-                    st.markdown(f'<div style="font-size:0.68rem;color:#059669;margin-top:-8px;">Most consistent: <b>{_cal_note["QA"]}</b> (σ={_cal_note["StdDev"]})</div>', unsafe_allow_html=True)
-            except Exception:
-                pass
-        else:
-            st.info("No QA/Bot Score columns.")
-
-    with _s5b:
-        st.markdown('<div class="section-chip">🏗️ Tier Breakdown (Avg %)</div>', unsafe_allow_html=True)
-        try:
-            _tier_rows = []
-            for _t in _QA_SCHEMA.get("tiers", []):
-                _tscores = []
-                for _p in _t.get("params", []):
-                    if _p["col"] not in _dash_df.columns:
-                        continue
-                    _pmx = [int(o) for o in _p.get("options", []) if str(o).lstrip("-").isdigit()]
-                    _pmax = max(_pmx) if _pmx else 2
-                    _pv = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
-                        {"NA": "", "nan": "", "Fatal": "", "Yes": "0", "No": "2"}), errors="coerce").dropna()
-                    if len(_pv) > 0:
-                        _tscores.append(_pv.mean() / _pmax * 100)
-                if _tscores:
-                    _tier_rows.append({
-                        "label": _t["label"].split("·")[1].strip() if "·" in _t["label"] else _t["label"],
-                        "pct": round(sum(_tscores) / len(_tscores), 1),
-                        "weight": _t.get("weight_pct", 0),
-                        "color": _t.get("color", "#2563EB"),
-                    })
-            if _tier_rows:
-                _tb_fig = go.Figure()
-                _tb_fig.add_trace(go.Bar(
-                    y=[r["label"] for r in _tier_rows],
-                    x=[r["pct"] for r in _tier_rows],
-                    orientation="h",
-                    marker_color=[r["color"] for r in _tier_rows],
-                    # Full label on bar: "CRITICAL  83.5%  (63% weight)"
-                    text=[f'{r["label"]}  ·  {r["pct"]}%  (weight: {r["weight"]}%)' for r in _tier_rows],
-                    textposition="inside",
-                    insidetextanchor="start",
-                    textfont=dict(color="#fff", size=11),
-                ))
-                _tb_fig.add_vline(x=80, line_dash="dot", line_color="#6b7280",
-                    annotation_text="Target 80%", annotation_position="top right",
-                    annotation_font=dict(size=10, color="#6b7280"))
-                _tb_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font=dict(family="Inter,sans-serif", size=12),
-                    margin=dict(l=10, r=10, t=30, b=10), height=200,
-                    showlegend=False, xaxis_title="Avg Score %", xaxis_range=[0, 110],
-                    yaxis=dict(tickfont=dict(size=12)))
-                st.plotly_chart(_tb_fig, use_container_width=True, config={"displayModeBar": False})
-        except Exception:
-            pass
-
-    # ── Section 6 — Disposition Breakdown + Lead Stage Analysis ─────────────
-    _s6a, _s6b = st.columns(2)
-    with _s6a:
-        st.markdown('<div class="section-chip">📂 Disposition Breakdown</div>', unsafe_allow_html=True)
-        _disp_col = next((c for c in ["Disposition", "Correct Disposition", "Correct Disposition (Expected)"] if c in _dash_df.columns), None)
-        if _disp_col:
-            try:
-                _disp_counts = _dash_df[_disp_col].astype(str).str.strip().value_counts()
-                _disp_counts = _disp_counts[_disp_counts.index != "nan"][:10]
-                _disp_pct = (_disp_counts / _disp_counts.sum() * 100).round(1)
-                _disp_colors = ["#2563EB", "#0891b2", "#059669", "#d97706", "#dc2626",
-                                "#7c3aed", "#db2777", "#0d9488", "#b45309", "#374151"]
-                _dsp_fig = go.Figure()
-                _dsp_fig.add_trace(go.Bar(
-                    x=list(_disp_counts.values),
-                    y=list(_disp_counts.index),
-                    orientation="h",
-                    marker_color=_disp_colors[:len(_disp_counts)],
-                    # Label: "Disposition Name: N calls (X%)"
-                    text=[f"{n}  ({p}%)" for n, p in zip(_disp_counts.values, _disp_pct.values)],
-                    textposition="outside",
-                    cliponaxis=False,
-                ))
-                _dsp_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font=dict(family="Inter,sans-serif", size=11),
-                    margin=dict(l=10, r=90, t=20, b=10), height=max(200, len(_disp_counts)*32+60),
-                    showlegend=False, xaxis_title="Number of Calls",
-                    yaxis=dict(tickfont=dict(size=11, color="#0B1F3A")))
-                st.plotly_chart(_dsp_fig, use_container_width=True, config={"displayModeBar": False})
-            except Exception:
-                pass
-        else:
-            st.info("No Disposition column found.")
-
-    with _s6b:
-        st.markdown('<div class="section-chip">🔥 Lead Stage Breakdown</div>', unsafe_allow_html=True)
-        if "Lead Stage" in _dash_df.columns:
-            try:
-                _ls_counts = _dash_df["Lead Stage"].astype(str).str.strip().value_counts()
-                _ls_counts = _ls_counts[_ls_counts.index != "nan"]
-                _LS_COLORS = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB",
-                              "Not Interested": "#6b7280", "RNR": "#7c3aed"}
-                _ls_colors = [_LS_COLORS.get(k, "#94a3b8") for k in _ls_counts.index]
-                # Show as horizontal bar so labels are always readable in email screenshots
-                _ls_pct = (_ls_counts / _ls_counts.sum() * 100).round(1)
-                _ls_fig = go.Figure()
-                _ls_fig.add_trace(go.Bar(
-                    y=list(_ls_counts.index),
-                    x=list(_ls_counts.values),
-                    orientation="h",
-                    marker_color=_ls_colors,
-                    # Full annotation: "Hot: 12 calls (45%)"
-                    text=[f"{k}: {v} calls ({p}%)" for k, v, p in zip(_ls_counts.index, _ls_counts.values, _ls_pct.values)],
-                    textposition="outside",
-                    cliponaxis=False,
-                ))
-                _ls_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font=dict(family="Inter,sans-serif", size=11),
-                    margin=dict(l=10, r=140, t=20, b=10), height=max(200, len(_ls_counts)*38+60),
-                    showlegend=False, xaxis_title="Number of Calls",
-                    yaxis=dict(tickfont=dict(size=12, color="#0B1F3A", family="Inter,sans-serif")))
-                st.plotly_chart(_ls_fig, use_container_width=True, config={"displayModeBar": False})
-            except Exception:
-                pass
-        else:
-            st.info("No Lead Stage column found.")
-
-    # ── Section 7 — Client Health Matrix ─────────────────────────────────────
-    if "Client" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-        st.markdown('<div class="section-chip">🏢 Client Health Matrix</div>', unsafe_allow_html=True)
-        try:
-            _ch_rows = []
-            for _cn, _cg in _dash_df.groupby("Client"):
-                _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
-                _c_st = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
-                _c_camps = _cg["Campaign Name"].nunique() if "Campaign Name" in _cg.columns else 0
-                _c_avg = round(_c_bs.mean(), 1) if not _c_bs.empty else 0
-                _c_pr = round(int((_c_st == "Pass").sum()) / len(_cg) * 100, 1) if len(_cg) else 0
-                _c_fatal = int((_c_st == "Auto-Fail").sum())
-                _c_health = "🟢 Healthy" if _c_avg >= 80 and _c_pr >= 75 else "🟡 Monitor" if _c_avg >= 65 or _c_pr >= 55 else "🔴 At Risk"
-                _ch_rows.append({"Client": str(_cn), "Audits": len(_cg), "Campaigns": _c_camps,
-                                  "Avg Score": _c_avg, "Pass Rate": f"{_c_pr}%",
-                                  "Auto-Fails": _c_fatal, "Health": _c_health})
-            _ch_rows.sort(key=lambda x: -x["Avg Score"])
-            _chm_html = '<table style="width:100%;border-collapse:collapse;font-size:0.71rem;">'
-            _chm_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["Client", "Audits", "Campaigns", "Avg Score", "Pass Rate", "Auto-Fails", "Health"]) + "</tr>"
-            for _r in _ch_rows:
-                _row_bg = "#f0fdf4" if "Healthy" in _r["Health"] else "#fffbeb" if "Monitor" in _r["Health"] else "#fef2f2"
-                _chm_html += (f'<tr style="border-bottom:1px solid #f0f4fa;background:{_row_bg};">'
-                              f'<td style="padding:5px 8px;font-weight:600;color:#0B1F3A;">{_r["Client"]}</td>'
-                              f'<td style="padding:5px 8px;color:#2563EB;">{_r["Audits"]}</td>'
-                              f'<td style="padding:5px 8px;">{_r["Campaigns"]}</td>'
-                              f'<td style="padding:5px 8px;font-weight:700;">{_r["Avg Score"]}</td>'
-                              f'<td style="padding:5px 8px;">{_r["Pass Rate"]}</td>'
-                              f'<td style="padding:5px 8px;color:#dc2626;">{_r["Auto-Fails"]}</td>'
-                              f'<td style="padding:5px 8px;font-weight:700;">{_r["Health"]}</td>'
-                              f'</tr>')
-            _chm_html += "</table>"
-            st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_chm_html}</div>', unsafe_allow_html=True)
-        except Exception:
-            pass
-
-    # ── Section 8 — Lead Score vs Bot Score Correlation ──────────────────────
-    _has_lead = "Lead Score" in _dash_df.columns
-    _has_ls = "Lead Stage" in _dash_df.columns
-    if _has_lead and "Bot Score" in _dash_df.columns:
-        st.markdown('<div class="section-chip">🔗 Lead Score vs Bot Score Correlation</div>', unsafe_allow_html=True)
-        try:
-            _corr_df = _dash_df[["Lead Score", "Bot Score"]].copy()
-            if _has_ls:
-                _corr_df["Lead Stage"] = _dash_df["Lead Stage"].astype(str).str.strip()
-            _corr_df["Lead Score"] = pd.to_numeric(_corr_df["Lead Score"], errors="coerce")
-            _corr_df["Bot Score"] = pd.to_numeric(_corr_df["Bot Score"], errors="coerce")
-            _corr_df = _corr_df.dropna(subset=["Lead Score", "Bot Score"])
-            if len(_corr_df) >= 3:
-                _LS_COLORS2 = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB",
-                               "Not Interested": "#6b7280", "RNR": "#7c3aed"}
-                _sc_fig = go.Figure()
-                if _has_ls:
-                    for _ls_v in _corr_df["Lead Stage"].unique():
-                        _sub = _corr_df[_corr_df["Lead Stage"] == _ls_v]
-                        _sc_fig.add_trace(go.Scatter(
-                            x=_sub["Bot Score"], y=_sub["Lead Score"],
-                            mode="markers", name=str(_ls_v),
-                            marker=dict(size=8, color=_LS_COLORS2.get(_ls_v, "#94a3b8"), opacity=0.75)))
-                else:
-                    _sc_fig.add_trace(go.Scatter(
-                        x=_corr_df["Bot Score"], y=_corr_df["Lead Score"],
-                        mode="markers", marker=dict(size=8, color="#2563EB", opacity=0.7), name="Audit"))
-                _sc_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font=dict(family="Inter,sans-serif", size=11),
-                    margin=dict(l=10, r=10, t=20, b=10), height=300,
-                    xaxis_title="Bot Score", yaxis_title="Lead Score",
-                    legend=dict(orientation="h", y=1.1, x=0))
-                st.plotly_chart(_sc_fig, use_container_width=True, config={"displayModeBar": False})
-                _corr_val = round(_corr_df["Bot Score"].corr(_corr_df["Lead Score"]), 3)
-                _corr_interp = "strong positive" if _corr_val > 0.5 else "moderate positive" if _corr_val > 0.2 else "weak/none" if abs(_corr_val) <= 0.2 else "moderate negative" if _corr_val > -0.5 else "strong negative"
-                st.markdown(f'<div style="font-size:0.70rem;color:#374151;margin-top:-8px;">Pearson r = <b>{_corr_val}</b> ({_corr_interp} correlation)</div>', unsafe_allow_html=True)
-        except Exception:
-            pass
-
-    # ── Section 9 — Co-failure Analysis ──────────────────────────────────────
-    st.markdown('<div class="section-chip">🔴 Co-failure Analysis (Parameters That Fail Together)</div>', unsafe_allow_html=True)
-    try:
-        _all_param_cols = []
-        for _t in _QA_SCHEMA.get("tiers", []):
-            for _p in _t.get("params", []):
-                if _p["col"] in _dash_df.columns:
-                    _all_param_cols.append(_p)
-        # Build binary fail matrix (1 = failed / below 50% of max, 0 = ok)
-        _fail_mat = {}
-        for _p in _all_param_cols:
-            _pmx = [int(o) for o in _p.get("options", []) if str(o).lstrip("-").isdigit()]
-            _pmax = max(_pmx) if _pmx else 2
-            _pv = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
-                {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmax)}), errors="coerce")
-            _fail_mat[_p["col"]] = (_pv < _pmax * 0.5).astype(int)
-        if len(_fail_mat) >= 2 and _total_d >= 5:
-            _fail_df = pd.DataFrame(_fail_mat)
-            _cofail_pairs = []
-            _cols_list = list(_fail_df.columns)
-            for _i in range(len(_cols_list)):
-                for _j in range(_i + 1, len(_cols_list)):
-                    _both_fail = ((_fail_df[_cols_list[_i]] == 1) & (_fail_df[_cols_list[_j]] == 1)).sum()
-                    _either = ((_fail_df[_cols_list[_i]] == 1) | (_fail_df[_cols_list[_j]] == 1)).sum()
-                    _rate = round(_both_fail / _total_d * 100, 1)
-                    if _rate >= 10:
-                        _cofail_pairs.append({"p1": _cols_list[_i], "p2": _cols_list[_j],
-                                              "both_fail": int(_both_fail), "rate": _rate})
-            _cofail_pairs.sort(key=lambda x: -x["rate"])
-            if _cofail_pairs[:8]:
-                _cf_html = ""
-                for _cf in _cofail_pairs[:8]:
-                    _cfcolor = "#dc2626" if _cf["rate"] >= 35 else "#d97706" if _cf["rate"] >= 20 else "#2563EB"
-                    _cf_html += (
-                        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:6px 10px;'
-                        f'background:#fff;border:1px solid #E2EAF6;border-radius:8px;">'
-                        f'<div style="flex:1;font-size:0.70rem;font-weight:600;color:#0B1F3A;">'
-                        f'<span style="color:#dc2626;">✗</span> {_cf["p1"]}'
-                        f' <span style="color:#64748b;font-weight:400;"> + </span>'
-                        f'<span style="color:#dc2626;">✗</span> {_cf["p2"]}</div>'
-                        f'<div style="flex-shrink:0;background:{_cfcolor};color:#fff;font-size:0.65rem;'
-                        f'font-weight:800;padding:2px 8px;border-radius:4px;">{_cf["rate"]}% co-fail</div>'
-                        f'</div>'
-                    )
-                st.markdown(f'<div style="max-height:300px;overflow-y:auto;">{_cf_html}</div>', unsafe_allow_html=True)
             else:
-                st.markdown('<div style="font-size:0.73rem;color:#059669;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">No significant co-failures detected (threshold: 10%)</div>', unsafe_allow_html=True)
-    except Exception:
-        pass
+                st.info("No QA/Bot Score columns.")
 
-    # ── Section 10 — Parameter Heatmap (QA × Param) ──────────────────────────
-    if "QA" in _dash_df.columns:
-        st.markdown('<div class="section-chip">🌡️ Parameter × QA Heatmap</div>', unsafe_allow_html=True)
+        with _s5b:
+            st.markdown('<div class="section-chip">🏗️ Tier Breakdown (Avg %)</div>', unsafe_allow_html=True)
+            try:
+                _tier_rows = []
+                for _t in _QA_SCHEMA.get("tiers", []):
+                    _tscores = []
+                    for _p in _t.get("params", []):
+                        if _p["col"] not in _dash_df.columns:
+                            continue
+                        _pmx = [int(o) for o in _p.get("options", []) if str(o).lstrip("-").isdigit()]
+                        _pmax = max(_pmx) if _pmx else 2
+                        _pv = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
+                            {"NA": "", "nan": "", "Fatal": "", "Yes": "0", "No": "2"}), errors="coerce").dropna()
+                        if len(_pv) > 0:
+                            _tscores.append(_pv.mean() / _pmax * 100)
+                    if _tscores:
+                        _tier_rows.append({
+                            "label": _t["label"].split("·")[1].strip() if "·" in _t["label"] else _t["label"],
+                            "pct": round(sum(_tscores) / len(_tscores), 1),
+                            "weight": _t.get("weight_pct", 0),
+                            "color": _t.get("color", "#2563EB"),
+                        })
+                if _tier_rows:
+                    _tb_fig = go.Figure()
+                    _tb_fig.add_trace(go.Bar(
+                        y=[r["label"] for r in _tier_rows],
+                        x=[r["pct"] for r in _tier_rows],
+                        orientation="h",
+                        marker_color=[r["color"] for r in _tier_rows],
+                        # Full label on bar: "CRITICAL  83.5%  (63% weight)"
+                        text=[f'{r["label"]}  ·  {r["pct"]}%  (weight: {r["weight"]}%)' for r in _tier_rows],
+                        textposition="inside",
+                        insidetextanchor="start",
+                        textfont=dict(color="#fff", size=11),
+                    ))
+                    _tb_fig.add_vline(x=80, line_dash="dot", line_color="#6b7280",
+                        annotation_text="Target 80%", annotation_position="top right",
+                        annotation_font=dict(size=10, color="#6b7280"))
+                    _tb_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                        font=dict(family="Inter,sans-serif", size=12),
+                        margin=dict(l=10, r=10, t=30, b=10), height=200,
+                        showlegend=False, xaxis_title="Avg Score %", xaxis_range=[0, 110],
+                        yaxis=dict(tickfont=dict(size=12)))
+                    st.plotly_chart(_tb_fig, use_container_width=True, config={"displayModeBar": False})
+            except Exception:
+                pass
+
+        # ── Section 6 — Disposition Breakdown + Lead Stage Analysis ─────────────
+        _s6a, _s6b = st.columns(2)
+        with _s6a:
+            st.markdown('<div class="section-chip">📂 Disposition Breakdown</div>', unsafe_allow_html=True)
+            _disp_col = next((c for c in ["Disposition", "Correct Disposition", "Correct Disposition (Expected)"] if c in _dash_df.columns), None)
+            if _disp_col:
+                try:
+                    _disp_counts = _dash_df[_disp_col].astype(str).str.strip().value_counts()
+                    _disp_counts = _disp_counts[_disp_counts.index != "nan"][:10]
+                    _disp_pct = (_disp_counts / _disp_counts.sum() * 100).round(1)
+                    _disp_colors = ["#2563EB", "#0891b2", "#059669", "#d97706", "#dc2626",
+                                    "#7c3aed", "#db2777", "#0d9488", "#b45309", "#374151"]
+                    _dsp_fig = go.Figure()
+                    _dsp_fig.add_trace(go.Bar(
+                        x=list(_disp_counts.values),
+                        y=list(_disp_counts.index),
+                        orientation="h",
+                        marker_color=_disp_colors[:len(_disp_counts)],
+                        # Label: "Disposition Name: N calls (X%)"
+                        text=[f"{n}  ({p}%)" for n, p in zip(_disp_counts.values, _disp_pct.values)],
+                        textposition="outside",
+                        cliponaxis=False,
+                    ))
+                    _dsp_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                        font=dict(family="Inter,sans-serif", size=11),
+                        margin=dict(l=10, r=90, t=20, b=10), height=max(200, len(_disp_counts)*32+60),
+                        showlegend=False, xaxis_title="Number of Calls",
+                        yaxis=dict(tickfont=dict(size=11, color="#0B1F3A")))
+                    st.plotly_chart(_dsp_fig, use_container_width=True, config={"displayModeBar": False})
+                except Exception:
+                    pass
+            else:
+                st.info("No Disposition column found.")
+
+        with _s6b:
+            st.markdown('<div class="section-chip">🔥 Lead Stage Breakdown</div>', unsafe_allow_html=True)
+            if "Lead Stage" in _dash_df.columns:
+                try:
+                    _ls_counts = _dash_df["Lead Stage"].astype(str).str.strip().value_counts()
+                    _ls_counts = _ls_counts[_ls_counts.index != "nan"]
+                    _LS_COLORS = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB",
+                                  "Not Interested": "#6b7280", "RNR": "#7c3aed"}
+                    _ls_colors = [_LS_COLORS.get(k, "#94a3b8") for k in _ls_counts.index]
+                    # Show as horizontal bar so labels are always readable in email screenshots
+                    _ls_pct = (_ls_counts / _ls_counts.sum() * 100).round(1)
+                    _ls_fig = go.Figure()
+                    _ls_fig.add_trace(go.Bar(
+                        y=list(_ls_counts.index),
+                        x=list(_ls_counts.values),
+                        orientation="h",
+                        marker_color=_ls_colors,
+                        # Full annotation: "Hot: 12 calls (45%)"
+                        text=[f"{k}: {v} calls ({p}%)" for k, v, p in zip(_ls_counts.index, _ls_counts.values, _ls_pct.values)],
+                        textposition="outside",
+                        cliponaxis=False,
+                    ))
+                    _ls_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                        font=dict(family="Inter,sans-serif", size=11),
+                        margin=dict(l=10, r=140, t=20, b=10), height=max(200, len(_ls_counts)*38+60),
+                        showlegend=False, xaxis_title="Number of Calls",
+                        yaxis=dict(tickfont=dict(size=12, color="#0B1F3A", family="Inter,sans-serif")))
+                    st.plotly_chart(_ls_fig, use_container_width=True, config={"displayModeBar": False})
+                except Exception:
+                    pass
+            else:
+                st.info("No Lead Stage column found.")
+
+        # ── Section 7 — Client Health Matrix ─────────────────────────────────────
+        if "Client" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+            st.markdown('<div class="section-chip">🏢 Client Health Matrix</div>', unsafe_allow_html=True)
+            try:
+                _ch_rows = []
+                for _cn, _cg in _dash_df.groupby("Client"):
+                    _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                    _c_st = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
+                    _c_camps = _cg["Campaign Name"].nunique() if "Campaign Name" in _cg.columns else 0
+                    _c_avg = round(_c_bs.mean(), 1) if not _c_bs.empty else 0
+                    _c_pr = round(int((_c_st == "Pass").sum()) / len(_cg) * 100, 1) if len(_cg) else 0
+                    _c_fatal = int((_c_st == "Auto-Fail").sum())
+                    _c_health = "🟢 Healthy" if _c_avg >= 80 and _c_pr >= 75 else "🟡 Monitor" if _c_avg >= 65 or _c_pr >= 55 else "🔴 At Risk"
+                    _ch_rows.append({"Client": str(_cn), "Audits": len(_cg), "Campaigns": _c_camps,
+                                      "Avg Score": _c_avg, "Pass Rate": f"{_c_pr}%",
+                                      "Auto-Fails": _c_fatal, "Health": _c_health})
+                _ch_rows.sort(key=lambda x: -x["Avg Score"])
+                _chm_html = '<table style="width:100%;border-collapse:collapse;font-size:0.71rem;">'
+                _chm_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["Client", "Audits", "Campaigns", "Avg Score", "Pass Rate", "Auto-Fails", "Health"]) + "</tr>"
+                for _r in _ch_rows:
+                    _row_bg = "#f0fdf4" if "Healthy" in _r["Health"] else "#fffbeb" if "Monitor" in _r["Health"] else "#fef2f2"
+                    _chm_html += (f'<tr style="border-bottom:1px solid #f0f4fa;background:{_row_bg};">'
+                                  f'<td style="padding:5px 8px;font-weight:600;color:#0B1F3A;">{_r["Client"]}</td>'
+                                  f'<td style="padding:5px 8px;color:#2563EB;">{_r["Audits"]}</td>'
+                                  f'<td style="padding:5px 8px;">{_r["Campaigns"]}</td>'
+                                  f'<td style="padding:5px 8px;font-weight:700;">{_r["Avg Score"]}</td>'
+                                  f'<td style="padding:5px 8px;">{_r["Pass Rate"]}</td>'
+                                  f'<td style="padding:5px 8px;color:#dc2626;">{_r["Auto-Fails"]}</td>'
+                                  f'<td style="padding:5px 8px;font-weight:700;">{_r["Health"]}</td>'
+                                  f'</tr>')
+                _chm_html += "</table>"
+                st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_chm_html}</div>', unsafe_allow_html=True)
+            except Exception:
+                pass
+
+        # ── Section 8 — Lead Score vs Bot Score Correlation ──────────────────────
+        _has_lead = "Lead Score" in _dash_df.columns
+        _has_ls = "Lead Stage" in _dash_df.columns
+        if _has_lead and "Bot Score" in _dash_df.columns:
+            st.markdown('<div class="section-chip">🔗 Lead Score vs Bot Score Correlation</div>', unsafe_allow_html=True)
+            try:
+                _corr_df = _dash_df[["Lead Score", "Bot Score"]].copy()
+                if _has_ls:
+                    _corr_df["Lead Stage"] = _dash_df["Lead Stage"].astype(str).str.strip()
+                _corr_df["Lead Score"] = pd.to_numeric(_corr_df["Lead Score"], errors="coerce")
+                _corr_df["Bot Score"] = pd.to_numeric(_corr_df["Bot Score"], errors="coerce")
+                _corr_df = _corr_df.dropna(subset=["Lead Score", "Bot Score"])
+                if len(_corr_df) >= 3:
+                    _LS_COLORS2 = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB",
+                                   "Not Interested": "#6b7280", "RNR": "#7c3aed"}
+                    _sc_fig = go.Figure()
+                    if _has_ls:
+                        for _ls_v in _corr_df["Lead Stage"].unique():
+                            _sub = _corr_df[_corr_df["Lead Stage"] == _ls_v]
+                            _sc_fig.add_trace(go.Scatter(
+                                x=_sub["Bot Score"], y=_sub["Lead Score"],
+                                mode="markers", name=str(_ls_v),
+                                marker=dict(size=8, color=_LS_COLORS2.get(_ls_v, "#94a3b8"), opacity=0.75)))
+                    else:
+                        _sc_fig.add_trace(go.Scatter(
+                            x=_corr_df["Bot Score"], y=_corr_df["Lead Score"],
+                            mode="markers", marker=dict(size=8, color="#2563EB", opacity=0.7), name="Audit"))
+                    _sc_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                        font=dict(family="Inter,sans-serif", size=11),
+                        margin=dict(l=10, r=10, t=20, b=10), height=300,
+                        xaxis_title="Bot Score", yaxis_title="Lead Score",
+                        legend=dict(orientation="h", y=1.1, x=0))
+                    st.plotly_chart(_sc_fig, use_container_width=True, config={"displayModeBar": False})
+                    _corr_val = round(_corr_df["Bot Score"].corr(_corr_df["Lead Score"]), 3)
+                    _corr_interp = "strong positive" if _corr_val > 0.5 else "moderate positive" if _corr_val > 0.2 else "weak/none" if abs(_corr_val) <= 0.2 else "moderate negative" if _corr_val > -0.5 else "strong negative"
+                    st.markdown(f'<div style="font-size:0.70rem;color:#374151;margin-top:-8px;">Pearson r = <b>{_corr_val}</b> ({_corr_interp} correlation)</div>', unsafe_allow_html=True)
+            except Exception:
+                pass
+
+        # ── Section 9 — Co-failure Analysis ──────────────────────────────────────
+        st.markdown('<div class="section-chip">🔴 Co-failure Analysis (Parameters That Fail Together)</div>', unsafe_allow_html=True)
         try:
-            _hm_params = []
+            _all_param_cols = []
             for _t in _QA_SCHEMA.get("tiers", []):
                 for _p in _t.get("params", []):
                     if _p["col"] in _dash_df.columns:
-                        _pmx = [int(o) for o in _p.get("options", []) if str(o).lstrip("-").isdigit()]
-                        _pmax = max(_pmx) if _pmx else 2
-                        _hm_params.append((_p["col"], _pmax))
-            _hm_qas = sorted(_dash_df["QA"].dropna().unique().tolist())
-            if len(_hm_params) >= 2 and len(_hm_qas) >= 1:
-                _hm_z = []
-                _hm_text = []
-                for _qn in _hm_qas:
-                    _row_z = []
-                    _row_t = []
-                    _qg = _dash_df[_dash_df["QA"] == _qn]
-                    for _pcol, _pmax in _hm_params:
-                        _pv = pd.to_numeric(_qg[_pcol].astype(str).str.strip().replace(
-                            {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmax)}), errors="coerce").dropna()
-                        if len(_pv) > 0:
-                            _pct = round(_pv.mean() / _pmax * 100, 0)
-                            _row_z.append(_pct)
-                            _row_t.append(f"{int(_pct)}%")
-                        else:
-                            _row_z.append(None)
-                            _row_t.append("—")
-                    _hm_z.append(_row_z)
-                    _hm_text.append(_row_t)
-                _hm_fig = go.Figure(go.Heatmap(
-                    z=_hm_z,
-                    x=[p[0] for p in _hm_params],
-                    y=_hm_qas,
-                    text=_hm_text,
-                    texttemplate="%{text}",
-                    colorscale=[[0, "#dc2626"], [0.5, "#f59e0b"], [0.7, "#34d399"], [1, "#059669"]],
-                    zmin=0, zmax=100,
-                    showscale=True,
-                    colorbar=dict(title="Score %", thickness=12, len=0.9),
-                ))
-                _hm_fig.update_layout(
-                    plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font=dict(family="Inter,sans-serif", size=10),
-                    margin=dict(l=10, r=10, t=20, b=80),
-                    height=max(200, len(_hm_qas) * 50 + 100),
-                    xaxis=dict(tickangle=-35, side="bottom"),
-                )
-                st.plotly_chart(_hm_fig, use_container_width=True, config={"displayModeBar": False})
-        except Exception:
-            pass
-
-    # ── Section 11 — Campaign Score Divergence (vs portfolio avg) ────────────
-    if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns and _total_d >= 5:
-        st.markdown('<div class="section-chip">↔️ Campaign Score Divergence vs Portfolio Average</div>', unsafe_allow_html=True)
-        try:
-            _port_avg = _bs_d.dropna().mean()
-            _div_rows = []
-            for _cn, _cg in _dash_df.groupby("Campaign Name"):
-                _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
-                if len(_c_bs) >= 2:
-                    _c_avg = _c_bs.mean()
-                    _div_rows.append({"Campaign": str(_cn), "Avg": round(_c_avg, 1),
-                                      "Delta": round(_c_avg - _port_avg, 1), "N": len(_c_bs)})
-            _div_rows.sort(key=lambda x: x["Delta"])
-            if len(_div_rows) >= 2:
-                _dv_fig = go.Figure()
-                _dv_fig.add_trace(go.Bar(
-                    y=[r["Campaign"] for r in _div_rows],
-                    x=[r["Delta"] for r in _div_rows],
-                    orientation="h",
-                    marker_color=["#059669" if r["Delta"] >= 0 else "#dc2626" for r in _div_rows],
-                    # Label: "Campaign Name  Avg 83.2%  (+3.2 vs avg)"
-                    text=[f'{r["Campaign"]}  ·  {r["Avg"]}%  ({r["Delta"]:+.1f})  [{r["N"]} calls]' for r in _div_rows],
-                    textposition="outside",
-                    cliponaxis=False,
-                    textfont=dict(size=10),
-                ))
-                _dv_fig.add_vline(x=0, line_color="#64748b", line_width=1.5,
-                    annotation_text=f"Portfolio Avg: {_port_avg:.1f}%",
-                    annotation_position="top",
-                    annotation_font=dict(size=10, color="#64748b"))
-                _dv_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font=dict(family="Inter,sans-serif", size=11),
-                    margin=dict(l=10, r=220, t=30, b=10),
-                    height=max(200, len(_div_rows) * 44 + 70),
-                    xaxis_title=f"Score deviation vs Portfolio Average ({_port_avg:.1f}%)",
-                    xaxis=dict(ticksuffix="%"),
-                    yaxis=dict(tickfont=dict(size=11)),
-                    showlegend=False)
-                st.plotly_chart(_dv_fig, use_container_width=True, config={"displayModeBar": False})
-        except Exception:
-            pass
-
-    # ── Section 12 — What Went Right / Needs Attention (all params) ──────────
-    _param_avgs_d = []
-    for _tier_d in _QA_SCHEMA.get("tiers", []):
-        for _p_d in _tier_d.get("params", []):
-            if _p_d["col"] not in _dash_df.columns:
-                continue
-            _pmx = [int(o) for o in _p_d.get("options", []) if str(o).lstrip("-").isdigit()]
-            _pmax_d = max(_pmx) if _pmx else 2
-            _pv_d = pd.to_numeric(
-                _dash_df[_p_d["col"]].astype(str).str.strip().replace({"NA": "", "nan": "", "Fatal": ""}),
-                errors="coerce").dropna()
-            if len(_pv_d) == 0:
-                continue
-            _param_avgs_d.append({"col": _p_d["col"], "pct": round(_pv_d.mean() / _pmax_d * 100, 1)})
-
-    _strong_d = sorted([p for p in _param_avgs_d if p["pct"] >= 75], key=lambda x: -x["pct"])[:8]
-    _weak_d = sorted([p for p in _param_avgs_d if p["pct"] < 70], key=lambda x: x["pct"])[:8]
-
-    _s12l, _s12r = st.columns(2)
-    with _s12l:
-        st.markdown('<div class="section-chip">✅ What Went Right</div>', unsafe_allow_html=True)
-        if _strong_d:
-            _wr_d = ""
-            for _wp in _strong_d:
-                _wr_d += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-                          f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp["col"]}</div>'
-                          f'<div style="flex:1;height:10px;background:#D1FAE5;border-radius:5px;overflow:hidden;">'
-                          f'<div style="width:{_wp["pct"]}%;height:100%;background:linear-gradient(90deg,#059669,#34D399);border-radius:5px;"></div></div>'
-                          f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:#059669;flex-shrink:0;text-align:right;">{_wp["pct"]}%</div>'
-                          f'</div>')
-            st.markdown(f'<div style="background:#fff;border:1px solid #D1FAE5;border-left:3px solid #059669;border-radius:10px;padding:14px 16px;">{_wr_d}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown('<div style="background:#F8FAFF;border:1px solid #DBEAFE;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#64748b;text-align:center;">No parameters ≥75% yet</div>', unsafe_allow_html=True)
-
-    with _s12r:
-        st.markdown('<div class="section-chip">⚠️ Needs Attention</div>', unsafe_allow_html=True)
-        if _weak_d:
-            _ww_d = ""
-            for _wp2 in _weak_d:
-                _urg = "#dc2626" if _wp2["pct"] < 50 else "#d97706"
-                _bg2 = "#FEE2E2" if _wp2["pct"] < 50 else "#FEF3C7"
-                _ww_d += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-                          f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp2["col"]}</div>'
-                          f'<div style="flex:1;height:10px;background:{_bg2};border-radius:5px;overflow:hidden;">'
-                          f'<div style="width:{_wp2["pct"]}%;height:100%;background:{_urg};border-radius:5px;"></div></div>'
-                          f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:{_urg};flex-shrink:0;text-align:right;">{_wp2["pct"]}%</div>'
-                          f'</div>')
-            st.markdown(f'<div style="background:#fff;border:1px solid #FEE2E2;border-left:3px solid #dc2626;border-radius:10px;padding:14px 16px;">{_ww_d}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#059669;text-align:center;">🎉 All parameters performing well!</div>', unsafe_allow_html=True)
-
-    # ── Section 13 — All-param score bars (full overview) ────────────────────
-    if _param_avgs_d:
-        st.markdown('<div class="section-chip">📊 All Parameter Scores</div>', unsafe_allow_html=True)
-        try:
-            _allp_sorted = sorted(_param_avgs_d, key=lambda x: x["pct"])
-            _ap_fig = go.Figure()
-            _ap_fig.add_trace(go.Bar(
-                y=[p["col"] for p in _allp_sorted],
-                x=[p["pct"] for p in _allp_sorted],
-                orientation="h",
-                marker_color=["#059669" if p["pct"] >= 80 else "#f59e0b" if p["pct"] >= 60 else "#dc2626" for p in _allp_sorted],
-                text=[f'{p["pct"]}%' for p in _allp_sorted],
-                textposition="auto",
-            ))
-            _ap_fig.add_vline(x=80, line_dash="dot", line_color="#6b7280", annotation_text="80%")
-            _ap_fig.update_layout(
-                plot_bgcolor="#fff", paper_bgcolor="#fff",
-                font=dict(family="Inter,sans-serif", size=11),
-                margin=dict(l=10, r=10, t=20, b=10),
-                height=max(300, len(_allp_sorted) * 28 + 60),
-                showlegend=False, xaxis_title="Avg Score %", xaxis_range=[0, 108],
-            )
-            st.plotly_chart(_ap_fig, use_container_width=True, config={"displayModeBar": False})
-        except Exception:
-            pass
-
-    # ── Section 14 — Full Dashboard Email Builder (all panels tick/untick) ────
-    st.markdown('<div class="section-chip">📧 Send Dashboard as Email — Select Any Section</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:14px;">Tick every section you want to include. Each panel is converted to email-safe HTML and assembled into a single professional report email.</div>', unsafe_allow_html=True)
-
-    # ── Email-safe table helper ───────────────────────────────────────────────
-    def _em_tbl(title, icon, headers, rows, hdr_color="#0B1F3A"):
-        """Generate email-safe HTML table block."""
-        _th = "".join(f'<th style="background:{hdr_color};color:#fff;padding:8px 10px;font-size:11px;font-weight:700;text-align:left;white-space:nowrap;">{h}</th>' for h in headers)
-        _tr_html = ""
-        for _ri, _row in enumerate(rows):
-            _rb = "#f8faff" if _ri % 2 == 0 else "#ffffff"
-            _td = "".join(f'<td style="padding:7px 10px;font-size:11px;color:#374151;border-bottom:1px solid #e2e8f0;">{cell}</td>' for cell in _row)
-            _tr_html += f'<tr style="background:{_rb};">{_td}</tr>'
-        return (
-            f'<div style="font-family:Arial,sans-serif;margin-bottom:16px;">'
-            f'<div style="background:{hdr_color};color:#fff;padding:10px 14px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;">{icon} {title}</div>'
-            f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;overflow:hidden;">'
-            f'<table style="width:100%;border-collapse:collapse;"><thead><tr>{_th}</tr></thead>'
-            f'<tbody>{_tr_html}</tbody></table></div></div>'
-        )
-
-    def _em_kv_card(title, icon, pairs, accent="#2563EB"):
-        """Email-safe key-value card."""
-        _rows = "".join(
-            f'<tr><td style="padding:6px 10px;font-size:11px;color:#64748b;font-weight:600;width:50%;border-bottom:1px solid #f0f4fa;">{k}</td>'
-            f'<td style="padding:6px 10px;font-size:12px;font-weight:700;color:#0B1F3A;border-bottom:1px solid #f0f4fa;">{v}</td></tr>'
-            for k, v in pairs
-        )
-        return (
-            f'<div style="font-family:Arial,sans-serif;border:1px solid {accent}33;border-radius:8px;overflow:hidden;margin-bottom:12px;">'
-            f'<div style="background:{accent};color:#fff;padding:9px 12px;font-size:12px;font-weight:700;">{icon} {title}</div>'
-            f'<table style="width:100%;border-collapse:collapse;">{_rows}</table></div>'
-        )
-
-    def _em_insight_card(title, detail, itype):
-        _tc = {"critical": "#dc2626", "warning": "#d97706", "success": "#059669", "info": "#2563EB"}.get(itype, "#2563EB")
-        _bg = {"critical": "#fef2f2", "warning": "#fffbeb", "success": "#f0fdf4", "info": "#eff6ff"}.get(itype, "#eff6ff")
-        return (
-            f'<div style="background:{_bg};border-left:4px solid {_tc};border-radius:6px;padding:10px 14px;margin-bottom:8px;font-family:Arial,sans-serif;">'
-            f'<div style="font-size:12px;font-weight:700;color:#0B1F3A;margin-bottom:4px;">{title}</div>'
-            f'<div style="font-size:11px;color:#374151;">{detail}</div></div>'
-        )
-
-    def _em_bar_row(label, pct, color):
-        _pct = max(0, min(100, pct))
-        return (
-            f'<tr><td style="padding:5px 10px;font-size:11px;color:#0B1F3A;font-weight:600;width:160px;white-space:nowrap;">{label}</td>'
-            f'<td style="padding:5px 10px;"><table width="100%" style="border-collapse:collapse;"><tr>'
-            f'<td style="background:#f0f4fa;border-radius:4px;height:10px;padding:0;overflow:hidden;">'
-            f'<div style="background:{color};height:10px;width:{_pct:.0f}%;border-radius:4px;"></div></td></tr></table></td>'
-            f'<td style="padding:5px 10px;font-size:11px;font-weight:800;color:{color};width:42px;text-align:right;">{_pct:.1f}%</td></tr>'
-        )
-
-    # ── Build all dashboard sections ──────────────────────────────────────────
-    _ALL_SECTIONS = []   # {id, label, icon, default, preview_html, email_html}
-
-    def _add_section(sid, label, icon, default, preview_fn, email_fn):
-        try:
-            _prev = preview_fn()
-            _eml  = email_fn()
-            _ALL_SECTIONS.append({"id": sid, "label": label, "icon": icon,
-                                   "default": default, "preview": _prev, "email": _eml})
-        except Exception:
-            pass
-
-    # ── S1: KPI Overview ─────────────────────────────────────────────────────
-    def _s1_prev():
-        _sd_cfg2 = [("Total Audits", str(_total_d), "#0B1F3A"), ("Avg Bot Score", f"{_avg_d or '—'}%", "#0891b2"),
-                    ("Pass Rate", f"{_pr_d}%", "#059669"), ("Passed", str(_pass_d), "#059669"),
-                    ("Needs Review", str(_rev_d), "#d97706"), ("Auto-Fails", str(_fatal_d), "#dc2626")]
-        _h = '<div style="display:flex;flex-wrap:wrap;gap:6px;">'
-        for _lbl, _val, _clr in _sd_cfg2:
-            _h += (f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:8px 12px;min-width:90px;">'
-                   f'<div style="font-size:1.2rem;font-weight:900;color:{_clr};">{_val}</div>'
-                   f'<div style="font-size:0.6rem;color:#64748b;font-weight:700;text-transform:uppercase;">{_lbl}</div></div>')
-        return _h + "</div>"
-
-    def _s1_eml():
-        _pairs = [("Total Audits", _total_d), ("Avg Bot Score", f"{_avg_d or '—'}%"), ("Pass Rate", f"{_pr_d}%"),
-                  ("Passed ✅", _pass_d), ("Needs Review 🟡", _rev_d), ("Auto-Fails 🚨", _fatal_d),
-                  ("Score Momentum", f"{_momentum_arrow} {_momentum_txt}")]
-        _cells = "".join(
-            f'<td style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;text-align:center;width:16%;">'
-            f'<div style="font-size:18px;font-weight:900;color:#0B1F3A;">{v}</div>'
-            f'<div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;margin-top:4px;">{k}</div></td>'
-            for k, v in _pairs
-        )
-        return (f'<div style="font-family:Arial,sans-serif;background:#0B1F3A;padding:10px 14px;border-radius:8px 8px 0 0;'
-                f'color:#fff;font-size:13px;font-weight:700;">📊 KPI Overview</div>'
-                f'<table width="100%" style="border-collapse:separate;border-spacing:4px;background:#f8faff;'
-                f'padding:10px;border-radius:0 0 8px 8px;margin-bottom:16px;">'
-                f'<tr>{_cells}</tr></table>')
-    _add_section("kpi", "KPI Overview", "📊", True, _s1_prev, _s1_eml)
-
-    # ── S2: Status Distribution ──────────────────────────────────────────────
-    def _s2_prev():
-        _cfg = [("✅ Pass", "#0ebc6e", _pass_d), ("🟡 Needs Review", "#f59e0b", _rev_d),
-                ("❌ Fail", "#ef4444", _fail_d), ("🚨 Auto-Fail", "#dc2626", _fatal_d)]
-        _h = ""
-        for _sn, _sc, _sv in _cfg:
-            _sp = round(_sv / _total_d * 100, 1) if _total_d else 0
-            _h += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
-                   f'<div style="width:100px;font-size:0.68rem;font-weight:600;color:#0B1F3A;">{_sn}</div>'
-                   f'<div style="flex:1;height:10px;background:#f0f2f5;border-radius:5px;">'
-                   f'<div style="width:{_sp}%;height:100%;background:{_sc};border-radius:5px;"></div></div>'
-                   f'<div style="width:55px;font-size:0.68rem;font-weight:700;color:{_sc};text-align:right;">{_sv} ({_sp}%)</div></div>')
-        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h}</div>'
-
-    def _s2_eml():
-        _cfg = [("✅ Pass", "#059669", _pass_d), ("🟡 Needs Review", "#d97706", _rev_d),
-                ("❌ Fail", "#ef4444", _fail_d), ("🚨 Auto-Fail", "#dc2626", _fatal_d)]
-        _rows = [(_sn, str(_sv), f"{round(_sv/_total_d*100,1) if _total_d else 0}%",
-                  "█" * int(_sv/_total_d*20) if _total_d else "") for _sn, _, _sv in _cfg]
-        return _em_tbl("Status Distribution", "📊", ["Status", "Count", "Rate", "Bar"], _rows, "#0B1F3A")
-    _add_section("status_dist", "Status Distribution", "📊", True, _s2_prev, _s2_eml)
-
-    # ── S3: Score Trend ──────────────────────────────────────────────────────
-    def _s3_prev():
-        if "Audit Date" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
-            return '<div style="font-size:0.70rem;color:#64748b;">No date/score data.</div>'
-        _td = _dash_df[["Audit Date","Bot Score"]].copy()
-        _td["Audit Date"] = pd.to_datetime(_td["Audit Date"], errors="coerce")
-        _td["Bot Score"] = pd.to_numeric(_td["Bot Score"], errors="coerce")
-        _td = _td.dropna().sort_values("Audit Date").groupby("Audit Date")["Bot Score"].mean().reset_index().tail(7)
-        _h = '<div style="font-size:0.68rem;color:#64748b;margin-bottom:4px;">Last 7 data points (daily avg):</div>'
-        for _, _row in _td.iterrows():
-            _v = round(_row["Bot Score"], 1)
-            _c = "#059669" if _v >= 80 else "#d97706" if _v >= 60 else "#dc2626"
-            _h += (f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
-                   f'<span style="font-size:0.65rem;color:#64748b;width:72px;">{str(_row["Audit Date"])[:10]}</span>'
-                   f'<div style="flex:1;height:8px;background:#f0f2f5;border-radius:4px;">'
-                   f'<div style="width:{_v}%;height:100%;background:{_c};border-radius:4px;"></div></div>'
-                   f'<span style="font-size:0.68rem;font-weight:700;color:{_c};width:35px;">{_v}%</span></div>')
-        return _h
-
-    def _s3_eml():
-        if "Audit Date" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
-            return ""
-        _td2 = _dash_df[["Audit Date","Bot Score"]].copy()
-        _td2["Audit Date"] = pd.to_datetime(_td2["Audit Date"], errors="coerce")
-        _td2["Bot Score"] = pd.to_numeric(_td2["Bot Score"], errors="coerce")
-        _td2 = _td2.dropna().sort_values("Audit Date").groupby("Audit Date")["Bot Score"].mean().reset_index()
-        _rows2 = []
-        for _, _r in _td2.iterrows():
-            _v = round(_r["Bot Score"], 1)
-            _status = "✅ Above Target" if _v >= 80 else "🟡 Below Target" if _v >= 60 else "🔴 Critical"
-            _rows2.append((str(_r["Audit Date"])[:10], f"{_v}%", str(len(_td2)), _status))
-        return _em_tbl("Score Trend Over Time", "📈", ["Date", "Avg Bot Score", "Data Points", "Status"], _rows2[-14:], "#0891b2")
-    _add_section("score_trend", "Score Trend", "📈", True, _s3_prev, _s3_eml)
-
-    # ── S4: QA Leaderboard ────────────────────────────────────────────────────
-    def _s4_prev_fn():
-        if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
-            return '<div style="font-size:0.70rem;color:#64748b;">No QA data.</div>'
-        _rows3 = []
-        for _qn, _qg in _dash_df.groupby("QA"):
-            _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
-            _qst = _qg["Status"].astype(str).str.strip() if "Status" in _qg.columns else pd.Series([])
-            _rows3.append({"n": str(_qn), "avg": round(_qbs.mean(),1) if len(_qbs) else 0,
-                           "cnt": len(_qg), "pr": round(int((_qst=="Pass").sum())/len(_qg)*100,1) if len(_qg) else 0,
-                           "af": int((_qst=="Auto-Fail").sum())})
-        _rows3.sort(key=lambda x: -x["avg"])
-        _h2 = '<table style="width:100%;border-collapse:collapse;font-size:0.68rem;">'
-        for _mi, _r in enumerate(_rows3[:6]):
-            _bg3 = "#f8faff" if _mi % 2 == 0 else "#fff"
-            _mdl = ["🥇","🥈","🥉"][_mi] if _mi < 3 else ""
-            _h2 += (f'<tr style="background:{_bg3};">'
-                    f'<td style="padding:5px 8px;font-weight:600;">{_mdl} {_r["n"]}</td>'
-                    f'<td style="padding:5px 8px;color:#2563EB;">{_r["cnt"]}</td>'
-                    f'<td style="padding:5px 8px;font-weight:700;color:#059669;">{_r["avg"]}%</td>'
-                    f'<td style="padding:5px 8px;">{_r["pr"]}%</td>'
-                    f'<td style="padding:5px 8px;color:#dc2626;">{_r["af"]}</td></tr>')
-        _h2 += "</table>"
-        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h2}</div>'
-
-    def _s4_eml_fn():
-        if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
-            return ""
-        _erows = []
-        for _qn, _qg in _dash_df.groupby("QA"):
-            _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
-            _qst = _qg["Status"].astype(str).str.strip() if "Status" in _qg.columns else pd.Series([])
-            _erows.append((str(_qn), str(len(_qg)), f"{round(_qbs.mean(),1) if len(_qbs) else 0}%",
-                           f"{round(int((_qst=='Pass').sum())/len(_qg)*100,1) if len(_qg) else 0}%",
-                           str(int((_qst=="Auto-Fail").sum()))))
-        _erows.sort(key=lambda x: -float(x[2].rstrip("%")))
-        return _em_tbl("QA Leaderboard", "👤", ["QA Auditor", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"], _erows, "#059669")
-    _add_section("qa_lb", "QA Leaderboard", "👤", True, _s4_prev_fn, _s4_eml_fn)
-
-    # ── S5: Campaign Rankings ─────────────────────────────────────────────────
-    def _s5_prev_fn():
-        if "Campaign Name" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
-            return '<div style="font-size:0.70rem;color:#64748b;">No campaign data.</div>'
-        _rows5 = []
-        for _cn, _cg in _dash_df.groupby("Campaign Name"):
-            _cbs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
-            _cst = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
-            _rows5.append({"n": str(_cn)[:22], "avg": round(_cbs.mean(),1) if len(_cbs) else 0,
-                           "cnt": len(_cg), "pr": round(int((_cst=="Pass").sum())/len(_cg)*100,1) if len(_cg) else 0,
-                           "af": int((_cst=="Auto-Fail").sum())})
-        _rows5.sort(key=lambda x: -x["avg"])
-        _h5 = '<table style="width:100%;border-collapse:collapse;font-size:0.68rem;">'
-        for _mi5, _r5 in enumerate(_rows5[:5]):
-            _bg5 = "#f8faff" if _mi5 % 2 == 0 else "#fff"
-            _h5 += (f'<tr style="background:{_bg5};">'
-                    f'<td style="padding:5px 8px;font-weight:600;">{_r5["n"]}</td>'
-                    f'<td style="padding:5px 8px;color:#2563EB;">{_r5["cnt"]}</td>'
-                    f'<td style="padding:5px 8px;font-weight:700;color:#059669;">{_r5["avg"]}%</td>'
-                    f'<td style="padding:5px 8px;">{_r5["pr"]}%</td>'
-                    f'<td style="padding:5px 8px;color:#dc2626;">{_r5["af"]}</td></tr>')
-        _h5 += "</table>"
-        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h5}</div>'
-
-    def _s5_eml_fn():
-        if "Campaign Name" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
-            return ""
-        _erows5 = []
-        for _cn, _cg in _dash_df.groupby("Campaign Name"):
-            _cbs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
-            _cst = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
-            _erows5.append((str(_cn), str(len(_cg)), f"{round(_cbs.mean(),1) if len(_cbs) else 0}%",
-                            f"{round(int((_cst=='Pass').sum())/len(_cg)*100,1) if len(_cg) else 0}%",
-                            str(int((_cst=="Auto-Fail").sum()))))
-        _erows5.sort(key=lambda x: -float(x[2].rstrip("%")))
-        return _em_tbl("Campaign Rankings", "🎯", ["Campaign", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"], _erows5, "#1a62f2")
-    _add_section("campaign_lb", "Campaign Rankings", "🎯", True, _s5_prev_fn, _s5_eml_fn)
-
-    # ── S6: Auditor Calibration ───────────────────────────────────────────────
-    def _s6_prev_fn():
-        if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
-            return '<div style="font-size:0.70rem;color:#64748b;">No QA data.</div>'
-        _rows6 = []
-        for _qn, _qg in _dash_df.groupby("QA"):
-            _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
-            if len(_qbs) >= 2:
-                _rows6.append({"n": str(_qn), "avg": round(_qbs.mean(),1), "std": round(_qbs.std(),1), "cnt": len(_qbs)})
-        _rows6.sort(key=lambda x: x["std"])
-        _h6 = '<table style="width:100%;border-collapse:collapse;font-size:0.68rem;">'
-        for _mi6, _r6 in enumerate(_rows6[:6]):
-            _bg6 = "#f8faff" if _mi6 % 2 == 0 else "#fff"
-            _cc6 = "#059669" if _r6["std"] < 8 else "#d97706" if _r6["std"] < 15 else "#dc2626"
-            _h6 += (f'<tr style="background:{_bg6};">'
-                    f'<td style="padding:5px 8px;font-weight:600;">{_r6["n"]}</td>'
-                    f'<td style="padding:5px 8px;color:#2563EB;">{_r6["cnt"]}</td>'
-                    f'<td style="padding:5px 8px;font-weight:700;color:#059669;">{_r6["avg"]}%</td>'
-                    f'<td style="padding:5px 8px;font-weight:700;color:{_cc6};">σ {_r6["std"]}</td></tr>')
-        _h6 += "</table>"
-        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h6}</div>'
-
-    def _s6_eml_fn():
-        if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
-            return ""
-        _erows6 = []
-        for _qn, _qg in _dash_df.groupby("QA"):
-            _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
-            if len(_qbs) >= 2:
-                _std6 = round(_qbs.std(), 1)
-                _cons = "✅ Consistent" if _std6 < 8 else "🟡 Moderate" if _std6 < 15 else "🔴 High Variance"
-                _erows6.append((str(_qn), str(len(_qbs)), f"{round(_qbs.mean(),1)}%", f"σ={_std6}", _cons))
-        _erows6.sort(key=lambda x: float(x[3].lstrip("σ=")))
-        return _em_tbl("Auditor Calibration", "📐", ["QA Auditor", "Audits", "Avg Score", "Std Dev", "Consistency"], _erows6, "#7c3aed")
-    _add_section("auditor_cal", "Auditor Calibration", "📐", False, _s6_prev_fn, _s6_eml_fn)
-
-    # ── S7: Tier Breakdown ────────────────────────────────────────────────────
-    def _s7_data():
-        _rows7 = []
-        for _t7 in _QA_SCHEMA.get("tiers", []):
-            _tsc7 = []
-            for _p7 in _t7.get("params", []):
-                if _p7["col"] not in _dash_df.columns:
-                    continue
-                _pmx7 = max([int(o) for o in _p7.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
-                _pv7 = pd.to_numeric(_dash_df[_p7["col"]].astype(str).str.strip().replace(
-                    {"NA": "", "nan": "", "Fatal": "", "Yes": "0", "No": str(_pmx7)}), errors="coerce").dropna()
-                if len(_pv7):
-                    _tsc7.append(_pv7.mean() / _pmx7 * 100)
-            if _tsc7:
-                _avg7 = round(sum(_tsc7) / len(_tsc7), 1)
-                _lbl7 = _t7["label"].split("·")[1].strip() if "·" in _t7["label"] else _t7["label"]
-                _rows7.append((_lbl7, _t7.get("weight_pct", 0), _avg7, _t7.get("color", "#2563EB")))
-        return _rows7
-
-    def _s7_prev():
-        _rows7 = _s7_data()
-        if not _rows7:
-            return '<div style="font-size:0.70rem;color:#64748b;">No tier data.</div>'
-        _h7 = ""
-        for _ln7, _wt7, _av7, _cl7 in _rows7:
-            _h7 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-                    f'<span style="font-size:0.68rem;font-weight:700;color:{_cl7};width:90px;">{_ln7}</span>'
-                    f'<div style="flex:1;height:10px;background:#f0f2f5;border-radius:5px;">'
-                    f'<div style="width:{_av7}%;height:100%;background:{_cl7};border-radius:5px;"></div></div>'
-                    f'<span style="font-size:0.68rem;font-weight:800;color:{_cl7};width:40px;">{_av7}%</span>'
-                    f'<span style="font-size:0.60rem;color:#64748b;">(wt:{_wt7}%)</span></div>')
-        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h7}</div>'
-
-    def _s7_eml():
-        _rows7 = _s7_data()
-        _erows7 = [(_ln, f"{_wt}%", f"{_av}%", "✅ On Target" if _av >= 80 else "🟡 Below Target" if _av >= 65 else "🔴 Critical")
-                   for _ln, _wt, _av, _ in _rows7]
-        return _em_tbl("Tier Breakdown", "🏗️", ["Tier", "Weight", "Avg Score", "Status"], _erows7, "#dc2626")
-    _add_section("tier_breakdown", "Tier Breakdown", "🏗️", True, _s7_prev, _s7_eml)
-
-    # ── S8: Disposition Breakdown ─────────────────────────────────────────────
-    def _s8_data():
-        _dc8 = next((c for c in ["Disposition", "Correct Disposition", "Correct Disposition (Expected)"] if c in _dash_df.columns), None)
-        if not _dc8:
-            return None, []
-        _cnt8 = _dash_df[_dc8].astype(str).str.strip().value_counts()
-        _cnt8 = _cnt8[_cnt8.index != "nan"][:10]
-        return _dc8, _cnt8
-
-    def _s8_prev():
-        _, _cnt8 = _s8_data()
-        if not len(_cnt8):
-            return '<div style="font-size:0.70rem;color:#64748b;">No disposition data.</div>'
-        _colors8 = ["#2563EB","#0891b2","#059669","#d97706","#dc2626","#7c3aed","#db2777","#0d9488","#b45309","#374151"]
-        _h8 = ""
-        for _i8, (_k8, _v8) in enumerate(_cnt8.items()):
-            _p8 = round(_v8 / _cnt8.sum() * 100, 1)
-            _c8 = _colors8[_i8 % len(_colors8)]
-            _h8 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
-                    f'<span style="font-size:0.65rem;font-weight:600;color:#0B1F3A;width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_k8}</span>'
-                    f'<div style="flex:1;height:8px;background:#f0f2f5;border-radius:4px;">'
-                    f'<div style="width:{_p8}%;height:100%;background:{_c8};border-radius:4px;"></div></div>'
-                    f'<span style="font-size:0.65rem;font-weight:700;color:{_c8};width:55px;text-align:right;">{_v8} ({_p8}%)</span></div>')
-        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h8}</div>'
-
-    def _s8_eml():
-        _, _cnt8 = _s8_data()
-        if not len(_cnt8):
-            return ""
-        _t8 = _cnt8.sum()
-        _erows8 = [(str(_k), str(_v), f"{round(_v/_t8*100,1)}%") for _k, _v in _cnt8.items()]
-        return _em_tbl("Disposition Breakdown", "📂", ["Disposition", "Count", "Percentage"], _erows8, "#0891b2")
-    _add_section("disposition", "Disposition Breakdown", "📂", True, _s8_prev, _s8_eml)
-
-    # ── S9: Lead Stage Breakdown ──────────────────────────────────────────────
-    def _s9_data():
-        if "Lead Stage" not in _dash_df.columns:
-            return {}
-        _lsv9 = _dash_df["Lead Stage"].astype(str).str.strip().value_counts()
-        return {k: v for k, v in _lsv9.items() if k != "nan"}
-
-    def _s9_prev():
-        _lsd9 = _s9_data()
-        if not _lsd9:
-            return '<div style="font-size:0.70rem;color:#64748b;">No Lead Stage data.</div>'
-        _LS_C9 = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB", "Not Interested": "#6b7280", "RNR": "#7c3aed"}
-        _t9 = sum(_lsd9.values())
-        _h9 = ""
-        for _k9, _v9 in _lsd9.items():
-            _p9 = round(_v9 / _t9 * 100, 1)
-            _c9 = _LS_C9.get(_k9, "#94a3b8")
-            _h9 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
-                    f'<span style="font-size:0.70rem;font-weight:700;color:{_c9};width:90px;">{_k9}</span>'
-                    f'<div style="flex:1;height:10px;background:#f0f2f5;border-radius:5px;">'
-                    f'<div style="width:{_p9}%;height:100%;background:{_c9};border-radius:5px;"></div></div>'
-                    f'<span style="font-size:0.70rem;font-weight:800;color:{_c9};width:70px;text-align:right;">{_v9} ({_p9}%)</span></div>')
-        _conv9 = round((_lsd9.get("Hot", 0) + _lsd9.get("Warm", 0)) / _t9 * 100, 1) if _t9 else 0
-        _h9 += f'<div style="font-size:0.65rem;color:#059669;margin-top:6px;font-weight:700;">Conversion Readiness (Hot+Warm): {_conv9}%</div>'
-        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h9}</div>'
-
-    def _s9_eml():
-        _lsd9 = _s9_data()
-        if not _lsd9:
-            return ""
-        _t9 = sum(_lsd9.values())
-        _LS_C9 = {"Hot": "🔥 Hot", "Warm": "🌤 Warm", "Cold": "❄️ Cold", "Not Interested": "👎 Not Interested", "RNR": "📵 RNR"}
-        _erows9 = [(_LS_C9.get(k, k), str(v), f"{round(v/_t9*100,1)}%",
-                    "High Priority" if k == "Hot" else "Follow-up" if k == "Warm" else "Low Priority" if k == "Cold" else "—")
-                   for k, v in _lsd9.items()]
-        return _em_tbl("Lead Stage Breakdown", "🔥", ["Lead Stage", "Count", "Percentage", "Priority"], _erows9, "#d97706")
-    _add_section("lead_stage", "Lead Stage Breakdown", "🔥", True, _s9_prev, _s9_eml)
-
-    # ── S10: Client Health Matrix ─────────────────────────────────────────────
-    def _s10_data():
-        if "Client" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
-            return []
-        _rows10 = []
-        for _cn10, _cg10 in _dash_df.groupby("Client"):
-            _cbs10 = pd.to_numeric(_cg10["Bot Score"], errors="coerce").dropna()
-            _cst10 = _cg10["Status"].astype(str).str.strip() if "Status" in _cg10.columns else pd.Series([])
-            _avg10 = round(_cbs10.mean(), 1) if len(_cbs10) else 0
-            _pr10 = round(int((_cst10 == "Pass").sum()) / len(_cg10) * 100, 1) if len(_cg10) else 0
-            _af10 = int((_cst10 == "Auto-Fail").sum())
-            _h10 = "🟢 Healthy" if _avg10 >= 80 and _pr10 >= 75 else "🟡 Monitor" if _avg10 >= 65 or _pr10 >= 55 else "🔴 At Risk"
-            _rows10.append((str(_cn10), len(_cg10), _avg10, f"{_pr10}%", _af10, _h10))
-        _rows10.sort(key=lambda x: -x[2])
-        return _rows10
-
-    def _s10_prev():
-        _rows10 = _s10_data()
-        if not _rows10:
-            return '<div style="font-size:0.70rem;color:#64748b;">No client data.</div>'
-        _h10 = '<table style="width:100%;border-collapse:collapse;font-size:0.67rem;">'
-        for _mi10, _r10 in enumerate(_rows10[:6]):
-            _bg10 = "#f0fdf4" if "Healthy" in _r10[5] else "#fffbeb" if "Monitor" in _r10[5] else "#fef2f2"
-            _h10 += (f'<tr style="background:{_bg10};">'
-                     f'<td style="padding:4px 8px;font-weight:600;">{_r10[0][:18]}</td>'
-                     f'<td style="padding:4px 8px;color:#2563EB;">{_r10[1]}</td>'
-                     f'<td style="padding:4px 8px;font-weight:700;color:#059669;">{_r10[2]}%</td>'
-                     f'<td style="padding:4px 8px;">{_r10[3]}</td>'
-                     f'<td style="padding:4px 8px;color:#dc2626;">{_r10[4]}</td>'
-                     f'<td style="padding:4px 8px;font-weight:700;">{_r10[5]}</td></tr>')
-        _h10 += "</table>"
-        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h10}</div>'
-
-    def _s10_eml():
-        _rows10 = _s10_data()
-        _erows10 = [(r[0], str(r[1]), f"{r[2]}%", r[3], str(r[4]), r[5]) for r in _rows10]
-        return _em_tbl("Client Health Matrix", "🏢", ["Client", "Audits", "Avg Score", "Pass Rate", "Auto-Fails", "Health"], _erows10, "#374151")
-    _add_section("client_health", "Client Health Matrix", "🏢", True, _s10_prev, _s10_eml)
-
-    # ── S11: Parameter Performance (Top + Bottom) ─────────────────────────────
-    def _s11_data():
-        _pa11 = []
-        for _t11 in _QA_SCHEMA.get("tiers", []):
-            for _p11 in _t11.get("params", []):
-                if _p11["col"] not in _dash_df.columns:
-                    continue
-                _pmx11 = max([int(o) for o in _p11.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
-                _pv11 = pd.to_numeric(_dash_df[_p11["col"]].astype(str).str.strip().replace(
-                    {"NA": "", "nan": "", "Fatal": ""}), errors="coerce").dropna()
-                if len(_pv11):
-                    _pa11.append((_p11["col"], round(_pv11.mean() / _pmx11 * 100, 1),
-                                  _t11["label"].split("·")[0].strip() if "·" in _t11["label"] else "TIER"))
-        return sorted(_pa11, key=lambda x: -x[1])
-
-    def _s11_prev():
-        _pa11 = _s11_data()
-        if not _pa11:
-            return '<div style="font-size:0.70rem;color:#64748b;">No parameter data.</div>'
-        _h11 = '<table style="width:100%;border-collapse:collapse;">'
-        for _pn, _pv, _pt in _pa11:
-            _c11 = "#059669" if _pv >= 80 else "#d97706" if _pv >= 60 else "#dc2626"
-            _h11 += _em_bar_row(_pn[:22], _pv, _c11)
-        _h11 += "</table>"
-        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;overflow:hidden;">{_h11}</div>'
-
-    def _s11_eml():
-        _pa11 = _s11_data()
-        _erows11 = [(_pn, _pt, f"{_pv}%",
-                     "✅ Strong" if _pv >= 80 else "🟡 Moderate" if _pv >= 65 else "🔴 Critical")
-                    for _pn, _pv, _pt in _pa11]
-        return _em_tbl("All Parameter Scores", "📊", ["Parameter", "Tier", "Avg Score", "Status"], _erows11, "#0B1F3A")
-    _add_section("params", "Parameter Scores", "📊", True, _s11_prev, _s11_eml)
-
-    # ── S12: Co-failure Analysis ──────────────────────────────────────────────
-    def _s12_data():
-        if _total_d < 5:
-            return []
-        _all_pc = [_p for _t in _QA_SCHEMA.get("tiers", []) for _p in _t.get("params", []) if _p["col"] in _dash_df.columns]
-        _fm12 = {}
-        for _p12 in _all_pc:
-            _pmx12 = max([int(o) for o in _p12.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
-            _pv12 = pd.to_numeric(_dash_df[_p12["col"]].astype(str).str.strip().replace(
-                {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmx12)}), errors="coerce")
-            _fm12[_p12["col"]] = (_pv12 < _pmx12 * 0.5).astype(int)
-        _fm12_df = pd.DataFrame(_fm12)
-        _cl12 = list(_fm12_df.columns)
-        _pairs12 = []
-        for _i12 in range(len(_cl12)):
-            for _j12 in range(_i12 + 1, len(_cl12)):
-                _both = ((_fm12_df[_cl12[_i12]] == 1) & (_fm12_df[_cl12[_j12]] == 1)).sum()
-                _r12 = round(_both / _total_d * 100, 1)
-                if _r12 >= 10:
-                    _pairs12.append((_cl12[_i12], _cl12[_j12], _r12, int(_both)))
-        return sorted(_pairs12, key=lambda x: -x[2])[:10]
-
-    def _s12_prev():
-        _pairs12 = _s12_data()
-        if not _pairs12:
-            return '<div style="font-size:0.70rem;color:#059669;padding:8px;">No significant co-failures detected.</div>'
-        _h12 = ""
-        for _p1, _p2, _r12, _c12 in _pairs12:
-            _cc12 = "#dc2626" if _r12 >= 35 else "#d97706" if _r12 >= 20 else "#2563EB"
-            _h12 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;padding:5px 8px;'
-                     f'background:#fff;border:1px solid #E2EAF6;border-radius:6px;">'
-                     f'<div style="flex:1;font-size:0.65rem;font-weight:600;color:#0B1F3A;">✗ {_p1} + ✗ {_p2}</div>'
-                     f'<div style="background:{_cc12};color:#fff;font-size:0.60rem;font-weight:800;'
-                     f'padding:2px 7px;border-radius:4px;white-space:nowrap;">{_r12}%</div></div>')
-        return _h12
-
-    def _s12_eml():
-        _pairs12 = _s12_data()
-        if not _pairs12:
-            return ""
-        _erows12 = [(_p1, _p2, f"{_r12}%", str(_c12),
-                     "🔴 Critical" if _r12 >= 35 else "🟡 Warning" if _r12 >= 20 else "ℹ️ Noted")
-                    for _p1, _p2, _r12, _c12 in _pairs12]
-        return _em_tbl("Co-failure Analysis", "🔴", ["Parameter 1", "Parameter 2", "Co-fail Rate", "Count", "Risk"], _erows12, "#dc2626")
-    _add_section("cofail", "Co-failure Analysis", "🔴", True, _s12_prev, _s12_eml)
-
-    # ── S13: Campaign Score Divergence ────────────────────────────────────────
-    def _s13_data():
-        if "Campaign Name" not in _dash_df.columns or "Bot Score" not in _dash_df.columns or _total_d < 5:
-            return None, []
-        _pavg = _bs_d.dropna().mean()
-        _rows13 = []
-        for _cn13, _cg13 in _dash_df.groupby("Campaign Name"):
-            _cbs13 = pd.to_numeric(_cg13["Bot Score"], errors="coerce").dropna()
-            if len(_cbs13) >= 2:
-                _ca13 = _cbs13.mean()
-                _rows13.append((str(_cn13), round(_ca13, 1), round(_ca13 - _pavg, 1), len(_cbs13)))
-        return _pavg, sorted(_rows13, key=lambda x: x[2])
-
-    def _s13_prev():
-        _pavg13, _rows13 = _s13_data()
-        if not _rows13:
-            return '<div style="font-size:0.70rem;color:#64748b;">No campaign divergence data.</div>'
-        _h13 = f'<div style="font-size:0.65rem;color:#64748b;margin-bottom:6px;">Portfolio avg: {round(_pavg13,1) if _pavg13 else "—"}%</div>'
-        for _cn13, _av13, _dv13, _n13 in _rows13:
-            _c13 = "#059669" if _dv13 >= 0 else "#dc2626"
-            _w13 = min(abs(_dv13) / 20 * 100, 100)
-            _h13 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
-                     f'<span style="font-size:0.65rem;font-weight:600;color:#0B1F3A;width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_cn13}</span>'
-                     f'<div style="width:80px;height:8px;background:#f0f2f5;border-radius:4px;">'
-                     f'<div style="width:{_w13}%;height:100%;background:{_c13};border-radius:4px;"></div></div>'
-                     f'<span style="font-size:0.65rem;font-weight:700;color:{_c13};width:50px;">{_dv13:+.1f}%</span>'
-                     f'<span style="font-size:0.60rem;color:#64748b;">{_av13}% ({_n13})</span></div>')
-        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;">{_h13}</div>'
-
-    def _s13_eml():
-        _pavg13, _rows13 = _s13_data()
-        if not _rows13:
-            return ""
-        _erows13 = [(r[0], f"{r[1]}%", f"{r[2]:+.1f}%", str(r[3]),
-                     "✅ Above Avg" if r[2] >= 0 else "🔴 Below Avg") for r in _rows13]
-        return _em_tbl(f"Campaign Score Divergence (Portfolio Avg: {round(_pavg13,1) if _pavg13 else '—'}%)",
-                       "↔️", ["Campaign", "Avg Score", "vs Portfolio", "Calls", "Status"], _erows13, "#374151")
-    _add_section("camp_div", "Campaign Divergence", "↔️", False, _s13_prev, _s13_eml)
-
-    # ── S14: Call Performance Insights ────────────────────────────────────────
-    _ci_d14 = {}
-    try:
-        _ci_d14 = _gen_call_insights(_dash_df)
-    except Exception:
-        pass
-
-    def _s14_prev():
-        _ins14 = (_ci_d14.get("insights") or [])[:8]
-        if not _ins14:
-            return '<div style="font-size:0.70rem;color:#64748b;">No call insights.</div>'
-        _TYPE_C = {"critical": ("#dc2626", "#fef2f2"), "warning": ("#d97706", "#fffbeb"),
-                   "success": ("#059669", "#f0fdf4"), "info": ("#2563EB", "#eff6ff")}
-        _h14 = ""
-        for _ins14i in _ins14:
-            _bdr14, _bg14 = _TYPE_C.get(_ins14i.get("type", "info"), ("#2563EB", "#eff6ff"))
-            _h14 += (f'<div style="background:{_bg14};border-left:3px solid {_bdr14};border-radius:6px;'
-                     f'padding:8px 10px;margin-bottom:6px;">'
-                     f'<div style="font-size:0.70rem;font-weight:700;color:#0B1F3A;">{_ins14i.get("title","")}</div>'
-                     f'<div style="font-size:0.63rem;color:#374151;margin-top:2px;">{_ins14i.get("detail","")[:100]}…</div></div>')
-        return _h14
-
-    def _s14_eml():
-        _ins14 = (_ci_d14.get("insights") or [])
-        if not _ins14:
-            return ""
-        _ehtml14 = '<div style="font-family:Arial,sans-serif;margin-bottom:16px;"><div style="background:#0B1F3A;color:#fff;padding:10px 14px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;">📞 Call Performance Insights</div><div style="border:1px solid #e2e8f0;border-top:none;padding:12px;border-radius:0 0 8px 8px;">'
-        for _ins in _ins14:
-            _ehtml14 += _em_insight_card(_ins.get("title", ""), _ins.get("detail", ""), _ins.get("type", "info"))
-        _ehtml14 += "</div></div>"
-        return _ehtml14
-    _add_section("call_insights", "Call Performance Insights", "📞", True, _s14_prev, _s14_eml)
-
-    # ── S15: Priority Actions ─────────────────────────────────────────────────
-    def _s15_prev():
-        _acts15 = (_ci_d14.get("actions") or [])
-        if not _acts15:
-            return '<div style="font-size:0.70rem;color:#64748b;">No actions.</div>'
-        _PRI_C15 = {"high": "#dc2626", "medium": "#d97706", "low": "#2563EB"}
-        _h15 = ""
-        for _a15 in _acts15[:6]:
-            _pri15 = str(_a15.get("priority", "low")).lower()
-            _ac15 = _PRI_C15.get(_pri15, "#2563EB")
-            _h15 += (f'<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;padding:8px 10px;'
-                     f'background:#fff;border:1px solid #E2EAF6;border-radius:6px;">'
-                     f'<span style="background:{_ac15};color:#fff;font-size:0.55rem;font-weight:800;'
-                     f'padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;margin-top:1px;">{_pri15.upper()}</span>'
-                     f'<div style="font-size:0.67rem;font-weight:600;color:#0B1F3A;">{_a15.get("action","")[:100]}</div></div>')
-        return _h15
-
-    def _s15_eml():
-        _acts15 = (_ci_d14.get("actions") or [])
-        if not _acts15:
-            return ""
-        _PRI_E15 = {"high": "🔴 High", "medium": "🟡 Medium", "low": "🔵 Low"}
-        _erows15 = [(_PRI_E15.get(str(_a.get("priority","low")).lower(), "—"),
-                     str(_a.get("action", ""))[:80], str(_a.get("impact", ""))[:80])
-                    for _a in _acts15]
-        return _em_tbl("Priority Actions", "🎯", ["Priority", "Action", "Impact"], _erows15, "#dc2626")
-    _add_section("actions", "Priority Actions", "🎯", True, _s15_prev, _s15_eml)
-
-    # ── Render sections + tabs (Compose | Preview | Gallery) ────────────────
-    st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
-
-    _em_client = _sel_client if _sel_client != "All" else "Your Client"
-
-    _db_tab_compose, _db_tab_preview, _db_tab_gallery = st.tabs(
-        ["📤 Compose & Send", "👁 Preview Email", "🎨 Draft Gallery (15)"]
-    )
-
-    # ── TAB 1: Compose & Send ─────────────────────────────────────────────────
-    with _db_tab_compose:
-        _sel_all_col2, _desel_all_col2, _sel_count_col2 = st.columns([1, 1, 4])
-        if _sel_all_col2.button("☑ Select All", key="dash_sel_all", use_container_width=True):
-            for _s in _ALL_SECTIONS:
-                st.session_state[f"dbsec_{_s['id']}"] = True
-            st.rerun()
-        if _desel_all_col2.button("☐ Deselect All", key="dash_desel_all", use_container_width=True):
-            for _s in _ALL_SECTIONS:
-                st.session_state[f"dbsec_{_s['id']}"] = False
-            st.rerun()
-
-        _selected_section_ids = []
-        _chunks = [_ALL_SECTIONS[i:i+2] for i in range(0, len(_ALL_SECTIONS), 2)]
-        for _chunk in _chunks:
-            _rc1, _rc2 = st.columns(2)
-            for _s, _rc in zip(_chunk, [_rc1, _rc2]):
-                with _rc:
-                    _default_val = st.session_state.get(f"dbsec_{_s['id']}", _s["default"])
-                    _is_checked = st.checkbox(
-                        f'{_s["icon"]} {_s["label"]}',
-                        value=_default_val,
-                        key=f"dbsec_{_s['id']}",
-                    )
-                    if _is_checked:
-                        _selected_section_ids.append(_s["id"])
-                    if _is_checked or _s["default"]:
-                        st.markdown(
-                            f'<div style="background:#f8faff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;margin-bottom:4px;">'
-                            f'{_s["preview"]}</div>',
-                            unsafe_allow_html=True
+                        _all_param_cols.append(_p)
+            # Build binary fail matrix (1 = failed / below 50% of max, 0 = ok)
+            _fail_mat = {}
+            for _p in _all_param_cols:
+                _pmx = [int(o) for o in _p.get("options", []) if str(o).lstrip("-").isdigit()]
+                _pmax = max(_pmx) if _pmx else 2
+                _pv = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
+                    {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmax)}), errors="coerce")
+                _fail_mat[_p["col"]] = (_pv < _pmax * 0.5).astype(int)
+            if len(_fail_mat) >= 2 and _total_d >= 5:
+                _fail_df = pd.DataFrame(_fail_mat)
+                _cofail_pairs = []
+                _cols_list = list(_fail_df.columns)
+                for _i in range(len(_cols_list)):
+                    for _j in range(_i + 1, len(_cols_list)):
+                        _both_fail = ((_fail_df[_cols_list[_i]] == 1) & (_fail_df[_cols_list[_j]] == 1)).sum()
+                        _either = ((_fail_df[_cols_list[_i]] == 1) | (_fail_df[_cols_list[_j]] == 1)).sum()
+                        _rate = round(_both_fail / _total_d * 100, 1)
+                        if _rate >= 10:
+                            _cofail_pairs.append({"p1": _cols_list[_i], "p2": _cols_list[_j],
+                                                  "both_fail": int(_both_fail), "rate": _rate})
+                _cofail_pairs.sort(key=lambda x: -x["rate"])
+                if _cofail_pairs[:8]:
+                    _cf_html = ""
+                    for _cf in _cofail_pairs[:8]:
+                        _cfcolor = "#dc2626" if _cf["rate"] >= 35 else "#d97706" if _cf["rate"] >= 20 else "#2563EB"
+                        _cf_html += (
+                            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:6px 10px;'
+                            f'background:#fff;border:1px solid #E2EAF6;border-radius:8px;">'
+                            f'<div style="flex:1;font-size:0.70rem;font-weight:600;color:#0B1F3A;">'
+                            f'<span style="color:#dc2626;">✗</span> {_cf["p1"]}'
+                            f' <span style="color:#64748b;font-weight:400;"> + </span>'
+                            f'<span style="color:#dc2626;">✗</span> {_cf["p2"]}</div>'
+                            f'<div style="flex-shrink:0;background:{_cfcolor};color:#fff;font-size:0.65rem;'
+                            f'font-weight:800;padding:2px 8px;border-radius:4px;">{_cf["rate"]}% co-fail</div>'
+                            f'</div>'
                         )
-                    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-
-        st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
-        _sel_sections_c = [s for s in _ALL_SECTIONS if s["id"] in _selected_section_ids]
-        st.markdown(f'<div style="font-size:0.68rem;color:#64748b;margin-bottom:8px;">{len(_sel_sections_c)} of {len(_ALL_SECTIONS)} sections selected</div>', unsafe_allow_html=True)
-
-        _em_c1, _em_c2, _em_c3, _em_c4 = st.columns([3, 2, 1, 1])
-        with _em_c1:
-            _em_to = st.text_input("Recipient email(s)", placeholder="email1@co.com, email2@co.com", key="dbem_to")
-        with _em_c2:
-            _em_subj = st.text_input("Subject",
-                value=f"{_em_client} — Dashboard Report · {pd.Timestamp.now().strftime('%b %d, %Y')}",
-                key="dbem_subj")
-        with _em_c3:
-            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-            _em_prev_btn = st.button("👁 Preview", key="dbem_prev", use_container_width=True)
-        with _em_c4:
-            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-            _em_send_btn = st.button("📤 Send", key="dbem_send", type="primary", use_container_width=True)
-
-        if _em_prev_btn:
-            st.session_state["dbem_show_prev"] = not st.session_state.get("dbem_show_prev", False)
-
-        def _build_dashboard_email_html(sel_secs, client_name):
-            _sh = "".join(s["email"] for s in sel_secs if s["email"])
-            return f"""<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;background:#f8faff;padding:0;">
-  <div style="background:linear-gradient(135deg,#0B1F3A 0%,#1a62f2 100%);padding:28px 30px;border-radius:10px 10px 0 0;">
-    <div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.02em;">📊 Dashboard Report</div>
-    <div style="font-size:13px;color:#93c5fd;margin-top:5px;">
-      {client_name} · Generated {pd.Timestamp.now().strftime("%B %d, %Y at %H:%M")} ·
-      {_total_d} audits · Avg {_avg_d or "—"}% · Pass rate {_pr_d}%
-    </div>
-    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-      <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">{_sel_client}</span>
-      <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">{_sel_camp}</span>
-      <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">{_sel_period}</span>
-    </div>
-  </div>
-  <div style="padding:20px 24px;">{_sh}
-    <div style="margin-top:28px;padding-top:18px;border-top:2px solid #e2e8f0;">
-      <table width="100%" style="border-collapse:collapse;">
-        <tr>
-          <td style="padding:0;">
-            <div style="font-size:15px;font-weight:900;color:#0B1F3A;letter-spacing:-0.02em;line-height:1.2;">Convin Data Labs</div>
-            <div style="font-size:11px;color:#2563EB;font-weight:600;margin-top:2px;letter-spacing:0.03em;">AI-Powered Quality Intelligence</div>
-            <div style="font-size:10px;color:#94a3b8;margin-top:6px;">
-              {pd.Timestamp.now().strftime("%B %Y")} · {len(sel_secs)} sections · QA Dashboard Report
-            </div>
-          </td>
-          <td style="padding:0;text-align:right;vertical-align:middle;">
-            <div style="display:inline-block;background:linear-gradient(135deg,#0B1F3A,#1a62f2);border-radius:8px;padding:8px 14px;">
-              <div style="font-size:13px;font-weight:900;color:#fff;letter-spacing:0.02em;">CDL</div>
-            </div>
-          </td>
-        </tr>
-      </table>
-      <div style="margin-top:10px;font-size:10px;color:#cbd5e1;text-align:center;">
-        This report was generated and sent via Convin Data Labs QA Dashboard · convinlabs@convin.ai
-      </div>
-    </div>
-  </div>
-</div>"""
-
-        if _em_send_btn:
-            if not _sel_sections_c:
-                st.warning("No sections selected — tick at least one above.")
-            elif not _em_to.strip():
-                st.warning("Enter at least one recipient email.")
-            else:
-                _to_list_em = [e.strip() for e in _em_to.replace(";", ",").split(",") if e.strip() and "@" in e]
-                if not _to_list_em:
-                    st.error("No valid email addresses found.")
+                    st.markdown(f'<div style="max-height:300px;overflow-y:auto;">{_cf_html}</div>', unsafe_allow_html=True)
                 else:
-                    _full_em_html = _build_dashboard_email_html(_sel_sections_c, _em_client)
-                    try:
-                        import gmail_sender as _gs_em
-                        _em_result = _gs_em.send_report_email(
-                            credentials_dict={},
-                            to_emails=_to_list_em,
-                            subject=_em_subj,
-                            html_body=_full_em_html,
-                            from_email=st.session_state.get("user_email", "convinlabs@convin.ai"),
-                        )
-                        if _em_result.get("sent"):
-                            st.success(f"✅ Sent to: {', '.join(_em_result['sent'])}  ({len(_sel_sections_c)} sections)")
-                        for _sf_em in _em_result.get("failed", []):
-                            st.error(f"Failed → {_sf_em.get('email','?')}: {_sf_em.get('error','')}")
-                    except Exception as _em_exc:
-                        st.error(f"Send error: {_em_exc}")
+                    st.markdown('<div style="font-size:0.73rem;color:#059669;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">No significant co-failures detected (threshold: 10%)</div>', unsafe_allow_html=True)
+        except Exception:
+            pass
 
-        if st.session_state.get("dbem_show_prev", False):
-            _prev_secs_c = _sel_sections_c if _sel_sections_c else [s for s in _ALL_SECTIONS if s["default"]]
-            if _prev_secs_c:
-                _prev_html_c = _build_dashboard_email_html(_prev_secs_c, _em_client)
-                _prev_wrap_c = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
-<style>body{{margin:0;padding:16px;background:#e8ecf4;font-family:Arial,sans-serif;}}</style></head>
-<body>{_prev_html_c}</body></html>"""
-                import base64 as _b64c
-                _prev_b64c = _b64c.b64encode(_prev_wrap_c.encode()).decode()
-                st.markdown(
-                    f'<div style="font-size:0.72rem;color:#64748b;margin:8px 0 4px;">Preview — {len(_prev_secs_c)} sections · <em>Close by clicking 👁 Preview again</em></div>',
-                    unsafe_allow_html=True
-                )
-                st.markdown(
-                    f'<iframe src="data:text/html;base64,{_prev_b64c}" width="100%" height="680" style="border:1px solid #E2EAF6;border-radius:10px;background:#e8ecf4;"></iframe>',
-                    unsafe_allow_html=True
-                )
+        # ── Section 10 — Parameter Heatmap (QA × Param) ──────────────────────────
+        if "QA" in _dash_df.columns:
+            st.markdown('<div class="section-chip">🌡️ Parameter × QA Heatmap</div>', unsafe_allow_html=True)
+            try:
+                _hm_params = []
+                for _t in _QA_SCHEMA.get("tiers", []):
+                    for _p in _t.get("params", []):
+                        if _p["col"] in _dash_df.columns:
+                            _pmx = [int(o) for o in _p.get("options", []) if str(o).lstrip("-").isdigit()]
+                            _pmax = max(_pmx) if _pmx else 2
+                            _hm_params.append((_p["col"], _pmax))
+                _hm_qas = sorted(_dash_df["QA"].dropna().unique().tolist())
+                if len(_hm_params) >= 2 and len(_hm_qas) >= 1:
+                    _hm_z = []
+                    _hm_text = []
+                    for _qn in _hm_qas:
+                        _row_z = []
+                        _row_t = []
+                        _qg = _dash_df[_dash_df["QA"] == _qn]
+                        for _pcol, _pmax in _hm_params:
+                            _pv = pd.to_numeric(_qg[_pcol].astype(str).str.strip().replace(
+                                {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmax)}), errors="coerce").dropna()
+                            if len(_pv) > 0:
+                                _pct = round(_pv.mean() / _pmax * 100, 0)
+                                _row_z.append(_pct)
+                                _row_t.append(f"{int(_pct)}%")
+                            else:
+                                _row_z.append(None)
+                                _row_t.append("—")
+                        _hm_z.append(_row_z)
+                        _hm_text.append(_row_t)
+                    _hm_fig = go.Figure(go.Heatmap(
+                        z=_hm_z,
+                        x=[p[0] for p in _hm_params],
+                        y=_hm_qas,
+                        text=_hm_text,
+                        texttemplate="%{text}",
+                        colorscale=[[0, "#dc2626"], [0.5, "#f59e0b"], [0.7, "#34d399"], [1, "#059669"]],
+                        zmin=0, zmax=100,
+                        showscale=True,
+                        colorbar=dict(title="Score %", thickness=12, len=0.9),
+                    ))
+                    _hm_fig.update_layout(
+                        plot_bgcolor="#fff", paper_bgcolor="#fff",
+                        font=dict(family="Inter,sans-serif", size=10),
+                        margin=dict(l=10, r=10, t=20, b=80),
+                        height=max(200, len(_hm_qas) * 50 + 100),
+                        xaxis=dict(tickangle=-35, side="bottom"),
+                    )
+                    st.plotly_chart(_hm_fig, use_container_width=True, config={"displayModeBar": False})
+            except Exception:
+                pass
 
-    # ── TAB 2: Preview Email ──────────────────────────────────────────────────
-    with _db_tab_preview:
-        _prev_sel_ids = [_s["id"] for _s in _ALL_SECTIONS if st.session_state.get(f"dbsec_{_s['id']}", _s["default"])]
-        _prev_sel_secs = [s for s in _ALL_SECTIONS if s["id"] in _prev_sel_ids]
-        if not _prev_sel_secs:
-            st.info("No sections selected in Compose tab — select at least one to preview.")
-        else:
-            _prev_html = _build_dashboard_email_html(_prev_sel_secs, _em_client)
-            st.markdown(f'<div style="font-size:0.72rem;color:#64748b;margin-bottom:8px;">Previewing {len(_prev_sel_secs)} selected sections as they will appear in the email.</div>', unsafe_allow_html=True)
-            _prev_wrapped = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
-<style>body{{margin:0;padding:16px;background:#e8ecf4;font-family:Arial,sans-serif;}}</style></head>
-<body>{_prev_html}</body></html>"""
-            import base64 as _b64_prev
-            _prev_b64 = _b64_prev.b64encode(_prev_wrapped.encode()).decode()
-            st.markdown(
-                f'<iframe src="data:text/html;base64,{_prev_b64}" width="100%" height="700" style="border:1px solid #E2EAF6;border-radius:10px;background:#e8ecf4;"></iframe>',
-                unsafe_allow_html=True
+        # ── Section 11 — Campaign Score Divergence (vs portfolio avg) ────────────
+        if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns and _total_d >= 5:
+            st.markdown('<div class="section-chip">↔️ Campaign Score Divergence vs Portfolio Average</div>', unsafe_allow_html=True)
+            try:
+                _port_avg = _bs_d.dropna().mean()
+                _div_rows = []
+                for _cn, _cg in _dash_df.groupby("Campaign Name"):
+                    _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                    if len(_c_bs) >= 2:
+                        _c_avg = _c_bs.mean()
+                        _div_rows.append({"Campaign": str(_cn), "Avg": round(_c_avg, 1),
+                                          "Delta": round(_c_avg - _port_avg, 1), "N": len(_c_bs)})
+                _div_rows.sort(key=lambda x: x["Delta"])
+                if len(_div_rows) >= 2:
+                    _dv_fig = go.Figure()
+                    _dv_fig.add_trace(go.Bar(
+                        y=[r["Campaign"] for r in _div_rows],
+                        x=[r["Delta"] for r in _div_rows],
+                        orientation="h",
+                        marker_color=["#059669" if r["Delta"] >= 0 else "#dc2626" for r in _div_rows],
+                        # Label: "Campaign Name  Avg 83.2%  (+3.2 vs avg)"
+                        text=[f'{r["Campaign"]}  ·  {r["Avg"]}%  ({r["Delta"]:+.1f})  [{r["N"]} calls]' for r in _div_rows],
+                        textposition="outside",
+                        cliponaxis=False,
+                        textfont=dict(size=10),
+                    ))
+                    _dv_fig.add_vline(x=0, line_color="#64748b", line_width=1.5,
+                        annotation_text=f"Portfolio Avg: {_port_avg:.1f}%",
+                        annotation_position="top",
+                        annotation_font=dict(size=10, color="#64748b"))
+                    _dv_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                        font=dict(family="Inter,sans-serif", size=11),
+                        margin=dict(l=10, r=220, t=30, b=10),
+                        height=max(200, len(_div_rows) * 44 + 70),
+                        xaxis_title=f"Score deviation vs Portfolio Average ({_port_avg:.1f}%)",
+                        xaxis=dict(ticksuffix="%"),
+                        yaxis=dict(tickfont=dict(size=11)),
+                        showlegend=False)
+                    st.plotly_chart(_dv_fig, use_container_width=True, config={"displayModeBar": False})
+            except Exception:
+                pass
+
+        # ── Section 12 — What Went Right / Needs Attention (all params) ──────────
+        _param_avgs_d = []
+        for _tier_d in _QA_SCHEMA.get("tiers", []):
+            for _p_d in _tier_d.get("params", []):
+                if _p_d["col"] not in _dash_df.columns:
+                    continue
+                _pmx = [int(o) for o in _p_d.get("options", []) if str(o).lstrip("-").isdigit()]
+                _pmax_d = max(_pmx) if _pmx else 2
+                _pv_d = pd.to_numeric(
+                    _dash_df[_p_d["col"]].astype(str).str.strip().replace({"NA": "", "nan": "", "Fatal": ""}),
+                    errors="coerce").dropna()
+                if len(_pv_d) == 0:
+                    continue
+                _param_avgs_d.append({"col": _p_d["col"], "pct": round(_pv_d.mean() / _pmax_d * 100, 1)})
+
+        _strong_d = sorted([p for p in _param_avgs_d if p["pct"] >= 75], key=lambda x: -x["pct"])[:8]
+        _weak_d = sorted([p for p in _param_avgs_d if p["pct"] < 70], key=lambda x: x["pct"])[:8]
+
+        _s12l, _s12r = st.columns(2)
+        with _s12l:
+            st.markdown('<div class="section-chip">✅ What Went Right</div>', unsafe_allow_html=True)
+            if _strong_d:
+                _wr_d = ""
+                for _wp in _strong_d:
+                    _wr_d += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                              f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp["col"]}</div>'
+                              f'<div style="flex:1;height:10px;background:#D1FAE5;border-radius:5px;overflow:hidden;">'
+                              f'<div style="width:{_wp["pct"]}%;height:100%;background:linear-gradient(90deg,#059669,#34D399);border-radius:5px;"></div></div>'
+                              f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:#059669;flex-shrink:0;text-align:right;">{_wp["pct"]}%</div>'
+                              f'</div>')
+                st.markdown(f'<div style="background:#fff;border:1px solid #D1FAE5;border-left:3px solid #059669;border-radius:10px;padding:14px 16px;">{_wr_d}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div style="background:#F8FAFF;border:1px solid #DBEAFE;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#64748b;text-align:center;">No parameters ≥75% yet</div>', unsafe_allow_html=True)
+
+        with _s12r:
+            st.markdown('<div class="section-chip">⚠️ Needs Attention</div>', unsafe_allow_html=True)
+            if _weak_d:
+                _ww_d = ""
+                for _wp2 in _weak_d:
+                    _urg = "#dc2626" if _wp2["pct"] < 50 else "#d97706"
+                    _bg2 = "#FEE2E2" if _wp2["pct"] < 50 else "#FEF3C7"
+                    _ww_d += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                              f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp2["col"]}</div>'
+                              f'<div style="flex:1;height:10px;background:{_bg2};border-radius:5px;overflow:hidden;">'
+                              f'<div style="width:{_wp2["pct"]}%;height:100%;background:{_urg};border-radius:5px;"></div></div>'
+                              f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:{_urg};flex-shrink:0;text-align:right;">{_wp2["pct"]}%</div>'
+                              f'</div>')
+                st.markdown(f'<div style="background:#fff;border:1px solid #FEE2E2;border-left:3px solid #dc2626;border-radius:10px;padding:14px 16px;">{_ww_d}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#059669;text-align:center;">🎉 All parameters performing well!</div>', unsafe_allow_html=True)
+
+        # ── Section 13 — All-param score bars (full overview) ────────────────────
+        if _param_avgs_d:
+            st.markdown('<div class="section-chip">📊 All Parameter Scores</div>', unsafe_allow_html=True)
+            try:
+                _allp_sorted = sorted(_param_avgs_d, key=lambda x: x["pct"])
+                _ap_fig = go.Figure()
+                _ap_fig.add_trace(go.Bar(
+                    y=[p["col"] for p in _allp_sorted],
+                    x=[p["pct"] for p in _allp_sorted],
+                    orientation="h",
+                    marker_color=["#059669" if p["pct"] >= 80 else "#f59e0b" if p["pct"] >= 60 else "#dc2626" for p in _allp_sorted],
+                    text=[f'{p["pct"]}%' for p in _allp_sorted],
+                    textposition="auto",
+                ))
+                _ap_fig.add_vline(x=80, line_dash="dot", line_color="#6b7280", annotation_text="80%")
+                _ap_fig.update_layout(
+                    plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    font=dict(family="Inter,sans-serif", size=11),
+                    margin=dict(l=10, r=10, t=20, b=10),
+                    height=max(300, len(_allp_sorted) * 28 + 60),
+                    showlegend=False, xaxis_title="Avg Score %", xaxis_range=[0, 108],
+                )
+                st.plotly_chart(_ap_fig, use_container_width=True, config={"displayModeBar": False})
+            except Exception:
+                pass
+
+
+    with _tab_email:
+        # ── Section 14 — Full Dashboard Email Builder (all panels tick/untick) ────
+        st.markdown('<div class="section-chip">📧 Send Dashboard as Email — Select Any Section</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:14px;">Tick every section you want to include. Each panel is converted to email-safe HTML and assembled into a single professional report email.</div>', unsafe_allow_html=True)
+
+        # ── Email-safe table helper ───────────────────────────────────────────────
+        def _em_tbl(title, icon, headers, rows, hdr_color="#0B1F3A"):
+            """Generate email-safe HTML table block."""
+            _th = "".join(f'<th style="background:{hdr_color};color:#fff;padding:8px 10px;font-size:11px;font-weight:700;text-align:left;white-space:nowrap;">{h}</th>' for h in headers)
+            _tr_html = ""
+            for _ri, _row in enumerate(rows):
+                _rb = "#f8faff" if _ri % 2 == 0 else "#ffffff"
+                _td = "".join(f'<td style="padding:7px 10px;font-size:11px;color:#374151;border-bottom:1px solid #e2e8f0;">{cell}</td>' for cell in _row)
+                _tr_html += f'<tr style="background:{_rb};">{_td}</tr>'
+            return (
+                f'<div style="font-family:Arial,sans-serif;margin-bottom:16px;">'
+                f'<div style="background:{hdr_color};color:#fff;padding:10px 14px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;">{icon} {title}</div>'
+                f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;overflow:hidden;">'
+                f'<table style="width:100%;border-collapse:collapse;"><thead><tr>{_th}</tr></thead>'
+                f'<tbody>{_tr_html}</tbody></table></div></div>'
             )
 
-    # ── TAB 3: Draft Gallery (15 preset classy emails) ───────────────────────
-    with _db_tab_gallery:
-        st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:12px;">15 pre-built professional email drafts. Click <b>👁 Preview</b> to see the full email or <b>📋 Load</b> to populate the Compose tab.</div>', unsafe_allow_html=True)
+        def _em_kv_card(title, icon, pairs, accent="#2563EB"):
+            """Email-safe key-value card."""
+            _rows = "".join(
+                f'<tr><td style="padding:6px 10px;font-size:11px;color:#64748b;font-weight:600;width:50%;border-bottom:1px solid #f0f4fa;">{k}</td>'
+                f'<td style="padding:6px 10px;font-size:12px;font-weight:700;color:#0B1F3A;border-bottom:1px solid #f0f4fa;">{v}</td></tr>'
+                for k, v in pairs
+            )
+            return (
+                f'<div style="font-family:Arial,sans-serif;border:1px solid {accent}33;border-radius:8px;overflow:hidden;margin-bottom:12px;">'
+                f'<div style="background:{accent};color:#fff;padding:9px 12px;font-size:12px;font-weight:700;">{icon} {title}</div>'
+                f'<table style="width:100%;border-collapse:collapse;">{_rows}</table></div>'
+            )
 
-        # Helper: build a gallery draft HTML using current dashboard data
-        def _gallery_email(header_bg, header_color, accent, title, subtitle, sec_ids):
-            _gsh = "".join(s["email"] for s in _ALL_SECTIONS if s["id"] in sec_ids and s["email"])
-            return f"""<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;background:#f8faff;">
-  <div style="background:{header_bg};padding:30px;border-radius:10px 10px 0 0;">
-    <div style="font-size:24px;font-weight:900;color:{header_color};letter-spacing:-0.02em;">{title}</div>
-    <div style="font-size:13px;color:{header_color};opacity:0.8;margin-top:6px;">{subtitle} · {_em_client} · {pd.Timestamp.now().strftime("%B %Y")}</div>
-    <div style="margin-top:12px;">
-      <span style="background:rgba(255,255,255,0.2);color:{header_color};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-right:6px;">{_total_d} Audits</span>
-      <span style="background:rgba(255,255,255,0.2);color:{header_color};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-right:6px;">Avg {_avg_d or "—"}%</span>
-      <span style="background:rgba(255,255,255,0.2);color:{header_color};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">Pass {_pr_d}%</span>
-    </div>
-  </div>
-  <div style="padding:22px 26px;background:#ffffff;border:1px solid {accent}22;border-top:3px solid {accent};border-radius:0 0 10px 10px;">
-    {_gsh}
-    <div style="margin-top:28px;padding-top:18px;border-top:2px solid #e2e8f0;">
-      <table width="100%" style="border-collapse:collapse;">
-        <tr>
-          <td style="padding:0;">
-            <div style="font-size:15px;font-weight:900;color:#0B1F3A;letter-spacing:-0.02em;line-height:1.2;">Convin Data Labs</div>
-            <div style="font-size:11px;color:{accent};font-weight:600;margin-top:2px;letter-spacing:0.03em;">AI-Powered Quality Intelligence</div>
-            <div style="font-size:10px;color:#94a3b8;margin-top:6px;">{pd.Timestamp.now().strftime("%B %d, %Y")} · QA Dashboard Report</div>
-          </td>
-          <td style="padding:0;text-align:right;vertical-align:middle;">
-            <div style="display:inline-block;background:linear-gradient(135deg,#0B1F3A,#1a62f2);border-radius:8px;padding:8px 14px;">
-              <div style="font-size:13px;font-weight:900;color:#fff;letter-spacing:0.02em;">CDL</div>
-            </div>
-          </td>
-        </tr>
-      </table>
-      <div style="margin-top:10px;font-size:10px;color:#cbd5e1;text-align:center;">
-        This report was generated and sent via Convin Data Labs QA Dashboard · convinlabs@convin.ai
+        def _em_insight_card(title, detail, itype):
+            _tc = {"critical": "#dc2626", "warning": "#d97706", "success": "#059669", "info": "#2563EB"}.get(itype, "#2563EB")
+            _bg = {"critical": "#fef2f2", "warning": "#fffbeb", "success": "#f0fdf4", "info": "#eff6ff"}.get(itype, "#eff6ff")
+            return (
+                f'<div style="background:{_bg};border-left:4px solid {_tc};border-radius:6px;padding:10px 14px;margin-bottom:8px;font-family:Arial,sans-serif;">'
+                f'<div style="font-size:12px;font-weight:700;color:#0B1F3A;margin-bottom:4px;">{title}</div>'
+                f'<div style="font-size:11px;color:#374151;">{detail}</div></div>'
+            )
+
+        def _em_bar_row(label, pct, color):
+            _pct = max(0, min(100, pct))
+            return (
+                f'<tr><td style="padding:5px 10px;font-size:11px;color:#0B1F3A;font-weight:600;width:160px;white-space:nowrap;">{label}</td>'
+                f'<td style="padding:5px 10px;"><table width="100%" style="border-collapse:collapse;"><tr>'
+                f'<td style="background:#f0f4fa;border-radius:4px;height:10px;padding:0;overflow:hidden;">'
+                f'<div style="background:{color};height:10px;width:{_pct:.0f}%;border-radius:4px;"></div></td></tr></table></td>'
+                f'<td style="padding:5px 10px;font-size:11px;font-weight:800;color:{color};width:42px;text-align:right;">{_pct:.1f}%</td></tr>'
+            )
+
+        # ── Build all dashboard sections ──────────────────────────────────────────
+        _ALL_SECTIONS = []   # {id, label, icon, default, preview_html, email_html}
+
+        def _add_section(sid, label, icon, default, preview_fn, email_fn):
+            try:
+                _prev = preview_fn()
+                _eml  = email_fn()
+                _ALL_SECTIONS.append({"id": sid, "label": label, "icon": icon,
+                                       "default": default, "preview": _prev, "email": _eml})
+            except Exception:
+                pass
+
+        # ── S1: KPI Overview ─────────────────────────────────────────────────────
+        def _s1_prev():
+            _sd_cfg2 = [("Total Audits", str(_total_d), "#0B1F3A"), ("Avg Bot Score", f"{_avg_d or '—'}%", "#0891b2"),
+                        ("Pass Rate", f"{_pr_d}%", "#059669"), ("Passed", str(_pass_d), "#059669"),
+                        ("Needs Review", str(_rev_d), "#d97706"), ("Auto-Fails", str(_fatal_d), "#dc2626")]
+            _h = '<div style="display:flex;flex-wrap:wrap;gap:6px;">'
+            for _lbl, _val, _clr in _sd_cfg2:
+                _h += (f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:8px 12px;min-width:90px;">'
+                       f'<div style="font-size:1.2rem;font-weight:900;color:{_clr};">{_val}</div>'
+                       f'<div style="font-size:0.6rem;color:#64748b;font-weight:700;text-transform:uppercase;">{_lbl}</div></div>')
+            return _h + "</div>"
+
+        def _s1_eml():
+            _pairs = [("Total Audits", _total_d), ("Avg Bot Score", f"{_avg_d or '—'}%"), ("Pass Rate", f"{_pr_d}%"),
+                      ("Passed ✅", _pass_d), ("Needs Review 🟡", _rev_d), ("Auto-Fails 🚨", _fatal_d),
+                      ("Score Momentum", f"{_momentum_arrow} {_momentum_txt}")]
+            _cells = "".join(
+                f'<td style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;text-align:center;width:16%;">'
+                f'<div style="font-size:18px;font-weight:900;color:#0B1F3A;">{v}</div>'
+                f'<div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;margin-top:4px;">{k}</div></td>'
+                for k, v in _pairs
+            )
+            return (f'<div style="font-family:Arial,sans-serif;background:#0B1F3A;padding:10px 14px;border-radius:8px 8px 0 0;'
+                    f'color:#fff;font-size:13px;font-weight:700;">📊 KPI Overview</div>'
+                    f'<table width="100%" style="border-collapse:separate;border-spacing:4px;background:#f8faff;'
+                    f'padding:10px;border-radius:0 0 8px 8px;margin-bottom:16px;">'
+                    f'<tr>{_cells}</tr></table>')
+        _add_section("kpi", "KPI Overview", "📊", True, _s1_prev, _s1_eml)
+
+        # ── S2: Status Distribution ──────────────────────────────────────────────
+        def _s2_prev():
+            _cfg = [("✅ Pass", "#0ebc6e", _pass_d), ("🟡 Needs Review", "#f59e0b", _rev_d),
+                    ("❌ Fail", "#ef4444", _fail_d), ("🚨 Auto-Fail", "#dc2626", _fatal_d)]
+            _h = ""
+            for _sn, _sc, _sv in _cfg:
+                _sp = round(_sv / _total_d * 100, 1) if _total_d else 0
+                _h += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+                       f'<div style="width:100px;font-size:0.68rem;font-weight:600;color:#0B1F3A;">{_sn}</div>'
+                       f'<div style="flex:1;height:10px;background:#f0f2f5;border-radius:5px;">'
+                       f'<div style="width:{_sp}%;height:100%;background:{_sc};border-radius:5px;"></div></div>'
+                       f'<div style="width:55px;font-size:0.68rem;font-weight:700;color:{_sc};text-align:right;">{_sv} ({_sp}%)</div></div>')
+            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h}</div>'
+
+        def _s2_eml():
+            _cfg = [("✅ Pass", "#059669", _pass_d), ("🟡 Needs Review", "#d97706", _rev_d),
+                    ("❌ Fail", "#ef4444", _fail_d), ("🚨 Auto-Fail", "#dc2626", _fatal_d)]
+            _rows = [(_sn, str(_sv), f"{round(_sv/_total_d*100,1) if _total_d else 0}%",
+                      "█" * int(_sv/_total_d*20) if _total_d else "") for _sn, _, _sv in _cfg]
+            return _em_tbl("Status Distribution", "📊", ["Status", "Count", "Rate", "Bar"], _rows, "#0B1F3A")
+        _add_section("status_dist", "Status Distribution", "📊", True, _s2_prev, _s2_eml)
+
+        # ── S3: Score Trend ──────────────────────────────────────────────────────
+        def _s3_prev():
+            if "Audit Date" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+                return '<div style="font-size:0.70rem;color:#64748b;">No date/score data.</div>'
+            _td = _dash_df[["Audit Date","Bot Score"]].copy()
+            _td["Audit Date"] = pd.to_datetime(_td["Audit Date"], errors="coerce")
+            _td["Bot Score"] = pd.to_numeric(_td["Bot Score"], errors="coerce")
+            _td = _td.dropna().sort_values("Audit Date").groupby("Audit Date")["Bot Score"].mean().reset_index().tail(7)
+            _h = '<div style="font-size:0.68rem;color:#64748b;margin-bottom:4px;">Last 7 data points (daily avg):</div>'
+            for _, _row in _td.iterrows():
+                _v = round(_row["Bot Score"], 1)
+                _c = "#059669" if _v >= 80 else "#d97706" if _v >= 60 else "#dc2626"
+                _h += (f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
+                       f'<span style="font-size:0.65rem;color:#64748b;width:72px;">{str(_row["Audit Date"])[:10]}</span>'
+                       f'<div style="flex:1;height:8px;background:#f0f2f5;border-radius:4px;">'
+                       f'<div style="width:{_v}%;height:100%;background:{_c};border-radius:4px;"></div></div>'
+                       f'<span style="font-size:0.68rem;font-weight:700;color:{_c};width:35px;">{_v}%</span></div>')
+            return _h
+
+        def _s3_eml():
+            if "Audit Date" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+                return ""
+            _td2 = _dash_df[["Audit Date","Bot Score"]].copy()
+            _td2["Audit Date"] = pd.to_datetime(_td2["Audit Date"], errors="coerce")
+            _td2["Bot Score"] = pd.to_numeric(_td2["Bot Score"], errors="coerce")
+            _td2 = _td2.dropna().sort_values("Audit Date").groupby("Audit Date")["Bot Score"].mean().reset_index()
+            _rows2 = []
+            for _, _r in _td2.iterrows():
+                _v = round(_r["Bot Score"], 1)
+                _status = "✅ Above Target" if _v >= 80 else "🟡 Below Target" if _v >= 60 else "🔴 Critical"
+                _rows2.append((str(_r["Audit Date"])[:10], f"{_v}%", str(len(_td2)), _status))
+            return _em_tbl("Score Trend Over Time", "📈", ["Date", "Avg Bot Score", "Data Points", "Status"], _rows2[-14:], "#0891b2")
+        _add_section("score_trend", "Score Trend", "📈", True, _s3_prev, _s3_eml)
+
+        # ── S4: QA Leaderboard ────────────────────────────────────────────────────
+        def _s4_prev_fn():
+            if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+                return '<div style="font-size:0.70rem;color:#64748b;">No QA data.</div>'
+            _rows3 = []
+            for _qn, _qg in _dash_df.groupby("QA"):
+                _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
+                _qst = _qg["Status"].astype(str).str.strip() if "Status" in _qg.columns else pd.Series([])
+                _rows3.append({"n": str(_qn), "avg": round(_qbs.mean(),1) if len(_qbs) else 0,
+                               "cnt": len(_qg), "pr": round(int((_qst=="Pass").sum())/len(_qg)*100,1) if len(_qg) else 0,
+                               "af": int((_qst=="Auto-Fail").sum())})
+            _rows3.sort(key=lambda x: -x["avg"])
+            _h2 = '<table style="width:100%;border-collapse:collapse;font-size:0.68rem;">'
+            for _mi, _r in enumerate(_rows3[:6]):
+                _bg3 = "#f8faff" if _mi % 2 == 0 else "#fff"
+                _mdl = ["🥇","🥈","🥉"][_mi] if _mi < 3 else ""
+                _h2 += (f'<tr style="background:{_bg3};">'
+                        f'<td style="padding:5px 8px;font-weight:600;">{_mdl} {_r["n"]}</td>'
+                        f'<td style="padding:5px 8px;color:#2563EB;">{_r["cnt"]}</td>'
+                        f'<td style="padding:5px 8px;font-weight:700;color:#059669;">{_r["avg"]}%</td>'
+                        f'<td style="padding:5px 8px;">{_r["pr"]}%</td>'
+                        f'<td style="padding:5px 8px;color:#dc2626;">{_r["af"]}</td></tr>')
+            _h2 += "</table>"
+            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h2}</div>'
+
+        def _s4_eml_fn():
+            if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+                return ""
+            _erows = []
+            for _qn, _qg in _dash_df.groupby("QA"):
+                _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
+                _qst = _qg["Status"].astype(str).str.strip() if "Status" in _qg.columns else pd.Series([])
+                _erows.append((str(_qn), str(len(_qg)), f"{round(_qbs.mean(),1) if len(_qbs) else 0}%",
+                               f"{round(int((_qst=='Pass').sum())/len(_qg)*100,1) if len(_qg) else 0}%",
+                               str(int((_qst=="Auto-Fail").sum()))))
+            _erows.sort(key=lambda x: -float(x[2].rstrip("%")))
+            return _em_tbl("QA Leaderboard", "👤", ["QA Auditor", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"], _erows, "#059669")
+        _add_section("qa_lb", "QA Leaderboard", "👤", True, _s4_prev_fn, _s4_eml_fn)
+
+        # ── S5: Campaign Rankings ─────────────────────────────────────────────────
+        def _s5_prev_fn():
+            if "Campaign Name" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+                return '<div style="font-size:0.70rem;color:#64748b;">No campaign data.</div>'
+            _rows5 = []
+            for _cn, _cg in _dash_df.groupby("Campaign Name"):
+                _cbs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                _cst = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
+                _rows5.append({"n": str(_cn)[:22], "avg": round(_cbs.mean(),1) if len(_cbs) else 0,
+                               "cnt": len(_cg), "pr": round(int((_cst=="Pass").sum())/len(_cg)*100,1) if len(_cg) else 0,
+                               "af": int((_cst=="Auto-Fail").sum())})
+            _rows5.sort(key=lambda x: -x["avg"])
+            _h5 = '<table style="width:100%;border-collapse:collapse;font-size:0.68rem;">'
+            for _mi5, _r5 in enumerate(_rows5[:5]):
+                _bg5 = "#f8faff" if _mi5 % 2 == 0 else "#fff"
+                _h5 += (f'<tr style="background:{_bg5};">'
+                        f'<td style="padding:5px 8px;font-weight:600;">{_r5["n"]}</td>'
+                        f'<td style="padding:5px 8px;color:#2563EB;">{_r5["cnt"]}</td>'
+                        f'<td style="padding:5px 8px;font-weight:700;color:#059669;">{_r5["avg"]}%</td>'
+                        f'<td style="padding:5px 8px;">{_r5["pr"]}%</td>'
+                        f'<td style="padding:5px 8px;color:#dc2626;">{_r5["af"]}</td></tr>')
+            _h5 += "</table>"
+            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h5}</div>'
+
+        def _s5_eml_fn():
+            if "Campaign Name" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+                return ""
+            _erows5 = []
+            for _cn, _cg in _dash_df.groupby("Campaign Name"):
+                _cbs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                _cst = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
+                _erows5.append((str(_cn), str(len(_cg)), f"{round(_cbs.mean(),1) if len(_cbs) else 0}%",
+                                f"{round(int((_cst=='Pass').sum())/len(_cg)*100,1) if len(_cg) else 0}%",
+                                str(int((_cst=="Auto-Fail").sum()))))
+            _erows5.sort(key=lambda x: -float(x[2].rstrip("%")))
+            return _em_tbl("Campaign Rankings", "🎯", ["Campaign", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"], _erows5, "#1a62f2")
+        _add_section("campaign_lb", "Campaign Rankings", "🎯", True, _s5_prev_fn, _s5_eml_fn)
+
+        # ── S6: Auditor Calibration ───────────────────────────────────────────────
+        def _s6_prev_fn():
+            if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+                return '<div style="font-size:0.70rem;color:#64748b;">No QA data.</div>'
+            _rows6 = []
+            for _qn, _qg in _dash_df.groupby("QA"):
+                _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
+                if len(_qbs) >= 2:
+                    _rows6.append({"n": str(_qn), "avg": round(_qbs.mean(),1), "std": round(_qbs.std(),1), "cnt": len(_qbs)})
+            _rows6.sort(key=lambda x: x["std"])
+            _h6 = '<table style="width:100%;border-collapse:collapse;font-size:0.68rem;">'
+            for _mi6, _r6 in enumerate(_rows6[:6]):
+                _bg6 = "#f8faff" if _mi6 % 2 == 0 else "#fff"
+                _cc6 = "#059669" if _r6["std"] < 8 else "#d97706" if _r6["std"] < 15 else "#dc2626"
+                _h6 += (f'<tr style="background:{_bg6};">'
+                        f'<td style="padding:5px 8px;font-weight:600;">{_r6["n"]}</td>'
+                        f'<td style="padding:5px 8px;color:#2563EB;">{_r6["cnt"]}</td>'
+                        f'<td style="padding:5px 8px;font-weight:700;color:#059669;">{_r6["avg"]}%</td>'
+                        f'<td style="padding:5px 8px;font-weight:700;color:{_cc6};">σ {_r6["std"]}</td></tr>')
+            _h6 += "</table>"
+            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h6}</div>'
+
+        def _s6_eml_fn():
+            if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+                return ""
+            _erows6 = []
+            for _qn, _qg in _dash_df.groupby("QA"):
+                _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
+                if len(_qbs) >= 2:
+                    _std6 = round(_qbs.std(), 1)
+                    _cons = "✅ Consistent" if _std6 < 8 else "🟡 Moderate" if _std6 < 15 else "🔴 High Variance"
+                    _erows6.append((str(_qn), str(len(_qbs)), f"{round(_qbs.mean(),1)}%", f"σ={_std6}", _cons))
+            _erows6.sort(key=lambda x: float(x[3].lstrip("σ=")))
+            return _em_tbl("Auditor Calibration", "📐", ["QA Auditor", "Audits", "Avg Score", "Std Dev", "Consistency"], _erows6, "#7c3aed")
+        _add_section("auditor_cal", "Auditor Calibration", "📐", False, _s6_prev_fn, _s6_eml_fn)
+
+        # ── S7: Tier Breakdown ────────────────────────────────────────────────────
+        def _s7_data():
+            _rows7 = []
+            for _t7 in _QA_SCHEMA.get("tiers", []):
+                _tsc7 = []
+                for _p7 in _t7.get("params", []):
+                    if _p7["col"] not in _dash_df.columns:
+                        continue
+                    _pmx7 = max([int(o) for o in _p7.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
+                    _pv7 = pd.to_numeric(_dash_df[_p7["col"]].astype(str).str.strip().replace(
+                        {"NA": "", "nan": "", "Fatal": "", "Yes": "0", "No": str(_pmx7)}), errors="coerce").dropna()
+                    if len(_pv7):
+                        _tsc7.append(_pv7.mean() / _pmx7 * 100)
+                if _tsc7:
+                    _avg7 = round(sum(_tsc7) / len(_tsc7), 1)
+                    _lbl7 = _t7["label"].split("·")[1].strip() if "·" in _t7["label"] else _t7["label"]
+                    _rows7.append((_lbl7, _t7.get("weight_pct", 0), _avg7, _t7.get("color", "#2563EB")))
+            return _rows7
+
+        def _s7_prev():
+            _rows7 = _s7_data()
+            if not _rows7:
+                return '<div style="font-size:0.70rem;color:#64748b;">No tier data.</div>'
+            _h7 = ""
+            for _ln7, _wt7, _av7, _cl7 in _rows7:
+                _h7 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                        f'<span style="font-size:0.68rem;font-weight:700;color:{_cl7};width:90px;">{_ln7}</span>'
+                        f'<div style="flex:1;height:10px;background:#f0f2f5;border-radius:5px;">'
+                        f'<div style="width:{_av7}%;height:100%;background:{_cl7};border-radius:5px;"></div></div>'
+                        f'<span style="font-size:0.68rem;font-weight:800;color:{_cl7};width:40px;">{_av7}%</span>'
+                        f'<span style="font-size:0.60rem;color:#64748b;">(wt:{_wt7}%)</span></div>')
+            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h7}</div>'
+
+        def _s7_eml():
+            _rows7 = _s7_data()
+            _erows7 = [(_ln, f"{_wt}%", f"{_av}%", "✅ On Target" if _av >= 80 else "🟡 Below Target" if _av >= 65 else "🔴 Critical")
+                       for _ln, _wt, _av, _ in _rows7]
+            return _em_tbl("Tier Breakdown", "🏗️", ["Tier", "Weight", "Avg Score", "Status"], _erows7, "#dc2626")
+        _add_section("tier_breakdown", "Tier Breakdown", "🏗️", True, _s7_prev, _s7_eml)
+
+        # ── S8: Disposition Breakdown ─────────────────────────────────────────────
+        def _s8_data():
+            _dc8 = next((c for c in ["Disposition", "Correct Disposition", "Correct Disposition (Expected)"] if c in _dash_df.columns), None)
+            if not _dc8:
+                return None, []
+            _cnt8 = _dash_df[_dc8].astype(str).str.strip().value_counts()
+            _cnt8 = _cnt8[_cnt8.index != "nan"][:10]
+            return _dc8, _cnt8
+
+        def _s8_prev():
+            _, _cnt8 = _s8_data()
+            if not len(_cnt8):
+                return '<div style="font-size:0.70rem;color:#64748b;">No disposition data.</div>'
+            _colors8 = ["#2563EB","#0891b2","#059669","#d97706","#dc2626","#7c3aed","#db2777","#0d9488","#b45309","#374151"]
+            _h8 = ""
+            for _i8, (_k8, _v8) in enumerate(_cnt8.items()):
+                _p8 = round(_v8 / _cnt8.sum() * 100, 1)
+                _c8 = _colors8[_i8 % len(_colors8)]
+                _h8 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+                        f'<span style="font-size:0.65rem;font-weight:600;color:#0B1F3A;width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_k8}</span>'
+                        f'<div style="flex:1;height:8px;background:#f0f2f5;border-radius:4px;">'
+                        f'<div style="width:{_p8}%;height:100%;background:{_c8};border-radius:4px;"></div></div>'
+                        f'<span style="font-size:0.65rem;font-weight:700;color:{_c8};width:55px;text-align:right;">{_v8} ({_p8}%)</span></div>')
+            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h8}</div>'
+
+        def _s8_eml():
+            _, _cnt8 = _s8_data()
+            if not len(_cnt8):
+                return ""
+            _t8 = _cnt8.sum()
+            _erows8 = [(str(_k), str(_v), f"{round(_v/_t8*100,1)}%") for _k, _v in _cnt8.items()]
+            return _em_tbl("Disposition Breakdown", "📂", ["Disposition", "Count", "Percentage"], _erows8, "#0891b2")
+        _add_section("disposition", "Disposition Breakdown", "📂", True, _s8_prev, _s8_eml)
+
+        # ── S9: Lead Stage Breakdown ──────────────────────────────────────────────
+        def _s9_data():
+            if "Lead Stage" not in _dash_df.columns:
+                return {}
+            _lsv9 = _dash_df["Lead Stage"].astype(str).str.strip().value_counts()
+            return {k: v for k, v in _lsv9.items() if k != "nan"}
+
+        def _s9_prev():
+            _lsd9 = _s9_data()
+            if not _lsd9:
+                return '<div style="font-size:0.70rem;color:#64748b;">No Lead Stage data.</div>'
+            _LS_C9 = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB", "Not Interested": "#6b7280", "RNR": "#7c3aed"}
+            _t9 = sum(_lsd9.values())
+            _h9 = ""
+            for _k9, _v9 in _lsd9.items():
+                _p9 = round(_v9 / _t9 * 100, 1)
+                _c9 = _LS_C9.get(_k9, "#94a3b8")
+                _h9 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+                        f'<span style="font-size:0.70rem;font-weight:700;color:{_c9};width:90px;">{_k9}</span>'
+                        f'<div style="flex:1;height:10px;background:#f0f2f5;border-radius:5px;">'
+                        f'<div style="width:{_p9}%;height:100%;background:{_c9};border-radius:5px;"></div></div>'
+                        f'<span style="font-size:0.70rem;font-weight:800;color:{_c9};width:70px;text-align:right;">{_v9} ({_p9}%)</span></div>')
+            _conv9 = round((_lsd9.get("Hot", 0) + _lsd9.get("Warm", 0)) / _t9 * 100, 1) if _t9 else 0
+            _h9 += f'<div style="font-size:0.65rem;color:#059669;margin-top:6px;font-weight:700;">Conversion Readiness (Hot+Warm): {_conv9}%</div>'
+            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h9}</div>'
+
+        def _s9_eml():
+            _lsd9 = _s9_data()
+            if not _lsd9:
+                return ""
+            _t9 = sum(_lsd9.values())
+            _LS_C9 = {"Hot": "🔥 Hot", "Warm": "🌤 Warm", "Cold": "❄️ Cold", "Not Interested": "👎 Not Interested", "RNR": "📵 RNR"}
+            _erows9 = [(_LS_C9.get(k, k), str(v), f"{round(v/_t9*100,1)}%",
+                        "High Priority" if k == "Hot" else "Follow-up" if k == "Warm" else "Low Priority" if k == "Cold" else "—")
+                       for k, v in _lsd9.items()]
+            return _em_tbl("Lead Stage Breakdown", "🔥", ["Lead Stage", "Count", "Percentage", "Priority"], _erows9, "#d97706")
+        _add_section("lead_stage", "Lead Stage Breakdown", "🔥", True, _s9_prev, _s9_eml)
+
+        # ── S10: Client Health Matrix ─────────────────────────────────────────────
+        def _s10_data():
+            if "Client" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+                return []
+            _rows10 = []
+            for _cn10, _cg10 in _dash_df.groupby("Client"):
+                _cbs10 = pd.to_numeric(_cg10["Bot Score"], errors="coerce").dropna()
+                _cst10 = _cg10["Status"].astype(str).str.strip() if "Status" in _cg10.columns else pd.Series([])
+                _avg10 = round(_cbs10.mean(), 1) if len(_cbs10) else 0
+                _pr10 = round(int((_cst10 == "Pass").sum()) / len(_cg10) * 100, 1) if len(_cg10) else 0
+                _af10 = int((_cst10 == "Auto-Fail").sum())
+                _h10 = "🟢 Healthy" if _avg10 >= 80 and _pr10 >= 75 else "🟡 Monitor" if _avg10 >= 65 or _pr10 >= 55 else "🔴 At Risk"
+                _rows10.append((str(_cn10), len(_cg10), _avg10, f"{_pr10}%", _af10, _h10))
+            _rows10.sort(key=lambda x: -x[2])
+            return _rows10
+
+        def _s10_prev():
+            _rows10 = _s10_data()
+            if not _rows10:
+                return '<div style="font-size:0.70rem;color:#64748b;">No client data.</div>'
+            _h10 = '<table style="width:100%;border-collapse:collapse;font-size:0.67rem;">'
+            for _mi10, _r10 in enumerate(_rows10[:6]):
+                _bg10 = "#f0fdf4" if "Healthy" in _r10[5] else "#fffbeb" if "Monitor" in _r10[5] else "#fef2f2"
+                _h10 += (f'<tr style="background:{_bg10};">'
+                         f'<td style="padding:4px 8px;font-weight:600;">{_r10[0][:18]}</td>'
+                         f'<td style="padding:4px 8px;color:#2563EB;">{_r10[1]}</td>'
+                         f'<td style="padding:4px 8px;font-weight:700;color:#059669;">{_r10[2]}%</td>'
+                         f'<td style="padding:4px 8px;">{_r10[3]}</td>'
+                         f'<td style="padding:4px 8px;color:#dc2626;">{_r10[4]}</td>'
+                         f'<td style="padding:4px 8px;font-weight:700;">{_r10[5]}</td></tr>')
+            _h10 += "</table>"
+            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h10}</div>'
+
+        def _s10_eml():
+            _rows10 = _s10_data()
+            _erows10 = [(r[0], str(r[1]), f"{r[2]}%", r[3], str(r[4]), r[5]) for r in _rows10]
+            return _em_tbl("Client Health Matrix", "🏢", ["Client", "Audits", "Avg Score", "Pass Rate", "Auto-Fails", "Health"], _erows10, "#374151")
+        _add_section("client_health", "Client Health Matrix", "🏢", True, _s10_prev, _s10_eml)
+
+        # ── S11: Parameter Performance (Top + Bottom) ─────────────────────────────
+        def _s11_data():
+            _pa11 = []
+            for _t11 in _QA_SCHEMA.get("tiers", []):
+                for _p11 in _t11.get("params", []):
+                    if _p11["col"] not in _dash_df.columns:
+                        continue
+                    _pmx11 = max([int(o) for o in _p11.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
+                    _pv11 = pd.to_numeric(_dash_df[_p11["col"]].astype(str).str.strip().replace(
+                        {"NA": "", "nan": "", "Fatal": ""}), errors="coerce").dropna()
+                    if len(_pv11):
+                        _pa11.append((_p11["col"], round(_pv11.mean() / _pmx11 * 100, 1),
+                                      _t11["label"].split("·")[0].strip() if "·" in _t11["label"] else "TIER"))
+            return sorted(_pa11, key=lambda x: -x[1])
+
+        def _s11_prev():
+            _pa11 = _s11_data()
+            if not _pa11:
+                return '<div style="font-size:0.70rem;color:#64748b;">No parameter data.</div>'
+            _h11 = '<table style="width:100%;border-collapse:collapse;">'
+            for _pn, _pv, _pt in _pa11:
+                _c11 = "#059669" if _pv >= 80 else "#d97706" if _pv >= 60 else "#dc2626"
+                _h11 += _em_bar_row(_pn[:22], _pv, _c11)
+            _h11 += "</table>"
+            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;overflow:hidden;">{_h11}</div>'
+
+        def _s11_eml():
+            _pa11 = _s11_data()
+            _erows11 = [(_pn, _pt, f"{_pv}%",
+                         "✅ Strong" if _pv >= 80 else "🟡 Moderate" if _pv >= 65 else "🔴 Critical")
+                        for _pn, _pv, _pt in _pa11]
+            return _em_tbl("All Parameter Scores", "📊", ["Parameter", "Tier", "Avg Score", "Status"], _erows11, "#0B1F3A")
+        _add_section("params", "Parameter Scores", "📊", True, _s11_prev, _s11_eml)
+
+        # ── S12: Co-failure Analysis ──────────────────────────────────────────────
+        def _s12_data():
+            if _total_d < 5:
+                return []
+            _all_pc = [_p for _t in _QA_SCHEMA.get("tiers", []) for _p in _t.get("params", []) if _p["col"] in _dash_df.columns]
+            _fm12 = {}
+            for _p12 in _all_pc:
+                _pmx12 = max([int(o) for o in _p12.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
+                _pv12 = pd.to_numeric(_dash_df[_p12["col"]].astype(str).str.strip().replace(
+                    {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmx12)}), errors="coerce")
+                _fm12[_p12["col"]] = (_pv12 < _pmx12 * 0.5).astype(int)
+            _fm12_df = pd.DataFrame(_fm12)
+            _cl12 = list(_fm12_df.columns)
+            _pairs12 = []
+            for _i12 in range(len(_cl12)):
+                for _j12 in range(_i12 + 1, len(_cl12)):
+                    _both = ((_fm12_df[_cl12[_i12]] == 1) & (_fm12_df[_cl12[_j12]] == 1)).sum()
+                    _r12 = round(_both / _total_d * 100, 1)
+                    if _r12 >= 10:
+                        _pairs12.append((_cl12[_i12], _cl12[_j12], _r12, int(_both)))
+            return sorted(_pairs12, key=lambda x: -x[2])[:10]
+
+        def _s12_prev():
+            _pairs12 = _s12_data()
+            if not _pairs12:
+                return '<div style="font-size:0.70rem;color:#059669;padding:8px;">No significant co-failures detected.</div>'
+            _h12 = ""
+            for _p1, _p2, _r12, _c12 in _pairs12:
+                _cc12 = "#dc2626" if _r12 >= 35 else "#d97706" if _r12 >= 20 else "#2563EB"
+                _h12 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;padding:5px 8px;'
+                         f'background:#fff;border:1px solid #E2EAF6;border-radius:6px;">'
+                         f'<div style="flex:1;font-size:0.65rem;font-weight:600;color:#0B1F3A;">✗ {_p1} + ✗ {_p2}</div>'
+                         f'<div style="background:{_cc12};color:#fff;font-size:0.60rem;font-weight:800;'
+                         f'padding:2px 7px;border-radius:4px;white-space:nowrap;">{_r12}%</div></div>')
+            return _h12
+
+        def _s12_eml():
+            _pairs12 = _s12_data()
+            if not _pairs12:
+                return ""
+            _erows12 = [(_p1, _p2, f"{_r12}%", str(_c12),
+                         "🔴 Critical" if _r12 >= 35 else "🟡 Warning" if _r12 >= 20 else "ℹ️ Noted")
+                        for _p1, _p2, _r12, _c12 in _pairs12]
+            return _em_tbl("Co-failure Analysis", "🔴", ["Parameter 1", "Parameter 2", "Co-fail Rate", "Count", "Risk"], _erows12, "#dc2626")
+        _add_section("cofail", "Co-failure Analysis", "🔴", True, _s12_prev, _s12_eml)
+
+        # ── S13: Campaign Score Divergence ────────────────────────────────────────
+        def _s13_data():
+            if "Campaign Name" not in _dash_df.columns or "Bot Score" not in _dash_df.columns or _total_d < 5:
+                return None, []
+            _pavg = _bs_d.dropna().mean()
+            _rows13 = []
+            for _cn13, _cg13 in _dash_df.groupby("Campaign Name"):
+                _cbs13 = pd.to_numeric(_cg13["Bot Score"], errors="coerce").dropna()
+                if len(_cbs13) >= 2:
+                    _ca13 = _cbs13.mean()
+                    _rows13.append((str(_cn13), round(_ca13, 1), round(_ca13 - _pavg, 1), len(_cbs13)))
+            return _pavg, sorted(_rows13, key=lambda x: x[2])
+
+        def _s13_prev():
+            _pavg13, _rows13 = _s13_data()
+            if not _rows13:
+                return '<div style="font-size:0.70rem;color:#64748b;">No campaign divergence data.</div>'
+            _h13 = f'<div style="font-size:0.65rem;color:#64748b;margin-bottom:6px;">Portfolio avg: {round(_pavg13,1) if _pavg13 else "—"}%</div>'
+            for _cn13, _av13, _dv13, _n13 in _rows13:
+                _c13 = "#059669" if _dv13 >= 0 else "#dc2626"
+                _w13 = min(abs(_dv13) / 20 * 100, 100)
+                _h13 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+                         f'<span style="font-size:0.65rem;font-weight:600;color:#0B1F3A;width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_cn13}</span>'
+                         f'<div style="width:80px;height:8px;background:#f0f2f5;border-radius:4px;">'
+                         f'<div style="width:{_w13}%;height:100%;background:{_c13};border-radius:4px;"></div></div>'
+                         f'<span style="font-size:0.65rem;font-weight:700;color:{_c13};width:50px;">{_dv13:+.1f}%</span>'
+                         f'<span style="font-size:0.60rem;color:#64748b;">{_av13}% ({_n13})</span></div>')
+            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;">{_h13}</div>'
+
+        def _s13_eml():
+            _pavg13, _rows13 = _s13_data()
+            if not _rows13:
+                return ""
+            _erows13 = [(r[0], f"{r[1]}%", f"{r[2]:+.1f}%", str(r[3]),
+                         "✅ Above Avg" if r[2] >= 0 else "🔴 Below Avg") for r in _rows13]
+            return _em_tbl(f"Campaign Score Divergence (Portfolio Avg: {round(_pavg13,1) if _pavg13 else '—'}%)",
+                           "↔️", ["Campaign", "Avg Score", "vs Portfolio", "Calls", "Status"], _erows13, "#374151")
+        _add_section("camp_div", "Campaign Divergence", "↔️", False, _s13_prev, _s13_eml)
+
+        # ── S14: Call Performance Insights ────────────────────────────────────────
+        _ci_d14 = {}
+        try:
+            _ci_d14 = _gen_call_insights(_dash_df)
+        except Exception:
+            pass
+
+        def _s14_prev():
+            _ins14 = (_ci_d14.get("insights") or [])[:8]
+            if not _ins14:
+                return '<div style="font-size:0.70rem;color:#64748b;">No call insights.</div>'
+            _TYPE_C = {"critical": ("#dc2626", "#fef2f2"), "warning": ("#d97706", "#fffbeb"),
+                       "success": ("#059669", "#f0fdf4"), "info": ("#2563EB", "#eff6ff")}
+            _h14 = ""
+            for _ins14i in _ins14:
+                _bdr14, _bg14 = _TYPE_C.get(_ins14i.get("type", "info"), ("#2563EB", "#eff6ff"))
+                _h14 += (f'<div style="background:{_bg14};border-left:3px solid {_bdr14};border-radius:6px;'
+                         f'padding:8px 10px;margin-bottom:6px;">'
+                         f'<div style="font-size:0.70rem;font-weight:700;color:#0B1F3A;">{_ins14i.get("title","")}</div>'
+                         f'<div style="font-size:0.63rem;color:#374151;margin-top:2px;">{_ins14i.get("detail","")[:100]}…</div></div>')
+            return _h14
+
+        def _s14_eml():
+            _ins14 = (_ci_d14.get("insights") or [])
+            if not _ins14:
+                return ""
+            _ehtml14 = '<div style="font-family:Arial,sans-serif;margin-bottom:16px;"><div style="background:#0B1F3A;color:#fff;padding:10px 14px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;">📞 Call Performance Insights</div><div style="border:1px solid #e2e8f0;border-top:none;padding:12px;border-radius:0 0 8px 8px;">'
+            for _ins in _ins14:
+                _ehtml14 += _em_insight_card(_ins.get("title", ""), _ins.get("detail", ""), _ins.get("type", "info"))
+            _ehtml14 += "</div></div>"
+            return _ehtml14
+        _add_section("call_insights", "Call Performance Insights", "📞", True, _s14_prev, _s14_eml)
+
+        # ── S15: Priority Actions ─────────────────────────────────────────────────
+        def _s15_prev():
+            _acts15 = (_ci_d14.get("actions") or [])
+            if not _acts15:
+                return '<div style="font-size:0.70rem;color:#64748b;">No actions.</div>'
+            _PRI_C15 = {"high": "#dc2626", "medium": "#d97706", "low": "#2563EB"}
+            _h15 = ""
+            for _a15 in _acts15[:6]:
+                _pri15 = str(_a15.get("priority", "low")).lower()
+                _ac15 = _PRI_C15.get(_pri15, "#2563EB")
+                _h15 += (f'<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;padding:8px 10px;'
+                         f'background:#fff;border:1px solid #E2EAF6;border-radius:6px;">'
+                         f'<span style="background:{_ac15};color:#fff;font-size:0.55rem;font-weight:800;'
+                         f'padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;margin-top:1px;">{_pri15.upper()}</span>'
+                         f'<div style="font-size:0.67rem;font-weight:600;color:#0B1F3A;">{_a15.get("action","")[:100]}</div></div>')
+            return _h15
+
+        def _s15_eml():
+            _acts15 = (_ci_d14.get("actions") or [])
+            if not _acts15:
+                return ""
+            _PRI_E15 = {"high": "🔴 High", "medium": "🟡 Medium", "low": "🔵 Low"}
+            _erows15 = [(_PRI_E15.get(str(_a.get("priority","low")).lower(), "—"),
+                         str(_a.get("action", ""))[:80], str(_a.get("impact", ""))[:80])
+                        for _a in _acts15]
+            return _em_tbl("Priority Actions", "🎯", ["Priority", "Action", "Impact"], _erows15, "#dc2626")
+        _add_section("actions", "Priority Actions", "🎯", True, _s15_prev, _s15_eml)
+
+        # ── Render sections + tabs (Compose | Preview | Gallery) ────────────────
+        st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
+
+        _em_client = _sel_client if _sel_client != "All" else "Your Client"
+
+        _db_tab_compose, _db_tab_gallery, _db_tab_preview = st.tabs(
+            ["📤 Compose & Send", "🎨 Draft Gallery (15)", "👁 Preview Email"]
+        )
+
+        # ── TAB 1: Compose & Send ─────────────────────────────────────────────────
+        with _db_tab_compose:
+            _sel_all_col2, _desel_all_col2, _sel_count_col2 = st.columns([1, 1, 4])
+            if _sel_all_col2.button("☑ Select All", key="dash_sel_all", use_container_width=True):
+                for _s in _ALL_SECTIONS:
+                    st.session_state[f"dbsec_{_s['id']}"] = True
+                st.rerun()
+            if _desel_all_col2.button("☐ Deselect All", key="dash_desel_all", use_container_width=True):
+                for _s in _ALL_SECTIONS:
+                    st.session_state[f"dbsec_{_s['id']}"] = False
+                st.rerun()
+
+            _selected_section_ids = []
+            _chunks = [_ALL_SECTIONS[i:i+2] for i in range(0, len(_ALL_SECTIONS), 2)]
+            for _chunk in _chunks:
+                _rc1, _rc2 = st.columns(2)
+                for _s, _rc in zip(_chunk, [_rc1, _rc2]):
+                    with _rc:
+                        _default_val = st.session_state.get(f"dbsec_{_s['id']}", _s["default"])
+                        _is_checked = st.checkbox(
+                            f'{_s["icon"]} {_s["label"]}',
+                            value=_default_val,
+                            key=f"dbsec_{_s['id']}",
+                        )
+                        if _is_checked:
+                            _selected_section_ids.append(_s["id"])
+                        if _is_checked or _s["default"]:
+                            st.markdown(
+                                f'<div style="background:#f8faff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;margin-bottom:4px;">'
+                                f'{_s["preview"]}</div>',
+                                unsafe_allow_html=True
+                            )
+                        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+
+            st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
+            _sel_sections_c = [s for s in _ALL_SECTIONS if s["id"] in _selected_section_ids]
+            st.markdown(f'<div style="font-size:0.68rem;color:#64748b;margin-bottom:8px;">{len(_sel_sections_c)} of {len(_ALL_SECTIONS)} sections selected</div>', unsafe_allow_html=True)
+
+            _em_c1, _em_c2, _em_c3, _em_c4 = st.columns([3, 2, 1, 1])
+            with _em_c1:
+                _em_to = st.text_input("Recipient email(s)", placeholder="email1@co.com, email2@co.com", key="dbem_to")
+            with _em_c2:
+                _em_subj = st.text_input("Subject",
+                    value=f"{_em_client} — Dashboard Report · {pd.Timestamp.now().strftime('%b %d, %Y')}",
+                    key="dbem_subj")
+            with _em_c3:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                _em_prev_btn = st.button("👁 Preview", key="dbem_prev", use_container_width=True)
+            with _em_c4:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                _em_send_btn = st.button("📤 Send", key="dbem_send", type="primary", use_container_width=True)
+
+            if _em_prev_btn:
+                st.session_state["dbem_show_prev"] = not st.session_state.get("dbem_show_prev", False)
+
+            def _build_dashboard_email_html(sel_secs, client_name):
+                _sh = "".join(s["email"] for s in sel_secs if s["email"])
+                return f"""<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;background:#f8faff;padding:0;">
+      <div style="background:linear-gradient(135deg,#0B1F3A 0%,#1a62f2 100%);padding:28px 30px;border-radius:10px 10px 0 0;">
+        <div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.02em;">📊 Dashboard Report</div>
+        <div style="font-size:13px;color:#93c5fd;margin-top:5px;">
+          {client_name} · Generated {pd.Timestamp.now().strftime("%B %d, %Y at %H:%M")} ·
+          {_total_d} audits · Avg {_avg_d or "—"}% · Pass rate {_pr_d}%
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">{_sel_client}</span>
+          <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">{_sel_camp}</span>
+          <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">{_sel_period}</span>
+        </div>
       </div>
-    </div>
-  </div>
-</div>"""
+      <div style="padding:20px 24px;">{_sh}
+        <div style="margin-top:28px;padding-top:18px;border-top:2px solid #e2e8f0;">
+          <table width="100%" style="border-collapse:collapse;">
+            <tr>
+              <td style="padding:0;">
+                <div style="font-size:15px;font-weight:900;color:#0B1F3A;letter-spacing:-0.02em;line-height:1.2;">Convin Data Labs</div>
+                <div style="font-size:11px;color:#2563EB;font-weight:600;margin-top:2px;letter-spacing:0.03em;">AI-Powered Quality Intelligence</div>
+                <div style="font-size:10px;color:#94a3b8;margin-top:6px;">
+                  {pd.Timestamp.now().strftime("%B %Y")} · {len(sel_secs)} sections · QA Dashboard Report
+                </div>
+              </td>
+              <td style="padding:0;text-align:right;vertical-align:middle;">
+                <div style="display:inline-block;background:linear-gradient(135deg,#0B1F3A,#1a62f2);border-radius:8px;padding:8px 14px;">
+                  <div style="font-size:13px;font-weight:900;color:#fff;letter-spacing:0.02em;">CDL</div>
+                </div>
+              </td>
+            </tr>
+          </table>
+          <div style="margin-top:10px;font-size:10px;color:#cbd5e1;text-align:center;">
+            This report was generated and sent via Convin Data Labs QA Dashboard · convinlabs@convin.ai
+          </div>
+        </div>
+      </div>
+    </div>"""
 
-        _GALLERY_PRESETS = [
-            {
-                "title": "Executive Performance Report",
-                "desc": "High-level KPIs, score trend & priority actions. Best for C-suite monthly reviews.",
-                "tag": "Monthly · Executive",
-                "hdr_bg": "linear-gradient(135deg,#0B1F3A 0%,#1e40af 100%)",
-                "hdr_color": "#ffffff",
-                "accent": "#1e40af",
-                "sec_ids": ["kpi", "score_trend", "campaign_lb", "actions"],
-            },
-            {
-                "title": "Weekly QA Digest",
-                "desc": "QA leaderboard, auditor calibration & what went right vs needs attention.",
-                "tag": "Weekly · QA Team",
-                "hdr_bg": "linear-gradient(135deg,#0f766e 0%,#14b8a6 100%)",
-                "hdr_color": "#ffffff",
-                "accent": "#0f766e",
-                "sec_ids": ["kpi", "qa_lb", "auditor_cal", "params"],
-            },
-            {
-                "title": "Red Alert — Critical Issues",
-                "desc": "Co-failure analysis, bottom parameters & priority actions. Use for urgent escalations.",
-                "tag": "Alert · Urgent",
-                "hdr_bg": "linear-gradient(135deg,#991b1b 0%,#ef4444 100%)",
-                "hdr_color": "#ffffff",
-                "accent": "#dc2626",
-                "sec_ids": ["kpi", "cofail", "params", "actions"],
-            },
-            {
-                "title": "Campaign Deep Dive",
-                "desc": "Campaign rankings, score divergence & disposition breakdown for campaign managers.",
-                "tag": "Campaign · Analysis",
-                "hdr_bg": "linear-gradient(135deg,#1d4ed8 0%,#60a5fa 100%)",
-                "hdr_color": "#ffffff",
-                "accent": "#1d4ed8",
-                "sec_ids": ["kpi", "campaign_lb", "disposition", "lead_stage"],
-            },
-            {
-                "title": "Client Success Report",
-                "desc": "Client health matrix, KPIs & call performance insights. Share with account managers.",
-                "tag": "Client · Success",
-                "hdr_bg": "linear-gradient(135deg,#065f46 0%,#34d399 100%)",
-                "hdr_color": "#ffffff",
-                "accent": "#059669",
-                "sec_ids": ["kpi", "client_health", "call_insights", "actions"],
-            },
-            {
-                "title": "Bot Quality Scorecard",
-                "desc": "Full parameter scores, tier breakdown & co-failure pairs. For technical QA reviews.",
-                "tag": "Technical · QA",
-                "hdr_bg": "linear-gradient(135deg,#4c1d95 0%,#8b5cf6 100%)",
-                "hdr_color": "#ffffff",
-                "accent": "#7c3aed",
-                "sec_ids": ["kpi", "tier_breakdown", "params", "cofail"],
-            },
-            {
-                "title": "Lead Performance Brief",
-                "desc": "Lead stage funnel, disposition accuracy & conversion insights for sales teams.",
-                "tag": "Sales · Leads",
-                "hdr_bg": "linear-gradient(135deg,#92400e 0%,#f59e0b 100%)",
-                "hdr_color": "#ffffff",
-                "accent": "#d97706",
-                "sec_ids": ["kpi", "lead_stage", "disposition", "call_insights"],
-            },
-            {
-                "title": "Monthly Full Audit Review",
-                "desc": "All 15 sections — the complete end-of-month audit package for stakeholders.",
-                "tag": "Monthly · Full",
-                "hdr_bg": "linear-gradient(135deg,#1e1b4b 0%,#3730a3 100%)",
-                "hdr_color": "#ffffff",
-                "accent": "#4338ca",
-                "sec_ids": [s["id"] for s in _ALL_SECTIONS],
-            },
-            {
-                "title": "Performance Snapshot",
-                "desc": "Quick 5-section snapshot: KPIs, status, trend, leaderboard, actions.",
-                "tag": "Quick · Snapshot",
-                "hdr_bg": "linear-gradient(135deg,#0c4a6e 0%,#0ea5e9 100%)",
-                "hdr_color": "#ffffff",
-                "accent": "#0284c7",
-                "sec_ids": ["kpi", "status_dist", "score_trend", "qa_lb", "actions"],
-            },
-            {
-                "title": "Operations Intelligence Report",
-                "desc": "Auditor calibration, client health, campaign divergence & priority actions.",
-                "tag": "Ops · Intelligence",
-                "hdr_bg": "linear-gradient(135deg,#374151 0%,#6b7280 100%)",
-                "hdr_color": "#ffffff",
-                "accent": "#4b5563",
-                "sec_ids": ["kpi", "auditor_cal", "client_health", "campaign_lb", "actions"],
-            },
-            {
-                "title": "Convin Gold — Premium Report",
-                "desc": "Luxury gold-on-black premium report. KPIs, score trend, tier breakdown & all parameters.",
-                "tag": "Premium · Signature",
-                "hdr_bg": "linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)",
-                "hdr_color": "#f5c518",
-                "accent": "#f5c518",
-                "sec_ids": ["kpi", "score_trend", "tier_breakdown", "params", "actions"],
-            },
-            {
-                "title": "Coral Pulse — Sales Flash",
-                "desc": "Vibrant coral-pink sales energy. Lead stage, disposition, call insights & conversions.",
-                "tag": "Sales · Flash",
-                "hdr_bg": "linear-gradient(135deg,#be123c 0%,#f43f5e 60%,#fb7185 100%)",
-                "hdr_color": "#ffffff",
-                "accent": "#f43f5e",
-                "sec_ids": ["kpi", "lead_stage", "disposition", "call_insights"],
-            },
-            {
-                "title": "Midnight Indigo — Deep Analysis",
-                "desc": "Dark indigo analytical report. Co-failure pairs, parameter heatmap & campaign divergence.",
-                "tag": "Analytics · Deep",
-                "hdr_bg": "linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4338ca 100%)",
-                "hdr_color": "#c7d2fe",
-                "accent": "#6366f1",
-                "sec_ids": ["kpi", "cofail", "params", "campaign_lb", "auditor_cal"],
-            },
-            {
-                "title": "Forest Zen — Calm Digest",
-                "desc": "Earthy green calm report. Status distribution, trend, leaderboard & client health.",
-                "tag": "Weekly · Calm",
-                "hdr_bg": "linear-gradient(135deg,#14532d 0%,#166534 50%,#16a34a 100%)",
-                "hdr_color": "#dcfce7",
-                "accent": "#22c55e",
-                "sec_ids": ["kpi", "status_dist", "score_trend", "qa_lb", "client_health"],
-            },
-            {
-                "title": "Titanium Pro — C-Suite Brief",
-                "desc": "Sleek silver-titanium executive brief. KPIs, campaign rankings & strategic actions.",
-                "tag": "C-Suite · Brief",
-                "hdr_bg": "linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#334155 100%)",
-                "hdr_color": "#e2e8f0",
-                "accent": "#94a3b8",
-                "sec_ids": ["kpi", "campaign_lb", "score_trend", "actions"],
-            },
-        ]
+            if _em_send_btn:
+                if not _sel_sections_c:
+                    st.warning("No sections selected — tick at least one above.")
+                elif not _em_to.strip():
+                    st.warning("Enter at least one recipient email.")
+                else:
+                    _to_list_em = [e.strip() for e in _em_to.replace(";", ",").split(",") if e.strip() and "@" in e]
+                    if not _to_list_em:
+                        st.error("No valid email addresses found.")
+                    else:
+                        _full_em_html = _build_dashboard_email_html(_sel_sections_c, _em_client)
+                        try:
+                            import gmail_sender as _gs_em
+                            _em_result = _gs_em.send_report_email(
+                                credentials_dict={},
+                                to_emails=_to_list_em,
+                                subject=_em_subj,
+                                html_body=_full_em_html,
+                                from_email=st.session_state.get("user_email", "convinlabs@convin.ai"),
+                            )
+                            if _em_result.get("sent"):
+                                st.success(f"✅ Sent to: {', '.join(_em_result['sent'])}  ({len(_sel_sections_c)} sections)")
+                            for _sf_em in _em_result.get("failed", []):
+                                st.error(f"Failed → {_sf_em.get('email','?')}: {_sf_em.get('error','')}")
+                        except Exception as _em_exc:
+                            st.error(f"Send error: {_em_exc}")
 
-        _gal_chunks = [_GALLERY_PRESETS[i:i+2] for i in range(0, len(_GALLERY_PRESETS), 2)]
-        for _gi, _gchunk in enumerate(_gal_chunks):
-            _gc1, _gc2 = st.columns(2)
-            for _gp, _gcol in zip(_gchunk, [_gc1, _gc2]):
-                with _gcol:
-                    _gidx = _GALLERY_PRESETS.index(_gp)
+            if st.session_state.get("dbem_show_prev", False):
+                _prev_secs_c = _sel_sections_c if _sel_sections_c else [s for s in _ALL_SECTIONS if s["default"]]
+                if _prev_secs_c:
+                    _prev_html_c = _build_dashboard_email_html(_prev_secs_c, _em_client)
+                    _prev_wrap_c = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+    <style>body{{margin:0;padding:16px;background:#e8ecf4;font-family:Arial,sans-serif;}}</style></head>
+    <body>{_prev_html_c}</body></html>"""
+                    import base64 as _b64c
+                    _prev_b64c = _b64c.b64encode(_prev_wrap_c.encode()).decode()
                     st.markdown(
-                        f'<div style="background:{_gp["hdr_bg"]};border-radius:10px 10px 0 0;padding:14px 16px;">'
-                        f'<div style="font-size:0.85rem;font-weight:800;color:#fff;">{_gp["title"]}</div>'
-                        f'<div style="font-size:0.65rem;color:rgba(255,255,255,0.75);margin-top:3px;">{_gp["tag"]}</div>'
-                        f'</div>'
-                        f'<div style="border:1px solid #E2EAF6;border-top:none;border-radius:0 0 10px 10px;padding:10px 14px;background:#fff;margin-bottom:12px;">'
-                        f'<div style="font-size:0.68rem;color:#374151;margin-bottom:8px;">{_gp["desc"]}</div>'
-                        f'<div style="font-size:0.62rem;color:#64748b;">{len(_gp["sec_ids"])} sections included</div>'
-                        f'</div>',
+                        f'<div style="font-size:0.72rem;color:#64748b;margin:8px 0 4px;">Preview — {len(_prev_secs_c)} sections · <em>Close by clicking 👁 Preview again</em></div>',
                         unsafe_allow_html=True
                     )
-                    _gpv_col, _gld_col = st.columns(2)
-                    if _gpv_col.button("👁 Preview", key=f"gal_prev_{_gidx}", use_container_width=True):
-                        st.session_state[f"gal_show_{_gidx}"] = not st.session_state.get(f"gal_show_{_gidx}", False)
-                        st.rerun()
-                    if _gld_col.button("📋 Load", key=f"gal_load_{_gidx}", use_container_width=True):
-                        for _s in _ALL_SECTIONS:
-                            st.session_state[f"dbsec_{_s['id']}"] = _s["id"] in _gp["sec_ids"]
-                        st.toast(f'Loaded "{_gp["title"]}" into Compose tab', icon="✅")
-                        st.rerun()
-                    if st.session_state.get(f"gal_show_{_gidx}", False):
-                        _gh = _gallery_email(
-                            _gp["hdr_bg"], _gp["hdr_color"], _gp["accent"],
-                            _gp["title"], _gp["tag"], _gp["sec_ids"]
-                        )
-                        _gw = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
-<style>body{{margin:0;padding:16px;background:#e8ecf4;font-family:Arial,sans-serif;}}</style></head>
-<body>{_gh}</body></html>"""
-                        import base64 as _b64g
-                        _gb64 = _b64g.b64encode(_gw.encode()).decode()
+                    st.markdown(
+                        f'<iframe src="data:text/html;base64,{_prev_b64c}" width="100%" height="680" style="border:1px solid #E2EAF6;border-radius:10px;background:#e8ecf4;"></iframe>',
+                        unsafe_allow_html=True
+                    )
+
+        # ── TAB 2: Preview Email ──────────────────────────────────────────────────
+        with _db_tab_preview:
+            _prev_sel_ids = [_s["id"] for _s in _ALL_SECTIONS if st.session_state.get(f"dbsec_{_s['id']}", _s["default"])]
+            _prev_sel_secs = [s for s in _ALL_SECTIONS if s["id"] in _prev_sel_ids]
+            if not _prev_sel_secs:
+                st.info("No sections selected in Compose tab — select at least one to preview.")
+            else:
+                _prev_html = _build_dashboard_email_html(_prev_sel_secs, _em_client)
+                st.markdown(f'<div style="font-size:0.72rem;color:#64748b;margin-bottom:8px;">Previewing {len(_prev_sel_secs)} selected sections as they will appear in the email.</div>', unsafe_allow_html=True)
+                _prev_wrapped = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+    <style>body{{margin:0;padding:16px;background:#e8ecf4;font-family:Arial,sans-serif;}}</style></head>
+    <body>{_prev_html}</body></html>"""
+                import base64 as _b64_prev
+                _prev_b64 = _b64_prev.b64encode(_prev_wrapped.encode()).decode()
+                st.markdown(
+                    f'<iframe src="data:text/html;base64,{_prev_b64}" width="100%" height="700" style="border:1px solid #E2EAF6;border-radius:10px;background:#e8ecf4;"></iframe>',
+                    unsafe_allow_html=True
+                )
+
+        # ── TAB 3: Draft Gallery (15 preset classy emails) ───────────────────────
+        with _db_tab_gallery:
+            st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:12px;">15 pre-built professional email drafts. Click <b>👁 Preview</b> to see the full email or <b>📋 Load</b> to populate the Compose tab.</div>', unsafe_allow_html=True)
+
+            # Helper: build a gallery draft HTML using current dashboard data
+            def _gallery_email(header_bg, header_color, accent, title, subtitle, sec_ids):
+                _gsh = "".join(s["email"] for s in _ALL_SECTIONS if s["id"] in sec_ids and s["email"])
+                return f"""<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;background:#f8faff;">
+      <div style="background:{header_bg};padding:30px;border-radius:10px 10px 0 0;">
+        <div style="font-size:24px;font-weight:900;color:{header_color};letter-spacing:-0.02em;">{title}</div>
+        <div style="font-size:13px;color:{header_color};opacity:0.8;margin-top:6px;">{subtitle} · {_em_client} · {pd.Timestamp.now().strftime("%B %Y")}</div>
+        <div style="margin-top:12px;">
+          <span style="background:rgba(255,255,255,0.2);color:{header_color};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-right:6px;">{_total_d} Audits</span>
+          <span style="background:rgba(255,255,255,0.2);color:{header_color};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-right:6px;">Avg {_avg_d or "—"}%</span>
+          <span style="background:rgba(255,255,255,0.2);color:{header_color};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">Pass {_pr_d}%</span>
+        </div>
+      </div>
+      <div style="padding:22px 26px;background:#ffffff;border:1px solid {accent}22;border-top:3px solid {accent};border-radius:0 0 10px 10px;">
+        {_gsh}
+        <div style="margin-top:28px;padding-top:18px;border-top:2px solid #e2e8f0;">
+          <table width="100%" style="border-collapse:collapse;">
+            <tr>
+              <td style="padding:0;">
+                <div style="font-size:15px;font-weight:900;color:#0B1F3A;letter-spacing:-0.02em;line-height:1.2;">Convin Data Labs</div>
+                <div style="font-size:11px;color:{accent};font-weight:600;margin-top:2px;letter-spacing:0.03em;">AI-Powered Quality Intelligence</div>
+                <div style="font-size:10px;color:#94a3b8;margin-top:6px;">{pd.Timestamp.now().strftime("%B %d, %Y")} · QA Dashboard Report</div>
+              </td>
+              <td style="padding:0;text-align:right;vertical-align:middle;">
+                <div style="display:inline-block;background:linear-gradient(135deg,#0B1F3A,#1a62f2);border-radius:8px;padding:8px 14px;">
+                  <div style="font-size:13px;font-weight:900;color:#fff;letter-spacing:0.02em;">CDL</div>
+                </div>
+              </td>
+            </tr>
+          </table>
+          <div style="margin-top:10px;font-size:10px;color:#cbd5e1;text-align:center;">
+            This report was generated and sent via Convin Data Labs QA Dashboard · convinlabs@convin.ai
+          </div>
+        </div>
+      </div>
+    </div>"""
+
+            _GALLERY_PRESETS = [
+                {
+                    "title": "Executive Performance Report",
+                    "desc": "High-level KPIs, score trend & priority actions. Best for C-suite monthly reviews.",
+                    "tag": "Monthly · Executive",
+                    "hdr_bg": "linear-gradient(135deg,#0B1F3A 0%,#1e40af 100%)",
+                    "hdr_color": "#ffffff",
+                    "accent": "#1e40af",
+                    "sec_ids": ["kpi", "score_trend", "campaign_lb", "actions"],
+                },
+                {
+                    "title": "Weekly QA Digest",
+                    "desc": "QA leaderboard, auditor calibration & what went right vs needs attention.",
+                    "tag": "Weekly · QA Team",
+                    "hdr_bg": "linear-gradient(135deg,#0f766e 0%,#14b8a6 100%)",
+                    "hdr_color": "#ffffff",
+                    "accent": "#0f766e",
+                    "sec_ids": ["kpi", "qa_lb", "auditor_cal", "params"],
+                },
+                {
+                    "title": "Red Alert — Critical Issues",
+                    "desc": "Co-failure analysis, bottom parameters & priority actions. Use for urgent escalations.",
+                    "tag": "Alert · Urgent",
+                    "hdr_bg": "linear-gradient(135deg,#991b1b 0%,#ef4444 100%)",
+                    "hdr_color": "#ffffff",
+                    "accent": "#dc2626",
+                    "sec_ids": ["kpi", "cofail", "params", "actions"],
+                },
+                {
+                    "title": "Campaign Deep Dive",
+                    "desc": "Campaign rankings, score divergence & disposition breakdown for campaign managers.",
+                    "tag": "Campaign · Analysis",
+                    "hdr_bg": "linear-gradient(135deg,#1d4ed8 0%,#60a5fa 100%)",
+                    "hdr_color": "#ffffff",
+                    "accent": "#1d4ed8",
+                    "sec_ids": ["kpi", "campaign_lb", "disposition", "lead_stage"],
+                },
+                {
+                    "title": "Client Success Report",
+                    "desc": "Client health matrix, KPIs & call performance insights. Share with account managers.",
+                    "tag": "Client · Success",
+                    "hdr_bg": "linear-gradient(135deg,#065f46 0%,#34d399 100%)",
+                    "hdr_color": "#ffffff",
+                    "accent": "#059669",
+                    "sec_ids": ["kpi", "client_health", "call_insights", "actions"],
+                },
+                {
+                    "title": "Bot Quality Scorecard",
+                    "desc": "Full parameter scores, tier breakdown & co-failure pairs. For technical QA reviews.",
+                    "tag": "Technical · QA",
+                    "hdr_bg": "linear-gradient(135deg,#4c1d95 0%,#8b5cf6 100%)",
+                    "hdr_color": "#ffffff",
+                    "accent": "#7c3aed",
+                    "sec_ids": ["kpi", "tier_breakdown", "params", "cofail"],
+                },
+                {
+                    "title": "Lead Performance Brief",
+                    "desc": "Lead stage funnel, disposition accuracy & conversion insights for sales teams.",
+                    "tag": "Sales · Leads",
+                    "hdr_bg": "linear-gradient(135deg,#92400e 0%,#f59e0b 100%)",
+                    "hdr_color": "#ffffff",
+                    "accent": "#d97706",
+                    "sec_ids": ["kpi", "lead_stage", "disposition", "call_insights"],
+                },
+                {
+                    "title": "Monthly Full Audit Review",
+                    "desc": "All 15 sections — the complete end-of-month audit package for stakeholders.",
+                    "tag": "Monthly · Full",
+                    "hdr_bg": "linear-gradient(135deg,#1e1b4b 0%,#3730a3 100%)",
+                    "hdr_color": "#ffffff",
+                    "accent": "#4338ca",
+                    "sec_ids": [s["id"] for s in _ALL_SECTIONS],
+                },
+                {
+                    "title": "Performance Snapshot",
+                    "desc": "Quick 5-section snapshot: KPIs, status, trend, leaderboard, actions.",
+                    "tag": "Quick · Snapshot",
+                    "hdr_bg": "linear-gradient(135deg,#0c4a6e 0%,#0ea5e9 100%)",
+                    "hdr_color": "#ffffff",
+                    "accent": "#0284c7",
+                    "sec_ids": ["kpi", "status_dist", "score_trend", "qa_lb", "actions"],
+                },
+                {
+                    "title": "Operations Intelligence Report",
+                    "desc": "Auditor calibration, client health, campaign divergence & priority actions.",
+                    "tag": "Ops · Intelligence",
+                    "hdr_bg": "linear-gradient(135deg,#374151 0%,#6b7280 100%)",
+                    "hdr_color": "#ffffff",
+                    "accent": "#4b5563",
+                    "sec_ids": ["kpi", "auditor_cal", "client_health", "campaign_lb", "actions"],
+                },
+                {
+                    "title": "Convin Gold — Premium Report",
+                    "desc": "Luxury gold-on-black premium report. KPIs, score trend, tier breakdown & all parameters.",
+                    "tag": "Premium · Signature",
+                    "hdr_bg": "linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)",
+                    "hdr_color": "#f5c518",
+                    "accent": "#f5c518",
+                    "sec_ids": ["kpi", "score_trend", "tier_breakdown", "params", "actions"],
+                },
+                {
+                    "title": "Coral Pulse — Sales Flash",
+                    "desc": "Vibrant coral-pink sales energy. Lead stage, disposition, call insights & conversions.",
+                    "tag": "Sales · Flash",
+                    "hdr_bg": "linear-gradient(135deg,#be123c 0%,#f43f5e 60%,#fb7185 100%)",
+                    "hdr_color": "#ffffff",
+                    "accent": "#f43f5e",
+                    "sec_ids": ["kpi", "lead_stage", "disposition", "call_insights"],
+                },
+                {
+                    "title": "Midnight Indigo — Deep Analysis",
+                    "desc": "Dark indigo analytical report. Co-failure pairs, parameter heatmap & campaign divergence.",
+                    "tag": "Analytics · Deep",
+                    "hdr_bg": "linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4338ca 100%)",
+                    "hdr_color": "#c7d2fe",
+                    "accent": "#6366f1",
+                    "sec_ids": ["kpi", "cofail", "params", "campaign_lb", "auditor_cal"],
+                },
+                {
+                    "title": "Forest Zen — Calm Digest",
+                    "desc": "Earthy green calm report. Status distribution, trend, leaderboard & client health.",
+                    "tag": "Weekly · Calm",
+                    "hdr_bg": "linear-gradient(135deg,#14532d 0%,#166534 50%,#16a34a 100%)",
+                    "hdr_color": "#dcfce7",
+                    "accent": "#22c55e",
+                    "sec_ids": ["kpi", "status_dist", "score_trend", "qa_lb", "client_health"],
+                },
+                {
+                    "title": "Titanium Pro — C-Suite Brief",
+                    "desc": "Sleek silver-titanium executive brief. KPIs, campaign rankings & strategic actions.",
+                    "tag": "C-Suite · Brief",
+                    "hdr_bg": "linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#334155 100%)",
+                    "hdr_color": "#e2e8f0",
+                    "accent": "#94a3b8",
+                    "sec_ids": ["kpi", "campaign_lb", "score_trend", "actions"],
+                },
+            ]
+
+            _gal_chunks = [_GALLERY_PRESETS[i:i+2] for i in range(0, len(_GALLERY_PRESETS), 2)]
+            for _gi, _gchunk in enumerate(_gal_chunks):
+                _gc1, _gc2 = st.columns(2)
+                for _gp, _gcol in zip(_gchunk, [_gc1, _gc2]):
+                    with _gcol:
+                        _gidx = _GALLERY_PRESETS.index(_gp)
                         st.markdown(
-                            f'<iframe src="data:text/html;base64,{_gb64}" width="100%" height="520" style="border:1px solid #E2EAF6;border-radius:8px;margin-top:4px;"></iframe>',
+                            f'<div style="background:{_gp["hdr_bg"]};border-radius:10px 10px 0 0;padding:14px 16px;">'
+                            f'<div style="font-size:0.85rem;font-weight:800;color:#fff;">{_gp["title"]}</div>'
+                            f'<div style="font-size:0.65rem;color:rgba(255,255,255,0.75);margin-top:3px;">{_gp["tag"]}</div>'
+                            f'</div>'
+                            f'<div style="border:1px solid #E2EAF6;border-top:none;border-radius:0 0 10px 10px;padding:10px 14px;background:#fff;margin-bottom:12px;">'
+                            f'<div style="font-size:0.68rem;color:#374151;margin-bottom:8px;">{_gp["desc"]}</div>'
+                            f'<div style="font-size:0.62rem;color:#64748b;">{len(_gp["sec_ids"])} sections included</div>'
+                            f'</div>',
                             unsafe_allow_html=True
                         )
+                        _gpv_col, _gld_col = st.columns(2)
+                        if _gpv_col.button("👁 Preview", key=f"gal_prev_{_gidx}", use_container_width=True):
+                            st.session_state[f"gal_show_{_gidx}"] = not st.session_state.get(f"gal_show_{_gidx}", False)
+                            st.rerun()
+                        if _gld_col.button("📋 Load", key=f"gal_load_{_gidx}", use_container_width=True):
+                            for _s in _ALL_SECTIONS:
+                                st.session_state[f"dbsec_{_s['id']}"] = _s["id"] in _gp["sec_ids"]
+                            st.toast(f'Loaded "{_gp["title"]}" into Compose tab', icon="✅")
+                            st.rerun()
+                        if st.session_state.get(f"gal_show_{_gidx}", False):
+                            _gh = _gallery_email(
+                                _gp["hdr_bg"], _gp["hdr_color"], _gp["accent"],
+                                _gp["title"], _gp["tag"], _gp["sec_ids"]
+                            )
+                            _gw = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+    <style>body{{margin:0;padding:16px;background:#e8ecf4;font-family:Arial,sans-serif;}}</style></head>
+    <body>{_gh}</body></html>"""
+                            import base64 as _b64g
+                            _gb64 = _b64g.b64encode(_gw.encode()).decode()
+                            st.markdown(
+                                f'<iframe src="data:text/html;base64,{_gb64}" width="100%" height="520" style="border:1px solid #E2EAF6;border-radius:8px;margin-top:4px;"></iframe>',
+                                unsafe_allow_html=True
+                            )
 
     # ── Section 16 — Download ─────────────────────────────────────────────────
     try:
