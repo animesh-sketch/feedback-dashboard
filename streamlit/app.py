@@ -1176,6 +1176,7 @@ def _render_period_content(period: str):
     </div>
     """, unsafe_allow_html=True)
 
+    respondents = _ts["respondents"]
     _render_ai_summary(period, csat, respondents)
 
     st.markdown('<div class="section-chip">Key Metrics</div>', unsafe_allow_html=True)
@@ -1240,7 +1241,6 @@ def _render_period_content(period: str):
     </div>""", unsafe_allow_html=True)
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-    respondents = _ts["respondents"]
     with st.expander(f"👥  View Report Ratings  ({csat['responses']})", expanded=False):
         rows_html = "".join(
             f'<div class="resp-row"><div class="resp-name">{r["name"]}</div>'
