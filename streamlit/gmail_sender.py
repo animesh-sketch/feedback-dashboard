@@ -39,9 +39,9 @@ def _extract_inline_images(html: str):
     return modified, images
 
 
-def _send_via_resend(resend_key: str, from_addr: str, to_emails: list,
-                     subject: str, html_body: str) -> dict:
-    """Send using Resend HTTP API. Returns {sent, failed}."""
+def _resend_post(resend_key: str, from_str: str, to_emails: list,
+                 subject: str, html_body: str) -> dict:
+    """Single Resend API call. Returns {sent, failed}."""
     import requests as _req
     sent, failed = [], []
     for addr in to_emails:
@@ -50,20 +50,36 @@ def _send_via_resend(resend_key: str, from_addr: str, to_emails: list,
                 "https://api.resend.com/emails",
                 headers={"Authorization": f"Bearer {resend_key}",
                          "Content-Type": "application/json"},
-                json={"from": f"Convin Data Labs <{from_addr}>",
-                      "to": [addr],
-                      "subject": subject,
-                      "html": html_body},
+                json={"from": from_str, "to": [addr],
+                      "subject": subject, "html": html_body},
                 timeout=15,
             )
             if resp.status_code in (200, 201):
                 sent.append(addr)
             else:
                 failed.append({"email": addr,
-                                "error": f"Resend error {resp.status_code}: {resp.text[:200]}"})
+                                "error": f"Resend {resp.status_code}: {resp.text[:300]}"})
         except Exception as exc:
             failed.append({"email": addr, "error": f"Resend request failed: {exc}"})
     return {"sent": sent, "failed": failed}
+
+
+def _send_via_resend(resend_key: str, from_addr: str, to_emails: list,
+                     subject: str, html_body: str) -> dict:
+    """Try custom domain first, fall back to onboarding@resend.dev."""
+    result = _resend_post(resend_key,
+                          f"Convin Data Labs <{from_addr}>",
+                          to_emails, subject, html_body)
+    if not result.get("failed"):
+        return result
+
+    # If domain not verified (422) retry with Resend's default sender
+    errs = " ".join(f.get("error", "") for f in result["failed"])
+    if "422" in errs or "domain" in errs.lower() or "not verified" in errs.lower():
+        return _resend_post(resend_key,
+                            "Convin Data Labs <onboarding@resend.dev>",
+                            to_emails, subject, html_body)
+    return result
 
 
 def _send_via_gmail(gmail_user: str, app_password: str, to_emails: list,
@@ -156,19 +172,10 @@ def send_report_email(
             results["failed"].extend(r.get("failed", []))
         return results
 
-    # ── Try Resend first ──────────────────────────────────────────────────────
+    # ── Try Resend (preferred — no App Password needed) ──────────────────────
     if resend_key:
-        result = _send_via_resend(resend_key, from_addr, to_emails,
-                                  subject, html_body)
-        # If all sent successfully, return immediately
-        if not result.get("failed"):
-            return result
-        # If Resend failed with a domain/auth error, fall through to Gmail
-        resend_errors = [f.get("error", "") for f in result["failed"]]
-        domain_issue = any("domain" in e.lower() or "403" in e or "422" in e
-                           for e in resend_errors)
-        if not domain_issue:
-            return result  # non-domain error, don't retry
+        return _send_via_resend(resend_key, from_addr, to_emails,
+                                subject, html_body)
 
     # ── Fall back to Gmail SMTP ───────────────────────────────────────────────
     if app_password:
@@ -177,5 +184,5 @@ def send_report_email(
 
     return {"sent": [], "failed": [{"email": "config", "error": (
         "No email provider configured. "
-        "Add RESEND_API_KEY or GMAIL_APP_PASSWORD to Streamlit secrets."
+        "Add RESEND_API_KEY to Streamlit secrets."
     )}]}
