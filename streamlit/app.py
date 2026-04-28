@@ -8249,7 +8249,7 @@ def _render_registry():
     """Registry management — add/edit/delete PMs, CMs, QA, and Clients."""
     _registry_init()
     st.markdown('<div class="section-chip">🗂️ Registry Management</div>', unsafe_allow_html=True)
-    _reg_tabs = st.tabs(["👤 PM", "👥 CM", "🎯 QA", "🏢 Clients"])
+    _reg_tabs = st.tabs(["👤 PM", "🤖 Bot Name", "🎯 QA", "🏢 Clients"])
 
     # ── PM Registry ────────────────────────────────────────────────────────────
     with _reg_tabs[0]:
@@ -8285,24 +8285,24 @@ def _render_registry():
                         _registry_persist()
                         st.rerun()
 
-    # ── CM Registry ────────────────────────────────────────────────────────────
+    # ── Bot Name Registry ──────────────────────────────────────────────────────
     with _reg_tabs[1]:
         _cms = st.session_state.get("sense_registry_cms", [])
-        st.markdown(f'<div style="font-size:0.72rem;color:#5588bb;margin-bottom:8px;">{len(_cms)} CMs registered</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:0.72rem;color:#5588bb;margin-bottom:8px;">{len(_cms)} bot{"s" if len(_cms) != 1 else ""} registered</div>', unsafe_allow_html=True)
         if _cms:
             _cm_html = ""
             for _cm in _cms:
                 _cm_html += (f'<div style="display:flex;align-items:center;padding:5px 10px;'
                              f'border-bottom:1px solid #edf2fb;">'
-                             f'<span style="font-size:0.75rem;font-weight:600;color:#0d1d3a;flex:1;">{_cm}</span></div>')
+                             f'<span style="font-size:0.75rem;font-weight:600;color:#0d1d3a;flex:1;">🤖 {_cm}</span></div>')
             st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:8px;margin-bottom:10px;">{_cm_html}</div>', unsafe_allow_html=True)
-        with st.expander("➕ Add / Remove CM", expanded=False):
+        with st.expander("➕ Add / Remove Bot", expanded=False):
             _cc1, _cc2 = st.columns([3,1])
             with _cc1:
-                _new_cm = st.text_input("New CM name", placeholder="e.g. Priya", key="reg_new_cm")
+                _new_cm = st.text_input("Bot name", placeholder="e.g. Tara", key="reg_new_cm")
             with _cc2:
                 st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-                if st.button("Add CM", key="reg_add_cm", use_container_width=True):
+                if st.button("Add Bot", key="reg_add_cm", use_container_width=True):
                     _n = _new_cm.strip()
                     if _n and _n not in _cms:
                         _cms.append(_n)
@@ -8311,8 +8311,8 @@ def _render_registry():
                         _registry_persist()
                         st.rerun()
             if _cms:
-                _del_cm = st.selectbox("Remove CM", ["— select —"] + _cms, key="reg_del_cm")
-                if st.button("🗑️ Delete CM", key="reg_del_cm_btn", type="secondary"):
+                _del_cm = st.selectbox("Remove Bot", ["— select —"] + _cms, key="reg_del_cm")
+                if st.button("🗑️ Delete Bot", key="reg_del_cm_btn", type="secondary"):
                     if _del_cm != "— select —":
                         st.session_state["sense_registry_cms"] = [c for c in _cms if c != _del_cm]
                         _registry_persist()
@@ -9065,7 +9065,9 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         with _ld2:
             _f_lead_no   = st.text_input("Lead Number", key="f_lead_no", placeholder="e.g. LD-20250422")
         with _ld3:
-            _f_bot_name = st.selectbox("Bot Name *", _SENSE_BOT_LIST, key="f_bot_name")
+            _bot_registry = st.session_state.get("sense_registry_cms", [])
+            _bot_opts = [""] + _bot_registry if _bot_registry else _SENSE_BOT_LIST
+            _f_bot_name = st.selectbox("Bot Name *", _bot_opts, key="f_bot_name")
         with _ld4:
             _disp_opts = ["— select —", "Hot", "Warm", "Cold", "Interested", "Warm Follow-up", "Not Interested", "Converted", "DNC", "Wrong Number", "Language Barrier", "Voicemail / No Answer", "Other"]
             _f_disposition = st.selectbox("Disposition *", _disp_opts, key="f_disposition_sel")
