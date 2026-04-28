@@ -11448,15 +11448,15 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                             unsafe_allow_html=True
                         )
                         _gpv_col, _gld_col = st.columns(2)
-                        if _gpv_col.button("👁 Preview", key=f"gal_prev_{_gidx}", use_container_width=True):
-                            st.session_state[f"gal_show_{_gidx}"] = not st.session_state.get(f"gal_show_{_gidx}", False)
+                        if _gpv_col.button("👁 Preview", key=f"dbgal_prev_{_gidx}", use_container_width=True):
+                            st.session_state[f"dbgal_show_{_gidx}"] = not st.session_state.get(f"dbgal_show_{_gidx}", False)
                             st.rerun()
-                        if _gld_col.button("📋 Load", key=f"gal_load_{_gidx}", use_container_width=True):
+                        if _gld_col.button("📋 Load", key=f"dbgal_load_{_gidx}", use_container_width=True):
                             for _s in _ALL_SECTIONS:
                                 st.session_state[f"dbsec_{_s['id']}"] = _s["id"] in _gp["sec_ids"]
                             st.toast(f'Loaded "{_gp["title"]}" into Compose tab', icon="✅")
                             st.rerun()
-                        if st.session_state.get(f"gal_show_{_gidx}", False):
+                        if st.session_state.get(f"dbgal_show_{_gidx}", False):
                             _gh = _gallery_email(
                                 _gp["hdr_bg"], _gp["hdr_color"], _gp["accent"],
                                 _gp["title"], _gp["tag"], _gp["sec_ids"]
