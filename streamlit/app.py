@@ -6220,33 +6220,70 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
     legend_map = _merge_builtin_params(legend_map or {})
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-    # ── Date range filter for Insights ─────────────────────────────────────────
-    st.markdown('<div class="section-chip">📅 Date Range Filter</div>', unsafe_allow_html=True)
-    _ins_date_preset = st.radio("Filter by:", ["All", "Daily", "Weekly", "Monthly", "Custom"], horizontal=True, key="insights_date_filter")
+    # ── Prominent Date Filter Bar ──────────────────────────────────────────────
+    st.markdown(
+        '<div style="background:linear-gradient(135deg,#EFF6FF 0%,#F8FAFC 100%);'
+        'border:1px solid #BFDBFE;border-radius:12px;padding:12px 18px 10px;margin-bottom:4px;">'
+        '<span style="font-size:0.73rem;font-weight:800;color:#1D4ED8;letter-spacing:0.06em;">'
+        '📅 FILTER INSIGHTS BY TIME PERIOD</span></div>',
+        unsafe_allow_html=True,
+    )
+
+    _FILTER_OPTS = ["All", "Today", "Weekly", "Monthly", "Custom"]
+    # v2 key forces a fresh default — old "Today" value from prior sessions is discarded
+    if st.session_state.get("insights_active_filter_v2") not in _FILTER_OPTS:
+        st.session_state["insights_active_filter_v2"] = "All"
+
+    _ff1, _ff2, _ff3, _ff4, _ff5, _ffspace = st.columns([1, 1, 1, 1, 1, 2])
+    for _fcol, _flabel in zip([_ff1, _ff2, _ff3, _ff4, _ff5], _FILTER_OPTS):
+        with _fcol:
+            _is_active = st.session_state.get("insights_active_filter_v2") == _flabel
+            if st.button(
+                ("✓ " if _is_active else "") + _flabel,
+                key=f"ins_flt_{_flabel}",
+                type="primary" if _is_active else "secondary",
+                use_container_width=True,
+            ):
+                st.session_state["insights_active_filter_v2"] = _flabel
+
+    _ins_date_preset = st.session_state.get("insights_active_filter_v2", "All")
 
     _ins_filter_start = None
-    _ins_filter_end = None
+    _ins_filter_end   = None
 
-    if _ins_date_preset == "Daily":
+    if _ins_date_preset == "All":
+        pass  # no date filter — show all historical records
+    elif _ins_date_preset == "Today":
         _ins_filter_start = pd.Timestamp.now().date()
-        _ins_filter_end = pd.Timestamp.now().date()
+        _ins_filter_end   = pd.Timestamp.now().date()
     elif _ins_date_preset == "Weekly":
         _today = pd.Timestamp.now().date()
         _ins_filter_start = _today - pd.Timedelta(days=7)
-        _ins_filter_end = _today
+        _ins_filter_end   = _today
     elif _ins_date_preset == "Monthly":
         _today = pd.Timestamp.now().date()
         _ins_filter_start = _today - pd.Timedelta(days=30)
-        _ins_filter_end = _today
+        _ins_filter_end   = _today
     elif _ins_date_preset == "Custom":
-        _custom_cols = st.columns(2)
-        with _custom_cols[0]:
+        _cc1, _cc2 = st.columns(2)
+        with _cc1:
             _ins_filter_start = st.date_input("From Date:", key="insights_custom_start")
-        with _custom_cols[1]:
+        with _cc2:
             _ins_filter_end = st.date_input("To Date:", key="insights_custom_end")
 
     if _ins_filter_start and _ins_filter_end:
-        st.info(f"📊 Showing data from {_ins_filter_start} to {_ins_filter_end}")
+        _period_label = {
+            "Today":   f"today · {_ins_filter_start}",
+            "Weekly":  f"last 7 days · {_ins_filter_start} → {_ins_filter_end}",
+            "Monthly": f"last 30 days · {_ins_filter_start} → {_ins_filter_end}",
+            "Custom":  f"{_ins_filter_start} → {_ins_filter_end}",
+            "All":     "all time",
+        }.get(_ins_date_preset, str(_ins_filter_start))
+        st.markdown(
+            f'<div style="font-size:0.76rem;color:#059669;font-weight:600;margin:4px 0 12px;">'
+            f'📊 Showing: <strong>{_period_label}</strong></div>',
+            unsafe_allow_html=True,
+        )
 
     # ── Build audit_df — always seeds from form log / seed records ────────────
     _form_log_ins = _audit_log_load()
@@ -6285,6 +6322,72 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
     elif not _all_sheets:
         _all_sheets = {"Data": df} if df is not None and not (hasattr(df, "empty") and df.empty) else {}
 
+    # ── Sample data fallback when no real records exist ───────────────────────
+    _real_record_count  = len(_audit_df_ins) if _audit_df_ins is not None else 0
+    _using_sample_data  = False
+
+    if _real_record_count == 0:
+        _using_sample_data = True
+        _td   = pd.Timestamp.now().date()
+        _SSCORES = [88,75,62,91,12,79,84,66,93,71,58,86,74,12,82,69,95,61,77,88,52,73,90,64,85,71]
+        _SDAGO   = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 5, 7, 7, 7,10,10,14,14,14,21,21,21,28,28]
+        _SCLIENTS= ["HDFC Bank","HDFC Bank","Bajaj Finance","Airtel","Bajaj Finance",
+                    "Airtel","HDFC Bank","Bajaj Finance","Airtel","HDFC Bank",
+                    "Bajaj Finance","Airtel","HDFC Bank","Bajaj Finance","Airtel",
+                    "HDFC Bank","Bajaj Finance","Airtel","HDFC Bank","Bajaj Finance",
+                    "Airtel","HDFC Bank","Bajaj Finance","Airtel","HDFC Bank","Bajaj Finance"]
+        _SQA    = ["Priya K.","Rahul M.","Sneha D.","Priya K.","Rahul M.",
+                   "Sneha D.","Priya K.","Rahul M.","Sneha D.","Priya K.",
+                   "Rahul M.","Sneha D.","Priya K.","Rahul M.","Sneha D.",
+                   "Priya K.","Rahul M.","Sneha D.","Priya K.","Rahul M.",
+                   "Sneha D.","Priya K.","Rahul M.","Sneha D.","Priya K.","Rahul M."]
+        _SDISP  = ["Interested","Converted","Not Interested","Warm Follow-up","DNC",
+                   "Voicemail / No Answer","Interested","Interested","Converted",
+                   "Not Interested","Warm Follow-up","DNC","Interested","Not Interested",
+                   "Converted","Interested","Warm Follow-up","Not Interested","Converted",
+                   "Interested","DNC","Interested","Converted","Not Interested","Warm Follow-up","Interested"]
+        _SCAM   = {"HDFC Bank":"Home Loan Follow-up","Bajaj Finance":"Credit Card Renewal","Airtel":"Postpaid Upgrade"}
+        _SBOT   = {"HDFC Bank":"BotHDFC_v2","Bajaj Finance":"BotBajaj_v1","Airtel":"BotAirtel_v3"}
+        _SPM    = {"HDFC Bank":"Ananya R.","Bajaj Finance":"Vikram S.","Airtel":"Preethi T."}
+        _srows  = []
+        for _si in range(len(_SSCORES)):
+            _sc = _SSCORES[_si]; _cl = _SCLIENTS[_si]
+            _st = ("Auto-Fail" if _sc < 20 else "Pass" if _sc >= 80 else "Needs Review" if _sc >= 65 else "Fail")
+            _srows.append({
+                "Audit Date":   str(_td - pd.Timedelta(days=_SDAGO[_si])),
+                "QA":           _SQA[_si],   "Client":        _cl,
+                "Campaign Name":_SCAM[_cl],  "PM / CSM":      _SPM[_cl],
+                "Bot Name":     _SBOT[_cl],  "Lead Number":   f"LN-{1100+_si}",
+                "Disposition":  _SDISP[_si % len(_SDISP)],
+                "Bot Score": _sc, "Lead Score": round(_sc*0.85,1),
+                "Intelligence Score": round(_sc*0.9,1),
+                "Status": _st,  "Fatal?": "Yes" if _st=="Auto-Fail" else "No",
+                "Disposition Accuracy":        "2" if _sc>=80 else ("1" if _sc>=65 else "0"),
+                "Context Passing":             "2" if _sc>=75 else ("1" if _sc>=60 else "0"),
+                "Flow Issue":                  "No" if _sc>=70 else "Yes",
+                "Bot Restarted Conversation":  "No" if _sc>=65 else "Yes",
+                "Message Content":             "2" if _sc>=80 else ("1" if _sc>=60 else "0"),
+                "Follow-up in Specified Time": "2" if _sc>=75 else "1",
+                "Bot Repetition":              "No" if _sc>=70 else "Yes",
+                "Dead Air/Blank Space":        "2" if _sc>=80 else ("1" if _sc>=65 else "0"),
+                "Repeated Calls":              "2",
+                "Introduction":                "2" if _sc>=70 else "1",
+                "Background Noise":            "2" if _sc>=60 else "0",
+                "Transcription Issues":        "2" if _sc>=60 else "0",
+                "Latency":                     "2" if _sc>=75 else ("1" if _sc>=60 else "0"),
+                "Language Switch":             "2",
+                "Script Issue in Transcript":  "2" if _sc>=65 else "0",
+                "Template Issues":             "2",
+                "Pronunciation Issue":         "2" if _sc>=65 else "0",
+                "Abrupt Disconnection":        "Fatal" if _st=="Auto-Fail" else "0",
+                "NBA Not Executed":            "2",
+                "Notes": "", "Improvement Suggestion": "", "Call Drop Stage": "",
+            })
+        _audit_df_ins = pd.DataFrame(_srows)
+        # Update _all_sheets so downstream tabs (AI, reports) also see the data
+        if not _all_sheets:
+            _all_sheets = {"Audit": _audit_df_ins}
+
     _has_qa_ins = (_audit_df_ins is not None and
                    "Bot Score" in (_audit_df_ins.columns if _audit_df_ins is not None else []) and
                    "Status"    in (_audit_df_ins.columns if _audit_df_ins is not None else []))
@@ -6293,20 +6396,44 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
     if _ins_filter_start and _ins_filter_end and _audit_df_ins is not None and "Audit Date" in _audit_df_ins.columns:
         try:
             _audit_df_ins["Audit Date"] = pd.to_datetime(_audit_df_ins["Audit Date"], errors="coerce")
-            _audit_df_ins = _audit_df_ins[
+            _filtered_ins = _audit_df_ins[
                 (_audit_df_ins["Audit Date"].dt.date >= _ins_filter_start) &
                 (_audit_df_ins["Audit Date"].dt.date <= _ins_filter_end)
             ].reset_index(drop=True)
-            if _audit_df_ins.empty:
-                st.info(f"ℹ️ No insights data found for the selected date range ({_ins_filter_start} to {_ins_filter_end})")
+            if _filtered_ins.empty and not _using_sample_data:
+                # Show total count as hint so user knows data exists but not in this window
+                _total_all = len(_audit_df_ins)
+                st.warning(
+                    f"No audit records found for **{_ins_date_preset}** "
+                    f"({_ins_filter_start} → {_ins_filter_end}). "
+                    f"There are **{_total_all:,}** records in total — try **All** to see everything."
+                )
                 return
+            _audit_df_ins = _filtered_ins
         except:
             pass
 
-    # ── Audit data source banner ───────────────────────────────────────────────
+    # ── Prominent demo-data alert + refresh button ────────────────────────────
     _log_count_ins = len(_form_log_ins) if _form_log_ins else 0
     _upload_count_ins = max(0, (len(_audit_df_ins) if _audit_df_ins is not None else 0) - _log_count_ins)
     _total_recs_ins = len(_audit_df_ins) if _audit_df_ins is not None else 0
+
+    if _using_sample_data:
+        _demo_col, _ref_col = st.columns([5, 1])
+        with _demo_col:
+            st.warning(
+                "⚠️ **Demo mode** — no audit records found in the database. "
+                "The panels below use sample data to illustrate the dashboard. "
+                "Submit real audits via ✍️ **New Audit** to replace this with your data."
+            )
+        with _ref_col:
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+            if st.button("🔄 Refresh", key="ins_force_refresh", use_container_width=True,
+                         help="Force-reload audit data from the database"):
+                _audit_log_load.clear()
+                st.rerun()
+
+    # ── Audit data source banner ───────────────────────────────────────────────
     _src_parts_ins = []
     if _log_count_ins:
         _src_parts_ins.append(f'<span style="background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;border-radius:6px;padding:2px 10px;font-size:0.67rem;font-weight:700;">📡 {_log_count_ins} from Audit Log</span>')
@@ -6332,8 +6459,8 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
     )
 
     # ── TABS ──────────────────────────────────────────────────────────────────
-    _itab_labels = ["📊 Overview", "🏆 Performance", "📈 Trends", "🔬 Parameters", "📋 Reports", "🧠 Intelligence"]
-    _i1, _i2, _i3, _i4, _i5, _i6 = st.tabs(_itab_labels)
+    _itab_labels = ["📊 Overview", "🏆 Performance", "📈 Trends", "🔬 Parameters", "📋 Reports", "🧠 Intelligence", "📤 Send Report"]
+    _i1, _i2, _i3, _i4, _i5, _i6, _i7 = st.tabs(_itab_labels)
 
     # ══════════════════════════════════════════════════════════════════════════
     # Tab 1 — Overview
@@ -6342,7 +6469,7 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
         if not _has_qa_ins:
             st.info("No QA schema data found. Submit audits via the ✍️ New Audit tab first.")
         else:
-            if not sheets and not _log_count_ins:
+            if not sheets and not _log_count_ins and not _using_sample_data:
                 st.markdown(
                     '<div style="background:rgba(61,130,245,0.08);border:1px solid rgba(61,130,245,0.2);'
                     'border-radius:8px;padding:9px 16px;margin-bottom:12px;font-size:0.73rem;color:#2563EB;">'
@@ -8509,6 +8636,1114 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                             f'{_gap_html}</div>',
                             unsafe_allow_html=True
                         )
+
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # Tab 7 — Send Report (Client selector · Preview · Email)
+    # ══════════════════════════════════════════════════════════════════════════
+    with _i7:
+        if not _has_qa_ins:
+            st.info("No QA data found. Submit audits first.")
+        else:
+            st.markdown(
+                '<div style="background:linear-gradient(135deg,#0B1F3A 0%,#1e3a5f 100%);'
+                'border-radius:14px;padding:18px 24px;margin-bottom:18px;">'
+                '<div style="font-size:1.05rem;font-weight:800;color:#fff;letter-spacing:-0.01em;">📤 Client Report Sender</div>'
+                '<div style="font-size:0.73rem;color:rgba(186,230,253,0.8);margin-top:4px;">'
+                'Select a client, preview the report, and send it directly from here.</div></div>',
+                unsafe_allow_html=True,
+            )
+
+            # ── Row 1: Client / Campaign / Period selectors ───────────────────
+            _sr_c1, _sr_c2, _sr_c3 = st.columns([2, 2, 2])
+
+            # Pull clients from client_store for email auto-fill
+            _store_clients = client_store.load()
+            _store_map     = {c["company"]: c for c in _store_clients}  # company → client dict
+
+            with _sr_c1:
+                _aud_clients = sorted(_audit_df_ins["Client"].dropna().astype(str).unique().tolist()) if "Client" in _audit_df_ins.columns else []
+                # Merge audit clients with store clients for the dropdown
+                _all_cli_opts = ["— All Clients —"] + _aud_clients
+                _sr_cli = st.selectbox("🏢 Select Client", _all_cli_opts, key="sr_client_sel")
+
+            with _sr_c2:
+                _sr_camp_src = _audit_df_ins
+                if _sr_cli != "— All Clients —" and "Client" in _audit_df_ins.columns:
+                    _sr_camp_src = _audit_df_ins[_audit_df_ins["Client"].astype(str) == _sr_cli]
+                _sr_camp_opts = ["— All Campaigns —"] + (sorted(_sr_camp_src["Campaign Name"].dropna().astype(str).unique().tolist()) if "Campaign Name" in _sr_camp_src.columns else [])
+                _sr_camp = st.selectbox("🎯 Campaign", _sr_camp_opts, key="sr_camp_sel")
+
+            with _sr_c3:
+                _sr_period_opts = ["All Time", "This Month (30 days)", "This Week (7 days)", "Today"]
+                _sr_period = st.selectbox("📅 Period", _sr_period_opts, key="sr_period_sel")
+
+            # ── Filter the data for this report ──────────────────────────────
+            _sr_df = _audit_df_ins.copy()
+            if _sr_cli != "— All Clients —" and "Client" in _sr_df.columns:
+                _sr_df = _sr_df[_sr_df["Client"].astype(str) == _sr_cli]
+            if _sr_camp != "— All Campaigns —" and "Campaign Name" in _sr_df.columns:
+                _sr_df = _sr_df[_sr_df["Campaign Name"].astype(str) == _sr_camp]
+            if "Audit Date" in _sr_df.columns:
+                try:
+                    _sr_df["Audit Date"] = pd.to_datetime(_sr_df["Audit Date"], errors="coerce")
+                    _sr_now = pd.Timestamp.now().date()
+                    if _sr_period == "Today":
+                        _sr_df = _sr_df[_sr_df["Audit Date"].dt.date == _sr_now]
+                    elif _sr_period == "This Week (7 days)":
+                        _sr_df = _sr_df[_sr_df["Audit Date"].dt.date >= (_sr_now - pd.Timedelta(days=7))]
+                    elif _sr_period == "This Month (30 days)":
+                        _sr_df = _sr_df[_sr_df["Audit Date"].dt.date >= (_sr_now - pd.Timedelta(days=30))]
+                except Exception:
+                    pass
+
+            _sr_total   = len(_sr_df)
+            _sr_bs      = pd.to_numeric(_sr_df["Bot Score"], errors="coerce") if _sr_total else pd.Series(dtype=float)
+            _sr_avg     = round(_sr_bs.dropna().mean(), 1) if _sr_bs.dropna().notna().any() else None
+            _sr_st      = _sr_df["Status"].astype(str).str.strip() if _sr_total else pd.Series(dtype=str)
+            _sr_pass    = int((_sr_st == "Pass").sum())
+            _sr_review  = int((_sr_st == "Needs Review").sum())
+            _sr_fail    = int((_sr_st == "Fail").sum())
+            _sr_fatal   = int((_sr_st == "Auto-Fail").sum())
+            _sr_pr      = round(_sr_pass / _sr_total * 100, 1) if _sr_total else 0
+
+            # Param averages for strengths / weaknesses
+            _sr_pavgs = []
+            for _sr_tier in _QA_SCHEMA["tiers"]:
+                for _sr_p in _sr_tier["params"]:
+                    if _sr_p["col"] not in _sr_df.columns or _sr_total == 0:
+                        continue
+                    _sr_pmax = max([int(o) for o in _sr_p["options"] if str(o).lstrip("-").isdigit()], default=2)
+                    _sr_pvals = pd.to_numeric(
+                        _sr_df[_sr_p["col"]].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":""}),
+                        errors="coerce").dropna()
+                    if len(_sr_pvals) == 0:
+                        continue
+                    _sr_pavgs.append({"col": _sr_p["col"], "pct": round(_sr_pvals.mean() / _sr_pmax * 100, 1)})
+            _sr_strengths = sorted([p for p in _sr_pavgs if p["pct"] >= 75], key=lambda x: -x["pct"])[:4]
+            _sr_weaknesses = sorted([p for p in _sr_pavgs if p["pct"] < 70], key=lambda x: x["pct"])[:4]
+
+            # Key insights from rule engine
+            _sr_qi = _gen_qa_insights(_sr_df) if _sr_total > 0 else {"insights": [], "actions": []}
+            _sr_insights = _sr_qi.get("insights", [])[:5]
+            _sr_actions  = _sr_qi.get("actions", [])[:4]
+
+            # ── Report stats bar ─────────────────────────────────────────────
+            _sr_bc = "#059669" if (_sr_avg or 0) >= 80 else "#d97706" if (_sr_avg or 0) >= 65 else "#dc2626"
+            st.markdown(
+                f'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">'
+                f'<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:10px 18px;text-align:center;min-width:80px;">'
+                f'<div style="font-size:1.4rem;font-weight:900;color:#1D4ED8;">{_sr_total}</div>'
+                f'<div style="font-size:0.6rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.07em;">Total Audits</div></div>'
+                f'<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:10px;padding:10px 18px;text-align:center;min-width:80px;">'
+                f'<div style="font-size:1.4rem;font-weight:900;color:{_sr_bc};">{_sr_avg or "—"}%</div>'
+                f'<div style="font-size:0.6rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.07em;">Avg Score</div></div>'
+                f'<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:10px 18px;text-align:center;min-width:80px;">'
+                f'<div style="font-size:1.4rem;font-weight:900;color:#059669;">{_sr_pr}%</div>'
+                f'<div style="font-size:0.6rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.07em;">Pass Rate</div></div>'
+                f'<div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:10px 18px;text-align:center;min-width:80px;">'
+                f'<div style="font-size:1.4rem;font-weight:900;color:#d97706;">{_sr_review}</div>'
+                f'<div style="font-size:0.6rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.07em;">Needs Review</div></div>'
+                f'<div style="background:#FFF1F2;border:1px solid #FECDD3;border-radius:10px;padding:10px 18px;text-align:center;min-width:80px;">'
+                f'<div style="font-size:1.4rem;font-weight:900;color:#dc2626;">{_sr_fatal}</div>'
+                f'<div style="font-size:0.6rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.07em;">Auto-Fails</div></div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            # ── Build report HTML ─────────────────────────────────────────────
+            def _build_sr_html():
+                _now_s  = pd.Timestamp.now().strftime("%d %b %Y")
+                _cli_l  = _sr_cli if _sr_cli != "— All Clients —" else "All Clients"
+                _camp_l = _sr_camp if _sr_camp != "— All Campaigns —" else "All Campaigns"
+                _bc_s   = "#059669" if (_sr_avg or 0) >= 80 else "#d97706" if (_sr_avg or 0) >= 65 else "#dc2626"
+
+                H = (
+                    '<div style="font-family:\'Segoe UI\',Arial,sans-serif;max-width:660px;margin:0 auto;'
+                    'background:#fff;border-radius:16px;overflow:hidden;border:1px solid #E2EAF6;">'
+                    # Header
+                    f'<div style="background:linear-gradient(135deg,#0B1F3A 0%,#1e3a5f 50%,#2563EB 100%);padding:32px 36px 26px;">'
+                    f'<div style="font-size:9px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:rgba(186,230,253,0.75);margin-bottom:8px;">CONVIN SENSE · QA AUDIT REPORT</div>'
+                    f'<div style="font-size:26px;font-weight:900;color:#fff;line-height:1.15;letter-spacing:-0.02em;margin-bottom:4px;">QA Audit Insights</div>'
+                    f'<div style="font-size:12px;color:rgba(186,230,253,0.7);margin-bottom:16px;">Powered by Convin Sense Intelligence Engine</div>'
+                    f'<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+                    f'<span style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">📅 {_now_s}</span>'
+                    f'<span style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🏢 {_cli_l}</span>'
+                    f'<span style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">🎯 {_camp_l}</span>'
+                    f'<span style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:4px 12px;font-size:11px;color:#fff;">📊 {_sr_period}</span>'
+                    f'</div></div>'
+                    # Body
+                    '<div style="padding:28px 36px;">'
+                )
+
+                # KPI grid
+                H += (
+                    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:22px;">'
+                    f'<div style="background:#EFF6FF;border-radius:12px;padding:14px 12px;text-align:center;border:1px solid #BFDBFE;">'
+                    f'<div style="font-size:1.8rem;font-weight:900;color:#1D4ED8;">{_sr_total}</div>'
+                    f'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Total Audits</div></div>'
+                    f'<div style="background:#F0FDF4;border-radius:12px;padding:14px 12px;text-align:center;border:1px solid #BBF7D0;">'
+                    f'<div style="font-size:1.8rem;font-weight:900;color:{_bc_s};">{_sr_avg or "—"}%</div>'
+                    f'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Avg Bot Score</div></div>'
+                    f'<div style="background:#F0FDF4;border-radius:12px;padding:14px 12px;text-align:center;border:1px solid #BBF7D0;">'
+                    f'<div style="font-size:1.8rem;font-weight:900;color:#059669;">{_sr_pr}%</div>'
+                    f'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Pass Rate</div></div>'
+                    f'<div style="background:#FFF1F2;border-radius:12px;padding:14px 12px;text-align:center;border:1px solid #FECDD3;">'
+                    f'<div style="font-size:1.8rem;font-weight:900;color:#dc2626;">{_sr_fatal}</div>'
+                    f'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Auto-Fails</div></div>'
+                    '</div>'
+                )
+
+                # Status distribution
+                _sd = [("✅ Pass","#059669",_sr_pass),("🟡 Needs Review","#f59e0b",_sr_review),
+                       ("❌ Fail","#ef4444",_sr_fail),("🚨 Auto-Fail","#dc2626",_sr_fatal)]
+                H += ('<div style="margin-bottom:22px;">'
+                      '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;'
+                      'color:#0B1F3A;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #EFF6FF;">📊 Status Breakdown</div>')
+                for _sn2, _sc2, _sv2 in _sd:
+                    _sp2 = round(_sv2 / _sr_total * 100, 1) if _sr_total else 0
+                    H += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+                          f'<div style="width:130px;font-size:12px;font-weight:600;color:#0d1d3a;flex-shrink:0;">{_sn2}</div>'
+                          f'<div style="flex:1;height:12px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
+                          f'<div style="width:{_sp2}%;height:100%;background:{_sc2};border-radius:3px;"></div></div>'
+                          f'<div style="width:80px;text-align:right;font-size:12px;font-weight:700;color:{_sc2};flex-shrink:0;">{_sv2} ({_sp2}%)</div>'
+                          f'</div>')
+                H += '</div>'
+
+                # Strengths / weaknesses two-column
+                H += ('<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;">')
+                # Strengths
+                H += ('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:14px 16px;">'
+                      '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#059669;margin-bottom:10px;">✅ Top Strengths</div>')
+                if _sr_strengths:
+                    for _ss in _sr_strengths:
+                        H += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                              f'<div style="flex:1;font-size:12px;font-weight:600;color:#064E3B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_ss["col"]}</div>'
+                              f'<div style="font-size:11px;font-weight:800;color:#059669;flex-shrink:0;">{_ss["pct"]}%</div>'
+                              f'</div>')
+                else:
+                    H += '<div style="font-size:12px;color:#94a3b8;">No data yet</div>'
+                H += '</div>'
+                # Weaknesses
+                H += ('<div style="background:#FFF1F2;border:1px solid #FECDD3;border-radius:12px;padding:14px 16px;">'
+                      '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#dc2626;margin-bottom:10px;">⚠️ Needs Improvement</div>')
+                if _sr_weaknesses:
+                    for _sw in _sr_weaknesses:
+                        _sw_c = "#dc2626" if _sw["pct"] < 50 else "#d97706"
+                        H += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                              f'<div style="flex:1;font-size:12px;font-weight:600;color:#7F1D1D;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_sw["col"]}</div>'
+                              f'<div style="font-size:11px;font-weight:800;color:{_sw_c};flex-shrink:0;">{_sw["pct"]}%</div>'
+                              f'</div>')
+                else:
+                    H += '<div style="font-size:12px;color:#94a3b8;">All parameters healthy 🎉</div>'
+                H += '</div>'
+                H += '</div>'
+
+                # Key insights
+                if _sr_insights:
+                    _ti_bg  = {"critical":"#FFF1F2","warning":"#FFFBEB","success":"#ECFDF5","info":"#EBF5FF"}
+                    _ti_bc  = {"critical":"#dc2626","warning":"#D97706","success":"#059669","info":"#2563EB"}
+                    _ti_tc  = {"critical":"#7F1D1D","warning":"#78350F","success":"#064E3B","info":"#1e3a5f"}
+                    _ti_ico = {"critical":"🚨","warning":"⚠️","success":"✅","info":"ℹ️"}
+                    H += ('<div style="margin-bottom:22px;">'
+                          '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;'
+                          'color:#0B1F3A;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #EFF6FF;">💡 Key Insights</div>')
+                    for _sri in _sr_insights:
+                        _t = _sri.get("type","info")
+                        H += (f'<div style="background:{_ti_bg.get(_t,"#EBF5FF")};border-left:4px solid {_ti_bc.get(_t,"#2563EB")};'
+                              f'border-radius:0 8px 8px 0;padding:11px 14px;margin-bottom:8px;">'
+                              f'<div style="font-size:13px;font-weight:800;color:{_ti_tc.get(_t,"#0B1F3A")};margin-bottom:4px;">'
+                              f'{_ti_ico.get(_t,"ℹ️")} {_sri.get("title","")}</div>'
+                              f'<div style="font-size:12px;color:{_ti_tc.get(_t,"#374151")};line-height:1.55;">{_sri.get("detail","")}</div>'
+                              f'</div>')
+                    H += '</div>'
+
+                # Priority actions
+                if _sr_actions:
+                    _pa_bg  = {"high":"#FFF1F2","medium":"#FFFBEB","low":"#ECFDF5"}
+                    _pa_bc  = {"high":"#dc2626","medium":"#D97706","low":"#059669"}
+                    _pa_lbl = {"high":"🔴 HIGH","medium":"🟡 MED","low":"🟢 LOW"}
+                    H += ('<div style="margin-bottom:22px;">'
+                          '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;'
+                          'color:#0B1F3A;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #EFF6FF;">🎯 Priority Actions</div>')
+                    for _ax, _act in enumerate(_sr_actions, 1):
+                        _p2 = _act.get("priority","low")
+                        H += (f'<div style="background:{_pa_bg.get(_p2,"#ECFDF5")};border-left:4px solid {_pa_bc.get(_p2,"#059669")};'
+                              f'border-radius:0 8px 8px 0;padding:11px 14px;margin-bottom:8px;">'
+                              f'<div style="margin-bottom:4px;">'
+                              f'<span style="font-size:9px;font-weight:800;text-transform:uppercase;color:#fff;'
+                              f'background:{_pa_bc.get(_p2,"#059669")};padding:2px 8px;border-radius:8px;">#{_ax} · {_pa_lbl.get(_p2,"")} · {_act.get("category","")}</span></div>'
+                              f'<div style="font-size:13px;font-weight:700;color:#0B1F3A;line-height:1.5;margin-bottom:4px;">{_act.get("action","")}</div>'
+                              f'<div style="font-size:11px;color:#64748b;">💥 Impact: {_act.get("impact","")}</div>'
+                              f'</div>')
+                    H += '</div>'
+
+                # Footer
+                H += (f'<div style="border-top:1px solid #E2EAF6;margin-top:18px;padding-top:14px;text-align:center;">'
+                      f'<div style="font-size:11px;color:#94a3b8;line-height:1.8;">'
+                      f'Auto-generated by <strong style="color:#2563EB;">Convin Sense Audit</strong> · Auto QA Data Insights<br>'
+                      f'Report Date: {_now_s} &nbsp;·&nbsp; Client: {_cli_l} &nbsp;·&nbsp; Campaign: {_camp_l}'
+                      f'</div></div>'
+                      '</div></div>')
+                return H
+
+            # ── Preview + Send ────────────────────────────────────────────────
+            _sr_left, _sr_right = st.columns([2, 3])
+
+            with _sr_left:
+                st.markdown('<div style="font-size:0.75rem;font-weight:700;color:#0B1F3A;margin-bottom:8px;">📧 Recipients</div>', unsafe_allow_html=True)
+
+                # Auto-fill email from client_store if available
+                _auto_email = ""
+                if _sr_cli != "— All Clients —" and _sr_cli in _store_map:
+                    _auto_email = ", ".join(_store_map[_sr_cli].get("emails", []))
+
+                _sr_to_raw = st.text_area(
+                    "To (comma-separated emails)",
+                    value=_auto_email,
+                    height=80,
+                    placeholder="client@company.com, pm@company.com",
+                    key="sr_recipients",
+                )
+                _sr_subj = st.text_input(
+                    "Subject",
+                    value=f"QA Audit Report — {_sr_cli if _sr_cli != '— All Clients —' else 'All Clients'} — {pd.Timestamp.now().strftime('%d %b %Y')}",
+                    key="sr_subject",
+                )
+                _sr_note = st.text_area(
+                    "Personal note (optional)",
+                    height=72,
+                    placeholder="Hi team, please find the latest QA report attached...",
+                    key="sr_note",
+                )
+
+                if st.session_state.get("sr_no_data_warning") and _sr_total == 0:
+                    st.warning("No audit records for this selection. Change the client, campaign, or period.")
+
+                _sr_prev_btn = st.button("👁 Preview Report", key="sr_preview_btn", use_container_width=True)
+                _sr_send_btn = st.button("📤 Send to Client", key="sr_send_btn", type="primary", use_container_width=True)
+
+                if _sr_send_btn:
+                    if _sr_total == 0:
+                        st.session_state["sr_no_data_warning"] = True
+                        st.warning("No audit records for this selection.")
+                    else:
+                        _to_list = [e.strip() for e in _sr_to_raw.split(",") if "@" in e.strip()]
+                        if not _to_list:
+                            st.error("Add at least one valid email address.")
+                        else:
+                            _note_html = ""
+                            if _sr_note.strip():
+                                _note_html = (
+                                    f'<div style="font-family:\'Segoe UI\',Arial,sans-serif;max-width:660px;margin:0 auto 12px;'
+                                    f'background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:14px 18px;">'
+                                    f'<div style="font-size:13px;color:#78350F;line-height:1.65;white-space:pre-line;">{_sr_note.strip()}</div>'
+                                    f'</div>'
+                                )
+                            try:
+                                _full_html = _note_html + _build_sr_html()
+                                _sr_result = gmail_sender.send_report_email(
+                                    {}, _to_list, _sr_subj, _full_html,
+                                    from_email=st.session_state.get("user_email","")
+                                )
+                                if _sr_result.get("sent"):
+                                    st.success(f"✓ Sent to: {', '.join(_sr_result['sent'])}")
+                                    st.session_state.pop("sr_no_data_warning", None)
+                                for _sf in _sr_result.get("failed", []):
+                                    st.error(f"✗ {_sf['email']}: {_sf['error']}")
+                            except Exception as _send_exc:
+                                st.error(f"Send failed: {_send_exc}")
+
+            with _sr_right:
+                st.markdown('<div style="font-size:0.75rem;font-weight:700;color:#0B1F3A;margin-bottom:8px;">📄 Report Preview</div>', unsafe_allow_html=True)
+                if _sr_total == 0:
+                    st.info("No data for this selection — adjust client, campaign, or period.")
+                else:
+                    try:
+                        import streamlit.components.v1 as _cmp_sr
+                        _preview_html = _build_sr_html()
+                        _cmp_sr.html(_preview_html, height=700, scrolling=True)
+                    except Exception as _sr_exc:
+                        st.error(f"Preview error: {_sr_exc}")
+
+    # ──────────────────────────────────────────────────────────────────────────
+
+
+def _render_audit_dashboard(sheets=None, legend_map=None):
+    """Single-page audit dashboard — no sub-tabs. Maximum insight breadth."""
+    sheets = sheets or {}
+
+    # ── Load & merge audit data ───────────────────────────────────────────────
+    _log_rows = []
+    try:
+        _log_rows = _audit_log_load() or []
+    except Exception:
+        pass
+    _log_df = pd.DataFrame(_log_rows) if _log_rows else pd.DataFrame()
+
+    _sheet_df = pd.DataFrame()
+    for _sk, _sv in sheets.items():
+        if any(kw in _sk.lower() for kw in ("audit", "qa", "review", "score")):
+            _sheet_df = _sv
+            break
+
+    if not _log_df.empty and not _sheet_df.empty:
+        try:
+            _audit_df = pd.concat([_log_df, _sheet_df], ignore_index=True)
+        except Exception:
+            _audit_df = _log_df
+    elif not _log_df.empty:
+        _audit_df = _log_df
+    elif not _sheet_df.empty:
+        _audit_df = _sheet_df
+    else:
+        _audit_df = pd.DataFrame()
+
+    if _audit_df is None or _audit_df.empty:
+        st.info("No audit data yet — submit audits via ✍️ New Audit")
+        return
+
+    # ── Section 0 — Refresh + filters ────────────────────────────────────────
+    st.markdown('<div class="section-chip">📈 Audit Dashboard</div>', unsafe_allow_html=True)
+    _f1, _f2, _f3, _f4, _f5 = st.columns([2, 2, 2, 2, 1])
+
+    _clients = ["All"] + sorted(_audit_df["Client"].dropna().unique().tolist()) if "Client" in _audit_df.columns else ["All"]
+    _sel_client = _f1.selectbox("Client", _clients, key="dash_client")
+
+    if "Campaign Name" in _audit_df.columns and _sel_client != "All":
+        _camp_opts = ["All"] + sorted(_audit_df[_audit_df["Client"] == _sel_client]["Campaign Name"].dropna().unique().tolist())
+    elif "Campaign Name" in _audit_df.columns:
+        _camp_opts = ["All"] + sorted(_audit_df["Campaign Name"].dropna().unique().tolist())
+    else:
+        _camp_opts = ["All"]
+    _sel_camp = _f2.selectbox("Campaign", _camp_opts, key="dash_campaign")
+
+    _qa_opts = ["All"] + sorted(_audit_df["QA"].dropna().unique().tolist()) if "QA" in _audit_df.columns else ["All"]
+    _sel_qa = _f3.selectbox("QA", _qa_opts, key="dash_qa")
+
+    _period_opts = ["All Time", "This Month", "This Week", "Today"]
+    _sel_period = _f4.selectbox("Date Period", _period_opts, key="dash_period")
+
+    if _f5.button("🔄 Refresh", key="dash_refresh"):
+        try:
+            _audit_log_load.clear()
+        except Exception:
+            pass
+        st.rerun()
+
+    # Apply filters
+    _dash_df = _audit_df.copy()
+    if _sel_client != "All" and "Client" in _dash_df.columns:
+        _dash_df = _dash_df[_dash_df["Client"] == _sel_client]
+    if _sel_camp != "All" and "Campaign Name" in _dash_df.columns:
+        _dash_df = _dash_df[_dash_df["Campaign Name"] == _sel_camp]
+    if _sel_qa != "All" and "QA" in _dash_df.columns:
+        _dash_df = _dash_df[_dash_df["QA"] == _sel_qa]
+    if _sel_period != "All Time" and "Audit Date" in _dash_df.columns:
+        try:
+            _today = pd.Timestamp.now().normalize()
+            _d_col = pd.to_datetime(_dash_df["Audit Date"], errors="coerce")
+            if _sel_period == "Today":
+                _dash_df = _dash_df[_d_col >= _today]
+            elif _sel_period == "This Week":
+                _dash_df = _dash_df[_d_col >= _today - pd.Timedelta(days=_today.weekday())]
+            elif _sel_period == "This Month":
+                _dash_df = _dash_df[_d_col >= _today.replace(day=1)]
+        except Exception:
+            pass
+
+    if _dash_df.empty:
+        st.info("No data matches the selected filters.")
+        return
+
+    # ── Shared helpers ────────────────────────────────────────────────────────
+    def _kpi_card_d(val, label, grad):
+        return (f'<div style="background:#fff;border-radius:14px;padding:0;'
+                f'box-shadow:0 2px 10px rgba(11,31,58,0.08);overflow:hidden;border:1px solid #E2EAF6;">'
+                f'<div style="height:4px;background:{grad};"></div>'
+                f'<div style="padding:16px 14px 14px;text-align:center;">'
+                f'<div style="font-size:1.9rem;font-weight:900;color:#0B1F3A;line-height:1.05;letter-spacing:-0.03em;">{val}</div>'
+                f'<div style="font-size:0.59rem;font-weight:700;color:#64748b;letter-spacing:0.10em;text-transform:uppercase;margin-top:5px;">{label}</div>'
+                f'</div></div>')
+
+    _total_d = len(_dash_df)
+    _bs_d = pd.to_numeric(_dash_df["Bot Score"], errors="coerce") if "Bot Score" in _dash_df.columns else pd.Series(dtype=float)
+    _avg_d = round(_bs_d.dropna().mean(), 1) if not _bs_d.dropna().empty else None
+    _st_d = _dash_df["Status"].astype(str).str.strip() if "Status" in _dash_df.columns else pd.Series([""] * _total_d)
+    _pass_d = int((_st_d == "Pass").sum())
+    _rev_d = int((_st_d == "Needs Review").sum())
+    _fail_d = int((_st_d == "Fail").sum())
+    _fatal_d = int((_st_d == "Auto-Fail").sum())
+    _pr_d = round(_pass_d / _total_d * 100, 1) if _total_d else 0
+
+    # ── Section 1 — KPI cards + Score Momentum ───────────────────────────────
+    # Compute score momentum (recent half vs earlier half)
+    _momentum_txt = "—"
+    _momentum_color = "#64748b"
+    _momentum_arrow = "→"
+    try:
+        if "Audit Date" in _dash_df.columns and "Bot Score" in _dash_df.columns and _total_d >= 6:
+            _mom_df = _dash_df[["Audit Date", "Bot Score"]].copy()
+            _mom_df["Audit Date"] = pd.to_datetime(_mom_df["Audit Date"], errors="coerce")
+            _mom_df["Bot Score"] = pd.to_numeric(_mom_df["Bot Score"], errors="coerce")
+            _mom_df = _mom_df.dropna().sort_values("Audit Date")
+            _half = len(_mom_df) // 2
+            _prev_avg = _mom_df.iloc[:_half]["Bot Score"].mean()
+            _curr_avg = _mom_df.iloc[_half:]["Bot Score"].mean()
+            _delta = round(_curr_avg - _prev_avg, 1)
+            if _delta > 1:
+                _momentum_txt = f"+{_delta}%"
+                _momentum_color = "#059669"
+                _momentum_arrow = "↑"
+            elif _delta < -1:
+                _momentum_txt = f"{_delta}%"
+                _momentum_color = "#dc2626"
+                _momentum_arrow = "↓"
+            else:
+                _momentum_txt = f"±{abs(_delta)}%"
+                _momentum_color = "#d97706"
+                _momentum_arrow = "→"
+    except Exception:
+        pass
+
+    _kc1, _kc2, _kc3, _kc4, _kc5, _kc6, _kc7 = st.columns(7)
+    _kc1.markdown(_kpi_card_d(_total_d, "Total Audits", "linear-gradient(135deg,#0B1F3A,#2563EB)"), unsafe_allow_html=True)
+    _kc2.markdown(_kpi_card_d(f"{_avg_d or '—'}%", "Avg Bot Score", "linear-gradient(135deg,#0891b2,#06b6d4)" if (_avg_d or 0) >= 80 else "linear-gradient(135deg,#d97706,#f59e0b)" if (_avg_d or 0) >= 60 else "linear-gradient(135deg,#dc2626,#ef4444)"), unsafe_allow_html=True)
+    _kc3.markdown(_kpi_card_d(f"{_pr_d}%", "Pass Rate", "linear-gradient(135deg,#059669,#10b981)" if _pr_d >= 80 else "linear-gradient(135deg,#d97706,#f59e0b)" if _pr_d >= 60 else "linear-gradient(135deg,#dc2626,#ef4444)"), unsafe_allow_html=True)
+    _kc4.markdown(_kpi_card_d(f"✅ {_pass_d}", "Passed", "linear-gradient(135deg,#059669,#10b981)"), unsafe_allow_html=True)
+    _kc5.markdown(_kpi_card_d(f"🟡 {_rev_d}", "Needs Review", "linear-gradient(135deg,#d97706,#f59e0b)"), unsafe_allow_html=True)
+    _kc6.markdown(_kpi_card_d(f"🚨 {_fatal_d}", "Auto-Fails", "linear-gradient(135deg,#dc2626,#f43f5e)" if _fatal_d else "linear-gradient(135deg,#6b7280,#9ca3af)"), unsafe_allow_html=True)
+    _kc7.markdown(
+        f'<div style="background:#fff;border-radius:14px;padding:0;box-shadow:0 2px 10px rgba(11,31,58,0.08);overflow:hidden;border:1px solid #E2EAF6;">'
+        f'<div style="height:4px;background:linear-gradient(135deg,{_momentum_color},{_momentum_color}88);"></div>'
+        f'<div style="padding:16px 14px 14px;text-align:center;">'
+        f'<div style="font-size:1.9rem;font-weight:900;color:{_momentum_color};line-height:1.05;">{_momentum_arrow} {_momentum_txt}</div>'
+        f'<div style="font-size:0.59rem;font-weight:700;color:#64748b;letter-spacing:0.10em;text-transform:uppercase;margin-top:5px;">Score Momentum</div>'
+        f'</div></div>',
+        unsafe_allow_html=True
+    )
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+    # ── Section 2 — Status Distribution + Score Histogram ────────────────────
+    _s2l, _s2r = st.columns([55, 45])
+    with _s2l:
+        st.markdown('<div class="section-chip">📊 Status Distribution</div>', unsafe_allow_html=True)
+        _sd_cfg = [("✅ Pass", "#0ebc6e", _pass_d), ("🟡 Needs Review", "#f59e0b", _rev_d),
+                   ("❌ Fail", "#ef4444", _fail_d), ("🚨 Auto-Fail", "#dc2626", _fatal_d)]
+        _sd_html = ""
+        for _sn, _sc, _sv in _sd_cfg:
+            _sp = round(_sv / _total_d * 100, 1) if _total_d else 0
+            _sd_html += (
+                f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;">'
+                f'<div style="width:110px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;">{_sn}</div>'
+                f'<div style="flex:1;height:14px;background:#f0f2f5;border-radius:7px;overflow:hidden;">'
+                f'<div style="width:{_sp}%;height:100%;background:{_sc};border-radius:7px;transition:width 0.5s;"></div></div>'
+                f'<div style="width:50px;font-size:0.71rem;font-weight:800;color:{_sc};flex-shrink:0;text-align:right;">{_sv} ({_sp}%)</div>'
+                f'</div>'
+            )
+        st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:16px;">{_sd_html}</div>', unsafe_allow_html=True)
+
+    with _s2r:
+        st.markdown('<div class="section-chip">📈 Score Distribution</div>', unsafe_allow_html=True)
+        if not _bs_d.dropna().empty:
+            try:
+                _hist_fig = go.Figure()
+                _hist_fig.add_trace(go.Histogram(x=_bs_d.dropna(), nbinsx=20, marker_color="#2563EB", opacity=0.8, name="Score"))
+                _hist_fig.add_vline(x=80, line_dash="dot", line_color="#dc2626", annotation_text="80%")
+                _hist_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    font=dict(family="Inter,sans-serif", size=11),
+                    margin=dict(l=10, r=10, t=20, b=10), height=240,
+                    showlegend=False, xaxis_title="Bot Score", yaxis_title="Count")
+                st.plotly_chart(_hist_fig, use_container_width=True, config={"displayModeBar": False})
+            except Exception:
+                pass
+        else:
+            st.info("No Bot Score data available.")
+
+    # ── Section 3 — Score Trend + Fatal Rate Trend ───────────────────────────
+    if "Audit Date" in _dash_df.columns:
+        _s3ta, _s3tb = st.columns(2)
+        with _s3ta:
+            st.markdown('<div class="section-chip">📅 Score Trend Over Time</div>', unsafe_allow_html=True)
+            if "Bot Score" in _dash_df.columns:
+                try:
+                    _tr_df = _dash_df[["Audit Date", "Bot Score"]].copy()
+                    _tr_df["Audit Date"] = pd.to_datetime(_tr_df["Audit Date"], errors="coerce")
+                    _tr_df["Bot Score"] = pd.to_numeric(_tr_df["Bot Score"], errors="coerce")
+                    _tr_df = _tr_df.dropna().sort_values("Audit Date")
+                    if not _tr_df.empty:
+                        _daily = _tr_df.groupby("Audit Date")["Bot Score"].mean().reset_index()
+                        _roll = _daily["Bot Score"].rolling(3, min_periods=1).mean()
+                        _tf = go.Figure()
+                        _tf.add_trace(go.Scatter(x=_daily["Audit Date"], y=_daily["Bot Score"],
+                            mode="lines+markers", line=dict(color="#93c5fd", width=1.5),
+                            marker=dict(size=4), name="Daily Avg", opacity=0.7))
+                        _tf.add_trace(go.Scatter(x=_daily["Audit Date"], y=_roll,
+                            mode="lines", line=dict(color="#2563EB", width=2.5),
+                            name="3-period MA"))
+                        _tf.add_hline(y=80, line_dash="dot", line_color="#dc2626", annotation_text="Target 80%")
+                        _tf.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                            font=dict(family="Inter,sans-serif", size=11),
+                            margin=dict(l=10, r=10, t=20, b=10), height=260,
+                            legend=dict(orientation="h", y=1.12, x=0, font=dict(size=10)),
+                            xaxis_title="Date", yaxis_title="Avg Bot Score")
+                        st.plotly_chart(_tf, use_container_width=True, config={"displayModeBar": False})
+                except Exception:
+                    pass
+        with _s3tb:
+            st.markdown('<div class="section-chip">🚨 Fatal Rate Over Time</div>', unsafe_allow_html=True)
+            if "Status" in _dash_df.columns:
+                try:
+                    _fat_df = _dash_df[["Audit Date", "Status"]].copy()
+                    _fat_df["Audit Date"] = pd.to_datetime(_fat_df["Audit Date"], errors="coerce")
+                    _fat_df = _fat_df.dropna(subset=["Audit Date"])
+                    _fat_df["is_fatal"] = (_fat_df["Status"].astype(str).str.strip() == "Auto-Fail").astype(int)
+                    _fat_daily = _fat_df.groupby("Audit Date").agg(
+                        total=("is_fatal", "count"), fatals=("is_fatal", "sum")
+                    ).reset_index()
+                    _fat_daily["fatal_rate"] = round(_fat_daily["fatals"] / _fat_daily["total"] * 100, 1)
+                    _ff = go.Figure()
+                    _ff.add_trace(go.Bar(x=_fat_daily["Audit Date"], y=_fat_daily["fatals"],
+                        marker_color="#dc2626", name="Auto-Fails", opacity=0.7))
+                    _ff.add_trace(go.Scatter(x=_fat_daily["Audit Date"], y=_fat_daily["fatal_rate"],
+                        mode="lines+markers", line=dict(color="#7c3aed", width=2),
+                        marker=dict(size=5), name="Fatal Rate %", yaxis="y2"))
+                    _ff.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                        font=dict(family="Inter,sans-serif", size=11),
+                        margin=dict(l=10, r=10, t=20, b=10), height=260,
+                        legend=dict(orientation="h", y=1.12, x=0, font=dict(size=10)),
+                        yaxis=dict(title="Auto-Fail Count"),
+                        yaxis2=dict(title="Fatal Rate %", overlaying="y", side="right"))
+                    st.plotly_chart(_ff, use_container_width=True, config={"displayModeBar": False})
+                except Exception:
+                    pass
+
+    # ── Section 4 — QA Leaderboard + Campaign Rankings ───────────────────────
+    _s4l, _s4r = st.columns(2)
+    with _s4l:
+        st.markdown('<div class="section-chip">👤 QA Leaderboard</div>', unsafe_allow_html=True)
+        if "QA" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+            _lb_rows = []
+            for _qa_n, _qa_g in _dash_df.groupby("QA"):
+                _qa_bs = pd.to_numeric(_qa_g["Bot Score"], errors="coerce").dropna()
+                _qa_st = _qa_g["Status"].astype(str).str.strip() if "Status" in _qa_g.columns else pd.Series([])
+                _lb_rows.append({
+                    "QA": str(_qa_n),
+                    "Audits": len(_qa_g),
+                    "Avg Score": round(_qa_bs.mean(), 1) if not _qa_bs.empty else 0,
+                    "Pass Rate": f"{round(int((_qa_st=='Pass').sum())/len(_qa_g)*100,1) if len(_qa_g) else 0}%",
+                    "Auto-Fails": int((_qa_st == "Auto-Fail").sum()),
+                })
+            _lb_rows.sort(key=lambda x: -x["Avg Score"])
+            _lb_html = '<table style="width:100%;border-collapse:collapse;font-size:0.71rem;">'
+            _lb_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["QA", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"]) + "</tr>"
+            for _ri, _r in enumerate(_lb_rows):
+                _medal = ["🥇", "🥈", "🥉"][_ri] if _ri < 3 else ""
+                _lb_html += f'<tr style="border-bottom:1px solid #f0f4fa;"><td style="padding:5px 8px;font-weight:600;color:#0B1F3A;">{_medal} {_r["QA"]}</td><td style="padding:5px 8px;color:#2563EB;">{_r["Audits"]}</td><td style="padding:5px 8px;font-weight:700;color:#059669;">{_r["Avg Score"]}</td><td style="padding:5px 8px;">{_r["Pass Rate"]}</td><td style="padding:5px 8px;color:#dc2626;">{_r["Auto-Fails"]}</td></tr>'
+            _lb_html += "</table>"
+            st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_lb_html}</div>', unsafe_allow_html=True)
+        else:
+            st.info("No QA/Bot Score columns available.")
+
+    with _s4r:
+        st.markdown('<div class="section-chip">🎯 Campaign Rankings</div>', unsafe_allow_html=True)
+        if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+            _cr_rows = []
+            for _cn, _cg in _dash_df.groupby("Campaign Name"):
+                _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                _c_st = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
+                _cr_rows.append({
+                    "Campaign": str(_cn),
+                    "Audits": len(_cg),
+                    "Avg Score": round(_c_bs.mean(), 1) if not _c_bs.empty else 0,
+                    "Pass Rate": f"{round(int((_c_st=='Pass').sum())/len(_cg)*100,1) if len(_cg) else 0}%",
+                    "Auto-Fails": int((_c_st == "Auto-Fail").sum()),
+                })
+            _cr_rows.sort(key=lambda x: -x["Avg Score"])
+            _cr_html = '<table style="width:100%;border-collapse:collapse;font-size:0.71rem;">'
+            _cr_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["Campaign", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"]) + "</tr>"
+            for _r in _cr_rows:
+                _cr_html += f'<tr style="border-bottom:1px solid #f0f4fa;"><td style="padding:5px 8px;font-weight:600;color:#0B1F3A;">{_r["Campaign"]}</td><td style="padding:5px 8px;color:#2563EB;">{_r["Audits"]}</td><td style="padding:5px 8px;font-weight:700;color:#059669;">{_r["Avg Score"]}</td><td style="padding:5px 8px;">{_r["Pass Rate"]}</td><td style="padding:5px 8px;color:#dc2626;">{_r["Auto-Fails"]}</td></tr>'
+            _cr_html += "</table>"
+            st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_cr_html}</div>', unsafe_allow_html=True)
+        else:
+            st.info("No Campaign Name/Bot Score columns available.")
+
+    # ── Section 5 — Auditor Calibration (std dev) + Tier Breakdown ──────────
+    _s5a, _s5b = st.columns(2)
+    with _s5a:
+        st.markdown('<div class="section-chip">📐 Auditor Calibration (Score Consistency)</div>', unsafe_allow_html=True)
+        if "QA" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+            try:
+                _cal_rows = []
+                for _qn, _qg in _dash_df.groupby("QA"):
+                    _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
+                    if len(_qbs) >= 2:
+                        _cal_rows.append({"QA": str(_qn), "Audits": len(_qbs),
+                                          "Avg": round(_qbs.mean(), 1), "StdDev": round(_qbs.std(), 1),
+                                          "Min": int(_qbs.min()), "Max": int(_qbs.max())})
+                _cal_rows.sort(key=lambda x: x["StdDev"])
+                if _cal_rows:
+                    _cal_fig = go.Figure()
+                    _cal_fig.add_trace(go.Bar(
+                        x=[r["QA"] for r in _cal_rows],
+                        y=[r["Avg"] for r in _cal_rows],
+                        name="Avg Score",
+                        marker_color="#2563EB",
+                        error_y=dict(type="data", array=[r["StdDev"] for r in _cal_rows],
+                                     visible=True, color="#64748b", thickness=1.5, width=6),
+                        text=[f"{r['Avg']}±{r['StdDev']}" for r in _cal_rows],
+                        textposition="outside",
+                    ))
+                    _cal_fig.add_hline(y=80, line_dash="dot", line_color="#dc2626")
+                    _cal_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                        font=dict(family="Inter,sans-serif", size=11),
+                        margin=dict(l=10, r=10, t=30, b=10), height=280,
+                        showlegend=False, xaxis_title="QA Auditor", yaxis_title="Avg Score (±StdDev)",
+                        xaxis=dict(tickangle=-20))
+                    st.plotly_chart(_cal_fig, use_container_width=True, config={"displayModeBar": False})
+                    _cal_note = min(_cal_rows, key=lambda x: x["StdDev"])
+                    st.markdown(f'<div style="font-size:0.68rem;color:#059669;margin-top:-8px;">Most consistent: <b>{_cal_note["QA"]}</b> (σ={_cal_note["StdDev"]})</div>', unsafe_allow_html=True)
+            except Exception:
+                pass
+        else:
+            st.info("No QA/Bot Score columns.")
+
+    with _s5b:
+        st.markdown('<div class="section-chip">🏗️ Tier Breakdown (Avg %)</div>', unsafe_allow_html=True)
+        try:
+            _tier_rows = []
+            for _t in _QA_SCHEMA.get("tiers", []):
+                _tscores = []
+                for _p in _t.get("params", []):
+                    if _p["col"] not in _dash_df.columns:
+                        continue
+                    _pmx = [int(o) for o in _p.get("options", []) if str(o).lstrip("-").isdigit()]
+                    _pmax = max(_pmx) if _pmx else 2
+                    _pv = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
+                        {"NA": "", "nan": "", "Fatal": "", "Yes": "0", "No": "2"}), errors="coerce").dropna()
+                    if len(_pv) > 0:
+                        _tscores.append(_pv.mean() / _pmax * 100)
+                if _tscores:
+                    _tier_rows.append({
+                        "label": _t["label"].split("·")[1].strip() if "·" in _t["label"] else _t["label"],
+                        "pct": round(sum(_tscores) / len(_tscores), 1),
+                        "weight": _t.get("weight_pct", 0),
+                        "color": _t.get("color", "#2563EB"),
+                    })
+            if _tier_rows:
+                _tb_fig = go.Figure()
+                _tb_fig.add_trace(go.Bar(
+                    y=[r["label"] for r in _tier_rows],
+                    x=[r["pct"] for r in _tier_rows],
+                    orientation="h",
+                    marker_color=[r["color"] for r in _tier_rows],
+                    text=[f'{r["pct"]}%  (weight {r["weight"]}%)' for r in _tier_rows],
+                    textposition="auto",
+                ))
+                _tb_fig.add_vline(x=80, line_dash="dot", line_color="#6b7280", annotation_text="80%")
+                _tb_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    font=dict(family="Inter,sans-serif", size=12),
+                    margin=dict(l=10, r=10, t=20, b=10), height=280,
+                    showlegend=False, xaxis_title="Avg Score %", xaxis_range=[0, 105])
+                st.plotly_chart(_tb_fig, use_container_width=True, config={"displayModeBar": False})
+        except Exception:
+            pass
+
+    # ── Section 6 — Disposition Breakdown + Lead Stage Analysis ─────────────
+    _s6a, _s6b = st.columns(2)
+    with _s6a:
+        st.markdown('<div class="section-chip">📂 Disposition Breakdown</div>', unsafe_allow_html=True)
+        _disp_col = next((c for c in ["Disposition", "Correct Disposition", "Correct Disposition (Expected)"] if c in _dash_df.columns), None)
+        if _disp_col:
+            try:
+                _disp_counts = _dash_df[_disp_col].astype(str).str.strip().value_counts()
+                _disp_counts = _disp_counts[_disp_counts.index != "nan"][:10]
+                _disp_colors = ["#2563EB", "#0891b2", "#059669", "#d97706", "#dc2626",
+                                "#7c3aed", "#db2777", "#0d9488", "#b45309", "#374151"]
+                _dsp_fig = go.Figure()
+                _dsp_fig.add_trace(go.Bar(
+                    x=list(_disp_counts.values),
+                    y=list(_disp_counts.index),
+                    orientation="h",
+                    marker_color=_disp_colors[:len(_disp_counts)],
+                    text=list(_disp_counts.values),
+                    textposition="auto",
+                ))
+                _dsp_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    font=dict(family="Inter,sans-serif", size=11),
+                    margin=dict(l=10, r=10, t=20, b=10), height=280,
+                    showlegend=False, xaxis_title="Count", title_x=0.5)
+                st.plotly_chart(_dsp_fig, use_container_width=True, config={"displayModeBar": False})
+            except Exception:
+                pass
+        else:
+            st.info("No Disposition column found.")
+
+    with _s6b:
+        st.markdown('<div class="section-chip">🔥 Lead Stage Breakdown</div>', unsafe_allow_html=True)
+        if "Lead Stage" in _dash_df.columns:
+            try:
+                _ls_counts = _dash_df["Lead Stage"].astype(str).str.strip().value_counts()
+                _ls_counts = _ls_counts[_ls_counts.index != "nan"]
+                _LS_COLORS = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB",
+                              "Not Interested": "#6b7280", "RNR": "#7c3aed"}
+                _ls_colors = [_LS_COLORS.get(k, "#94a3b8") for k in _ls_counts.index]
+                _ls_fig = go.Figure(go.Pie(
+                    labels=list(_ls_counts.index), values=list(_ls_counts.values),
+                    marker_colors=_ls_colors, hole=0.45,
+                    textinfo="label+percent", textfont_size=11,
+                ))
+                _ls_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    font=dict(family="Inter,sans-serif"),
+                    margin=dict(l=10, r=10, t=20, b=10), height=280,
+                    showlegend=False)
+                st.plotly_chart(_ls_fig, use_container_width=True, config={"displayModeBar": False})
+            except Exception:
+                pass
+        else:
+            st.info("No Lead Stage column found.")
+
+    # ── Section 7 — Client Health Matrix ─────────────────────────────────────
+    if "Client" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+        st.markdown('<div class="section-chip">🏢 Client Health Matrix</div>', unsafe_allow_html=True)
+        try:
+            _ch_rows = []
+            for _cn, _cg in _dash_df.groupby("Client"):
+                _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                _c_st = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
+                _c_camps = _cg["Campaign Name"].nunique() if "Campaign Name" in _cg.columns else 0
+                _c_avg = round(_c_bs.mean(), 1) if not _c_bs.empty else 0
+                _c_pr = round(int((_c_st == "Pass").sum()) / len(_cg) * 100, 1) if len(_cg) else 0
+                _c_fatal = int((_c_st == "Auto-Fail").sum())
+                _c_health = "🟢 Healthy" if _c_avg >= 80 and _c_pr >= 75 else "🟡 Monitor" if _c_avg >= 65 or _c_pr >= 55 else "🔴 At Risk"
+                _ch_rows.append({"Client": str(_cn), "Audits": len(_cg), "Campaigns": _c_camps,
+                                  "Avg Score": _c_avg, "Pass Rate": f"{_c_pr}%",
+                                  "Auto-Fails": _c_fatal, "Health": _c_health})
+            _ch_rows.sort(key=lambda x: -x["Avg Score"])
+            _chm_html = '<table style="width:100%;border-collapse:collapse;font-size:0.71rem;">'
+            _chm_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["Client", "Audits", "Campaigns", "Avg Score", "Pass Rate", "Auto-Fails", "Health"]) + "</tr>"
+            for _r in _ch_rows:
+                _row_bg = "#f0fdf4" if "Healthy" in _r["Health"] else "#fffbeb" if "Monitor" in _r["Health"] else "#fef2f2"
+                _chm_html += (f'<tr style="border-bottom:1px solid #f0f4fa;background:{_row_bg};">'
+                              f'<td style="padding:5px 8px;font-weight:600;color:#0B1F3A;">{_r["Client"]}</td>'
+                              f'<td style="padding:5px 8px;color:#2563EB;">{_r["Audits"]}</td>'
+                              f'<td style="padding:5px 8px;">{_r["Campaigns"]}</td>'
+                              f'<td style="padding:5px 8px;font-weight:700;">{_r["Avg Score"]}</td>'
+                              f'<td style="padding:5px 8px;">{_r["Pass Rate"]}</td>'
+                              f'<td style="padding:5px 8px;color:#dc2626;">{_r["Auto-Fails"]}</td>'
+                              f'<td style="padding:5px 8px;font-weight:700;">{_r["Health"]}</td>'
+                              f'</tr>')
+            _chm_html += "</table>"
+            st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_chm_html}</div>', unsafe_allow_html=True)
+        except Exception:
+            pass
+
+    # ── Section 8 — Lead Score vs Bot Score Correlation ──────────────────────
+    _has_lead = "Lead Score" in _dash_df.columns
+    _has_ls = "Lead Stage" in _dash_df.columns
+    if _has_lead and "Bot Score" in _dash_df.columns:
+        st.markdown('<div class="section-chip">🔗 Lead Score vs Bot Score Correlation</div>', unsafe_allow_html=True)
+        try:
+            _corr_df = _dash_df[["Lead Score", "Bot Score"]].copy()
+            if _has_ls:
+                _corr_df["Lead Stage"] = _dash_df["Lead Stage"].astype(str).str.strip()
+            _corr_df["Lead Score"] = pd.to_numeric(_corr_df["Lead Score"], errors="coerce")
+            _corr_df["Bot Score"] = pd.to_numeric(_corr_df["Bot Score"], errors="coerce")
+            _corr_df = _corr_df.dropna(subset=["Lead Score", "Bot Score"])
+            if len(_corr_df) >= 3:
+                _LS_COLORS2 = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB",
+                               "Not Interested": "#6b7280", "RNR": "#7c3aed"}
+                _sc_fig = go.Figure()
+                if _has_ls:
+                    for _ls_v in _corr_df["Lead Stage"].unique():
+                        _sub = _corr_df[_corr_df["Lead Stage"] == _ls_v]
+                        _sc_fig.add_trace(go.Scatter(
+                            x=_sub["Bot Score"], y=_sub["Lead Score"],
+                            mode="markers", name=str(_ls_v),
+                            marker=dict(size=8, color=_LS_COLORS2.get(_ls_v, "#94a3b8"), opacity=0.75)))
+                else:
+                    _sc_fig.add_trace(go.Scatter(
+                        x=_corr_df["Bot Score"], y=_corr_df["Lead Score"],
+                        mode="markers", marker=dict(size=8, color="#2563EB", opacity=0.7), name="Audit"))
+                _sc_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    font=dict(family="Inter,sans-serif", size=11),
+                    margin=dict(l=10, r=10, t=20, b=10), height=300,
+                    xaxis_title="Bot Score", yaxis_title="Lead Score",
+                    legend=dict(orientation="h", y=1.1, x=0))
+                st.plotly_chart(_sc_fig, use_container_width=True, config={"displayModeBar": False})
+                _corr_val = round(_corr_df["Bot Score"].corr(_corr_df["Lead Score"]), 3)
+                _corr_interp = "strong positive" if _corr_val > 0.5 else "moderate positive" if _corr_val > 0.2 else "weak/none" if abs(_corr_val) <= 0.2 else "moderate negative" if _corr_val > -0.5 else "strong negative"
+                st.markdown(f'<div style="font-size:0.70rem;color:#374151;margin-top:-8px;">Pearson r = <b>{_corr_val}</b> ({_corr_interp} correlation)</div>', unsafe_allow_html=True)
+        except Exception:
+            pass
+
+    # ── Section 9 — Co-failure Analysis ──────────────────────────────────────
+    st.markdown('<div class="section-chip">🔴 Co-failure Analysis (Parameters That Fail Together)</div>', unsafe_allow_html=True)
+    try:
+        _all_param_cols = []
+        for _t in _QA_SCHEMA.get("tiers", []):
+            for _p in _t.get("params", []):
+                if _p["col"] in _dash_df.columns:
+                    _all_param_cols.append(_p)
+        # Build binary fail matrix (1 = failed / below 50% of max, 0 = ok)
+        _fail_mat = {}
+        for _p in _all_param_cols:
+            _pmx = [int(o) for o in _p.get("options", []) if str(o).lstrip("-").isdigit()]
+            _pmax = max(_pmx) if _pmx else 2
+            _pv = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
+                {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmax)}), errors="coerce")
+            _fail_mat[_p["col"]] = (_pv < _pmax * 0.5).astype(int)
+        if len(_fail_mat) >= 2 and _total_d >= 5:
+            _fail_df = pd.DataFrame(_fail_mat)
+            _cofail_pairs = []
+            _cols_list = list(_fail_df.columns)
+            for _i in range(len(_cols_list)):
+                for _j in range(_i + 1, len(_cols_list)):
+                    _both_fail = ((_fail_df[_cols_list[_i]] == 1) & (_fail_df[_cols_list[_j]] == 1)).sum()
+                    _either = ((_fail_df[_cols_list[_i]] == 1) | (_fail_df[_cols_list[_j]] == 1)).sum()
+                    _rate = round(_both_fail / _total_d * 100, 1)
+                    if _rate >= 10:
+                        _cofail_pairs.append({"p1": _cols_list[_i], "p2": _cols_list[_j],
+                                              "both_fail": int(_both_fail), "rate": _rate})
+            _cofail_pairs.sort(key=lambda x: -x["rate"])
+            if _cofail_pairs[:8]:
+                _cf_html = ""
+                for _cf in _cofail_pairs[:8]:
+                    _cfcolor = "#dc2626" if _cf["rate"] >= 35 else "#d97706" if _cf["rate"] >= 20 else "#2563EB"
+                    _cf_html += (
+                        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:6px 10px;'
+                        f'background:#fff;border:1px solid #E2EAF6;border-radius:8px;">'
+                        f'<div style="flex:1;font-size:0.70rem;font-weight:600;color:#0B1F3A;">'
+                        f'<span style="color:#dc2626;">✗</span> {_cf["p1"]}'
+                        f' <span style="color:#64748b;font-weight:400;"> + </span>'
+                        f'<span style="color:#dc2626;">✗</span> {_cf["p2"]}</div>'
+                        f'<div style="flex-shrink:0;background:{_cfcolor};color:#fff;font-size:0.65rem;'
+                        f'font-weight:800;padding:2px 8px;border-radius:4px;">{_cf["rate"]}% co-fail</div>'
+                        f'</div>'
+                    )
+                st.markdown(f'<div style="max-height:300px;overflow-y:auto;">{_cf_html}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div style="font-size:0.73rem;color:#059669;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">No significant co-failures detected (threshold: 10%)</div>', unsafe_allow_html=True)
+    except Exception:
+        pass
+
+    # ── Section 10 — Parameter Heatmap (QA × Param) ──────────────────────────
+    if "QA" in _dash_df.columns:
+        st.markdown('<div class="section-chip">🌡️ Parameter × QA Heatmap</div>', unsafe_allow_html=True)
+        try:
+            _hm_params = []
+            for _t in _QA_SCHEMA.get("tiers", []):
+                for _p in _t.get("params", []):
+                    if _p["col"] in _dash_df.columns:
+                        _pmx = [int(o) for o in _p.get("options", []) if str(o).lstrip("-").isdigit()]
+                        _pmax = max(_pmx) if _pmx else 2
+                        _hm_params.append((_p["col"], _pmax))
+            _hm_qas = sorted(_dash_df["QA"].dropna().unique().tolist())
+            if len(_hm_params) >= 2 and len(_hm_qas) >= 1:
+                _hm_z = []
+                _hm_text = []
+                for _qn in _hm_qas:
+                    _row_z = []
+                    _row_t = []
+                    _qg = _dash_df[_dash_df["QA"] == _qn]
+                    for _pcol, _pmax in _hm_params:
+                        _pv = pd.to_numeric(_qg[_pcol].astype(str).str.strip().replace(
+                            {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmax)}), errors="coerce").dropna()
+                        if len(_pv) > 0:
+                            _pct = round(_pv.mean() / _pmax * 100, 0)
+                            _row_z.append(_pct)
+                            _row_t.append(f"{int(_pct)}%")
+                        else:
+                            _row_z.append(None)
+                            _row_t.append("—")
+                    _hm_z.append(_row_z)
+                    _hm_text.append(_row_t)
+                _hm_fig = go.Figure(go.Heatmap(
+                    z=_hm_z,
+                    x=[p[0] for p in _hm_params],
+                    y=_hm_qas,
+                    text=_hm_text,
+                    texttemplate="%{text}",
+                    colorscale=[[0, "#dc2626"], [0.5, "#f59e0b"], [0.7, "#34d399"], [1, "#059669"]],
+                    zmin=0, zmax=100,
+                    showscale=True,
+                    colorbar=dict(title="Score %", thickness=12, len=0.9),
+                ))
+                _hm_fig.update_layout(
+                    plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    font=dict(family="Inter,sans-serif", size=10),
+                    margin=dict(l=10, r=10, t=20, b=80),
+                    height=max(200, len(_hm_qas) * 50 + 100),
+                    xaxis=dict(tickangle=-35, side="bottom"),
+                )
+                st.plotly_chart(_hm_fig, use_container_width=True, config={"displayModeBar": False})
+        except Exception:
+            pass
+
+    # ── Section 11 — Campaign Score Divergence (vs portfolio avg) ────────────
+    if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns and _total_d >= 5:
+        st.markdown('<div class="section-chip">↔️ Campaign Score Divergence vs Portfolio Average</div>', unsafe_allow_html=True)
+        try:
+            _port_avg = _bs_d.dropna().mean()
+            _div_rows = []
+            for _cn, _cg in _dash_df.groupby("Campaign Name"):
+                _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                if len(_c_bs) >= 2:
+                    _c_avg = _c_bs.mean()
+                    _div_rows.append({"Campaign": str(_cn), "Avg": round(_c_avg, 1),
+                                      "Delta": round(_c_avg - _port_avg, 1), "N": len(_c_bs)})
+            _div_rows.sort(key=lambda x: x["Delta"])
+            if len(_div_rows) >= 2:
+                _dv_fig = go.Figure()
+                _dv_fig.add_trace(go.Bar(
+                    y=[r["Campaign"] for r in _div_rows],
+                    x=[r["Delta"] for r in _div_rows],
+                    orientation="h",
+                    marker_color=["#059669" if r["Delta"] >= 0 else "#dc2626" for r in _div_rows],
+                    text=[f'{r["Delta"]:+.1f}' for r in _div_rows],
+                    textposition="auto",
+                ))
+                _dv_fig.add_vline(x=0, line_color="#64748b", line_width=1.5)
+                _dv_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    font=dict(family="Inter,sans-serif", size=11),
+                    margin=dict(l=10, r=10, t=20, b=10),
+                    height=max(200, len(_div_rows) * 42 + 60),
+                    xaxis_title=f"Score vs Portfolio Avg ({_port_avg:.1f}%)",
+                    showlegend=False)
+                st.plotly_chart(_dv_fig, use_container_width=True, config={"displayModeBar": False})
+        except Exception:
+            pass
+
+    # ── Section 12 — What Went Right / Needs Attention (all params) ──────────
+    _param_avgs_d = []
+    for _tier_d in _QA_SCHEMA.get("tiers", []):
+        for _p_d in _tier_d.get("params", []):
+            if _p_d["col"] not in _dash_df.columns:
+                continue
+            _pmx = [int(o) for o in _p_d.get("options", []) if str(o).lstrip("-").isdigit()]
+            _pmax_d = max(_pmx) if _pmx else 2
+            _pv_d = pd.to_numeric(
+                _dash_df[_p_d["col"]].astype(str).str.strip().replace({"NA": "", "nan": "", "Fatal": ""}),
+                errors="coerce").dropna()
+            if len(_pv_d) == 0:
+                continue
+            _param_avgs_d.append({"col": _p_d["col"], "pct": round(_pv_d.mean() / _pmax_d * 100, 1)})
+
+    _strong_d = sorted([p for p in _param_avgs_d if p["pct"] >= 75], key=lambda x: -x["pct"])[:8]
+    _weak_d = sorted([p for p in _param_avgs_d if p["pct"] < 70], key=lambda x: x["pct"])[:8]
+
+    _s12l, _s12r = st.columns(2)
+    with _s12l:
+        st.markdown('<div class="section-chip">✅ What Went Right</div>', unsafe_allow_html=True)
+        if _strong_d:
+            _wr_d = ""
+            for _wp in _strong_d:
+                _wr_d += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                          f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp["col"]}</div>'
+                          f'<div style="flex:1;height:10px;background:#D1FAE5;border-radius:5px;overflow:hidden;">'
+                          f'<div style="width:{_wp["pct"]}%;height:100%;background:linear-gradient(90deg,#059669,#34D399);border-radius:5px;"></div></div>'
+                          f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:#059669;flex-shrink:0;text-align:right;">{_wp["pct"]}%</div>'
+                          f'</div>')
+            st.markdown(f'<div style="background:#fff;border:1px solid #D1FAE5;border-left:3px solid #059669;border-radius:10px;padding:14px 16px;">{_wr_d}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="background:#F8FAFF;border:1px solid #DBEAFE;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#64748b;text-align:center;">No parameters ≥75% yet</div>', unsafe_allow_html=True)
+
+    with _s12r:
+        st.markdown('<div class="section-chip">⚠️ Needs Attention</div>', unsafe_allow_html=True)
+        if _weak_d:
+            _ww_d = ""
+            for _wp2 in _weak_d:
+                _urg = "#dc2626" if _wp2["pct"] < 50 else "#d97706"
+                _bg2 = "#FEE2E2" if _wp2["pct"] < 50 else "#FEF3C7"
+                _ww_d += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                          f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp2["col"]}</div>'
+                          f'<div style="flex:1;height:10px;background:{_bg2};border-radius:5px;overflow:hidden;">'
+                          f'<div style="width:{_wp2["pct"]}%;height:100%;background:{_urg};border-radius:5px;"></div></div>'
+                          f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:{_urg};flex-shrink:0;text-align:right;">{_wp2["pct"]}%</div>'
+                          f'</div>')
+            st.markdown(f'<div style="background:#fff;border:1px solid #FEE2E2;border-left:3px solid #dc2626;border-radius:10px;padding:14px 16px;">{_ww_d}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#059669;text-align:center;">🎉 All parameters performing well!</div>', unsafe_allow_html=True)
+
+    # ── Section 13 — All-param score bars (full overview) ────────────────────
+    if _param_avgs_d:
+        st.markdown('<div class="section-chip">📊 All Parameter Scores</div>', unsafe_allow_html=True)
+        try:
+            _allp_sorted = sorted(_param_avgs_d, key=lambda x: x["pct"])
+            _ap_fig = go.Figure()
+            _ap_fig.add_trace(go.Bar(
+                y=[p["col"] for p in _allp_sorted],
+                x=[p["pct"] for p in _allp_sorted],
+                orientation="h",
+                marker_color=["#059669" if p["pct"] >= 80 else "#f59e0b" if p["pct"] >= 60 else "#dc2626" for p in _allp_sorted],
+                text=[f'{p["pct"]}%' for p in _allp_sorted],
+                textposition="auto",
+            ))
+            _ap_fig.add_vline(x=80, line_dash="dot", line_color="#6b7280", annotation_text="80%")
+            _ap_fig.update_layout(
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
+                font=dict(family="Inter,sans-serif", size=11),
+                margin=dict(l=10, r=10, t=20, b=10),
+                height=max(300, len(_allp_sorted) * 28 + 60),
+                showlegend=False, xaxis_title="Avg Score %", xaxis_range=[0, 108],
+            )
+            st.plotly_chart(_ap_fig, use_container_width=True, config={"displayModeBar": False})
+        except Exception:
+            pass
+
+    # ── Section 14 — Key Insights ─────────────────────────────────────────────
+    st.markdown('<div class="section-chip">💡 Key Insights</div>', unsafe_allow_html=True)
+    _qi_d = {}
+    try:
+        _qi_d = _gen_qa_insights(_dash_df)
+        _ins_d = (_qi_d.get("insights") or [])
+        if _ins_d:
+            _TYPE_STYLES = {"critical": ("#dc2626", "#fef2f2"), "warning": ("#d97706", "#fffbeb"),
+                            "success": ("#059669", "#f0fdf4"), "info": ("#2563EB", "#eff6ff")}
+            _ins_cols = st.columns(2)
+            for _ii, _ins in enumerate(_ins_d):
+                _bdr, _bg = _TYPE_STYLES.get(_ins.get("type", "info"), ("#2563EB", "#eff6ff"))
+                _ins_cols[_ii % 2].markdown(
+                    f'<div style="background:{_bg};border-left:4px solid {_bdr};border-radius:8px;padding:12px 14px;margin-bottom:10px;">'
+                    f'<div style="font-size:0.73rem;font-weight:700;color:#0B1F3A;margin-bottom:4px;">{_ins.get("title","")}</div>'
+                    f'<div style="font-size:0.68rem;color:#374151;">{_ins.get("detail","")}</div>'
+                    f'</div>', unsafe_allow_html=True)
+    except Exception:
+        pass
+
+    # ── Section 15 — Priority Actions ────────────────────────────────────────
+    st.markdown('<div class="section-chip">🎯 Priority Actions</div>', unsafe_allow_html=True)
+    try:
+        _acts_d = (_qi_d.get("actions") or [])
+        if _acts_d:
+            _PRI_STYLES = {"high": ("#dc2626", "#fef2f2"), "medium": ("#d97706", "#fffbeb"), "low": ("#2563EB", "#eff6ff")}
+            _act_cols = st.columns(2)
+            for _ai, _a in enumerate(_acts_d):
+                _pri = str(_a.get("priority", "low")).lower()
+                _ac, _ab = _PRI_STYLES.get(_pri, ("#2563EB", "#eff6ff"))
+                _act_cols[_ai % 2].markdown(
+                    f'<div style="background:{_ab};border-left:4px solid {_ac};border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;">'
+                    f'<span style="background:{_ac};color:#fff;font-size:0.55rem;font-weight:800;padding:2px 7px;border-radius:4px;letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;margin-top:2px;">{_pri.upper()}</span>'
+                    f'<div><div style="font-size:0.72rem;font-weight:600;color:#0B1F3A;">{_a.get("action","")}</div>'
+                    f'<div style="font-size:0.65rem;color:#64748b;margin-top:2px;">{_a.get("impact","")}</div></div>'
+                    f'</div>', unsafe_allow_html=True)
+    except Exception:
+        pass
+
+    # ── Section 16 — Download ─────────────────────────────────────────────────
+    try:
+        st.download_button(
+            label="⬇ Download filtered audit data as CSV",
+            data=_dash_df.to_csv(index=False).encode("utf-8"),
+            file_name="audit_filtered.csv",
+            mime="text/csv",
+            key="dash_download",
+        )
+    except Exception:
+        pass
+
+    # ──────────────────────────────────────────────────────────────────────────
 
 
 def _render_registry():
@@ -10705,7 +11940,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         _empty_tabs = ["📊  Scorecard"]
         if st.session_state.get("show_new_audit_tab", True):
             _empty_tabs.append("✍️  New Audit")
-        _empty_tabs += ["📄  Weights", "🤖  Insights"]
+        _empty_tabs += ["📈  Dashboard", "📄  Weights", "🤖  Insights"]
 
         _tabs_empty = st.tabs(_empty_tabs)
         _idx = 0
@@ -10720,15 +11955,15 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
             _idx += 1
 
         with _tabs_empty[_idx]:
+            _render_audit_dashboard({}, legend_map=_legend_map_pre)
+        _idx += 1
+
+        with _tabs_empty[_idx]:
             _render_legend_page()
         _idx += 1
 
         with _tabs_empty[_idx]:
-            @st.fragment(run_every=30)
-            def _insights_live_empty():
-                _audit_log_load.clear()
-                _render_sense_insights(pd.DataFrame(), "Seed Data", {}, legend_map=_legend_map_pre)
-            _insights_live_empty()
+            _render_sense_insights(pd.DataFrame(), "Seed Data", {}, legend_map=_legend_map_pre)
         return
 
     # ── File info bar ─────────────────────────────────────────────────────────
@@ -10802,7 +12037,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     _base_tabs = ["📊  Scorecard"]
     if st.session_state.get("show_new_audit_tab", True):
         _base_tabs.append("✍️  New Audit")
-    _base_tabs.append("📄  Weights")
+    _base_tabs += ["📈  Dashboard", "📄  Weights"]
 
     _HIDDEN_SHEET_KEYWORDS = ("legend", "summary", "dashboard", "weights", "weight")
     _SIDEBAR_SHEET_KEYWORDS = ("voice bot audit", "voice bot", "vba")
@@ -10843,6 +12078,11 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
             _render_audit_form(_legend_map, fname)
         _tab_idx += 1
 
+    # ── Dashboard tab ──────────────────────────────────────────────────────────
+    with _tabs[_tab_idx]:
+        _render_audit_dashboard(sheets, legend_map=_legend_map)
+    _tab_idx += 1
+
     # ── Weights tab ────────────────────────────────────────────────────────────
     with _tabs[_tab_idx]:
         _render_legend_page()
@@ -10857,15 +12097,11 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         _render_registry()
 
     with _tabs[_registry_idx + 1]:
-        @st.fragment(run_every=30)
-        def _insights_live_frag():
-            _audit_log_load.clear()
-            _pdf = next(
-                (v for k, v in sheets.items() if any(kw in k.lower() for kw in ("audit","qa","review","score"))),
-                next(iter(sheets.values())) if sheets else pd.DataFrame()
-            )
-            _render_sense_insights(_pdf, fname, sheets, legend_map=_legend_map)
-        _insights_live_frag()
+        _pdf = next(
+            (v for k, v in sheets.items() if any(kw in k.lower() for kw in ("audit","qa","review","score"))),
+            next(iter(sheets.values())) if sheets else pd.DataFrame()
+        )
+        _render_sense_insights(_pdf, fname, sheets, legend_map=_legend_map)
 
 
 if not st.session_state["show_sidebar"]:
