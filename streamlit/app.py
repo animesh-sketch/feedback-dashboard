@@ -11158,8 +11158,26 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
     </div>
   </div>
   <div style="padding:20px 24px;">{_sh}
-    <div style="margin-top:24px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;text-align:center;">
-      Sent via Convin Data Labs QA Dashboard · {pd.Timestamp.now().strftime("%B %Y")} · {len(sel_secs)} sections
+    <div style="margin-top:28px;padding-top:18px;border-top:2px solid #e2e8f0;">
+      <table width="100%" style="border-collapse:collapse;">
+        <tr>
+          <td style="padding:0;">
+            <div style="font-size:15px;font-weight:900;color:#0B1F3A;letter-spacing:-0.02em;line-height:1.2;">Convin Data Labs</div>
+            <div style="font-size:11px;color:#2563EB;font-weight:600;margin-top:2px;letter-spacing:0.03em;">AI-Powered Quality Intelligence</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:6px;">
+              {pd.Timestamp.now().strftime("%B %Y")} · {len(sel_secs)} sections · QA Dashboard Report
+            </div>
+          </td>
+          <td style="padding:0;text-align:right;vertical-align:middle;">
+            <div style="display:inline-block;background:linear-gradient(135deg,#0B1F3A,#1a62f2);border-radius:8px;padding:8px 14px;">
+              <div style="font-size:13px;font-weight:900;color:#fff;letter-spacing:0.02em;">CDL</div>
+            </div>
+          </td>
+        </tr>
+      </table>
+      <div style="margin-top:10px;font-size:10px;color:#cbd5e1;text-align:center;">
+        This report was generated and sent via Convin Data Labs QA Dashboard · convinlabs@convin.ai
+      </div>
     </div>
   </div>
 </div>"""
@@ -11247,8 +11265,24 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
   </div>
   <div style="padding:22px 26px;background:#ffffff;border:1px solid {accent}22;border-top:3px solid {accent};border-radius:0 0 10px 10px;">
     {_gsh}
-    <div style="margin-top:20px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;text-align:center;">
-      Powered by Convin Data Labs · {pd.Timestamp.now().strftime("%B %d, %Y")}
+    <div style="margin-top:28px;padding-top:18px;border-top:2px solid #e2e8f0;">
+      <table width="100%" style="border-collapse:collapse;">
+        <tr>
+          <td style="padding:0;">
+            <div style="font-size:15px;font-weight:900;color:#0B1F3A;letter-spacing:-0.02em;line-height:1.2;">Convin Data Labs</div>
+            <div style="font-size:11px;color:{accent};font-weight:600;margin-top:2px;letter-spacing:0.03em;">AI-Powered Quality Intelligence</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:6px;">{pd.Timestamp.now().strftime("%B %d, %Y")} · QA Dashboard Report</div>
+          </td>
+          <td style="padding:0;text-align:right;vertical-align:middle;">
+            <div style="display:inline-block;background:linear-gradient(135deg,#0B1F3A,#1a62f2);border-radius:8px;padding:8px 14px;">
+              <div style="font-size:13px;font-weight:900;color:#fff;letter-spacing:0.02em;">CDL</div>
+            </div>
+          </td>
+        </tr>
+      </table>
+      <div style="margin-top:10px;font-size:10px;color:#cbd5e1;text-align:center;">
+        This report was generated and sent via Convin Data Labs QA Dashboard · convinlabs@convin.ai
+      </div>
     </div>
   </div>
 </div>"""
