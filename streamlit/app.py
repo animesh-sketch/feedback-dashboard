@@ -4581,6 +4581,242 @@ def _gen_qa_insights(audit_df):
     return {"insights": insights, "actions": actions}
 
 
+def _gen_call_insights(audit_df):
+    """Call-performance focused insights — about the calls, not the auditors."""
+    insights, actions = [], []
+    if audit_df is None or audit_df.empty:
+        return {"insights": insights, "actions": actions}
+
+    total = len(audit_df)
+    _bs = pd.to_numeric(audit_df.get("Bot Score", pd.Series(dtype=float)), errors="coerce")
+    _avg = round(_bs.dropna().mean(), 1) if not _bs.dropna().empty else None
+    _st = audit_df["Status"].astype(str).str.strip() if "Status" in audit_df.columns else pd.Series([""] * total)
+    _pass_r = round(int((_st == "Pass").sum()) / total * 100, 1) if total else 0
+    _fatal_c = int((_st == "Auto-Fail").sum())
+
+    # 1. Overall call quality
+    if _avg is not None:
+        _qt = "success" if _avg >= 80 else "warning" if _avg >= 65 else "critical"
+        _qmsg = ("Calls are performing well above the 80% target." if _avg >= 80
+                 else f"Call quality is {round(80 - _avg, 1)}% below target — improvement in key parameters needed."
+                 if _avg >= 65 else "Call quality is critically low. Major bot flow or script issues likely.")
+        insights.append({"type": _qt, "title": f"📞 Call Quality Score: {_avg}%", "detail": _qmsg})
+
+    # 2. Abrupt disconnections (call drops)
+    _adc = next((c for c in audit_df.columns if "abrupt" in c.lower() or "disconnect" in c.lower()), None)
+    if _adc:
+        _ad_hits = (audit_df[_adc].astype(str).str.strip().str.lower() == "fatal").sum()
+        if _ad_hits > 0:
+            _ad_pct = round(_ad_hits / total * 100, 1)
+            insights.append({"type": "critical",
+                "title": f"🚨 {_ad_hits} Abrupt Call Disconnections ({_ad_pct}%)",
+                "detail": f"{_ad_hits} calls ended abruptly before the conversation reached a logical close. These are auto-fail events — likely caused by network drops, bot timeout, or CTI errors."})
+            actions.append({"priority": "high", "category": "Technical",
+                "action": "Review server logs for call drop timestamps — look for timeout patterns, SIP errors, or API gateway failures.",
+                "impact": "Each abrupt disconnection is an auto-fail. Fixing the root cause directly improves pass rate."})
+    elif _fatal_c > 0:
+        insights.append({"type": "critical",
+            "title": f"🚨 {_fatal_c} Calls Ended in Auto-Fail",
+            "detail": f"{_fatal_c} calls ({round(_fatal_c/total*100,1)}%) were auto-failed. Review these calls to identify whether bot logic, network, or integration issues caused the failure."})
+
+    # 3. Disposition accuracy
+    _dac = next((c for c in audit_df.columns if "disposition accuracy" in c.lower()), None)
+    if _dac:
+        _da_v = pd.to_numeric(audit_df[_dac].astype(str).str.strip().replace({"NA": "", "nan": ""}), errors="coerce").dropna()
+        if len(_da_v) >= 3:
+            _da_pct = round(_da_v.mean() / 2 * 100, 1)
+            _dat = "success" if _da_pct >= 80 else "warning" if _da_pct >= 60 else "critical"
+            insights.append({"type": _dat,
+                "title": f"🎯 Disposition Accuracy: {_da_pct}%",
+                "detail": (f"Bot correctly classifies call outcomes {_da_pct}% of the time. " +
+                           ("Strong alignment between conversation and outcome tagging." if _da_pct >= 80
+                            else "Some mismatches between conversation outcome and disposition — review classification logic."))})
+            if _da_pct < 70:
+                actions.append({"priority": "high", "category": "Bot Logic",
+                    "action": "Audit calls where Disposition Accuracy < 2 — check if bot's outcome tagging logic matches actual conversation intent.",
+                    "impact": "Disposition Accuracy carries 18% weight in Tier-1 — improving it has the largest single score impact."})
+
+    # 4. Context passing failures
+    _cpc = next((c for c in audit_df.columns if "context" in c.lower() and "pass" in c.lower()), None)
+    if _cpc:
+        _cp_v = pd.to_numeric(audit_df[_cpc].astype(str).str.strip().replace({"NA": "", "nan": ""}), errors="coerce").dropna()
+        if len(_cp_v) >= 3:
+            _cp_pct = round(_cp_v.mean() / 2 * 100, 1)
+            if _cp_pct < 75:
+                insights.append({"type": "warning" if _cp_pct >= 55 else "critical",
+                    "title": f"🔗 Context Passing: {_cp_pct}%",
+                    "detail": f"Bot fails to carry forward conversation context in {round(100-_cp_pct,1)}% of calls — customers experience repetitive or irrelevant questions, increasing drop-off risk."})
+                actions.append({"priority": "high", "category": "Bot Flow",
+                    "action": "Test multi-turn conversation flows — ensure entity slots (name, amount, reference) are retained across all API calls and channel switches.",
+                    "impact": "Context Passing has 13% Tier-1 weight. A 15pp improvement adds ~2pp directly to the overall Bot Score."})
+
+    # 5. Flow issues
+    _fic = next((c for c in audit_df.columns if "flow issue" in c.lower()), None)
+    if _fic:
+        _fi_bad = (audit_df[_fic].astype(str).str.strip().str.lower() == "yes").sum()
+        _fi_pct = round(_fi_bad / total * 100, 1) if total else 0
+        if _fi_pct > 10:
+            insights.append({"type": "critical" if _fi_pct > 30 else "warning",
+                "title": f"🔍 Flow Issues Detected: {_fi_pct}% of Calls ({int(_fi_bad)})",
+                "detail": f"Bot deviated from the designed conversation path in {int(_fi_bad)} calls. Common causes: unexpected user inputs, missing intents, or broken fallback handlers."})
+            actions.append({"priority": "high" if _fi_pct > 30 else "medium", "category": "Bot Flow",
+                "action": "Map the utterances that triggered flow issues — add fallback intents and repair broken node transitions.",
+                "impact": f"Fixing flow issues in {_fi_pct}% of calls recovers Tier-1 points and improves customer experience."})
+
+    # 6. Bot restart / context loss
+    _brc = next((c for c in audit_df.columns if "restart" in c.lower()), None)
+    if _brc:
+        _br_bad = (audit_df[_brc].astype(str).str.strip().str.lower() == "yes").sum()
+        _br_pct = round(_br_bad / total * 100, 1) if total else 0
+        if _br_pct > 5:
+            insights.append({"type": "critical" if _br_pct > 20 else "warning",
+                "title": f"🔁 Bot Restarted Conversation: {_br_pct}% of Calls",
+                "detail": f"In {int(_br_bad)} calls the bot reset the conversation from scratch — customers had to repeat themselves. This severely hurts CX and conversion."})
+            actions.append({"priority": "high", "category": "Bot State",
+                "action": "Identify the node that triggers a restart — check session timeout configs and context variable overrides.",
+                "impact": "Eliminating restarts removes a Tier-1 Critical deduction and directly improves customer trust scores."})
+
+    # 7. Dead air / silence
+    _dac2 = next((c for c in audit_df.columns if "dead air" in c.lower() or "blank" in c.lower()), None)
+    if _dac2:
+        _da2_v = pd.to_numeric(audit_df[_dac2].astype(str).str.strip().replace({"NA": "", "nan": ""}), errors="coerce").dropna()
+        if len(_da2_v) >= 3:
+            _da2_pct = round(_da2_v.mean() / 2 * 100, 1)
+            if _da2_pct < 75:
+                insights.append({"type": "warning",
+                    "title": f"🔇 Dead Air / Silence Issues: {round(100-_da2_pct,1)}% of Calls Affected",
+                    "detail": f"Significant silence gaps detected in {round(100-_da2_pct,1)}% of calls — either >5s pauses or awkward blank moments that make callers think the line dropped."})
+                actions.append({"priority": "medium", "category": "Audio",
+                    "action": "Check TTS rendering latency and audio stream health — add comfort noise or acknowledgement messages in high-latency nodes.",
+                    "impact": "Reducing dead air improves perceived call quality and reduces premature hang-ups."})
+
+    # 8. Latency
+    _ltc = next((c for c in audit_df.columns if "latency" in c.lower()), None)
+    if _ltc:
+        _lt_v = pd.to_numeric(audit_df[_ltc].astype(str).str.strip().replace({"NA": "", "nan": ""}), errors="coerce").dropna()
+        if len(_lt_v) >= 3:
+            _lt_pct = round(_lt_v.mean() / 2 * 100, 1)
+            if _lt_pct < 75:
+                _lt_bad = int((_lt_v == 0).sum())
+                insights.append({"type": "warning",
+                    "title": f"⏱️ High Latency Detected: {_lt_bad} Calls ({round(_lt_bad/total*100,1)}%)",
+                    "detail": f"Response latency exceeded 1 second in {_lt_bad} calls — degrading conversation naturalness and increasing abandonment risk."})
+                actions.append({"priority": "medium", "category": "Infrastructure",
+                    "action": "Profile bot response times per intent — identify slow NLP models, database queries, or external API calls causing >500ms delays.",
+                    "impact": "Sub-500ms responses improve Tier-2 Latency score and reduce call drop-off rates."})
+
+    # 9. Bot repetition
+    _rpc = next((c for c in audit_df.columns if "repetition" in c.lower() or "repeat" in c.lower()), None)
+    if _rpc:
+        _rp_bad = (audit_df[_rpc].astype(str).str.strip().str.lower() == "yes").sum()
+        _rp_pct = round(_rp_bad / total * 100, 1) if total else 0
+        if _rp_pct > 10:
+            insights.append({"type": "warning",
+                "title": f"🔄 Bot Repetition: {_rp_pct}% of Calls",
+                "detail": f"Bot repeated the same message or question in {int(_rp_bad)} calls — usually caused by NLU misclassification loops or missing no-match handlers."})
+            actions.append({"priority": "medium", "category": "NLU",
+                "action": "Pull the repeated utterances and map them to missing training phrases — add no-match/fallback handlers for common misclassified inputs.",
+                "impact": "Fixing repetition loops eliminates a Tier-2 deduction and improves call completion rates."})
+
+    # 10. Introduction quality
+    _intrc = next((c for c in audit_df.columns if "introduction" in c.lower() or "intro" in c.lower()), None)
+    if _intrc:
+        _intr_v = pd.to_numeric(audit_df[_intrc].astype(str).str.strip().replace({"NA": "", "nan": ""}), errors="coerce").dropna()
+        if len(_intr_v) >= 3:
+            _intr_pct = round(_intr_v.mean() / 2 * 100, 1)
+            if _intr_pct < 70:
+                insights.append({"type": "warning",
+                    "title": f"👋 Introduction Quality: {_intr_pct}%",
+                    "detail": f"Bot introduction (name, company, purpose) is incomplete or missing in {round(100-_intr_pct,1)}% of calls — first impression sets caller expectations for the entire conversation."})
+
+    # 11. Message content quality
+    _mcc = next((c for c in audit_df.columns if "message content" in c.lower()), None)
+    if _mcc:
+        _mc_v = pd.to_numeric(audit_df[_mcc].astype(str).str.strip().replace({"NA": "", "nan": ""}), errors="coerce").dropna()
+        if len(_mc_v) >= 3:
+            _mc_pct = round(_mc_v.mean() / 2 * 100, 1)
+            if _mc_pct < 75:
+                insights.append({"type": "critical" if _mc_pct < 50 else "warning",
+                    "title": f"💬 Message Content Accuracy: {_mc_pct}%",
+                    "detail": f"Bot misunderstood or responded incorrectly to customer intent in {round(100-_mc_pct,1)}% of calls. This is a Tier-1 Critical parameter directly impacting lead conversion."})
+                actions.append({"priority": "high", "category": "NLU Training",
+                    "action": "Export low Message Content calls and identify the top 10 misclassified intents — retrain NLU model with corrected examples.",
+                    "impact": "Message Content carries 7% Tier-1 weight. Improving it from " + str(_mc_pct) + "% to 80%+ can add meaningful score improvement."})
+
+    # 12. Follow-up SLA compliance
+    _ftc = next((c for c in audit_df.columns if "follow" in c.lower() and ("time" in c.lower() or "sla" in c.lower() or "specified" in c.lower())), None)
+    if _ftc:
+        _ft_v = pd.to_numeric(audit_df[_ftc].astype(str).str.strip().replace({"NA": "", "nan": ""}), errors="coerce").dropna()
+        if len(_ft_v) >= 3:
+            _ft_pct = round(_ft_v.mean() / 2 * 100, 1)
+            if _ft_pct < 70:
+                insights.append({"type": "warning",
+                    "title": f"⏰ Follow-up SLA Compliance: {_ft_pct}%",
+                    "detail": f"Follow-up actions were missed or delayed beyond SLA in {round(100-_ft_pct,1)}% of calls — affecting post-call lead nurturing quality."})
+
+    # 13. Lead conversion rate
+    if "Lead Stage" in audit_df.columns:
+        _ls_v = audit_df["Lead Stage"].astype(str).str.strip().value_counts()
+        _ls_total = sum(_ls_v.values)
+        _hot_w = _ls_v.get("Hot", 0) + _ls_v.get("Warm", 0)
+        _conv = round(_hot_w / _ls_total * 100, 1) if _ls_total else 0
+        _lead_t = "success" if _conv >= 50 else "warning" if _conv >= 25 else "critical"
+        insights.append({"type": _lead_t,
+            "title": f"🔥 Lead Conversion Readiness: {_conv}% Hot + Warm",
+            "detail": (f"Hot: {_ls_v.get('Hot',0)}, Warm: {_ls_v.get('Warm',0)}, Cold: {_ls_v.get('Cold',0)}, "
+                       f"Not Interested: {_ls_v.get('Not Interested',0)}, RNR: {_ls_v.get('RNR',0)}. "
+                       + ("Strong pipeline — majority of calls are generating interested leads." if _conv >= 50
+                          else "Conversion is low — review bot pitch and qualification flow." if _conv >= 25
+                          else "Critical: very few calls converting to Hot/Warm. Bot may be missing key persuasion points."))})
+
+    # 14. Score trend (call quality improving or declining)
+    if "Audit Date" in audit_df.columns and _avg is not None and total >= 10:
+        try:
+            _tr2 = audit_df[["Audit Date", "Bot Score"]].copy()
+            _tr2["Audit Date"] = pd.to_datetime(_tr2["Audit Date"], errors="coerce")
+            _tr2["Bot Score"] = pd.to_numeric(_tr2["Bot Score"], errors="coerce")
+            _tr2 = _tr2.dropna().sort_values("Audit Date")
+            _half2 = len(_tr2) // 2
+            _fh = round(_tr2.iloc[:_half2]["Bot Score"].mean(), 1)
+            _lh = round(_tr2.iloc[_half2:]["Bot Score"].mean(), 1)
+            _diff2 = round(_lh - _fh, 1)
+            if _diff2 >= 5:
+                insights.append({"type": "success",
+                    "title": f"📈 Call Quality Improving (+{_diff2}% trend)",
+                    "detail": f"Recent calls average {_lh}% vs earlier {_fh}% — bot updates or coaching efforts are translating into measurably better call performance."})
+            elif _diff2 <= -5:
+                insights.append({"type": "critical" if _diff2 <= -10 else "warning",
+                    "title": f"📉 Call Quality Declining ({_diff2}% trend)",
+                    "detail": f"Recent calls average {_lh}% vs earlier {_fh}% — quality is slipping. Check for recent bot script changes, new campaign launches, or increased call volume pressures."})
+                actions.append({"priority": "high", "category": "Investigation",
+                    "action": "Compare the latest 20% of calls against earlier batches — identify which specific parameters declined and when the drop started.",
+                    "impact": "Early detection stops a declining trend from compounding into a campaign-wide quality failure."})
+        except Exception:
+            pass
+
+    # 15. Best/worst disposition performance
+    if "Disposition" in audit_df.columns and _avg is not None:
+        try:
+            _dp_scores = [(str(dn), round(pd.to_numeric(dg["Bot Score"], errors="coerce").dropna().mean(), 1))
+                          for dn, dg in audit_df.groupby("Disposition")
+                          if len(pd.to_numeric(dg["Bot Score"], errors="coerce").dropna()) >= 3]
+            if len(_dp_scores) >= 2:
+                _dp_best = max(_dp_scores, key=lambda x: x[1])
+                _dp_worst = min(_dp_scores, key=lambda x: x[1])
+                if _dp_best[1] >= _avg + 8:
+                    insights.append({"type": "success",
+                        "title": f"💎 Best Outcome: '{_dp_best[0]}' calls avg {_dp_best[1]}%",
+                        "detail": f"Calls that end as '{_dp_best[0]}' score {round(_dp_best[1]-_avg,1)}pp above average — model these conversation flows as best practice."})
+                if _dp_worst[1] < _avg - 8:
+                    insights.append({"type": "warning",
+                        "title": f"🔴 Weakest Outcome: '{_dp_worst[0]}' calls avg {_dp_worst[1]}%",
+                        "detail": f"'{_dp_worst[0]}' calls score {round(_avg-_dp_worst[1],1)}pp below average. The bot is under-scripted for this outcome — improve handling for this lead segment."})
+        except Exception:
+            pass
+
+    return {"insights": insights, "actions": actions}
+
+
 def _render_sense_scorecard(sheets, legend_map):
     """Full QA Scorecard — weighted scoring, intelligence params, agent breakdown."""
 
@@ -9176,17 +9412,22 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                         _roll = _daily["Bot Score"].rolling(3, min_periods=1).mean()
                         _tf = go.Figure()
                         _tf.add_trace(go.Scatter(x=_daily["Audit Date"], y=_daily["Bot Score"],
-                            mode="lines+markers", line=dict(color="#93c5fd", width=1.5),
-                            marker=dict(size=4), name="Daily Avg", opacity=0.7))
+                            mode="lines+markers+text", line=dict(color="#93c5fd", width=1.5),
+                            marker=dict(size=5), name="Daily Avg Bot Score", opacity=0.8,
+                            text=[f"{v:.0f}%" for v in _daily["Bot Score"]],
+                            textposition="top center", textfont=dict(size=9, color="#6b7280")))
                         _tf.add_trace(go.Scatter(x=_daily["Audit Date"], y=_roll,
                             mode="lines", line=dict(color="#2563EB", width=2.5),
-                            name="3-period MA"))
-                        _tf.add_hline(y=80, line_dash="dot", line_color="#dc2626", annotation_text="Target 80%")
+                            name="3-Period Moving Average"))
+                        _tf.add_hline(y=80, line_dash="dot", line_color="#dc2626",
+                            annotation_text="Target: 80%", annotation_position="bottom right",
+                            annotation_font=dict(size=10, color="#dc2626"))
                         _tf.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
                             font=dict(family="Inter,sans-serif", size=11),
-                            margin=dict(l=10, r=10, t=20, b=10), height=260,
+                            margin=dict(l=10, r=10, t=30, b=10), height=280,
                             legend=dict(orientation="h", y=1.12, x=0, font=dict(size=10)),
-                            xaxis_title="Date", yaxis_title="Avg Bot Score")
+                            xaxis_title="Audit Date", yaxis_title="Avg Bot Score (%)",
+                            yaxis=dict(ticksuffix="%"))
                         st.plotly_chart(_tf, use_container_width=True, config={"displayModeBar": False})
                 except Exception:
                     pass
@@ -9338,14 +9579,20 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     x=[r["pct"] for r in _tier_rows],
                     orientation="h",
                     marker_color=[r["color"] for r in _tier_rows],
-                    text=[f'{r["pct"]}%  (weight {r["weight"]}%)' for r in _tier_rows],
-                    textposition="auto",
+                    # Full label on bar: "CRITICAL  83.5%  (63% weight)"
+                    text=[f'{r["label"]}  ·  {r["pct"]}%  (weight: {r["weight"]}%)' for r in _tier_rows],
+                    textposition="inside",
+                    insidetextanchor="start",
+                    textfont=dict(color="#fff", size=11),
                 ))
-                _tb_fig.add_vline(x=80, line_dash="dot", line_color="#6b7280", annotation_text="80%")
+                _tb_fig.add_vline(x=80, line_dash="dot", line_color="#6b7280",
+                    annotation_text="Target 80%", annotation_position="top right",
+                    annotation_font=dict(size=10, color="#6b7280"))
                 _tb_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
                     font=dict(family="Inter,sans-serif", size=12),
-                    margin=dict(l=10, r=10, t=20, b=10), height=280,
-                    showlegend=False, xaxis_title="Avg Score %", xaxis_range=[0, 105])
+                    margin=dict(l=10, r=10, t=30, b=10), height=200,
+                    showlegend=False, xaxis_title="Avg Score %", xaxis_range=[0, 110],
+                    yaxis=dict(tickfont=dict(size=12)))
                 st.plotly_chart(_tb_fig, use_container_width=True, config={"displayModeBar": False})
         except Exception:
             pass
@@ -9359,6 +9606,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             try:
                 _disp_counts = _dash_df[_disp_col].astype(str).str.strip().value_counts()
                 _disp_counts = _disp_counts[_disp_counts.index != "nan"][:10]
+                _disp_pct = (_disp_counts / _disp_counts.sum() * 100).round(1)
                 _disp_colors = ["#2563EB", "#0891b2", "#059669", "#d97706", "#dc2626",
                                 "#7c3aed", "#db2777", "#0d9488", "#b45309", "#374151"]
                 _dsp_fig = go.Figure()
@@ -9367,13 +9615,16 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     y=list(_disp_counts.index),
                     orientation="h",
                     marker_color=_disp_colors[:len(_disp_counts)],
-                    text=list(_disp_counts.values),
-                    textposition="auto",
+                    # Label: "Disposition Name: N calls (X%)"
+                    text=[f"{n}  ({p}%)" for n, p in zip(_disp_counts.values, _disp_pct.values)],
+                    textposition="outside",
+                    cliponaxis=False,
                 ))
                 _dsp_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
                     font=dict(family="Inter,sans-serif", size=11),
-                    margin=dict(l=10, r=10, t=20, b=10), height=280,
-                    showlegend=False, xaxis_title="Count", title_x=0.5)
+                    margin=dict(l=10, r=90, t=20, b=10), height=max(200, len(_disp_counts)*32+60),
+                    showlegend=False, xaxis_title="Number of Calls",
+                    yaxis=dict(tickfont=dict(size=11, color="#0B1F3A")))
                 st.plotly_chart(_dsp_fig, use_container_width=True, config={"displayModeBar": False})
             except Exception:
                 pass
@@ -9389,15 +9640,24 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 _LS_COLORS = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB",
                               "Not Interested": "#6b7280", "RNR": "#7c3aed"}
                 _ls_colors = [_LS_COLORS.get(k, "#94a3b8") for k in _ls_counts.index]
-                _ls_fig = go.Figure(go.Pie(
-                    labels=list(_ls_counts.index), values=list(_ls_counts.values),
-                    marker_colors=_ls_colors, hole=0.45,
-                    textinfo="label+percent", textfont_size=11,
+                # Show as horizontal bar so labels are always readable in email screenshots
+                _ls_pct = (_ls_counts / _ls_counts.sum() * 100).round(1)
+                _ls_fig = go.Figure()
+                _ls_fig.add_trace(go.Bar(
+                    y=list(_ls_counts.index),
+                    x=list(_ls_counts.values),
+                    orientation="h",
+                    marker_color=_ls_colors,
+                    # Full annotation: "Hot: 12 calls (45%)"
+                    text=[f"{k}: {v} calls ({p}%)" for k, v, p in zip(_ls_counts.index, _ls_counts.values, _ls_pct.values)],
+                    textposition="outside",
+                    cliponaxis=False,
                 ))
                 _ls_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font=dict(family="Inter,sans-serif"),
-                    margin=dict(l=10, r=10, t=20, b=10), height=280,
-                    showlegend=False)
+                    font=dict(family="Inter,sans-serif", size=11),
+                    margin=dict(l=10, r=140, t=20, b=10), height=max(200, len(_ls_counts)*38+60),
+                    showlegend=False, xaxis_title="Number of Calls",
+                    yaxis=dict(tickfont=dict(size=12, color="#0B1F3A", family="Inter,sans-serif")))
                 st.plotly_chart(_ls_fig, use_container_width=True, config={"displayModeBar": False})
             except Exception:
                 pass
@@ -9601,15 +9861,23 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     x=[r["Delta"] for r in _div_rows],
                     orientation="h",
                     marker_color=["#059669" if r["Delta"] >= 0 else "#dc2626" for r in _div_rows],
-                    text=[f'{r["Delta"]:+.1f}' for r in _div_rows],
-                    textposition="auto",
+                    # Label: "Campaign Name  Avg 83.2%  (+3.2 vs avg)"
+                    text=[f'{r["Campaign"]}  ·  {r["Avg"]}%  ({r["Delta"]:+.1f})  [{r["N"]} calls]' for r in _div_rows],
+                    textposition="outside",
+                    cliponaxis=False,
+                    textfont=dict(size=10),
                 ))
-                _dv_fig.add_vline(x=0, line_color="#64748b", line_width=1.5)
+                _dv_fig.add_vline(x=0, line_color="#64748b", line_width=1.5,
+                    annotation_text=f"Portfolio Avg: {_port_avg:.1f}%",
+                    annotation_position="top",
+                    annotation_font=dict(size=10, color="#64748b"))
                 _dv_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
                     font=dict(family="Inter,sans-serif", size=11),
-                    margin=dict(l=10, r=10, t=20, b=10),
-                    height=max(200, len(_div_rows) * 42 + 60),
-                    xaxis_title=f"Score vs Portfolio Avg ({_port_avg:.1f}%)",
+                    margin=dict(l=10, r=220, t=30, b=10),
+                    height=max(200, len(_div_rows) * 44 + 70),
+                    xaxis_title=f"Score deviation vs Portfolio Average ({_port_avg:.1f}%)",
+                    xaxis=dict(ticksuffix="%"),
+                    yaxis=dict(tickfont=dict(size=11)),
                     showlegend=False)
                 st.plotly_chart(_dv_fig, use_container_width=True, config={"displayModeBar": False})
         except Exception:
@@ -9692,41 +9960,416 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         except Exception:
             pass
 
-    # ── Section 14 — Key Insights ─────────────────────────────────────────────
-    st.markdown('<div class="section-chip">💡 Key Insights</div>', unsafe_allow_html=True)
-    _qi_d = {}
+    # ── Section 14 — Insight Report Builder (tick → email) ───────────────────
+    st.markdown('<div class="section-chip">📧 Insight Report Builder — Select & Send</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:10px;">Tick the insights you want to include in the email report, then fill in recipients and hit Send.</div>', unsafe_allow_html=True)
+
+    # ── Precompute all insight cards ─────────────────────────────────────────
+    _IRPT_CARDS = []  # list of {id, title, emoji, type, body_html, email_html}
+
+    def _irpt(cid, emoji, title, itype, lines, kv_pairs=None):
+        """Build one insight card dict."""
+        _type_color = {"critical": "#dc2626", "warning": "#d97706", "success": "#059669", "info": "#2563EB"}.get(itype, "#2563EB")
+        _type_bg = {"critical": "#fef2f2", "warning": "#fffbeb", "success": "#f0fdf4", "info": "#eff6ff"}.get(itype, "#eff6ff")
+        _body = f'<div style="background:{_type_bg};border-left:4px solid {_type_color};border-radius:8px;padding:12px 14px;">'
+        _body += f'<div style="font-size:0.73rem;font-weight:700;color:#0B1F3A;margin-bottom:6px;">{emoji} {title}</div>'
+        for _ln in lines:
+            _body += f'<div style="font-size:0.68rem;color:#374151;margin-bottom:3px;">{_ln}</div>'
+        if kv_pairs:
+            _body += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">'
+            for _k, _v in kv_pairs:
+                _body += f'<span style="background:#fff;border:1px solid {_type_color}44;border-radius:5px;padding:3px 8px;font-size:0.66rem;color:#0B1F3A;"><b>{_k}:</b> {_v}</span>'
+            _body += '</div>'
+        _body += '</div>'
+        # Email HTML version (same content, email-safe inline styles)
+        _email = (
+            f'<div style="background:{_type_bg};border-left:4px solid {_type_color};border-radius:8px;'
+            f'padding:14px 16px;margin-bottom:12px;font-family:Arial,sans-serif;">'
+            f'<div style="font-size:14px;font-weight:700;color:#0B1F3A;margin-bottom:6px;">{emoji} {title}</div>'
+        )
+        for _ln in lines:
+            _email += f'<div style="font-size:13px;color:#374151;margin-bottom:4px;">{_ln}</div>'
+        if kv_pairs:
+            _email += '<table style="border-collapse:collapse;margin-top:8px;">'
+            for _k, _v in kv_pairs:
+                _email += f'<tr><td style="padding:2px 10px 2px 0;font-size:12px;color:#64748b;white-space:nowrap;"><b>{_k}</b></td><td style="padding:2px 0;font-size:12px;color:#0B1F3A;">{_v}</td></tr>'
+            _email += '</table>'
+        _email += '</div>'
+        return {"id": cid, "emoji": emoji, "title": title, "type": itype,
+                "body_html": _body, "email_html": _email}
+
+    # 1. Executive Summary
     try:
-        _qi_d = _gen_qa_insights(_dash_df)
-        _ins_d = (_qi_d.get("insights") or [])
-        if _ins_d:
-            _TYPE_STYLES = {"critical": ("#dc2626", "#fef2f2"), "warning": ("#d97706", "#fffbeb"),
-                            "success": ("#059669", "#f0fdf4"), "info": ("#2563EB", "#eff6ff")}
-            _ins_cols = st.columns(2)
-            for _ii, _ins in enumerate(_ins_d):
-                _bdr, _bg = _TYPE_STYLES.get(_ins.get("type", "info"), ("#2563EB", "#eff6ff"))
-                _ins_cols[_ii % 2].markdown(
-                    f'<div style="background:{_bg};border-left:4px solid {_bdr};border-radius:8px;padding:12px 14px;margin-bottom:10px;">'
-                    f'<div style="font-size:0.73rem;font-weight:700;color:#0B1F3A;margin-bottom:4px;">{_ins.get("title","")}</div>'
-                    f'<div style="font-size:0.68rem;color:#374151;">{_ins.get("detail","")}</div>'
-                    f'</div>', unsafe_allow_html=True)
+        _date_range = ""
+        if "Audit Date" in _dash_df.columns:
+            _dc = pd.to_datetime(_dash_df["Audit Date"], errors="coerce").dropna()
+            if not _dc.empty:
+                _date_range = f'{_dc.min().strftime("%b %d")} – {_dc.max().strftime("%b %d, %Y")}'
+        _ex_type = "success" if _pr_d >= 80 else "warning" if _pr_d >= 60 else "critical"
+        _IRPT_CARDS.append(_irpt("exec_summary", "📋", "Executive Summary", _ex_type,
+            [f"Audit period: {_date_range or 'All time'}" if _date_range else "All-time data"],
+            [("Total Audits", _total_d), ("Avg Bot Score", f"{_avg_d or '—'}%"),
+             ("Pass Rate", f"{_pr_d}%"), ("Auto-Fails", _fatal_d),
+             ("Score Momentum", f"{_momentum_arrow} {_momentum_txt}")]))
     except Exception:
         pass
 
-    # ── Section 15 — Priority Actions ────────────────────────────────────────
+    # 2. Score Percentiles
+    try:
+        if not _bs_d.dropna().empty:
+            _p25 = round(_bs_d.dropna().quantile(0.25), 1)
+            _p50 = round(_bs_d.dropna().quantile(0.50), 1)
+            _p75 = round(_bs_d.dropna().quantile(0.75), 1)
+            _p90 = round(_bs_d.dropna().quantile(0.90), 1)
+            _ptype = "success" if _p50 >= 80 else "warning" if _p50 >= 60 else "critical"
+            _IRPT_CARDS.append(_irpt("percentiles", "📊", "Score Percentile Breakdown", _ptype,
+                ["Distribution of Bot Scores across all audited calls in the selected period."],
+                [("25th pctile", f"{_p25}%"), ("Median (p50)", f"{_p50}%"),
+                 ("75th pctile", f"{_p75}%"), ("90th pctile", f"{_p90}%")]))
+    except Exception:
+        pass
+
+    # 3. Top Performing Parameters
+    try:
+        _top_params = sorted(_param_avgs_d, key=lambda x: -x["pct"])[:5]
+        if _top_params:
+            _IRPT_CARDS.append(_irpt("top_params", "✅", "Top Performing Parameters", "success",
+                ["Parameters consistently scoring ≥80% — these are your strengths to maintain."],
+                [(p["col"], f"{p['pct']}%") for p in _top_params]))
+    except Exception:
+        pass
+
+    # 4. Failing Parameters Alert
+    try:
+        _bot_params = sorted(_param_avgs_d, key=lambda x: x["pct"])[:5]
+        if _bot_params:
+            _bpt = "critical" if _bot_params[0]["pct"] < 50 else "warning"
+            _IRPT_CARDS.append(_irpt("fail_params", "⚠️", "Failing Parameters — Needs Attention", _bpt,
+                ["These parameters are dragging down your overall score. Prioritise coaching here."],
+                [(p["col"], f"{p['pct']}% avg") for p in _bot_params]))
+    except Exception:
+        pass
+
+    # 5. Best Campaign Spotlight
+    try:
+        if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+            _c_avgs = _dash_df.groupby("Campaign Name").apply(
+                lambda g: pd.to_numeric(g["Bot Score"], errors="coerce").dropna().mean()).dropna()
+            if not _c_avgs.empty:
+                _best_c = _c_avgs.idxmax()
+                _best_cv = round(_c_avgs.max(), 1)
+                _best_n = len(_dash_df[_dash_df["Campaign Name"] == _best_c])
+                _IRPT_CARDS.append(_irpt("best_camp", "🏆", "Best Campaign Spotlight", "success",
+                    [f"<b>{_best_c}</b> is your top-performing campaign this period."],
+                    [("Campaign", _best_c), ("Avg Score", f"{_best_cv}%"), ("Audits", _best_n)]))
+    except Exception:
+        pass
+
+    # 6. Worst Campaign Alert
+    try:
+        if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+            _c_avgs2 = _dash_df.groupby("Campaign Name").apply(
+                lambda g: pd.to_numeric(g["Bot Score"], errors="coerce").dropna().mean()).dropna()
+            if len(_c_avgs2) >= 2:
+                _worst_c = _c_avgs2.idxmin()
+                _worst_cv = round(_c_avgs2.min(), 1)
+                _worst_n = len(_dash_df[_dash_df["Campaign Name"] == _worst_c])
+                _wct = "critical" if _worst_cv < 60 else "warning"
+                _IRPT_CARDS.append(_irpt("worst_camp", "🔴", "Campaign Needs Attention", _wct,
+                    [f"<b>{_worst_c}</b> is underperforming and requires immediate review."],
+                    [("Campaign", _worst_c), ("Avg Score", f"{_worst_cv}%"), ("Audits", _worst_n)]))
+    except Exception:
+        pass
+
+    # 7. QA Auditor Variance Alert
+    try:
+        if "QA" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+            _qa_stds = []
+            for _qn2, _qg2 in _dash_df.groupby("QA"):
+                _qbs2 = pd.to_numeric(_qg2["Bot Score"], errors="coerce").dropna()
+                if len(_qbs2) >= 3:
+                    _qa_stds.append({"QA": str(_qn2), "std": round(_qbs2.std(), 1),
+                                     "avg": round(_qbs2.mean(), 1), "n": len(_qbs2)})
+            if _qa_stds:
+                _qa_stds.sort(key=lambda x: -x["std"])
+                _hv = _qa_stds[0]
+                _lv = _qa_stds[-1]
+                _vtype = "warning" if _hv["std"] > 15 else "info"
+                _IRPT_CARDS.append(_irpt("qa_variance", "📐", "Auditor Calibration Report", _vtype,
+                    ["High score variance from a QA auditor may indicate inconsistent scoring criteria."],
+                    [("Least Consistent", f'{_hv["QA"]} (σ={_hv["std"]})'),
+                     ("Most Consistent", f'{_lv["QA"]} (σ={_lv["std"]})'),
+                     ("Recommendation", "Align scoring rubric in team review")]))
+    except Exception:
+        pass
+
+    # 8. Auto-Fail Root Cause
+    try:
+        _af_counts = {}
+        for _t in _QA_SCHEMA.get("tiers", []):
+            for _p in _t.get("params", []):
+                if _p.get("fatal") and _p["col"] in _dash_df.columns:
+                    _fatal_hits = (_dash_df[_p["col"]].astype(str).str.strip() == "Fatal").sum()
+                    if _fatal_hits > 0:
+                        _af_counts[_p["col"]] = int(_fatal_hits)
+        if not _af_counts:
+            if "Status" in _dash_df.columns and _fatal_d > 0:
+                _af_counts["Abrupt Disconnection (or other)"] = _fatal_d
+        if _af_counts:
+            _af_type = "critical" if sum(_af_counts.values()) >= 3 else "warning"
+            _IRPT_CARDS.append(_irpt("autofail_root", "🚨", "Auto-Fail Root Cause Analysis", _af_type,
+                [f"Total auto-fails this period: <b>{_fatal_d}</b>. Root causes identified:"],
+                [(k, f"{v} occurrences") for k, v in sorted(_af_counts.items(), key=lambda x: -x[1])]))
+    except Exception:
+        pass
+
+    # 9. Week-over-Week Score Change
+    try:
+        if "Audit Date" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+            _wow_df = _dash_df[["Audit Date", "Bot Score"]].copy()
+            _wow_df["Audit Date"] = pd.to_datetime(_wow_df["Audit Date"], errors="coerce")
+            _wow_df["Bot Score"] = pd.to_numeric(_wow_df["Bot Score"], errors="coerce")
+            _wow_df = _wow_df.dropna()
+            _tnow = pd.Timestamp.now()
+            _this_wk = _wow_df[_wow_df["Audit Date"] >= _tnow - pd.Timedelta(days=7)]["Bot Score"]
+            _prev_wk = _wow_df[(_wow_df["Audit Date"] >= _tnow - pd.Timedelta(days=14)) &
+                               (_wow_df["Audit Date"] < _tnow - pd.Timedelta(days=7))]["Bot Score"]
+            if len(_this_wk) >= 2 and len(_prev_wk) >= 2:
+                _ww_delta = round(_this_wk.mean() - _prev_wk.mean(), 1)
+                _ww_dir = "↑ Improved" if _ww_delta > 0 else "↓ Declined" if _ww_delta < 0 else "→ Flat"
+                _wwt = "success" if _ww_delta > 2 else "critical" if _ww_delta < -2 else "info"
+                _IRPT_CARDS.append(_irpt("wow_trend", "📅", "Week-over-Week Performance", _wwt,
+                    [f"Score change vs previous 7 days: <b>{_ww_dir} ({_ww_delta:+.1f}%)</b>"],
+                    [("This week avg", f"{round(_this_wk.mean(),1)}%  ({len(_this_wk)} audits)"),
+                     ("Prior week avg", f"{round(_prev_wk.mean(),1)}%  ({len(_prev_wk)} audits)"),
+                     ("Change", f"{_ww_delta:+.1f}%")]))
+    except Exception:
+        pass
+
+    # 10. Client Risk Alert
+    try:
+        if "Client" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+            _at_risk = []
+            for _cn3, _cg3 in _dash_df.groupby("Client"):
+                _c_bs3 = pd.to_numeric(_cg3["Bot Score"], errors="coerce").dropna()
+                if len(_c_bs3) >= 2 and _c_bs3.mean() < 65:
+                    _at_risk.append((str(_cn3), round(_c_bs3.mean(), 1)))
+            if _at_risk:
+                _at_risk.sort(key=lambda x: x[1])
+                _IRPT_CARDS.append(_irpt("client_risk", "🏢", "Client Risk Alert", "critical",
+                    ["The following clients have an average Bot Score below 65% — immediate action recommended."],
+                    [(c, f"{v}% avg") for c, v in _at_risk]))
+    except Exception:
+        pass
+
+    # 11. Co-failure Pattern Warning
+    try:
+        _top_cofail = None
+        if _total_d >= 5:
+            _cfp_list = []
+            _all_pcols2 = [_p["col"] for _t in _QA_SCHEMA.get("tiers", []) for _p in _t.get("params", []) if _p["col"] in _dash_df.columns]
+            _fm2 = {}
+            for _pcol2 in _all_pcols2:
+                _p2 = next((_p for _t in _QA_SCHEMA["tiers"] for _p in _t["params"] if _p["col"] == _pcol2), None)
+                _pmx2 = max([int(o) for o in _p2.get("options", []) if str(o).lstrip("-").isdigit()], default=2) if _p2 else 2
+                _pv2 = pd.to_numeric(_dash_df[_pcol2].astype(str).str.strip().replace(
+                    {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmx2)}), errors="coerce")
+                _fm2[_pcol2] = (_pv2 < _pmx2 * 0.5).astype(int)
+            _fm2_df = pd.DataFrame(_fm2)
+            _cl2 = list(_fm2_df.columns)
+            for _i2 in range(len(_cl2)):
+                for _j2 in range(_i2 + 1, len(_cl2)):
+                    _both2 = ((_fm2_df[_cl2[_i2]] == 1) & (_fm2_df[_cl2[_j2]] == 1)).sum()
+                    _rate2 = round(_both2 / _total_d * 100, 1)
+                    if _rate2 >= 15:
+                        _cfp_list.append({"p1": _cl2[_i2], "p2": _cl2[_j2], "rate": _rate2, "count": int(_both2)})
+            _cfp_list.sort(key=lambda x: -x["rate"])
+            if _cfp_list:
+                _top_cofail = _cfp_list[0]
+                _cft = "critical" if _top_cofail["rate"] >= 35 else "warning"
+                _IRPT_CARDS.append(_irpt("cofail_pattern", "🔴", "Co-failure Pattern Detected", _cft,
+                    [f"These parameters fail together in <b>{_top_cofail['rate']}%</b> of audits — likely a systemic issue."],
+                    [("Parameter 1", _top_cofail["p1"]), ("Parameter 2", _top_cofail["p2"]),
+                     ("Co-fail rate", f'{_top_cofail["rate"]}% ({_top_cofail["count"]} audits)'),
+                     ("Action", "Review call flows where both issues co-occur")]))
+    except Exception:
+        pass
+
+    # 12. Lead Quality Snapshot
+    try:
+        if "Lead Stage" in _dash_df.columns:
+            _ls_snap = _dash_df["Lead Stage"].astype(str).str.strip().value_counts().to_dict()
+            _hot = _ls_snap.get("Hot", 0)
+            _warm = _ls_snap.get("Warm", 0)
+            _cold = _ls_snap.get("Cold", 0)
+            _ni = _ls_snap.get("Not Interested", 0)
+            _rnr = _ls_snap.get("RNR", 0)
+            _total_ls = sum(_ls_snap.values())
+            _conv_rate = round((_hot + _warm) / _total_ls * 100, 1) if _total_ls else 0
+            _lqt = "success" if _conv_rate >= 50 else "warning" if _conv_rate >= 30 else "critical"
+            _IRPT_CARDS.append(_irpt("lead_quality", "🔥", "Lead Quality Snapshot", _lqt,
+                [f"Conversion-ready (Hot + Warm): <b>{_conv_rate}%</b> of leads"],
+                [("Hot", f"{_hot} ({round(_hot/_total_ls*100,1) if _total_ls else 0}%)"),
+                 ("Warm", f"{_warm} ({round(_warm/_total_ls*100,1) if _total_ls else 0}%)"),
+                 ("Cold", f"{_cold}"), ("Not Interested", f"{_ni}"), ("RNR", f"{_rnr}")]))
+    except Exception:
+        pass
+
+    # 13. QA Productivity Summary
+    try:
+        if "QA" in _dash_df.columns:
+            _qa_counts = _dash_df["QA"].value_counts().head(5)
+            if not _qa_counts.empty:
+                _IRPT_CARDS.append(_irpt("qa_productivity", "👤", "QA Productivity Summary", "info",
+                    ["Number of audits completed per QA analyst in this period."],
+                    [(qa, f"{cnt} audits") for qa, cnt in _qa_counts.items()]))
+    except Exception:
+        pass
+
+    # 14. Bot Name Performance
+    try:
+        if "Bot Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+            _bn_avgs = _dash_df.groupby("Bot Name").apply(
+                lambda g: pd.to_numeric(g["Bot Score"], errors="coerce").dropna().mean()).dropna()
+            if len(_bn_avgs) >= 1:
+                _bn_type = "success" if _bn_avgs.mean() >= 80 else "warning"
+                _IRPT_CARDS.append(_irpt("bot_performance", "🤖", "Bot Performance by Bot Name", _bn_type,
+                    ["Average Bot Score per bot variant."],
+                    [(str(b), f"{round(v, 1)}%") for b, v in _bn_avgs.sort_values(ascending=False).items()]))
+    except Exception:
+        pass
+
+    # 15. Improvement Recommendations (derived)
+    try:
+        _recs = []
+        if _fatal_d >= 2:
+            _recs.append(("Critical", f"Investigate {_fatal_d} Auto-Fail calls — check Abrupt Disconnection triggers"))
+        if _avg_d and _avg_d < 70:
+            _recs.append(("Critical", f"Overall score {_avg_d}% is below 70% — initiate a full QA review cycle"))
+        _worst_p = min(_param_avgs_d, key=lambda x: x["pct"]) if _param_avgs_d else None
+        if _worst_p and _worst_p["pct"] < 50:
+            _recs.append(("High", f"'{_worst_p['col']}' scored only {_worst_p['pct']}% — schedule focused training"))
+        if _pr_d < 60:
+            _recs.append(("High", f"Pass rate {_pr_d}% is critically low — review scoring criteria and bot flows"))
+        if not _recs:
+            _recs.append(("Low", "Performance is within acceptable range — continue regular monitoring"))
+        _IRPT_CARDS.append(_irpt("recommendations", "💡", "Action Recommendations", "critical" if any(r[0]=="Critical" for r in _recs) else "warning",
+            ["Prioritised actions based on the current audit data:"],
+            [(_p, _msg) for _p, _msg in _recs]))
+    except Exception:
+        pass
+
+    # ── Render cards with checkboxes ────────────────────────────────────────
+    _selected_card_ids = []
+    _card_chunks = [_IRPT_CARDS[i:i+2] for i in range(0, len(_IRPT_CARDS), 2)]
+    for _chunk in _card_chunks:
+        _cc1, _cc2 = st.columns(2)
+        for _ci, (_card, _col) in enumerate(zip(_chunk, [_cc1, _cc2])):
+            with _col:
+                _checked = st.checkbox(
+                    f'{_card["emoji"]} {_card["title"]}',
+                    value=True,
+                    key=f'irpt_chk_{_card["id"]}',
+                )
+                if _checked:
+                    _selected_card_ids.append(_card["id"])
+                st.markdown(_card["body_html"], unsafe_allow_html=True)
+                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+
+    # ── Email send controls ──────────────────────────────────────────────────
+    st.markdown('<div style="height:10px"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-chip">✉️ Send Selected Insights via Email</div>', unsafe_allow_html=True)
+    _ec1, _ec2, _ec3 = st.columns([3, 2, 1])
+    with _ec1:
+        _irpt_to = st.text_input("Recipient email(s)", placeholder="email1@co.com, email2@co.com",
+                                  key="irpt_to_email")
+    with _ec2:
+        _irpt_subj = st.text_input("Subject", value=f"Audit Insight Report — {pd.Timestamp.now().strftime('%b %d, %Y')}",
+                                    key="irpt_subject")
+    with _ec3:
+        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+        _irpt_send_btn = st.button("📤 Send", key="irpt_send", type="primary", use_container_width=True)
+
+    if _irpt_send_btn:
+        _sel_cards = [c for c in _IRPT_CARDS if c["id"] in _selected_card_ids]
+        if not _sel_cards:
+            st.warning("No insights selected — tick at least one card above.")
+        elif not _irpt_to.strip():
+            st.warning("Enter at least one recipient email.")
+        else:
+            _to_list = [e.strip() for e in _irpt_to.replace(";", ",").split(",") if e.strip() and "@" in e]
+            if not _to_list:
+                st.error("No valid email addresses found.")
+            else:
+                # Build email HTML
+                _irpt_html = f"""
+                <div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;background:#f8faff;padding:0;">
+                  <div style="background:linear-gradient(135deg,#0B1F3A,#2563EB);padding:28px 30px;border-radius:10px 10px 0 0;">
+                    <div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:-0.02em;">Audit Insight Report</div>
+                    <div style="font-size:13px;color:#93c5fd;margin-top:4px;">Generated {pd.Timestamp.now().strftime("%B %d, %Y at %H:%M")} · {_total_d} audits · Avg {_avg_d or "—"}% · Pass rate {_pr_d}%</div>
+                  </div>
+                  <div style="padding:20px 24px;">
+                    {"".join(c["email_html"] for c in _sel_cards)}
+                    <div style="margin-top:20px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;text-align:center;">
+                      Sent via Convin Data Labs QA Dashboard · {pd.Timestamp.now().strftime("%Y")}
+                    </div>
+                  </div>
+                </div>"""
+                try:
+                    import gmail_sender as _gs_irpt
+                    _irpt_result = _gs_irpt.send_report_email(
+                        credentials_dict={},
+                        to_emails=_to_list,
+                        subject=_irpt_subj,
+                        html_body=_irpt_html,
+                        from_email=st.session_state.get("user_email", ""),
+                    )
+                    _sent_ok = _irpt_result.get("sent", [])
+                    _sent_fail = _irpt_result.get("failed", [])
+                    if _sent_ok:
+                        st.success(f"✅ Report sent to: {', '.join(_sent_ok)}  ({len(_sel_cards)} insights)")
+                    for _sf in _sent_fail:
+                        st.error(f"Failed → {_sf.get('email','?')}: {_sf.get('error','')}")
+                except Exception as _irpt_exc:
+                    st.error(f"Send error: {_irpt_exc}")
+
+    # ── Section 15 — Call Performance Insights ───────────────────────────────
+    st.markdown('<div class="section-chip">📞 Call Performance Insights</div>', unsafe_allow_html=True)
+    _ci_d = {}
+    try:
+        _ci_d = _gen_call_insights(_dash_df)
+        _ci_ins = (_ci_d.get("insights") or [])
+        if _ci_ins:
+            _TYPE_STYLES2 = {"critical": ("#dc2626", "#fef2f2"), "warning": ("#d97706", "#fffbeb"),
+                             "success": ("#059669", "#f0fdf4"), "info": ("#2563EB", "#eff6ff")}
+            _ci_cols = st.columns(2)
+            for _cii, _ci in enumerate(_ci_ins):
+                _cbdr, _cbg = _TYPE_STYLES2.get(_ci.get("type", "info"), ("#2563EB", "#eff6ff"))
+                _ci_cols[_cii % 2].markdown(
+                    f'<div style="background:{_cbg};border-left:4px solid {_cbdr};border-radius:8px;padding:12px 14px;margin-bottom:10px;">'
+                    f'<div style="font-size:0.73rem;font-weight:700;color:#0B1F3A;margin-bottom:4px;">{_ci.get("title","")}</div>'
+                    f'<div style="font-size:0.68rem;color:#374151;">{_ci.get("detail","")}</div>'
+                    f'</div>', unsafe_allow_html=True)
+        else:
+            st.info("No call performance insights available for this selection.")
+    except Exception:
+        pass
+
+    # ── Section 16 — Priority Actions (call-focused) ─────────────────────────
     st.markdown('<div class="section-chip">🎯 Priority Actions</div>', unsafe_allow_html=True)
     try:
-        _acts_d = (_qi_d.get("actions") or [])
-        if _acts_d:
-            _PRI_STYLES = {"high": ("#dc2626", "#fef2f2"), "medium": ("#d97706", "#fffbeb"), "low": ("#2563EB", "#eff6ff")}
-            _act_cols = st.columns(2)
-            for _ai, _a in enumerate(_acts_d):
-                _pri = str(_a.get("priority", "low")).lower()
-                _ac, _ab = _PRI_STYLES.get(_pri, ("#2563EB", "#eff6ff"))
-                _act_cols[_ai % 2].markdown(
-                    f'<div style="background:{_ab};border-left:4px solid {_ac};border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;">'
-                    f'<span style="background:{_ac};color:#fff;font-size:0.55rem;font-weight:800;padding:2px 7px;border-radius:4px;letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;margin-top:2px;">{_pri.upper()}</span>'
-                    f'<div><div style="font-size:0.72rem;font-weight:600;color:#0B1F3A;">{_a.get("action","")}</div>'
-                    f'<div style="font-size:0.65rem;color:#64748b;margin-top:2px;">{_a.get("impact","")}</div></div>'
+        _ci_acts = (_ci_d.get("actions") or [])
+        if _ci_acts:
+            _PRI_STYLES2 = {"high": ("#dc2626", "#fef2f2"), "medium": ("#d97706", "#fffbeb"), "low": ("#2563EB", "#eff6ff")}
+            _cact_cols = st.columns(2)
+            for _cai, _ca in enumerate(_ci_acts):
+                _cpri = str(_ca.get("priority", "low")).lower()
+                _cac, _cab = _PRI_STYLES2.get(_cpri, ("#2563EB", "#eff6ff"))
+                _cact_cols[_cai % 2].markdown(
+                    f'<div style="background:{_cab};border-left:4px solid {_cac};border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;">'
+                    f'<span style="background:{_cac};color:#fff;font-size:0.55rem;font-weight:800;padding:2px 7px;border-radius:4px;letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;margin-top:2px;">{_cpri.upper()}</span>'
+                    f'<div><div style="font-size:0.72rem;font-weight:600;color:#0B1F3A;">{_ca.get("action","")}</div>'
+                    f'<div style="font-size:0.65rem;color:#64748b;margin-top:2px;">{_ca.get("impact","")}</div></div>'
                     f'</div>', unsafe_allow_html=True)
     except Exception:
         pass
