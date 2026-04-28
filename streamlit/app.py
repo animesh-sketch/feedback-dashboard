@@ -9779,6 +9779,57 @@ def render_convin_sense():
     transform: translateY(-1px) !important;
 }
 
+/* ── Audit form radio buttons: large pill-shaped hit targets ── */
+div[data-testid="stForm"] .stRadio > div[role="radiogroup"] {
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+}
+div[data-testid="stForm"] .stRadio label {
+    background: #f1f5f9 !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 99px !important;
+    padding: 6px 16px !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    color: #334155 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    min-width: 52px !important;
+    text-align: center !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+div[data-testid="stForm"] .stRadio label:hover {
+    background: #e0e7ff !important;
+    border-color: #6366f1 !important;
+    color: #4338ca !important;
+}
+div[data-testid="stForm"] .stRadio label:has(input:checked) {
+    background: linear-gradient(135deg,#1d4ed8,#2563EB) !important;
+    border-color: #1d4ed8 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.4) !important;
+}
+/* Hide the native radio circle — the pill IS the button */
+div[data-testid="stForm"] .stRadio input[type="radio"] {
+    position: absolute !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+/* NA pill: amber tint when selected */
+div[data-testid="stForm"] .stRadio label:last-child {
+    border-color: #f59e0b !important;
+    color: #92400e !important;
+    background: #fffbeb !important;
+}
+div[data-testid="stForm"] .stRadio label:last-child:has(input:checked) {
+    background: #f59e0b !important;
+    border-color: #d97706 !important;
+    color: #fff !important;
+    box-shadow: 0 2px 8px rgba(245,158,11,0.4) !important;
+}
+
 /* ── Tabs: dark navy bar with bright active pill ── */
 .stTabs [data-baseweb="tab-list"] {
     background: linear-gradient(108deg,#040d1e,#0d1a3a) !important;
