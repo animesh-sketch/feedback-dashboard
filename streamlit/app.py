@@ -10485,7 +10485,11 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     if st.session_state.get("show_new_audit_tab", True):
         _base_tabs.append("✍️  New Audit")
 
-    _tab_labels = _base_tabs + [_tab_label(s) for s in sheets] + ["🗂️  Registry", "🤖  Insights"]
+    _HIDDEN_SHEET_KEYWORDS = ("legend", "summary", "dashboard")
+    _visible_sheets = {k: v for k, v in sheets.items()
+                       if not any(kw in k.lower() for kw in _HIDDEN_SHEET_KEYWORDS)}
+
+    _tab_labels = _base_tabs + [_tab_label(s) for s in _visible_sheets] + ["🗂️  Registry", "🤖  Insights"]
     _tabs = st.tabs(_tab_labels)
 
     _tab_idx = 0
@@ -10500,11 +10504,11 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
             _render_audit_form(_legend_map, fname)
         _tab_idx += 1
 
-    for i, (sheet_name, df) in enumerate(sheets.items()):
+    for i, (sheet_name, df) in enumerate(_visible_sheets.items()):
         with _tabs[_tab_idx + i]:
             _render_sense_sheet(df, sheet_name, fname, sheets=sheets)
 
-    _registry_idx = _tab_idx + len(sheets)
+    _registry_idx = _tab_idx + len(_visible_sheets)
     with _tabs[_registry_idx]:
         _render_registry()
 
