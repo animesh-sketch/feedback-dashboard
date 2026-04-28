@@ -1088,6 +1088,8 @@ def _render_period_content(period: str):
         ]
 
     _total_delivered = sum(len(r.get("sent_to", [])) for r in _sent_recs)
+    _total_failed    = sum(len(r.get("failed",  [])) for r in _sent_recs)
+    _total_attempted = _total_delivered + _total_failed
     _total_opens     = len(_ts["opens"]) + len(_ts["clicks"])   # clicks imply open
     _total_clicks    = len(_ts["clicks"])
     _total_ratings   = _ts["total_ratings"]
@@ -1095,6 +1097,8 @@ def _render_period_content(period: str):
     _open_rate_pct   = round(_total_opens  / _total_delivered * 100, 1) if _total_delivered else 0
     _click_rate_pct  = round(_total_clicks / _total_delivered * 100, 1) if _total_delivered else 0
     _cto_pct         = round(_total_clicks / _total_opens * 100, 1) if _total_opens else 0
+    _delivered_pct   = round(_total_delivered / _total_attempted * 100, 1) if _total_attempted else 100.0
+    _bounce_pct      = round(_total_failed    / _total_attempted * 100, 1) if _total_attempted else 0.0
 
     _period_labels   = {"Daily": "Today", "Weekly": "This Week", "Monthly": "All Time"}
     _real_data = {
@@ -1104,8 +1108,8 @@ def _render_period_content(period: str):
             {"label": "Total Sent",     "value": str(_total_delivered),                      "sub": None,                                "change": None, "up_good": True},
             {"label": "Open Rate",      "value": f"{_open_rate_pct}%",                       "sub": f"{_total_opens} opens",             "change": None, "up_good": True},
             {"label": "Click to Open",  "value": f"{_cto_pct}%",                             "sub": f"{_total_clicks} clicks",           "change": None, "up_good": True},
-            {"label": "Delivered Rate", "value": "100%",                                     "sub": f"{_total_delivered} emails",        "change": None, "up_good": True},
-            {"label": "Bounce Rate",    "value": "0.0%",                                     "sub": None,                                "change": None, "up_good": False},
+            {"label": "Delivered Rate", "value": f"{_delivered_pct}%",                       "sub": f"{_total_delivered} emails",        "change": None, "up_good": True},
+            {"label": "Bounce Rate",    "value": f"{_bounce_pct}%",                          "sub": f"{_total_failed} failed" if _total_failed else None, "change": None, "up_good": False},
             {"label": "Response Rate",  "value": f"{round(_total_ratings / _total_delivered * 100, 1) if _total_delivered else 0}%",
                                                                                               "sub": f"{_total_ratings} ratings",        "change": None, "up_good": True},
             {"label": "Avg Rating",     "value": f"{_ts['avg_rating']:.1f}" if _total_ratings else "—",
@@ -1171,6 +1175,8 @@ def _render_period_content(period: str):
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    _render_ai_summary(period, csat, respondents)
 
     st.markdown('<div class="section-chip">Key Metrics</div>', unsafe_allow_html=True)
     csat_card = f"""<div class="metric-card accent-amber">
@@ -1252,8 +1258,6 @@ def _render_period_content(period: str):
         <div style="color:#334466;font-size:0.68rem;font-weight:500;">{len(email_rows)} emails</div>
     </div>""", unsafe_allow_html=True)
     st.markdown(_email_table_html(email_rows), unsafe_allow_html=True)
-
-    _render_ai_summary(period, csat, respondents)
 
 
 # ─── Home landing portal ──────────────────────────────────────────────────────
