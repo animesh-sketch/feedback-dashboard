@@ -10534,7 +10534,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         _base_tabs.append("✍️  New Audit")
     _base_tabs.append("📄  Weights")
 
-    _HIDDEN_SHEET_KEYWORDS = ("legend", "summary", "dashboard")
+    _HIDDEN_SHEET_KEYWORDS = ("legend", "summary", "dashboard", "weights", "weight")
     _SIDEBAR_SHEET_KEYWORDS = ("voice bot audit", "voice bot", "vba")
 
     # Sheets moved to sidebar Settings
