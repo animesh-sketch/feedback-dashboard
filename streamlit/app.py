@@ -9126,41 +9126,68 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 'text-transform:uppercase;color:#0ebc6e;margin-bottom:6px;">⭐ Custom Parameters</div>',
                 unsafe_allow_html=True,
             )
+            _custom_param_names = {_cp["name"] for _cp in _custom_params}
             for _cp in _custom_params:
+                _cp_itype = _cp.get("input_type", "dropdown")
                 _cp_key = f"af_cp_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
                 _cp_cmt_key = f"af_cp_cmt_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
                 _cp_notcap_key = f"af_cp_notcap_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
-                _cpa, _cpb, _cpc, _cpd = st.columns([3, 1, 3, 3])
-                with _cpa:
-                    _guide = _cp.get("guide", "")
-                    _guide_html = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:2px;">{_guide}</div>' if _guide else ""
-                    st.markdown(
-                        f'<div style="padding:8px 0 4px;">'
-                        f'<div style="font-size:0.82rem;font-weight:700;color:#0d1d3a;">⭐ {_cp["name"]} *</div>'
-                        f'{_guide_html}</div>',
-                        unsafe_allow_html=True,
-                    )
-                with _cpb:
-                    _pv[_cp["name"]] = st.selectbox(
-                        _cp["name"],
-                        ["—", "Yes", "No", "NA"],
-                        key=_cp_key,
-                        label_visibility="collapsed",
-                    )
-                with _cpc:
-                    _pv[f"{_cp['name']} Comment"] = st.text_input(
-                        "Comment",
-                        placeholder="Remark…",
-                        key=_cp_cmt_key,
-                        label_visibility="collapsed",
-                    )
-                with _cpd:
-                    _pv[f"{_cp['name']} Not Captured"] = st.text_input(
-                        "What was not captured",
-                        placeholder="Missing info…",
-                        key=_cp_notcap_key,
-                        label_visibility="collapsed",
-                    )
+                _guide = _cp.get("guide", "")
+                _guide_html = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:2px;">{_guide}</div>' if _guide else ""
+                if _cp_itype == "text":
+                    _cpa, _cpb, _cpc = st.columns([3, 4, 3])
+                    with _cpa:
+                        st.markdown(
+                            f'<div style="padding:8px 0 4px;">'
+                            f'<div style="font-size:0.82rem;font-weight:700;color:#0d1d3a;">⭐ {_cp["name"]}</div>'
+                            f'{_guide_html}</div>',
+                            unsafe_allow_html=True,
+                        )
+                    with _cpb:
+                        _pv[_cp["name"]] = st.text_input(
+                            _cp["name"],
+                            placeholder="Enter value…",
+                            key=_cp_key,
+                            label_visibility="collapsed",
+                        )
+                    with _cpc:
+                        _pv[f"{_cp['name']} Comment"] = st.text_input(
+                            "Comment",
+                            placeholder="Remark…",
+                            key=_cp_cmt_key,
+                            label_visibility="collapsed",
+                        )
+                else:
+                    _cpa, _cpb, _cpc, _cpd = st.columns([3, 1, 3, 3])
+                    with _cpa:
+                        st.markdown(
+                            f'<div style="padding:8px 0 4px;">'
+                            f'<div style="font-size:0.82rem;font-weight:700;color:#0d1d3a;">⭐ {_cp["name"]}</div>'
+                            f'{_guide_html}</div>',
+                            unsafe_allow_html=True,
+                        )
+                    with _cpb:
+                        _cp_opts = _cp.get("options", ["Yes", "No"])
+                        _pv[_cp["name"]] = st.selectbox(
+                            _cp["name"],
+                            ["—"] + _cp_opts + (["NA"] if "NA" not in _cp_opts else []),
+                            key=_cp_key,
+                            label_visibility="collapsed",
+                        )
+                    with _cpc:
+                        _pv[f"{_cp['name']} Comment"] = st.text_input(
+                            "Comment",
+                            placeholder="Remark…",
+                            key=_cp_cmt_key,
+                            label_visibility="collapsed",
+                        )
+                    with _cpd:
+                        _pv[f"{_cp['name']} Not Captured"] = st.text_input(
+                            "What was not captured",
+                            placeholder="Missing info…",
+                            key=_cp_notcap_key,
+                            label_visibility="collapsed",
+                        )
 
         _f_notes = st.text_area("Reviewer Notes", placeholder="Optional observations…", height=56)
         _f_suggestion = st.text_area(
@@ -9196,8 +9223,10 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             if not _f_pm_csm.strip():
                 _errs.append("PM / CSM is required")
             for _col, _val in _pv.items():
-                if _col.endswith(" Comment"):
-                    continue  # comments are optional
+                if _col.endswith(" Comment") or _col.endswith(" Not Captured"):
+                    continue
+                if _col in _custom_param_names or any(_col.startswith(n + " ") for n in _custom_param_names):
+                    continue  # custom params are optional
                 if not _val or str(_val).strip() in ("— select —", "—"):
                     _errs.append(f"'{_col}' must be selected")
                 # NA is accepted as "not applicable" — no error
