@@ -9842,7 +9842,7 @@ div[data-testid="stForm"] .stRadio label:last-child:has(input:checked) {
 .stTabs [data-baseweb="tab"] {
     font-size: 0.76rem !important;
     font-weight: 600 !important;
-    color: rgba(255,255,255,0.85) !important;
+    color: #ffffff !important;
     background: transparent !important;
     border: none !important;
     border-radius: 9px !important;
@@ -9851,6 +9851,9 @@ div[data-testid="stForm"] .stRadio label:last-child:has(input:checked) {
     letter-spacing: 0.01em !important;
     white-space: nowrap !important;
 }
+.stTabs [data-baseweb="tab"] p,
+.stTabs [data-baseweb="tab"] span,
+.stTabs [data-baseweb="tab"] div { color: #ffffff !important; }
 .stTabs [data-baseweb="tab"]:hover {
     background: rgba(37,99,235,0.15) !important;
     color: #93c5fd !important;
