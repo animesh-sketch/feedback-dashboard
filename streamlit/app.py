@@ -11084,7 +11084,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
     _em_client = _sel_client if _sel_client != "All" else "Your Client"
 
     _db_tab_compose, _db_tab_preview, _db_tab_gallery = st.tabs(
-        ["📤 Compose & Send", "👁 Preview Email", "🎨 Draft Gallery"]
+        ["📤 Compose & Send", "👁 Preview Email", "🎨 Draft Gallery (15)"]
     )
 
     # ── TAB 1: Compose & Send ─────────────────────────────────────────────────
@@ -11246,9 +11246,9 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 unsafe_allow_html=True
             )
 
-    # ── TAB 3: Draft Gallery (10 preset classy emails) ───────────────────────
+    # ── TAB 3: Draft Gallery (15 preset classy emails) ───────────────────────
     with _db_tab_gallery:
-        st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:12px;">10 pre-built professional email drafts. Click <b>👁 Preview</b> to see the full email or <b>📋 Load</b> to populate the Compose tab.</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:12px;">15 pre-built professional email drafts. Click <b>👁 Preview</b> to see the full email or <b>📋 Load</b> to populate the Compose tab.</div>', unsafe_allow_html=True)
 
         # Helper: build a gallery draft HTML using current dashboard data
         def _gallery_email(header_bg, header_color, accent, title, subtitle, sec_ids):
