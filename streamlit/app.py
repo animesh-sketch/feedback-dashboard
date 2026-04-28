@@ -9817,18 +9817,6 @@ div[data-testid="stForm"] .stRadio input[type="radio"] {
     width: 0 !important;
     height: 0 !important;
 }
-/* NA pill: amber tint when selected */
-div[data-testid="stForm"] .stRadio label:last-child {
-    border-color: #f59e0b !important;
-    color: #92400e !important;
-    background: #fffbeb !important;
-}
-div[data-testid="stForm"] .stRadio label:last-child:has(input:checked) {
-    background: #f59e0b !important;
-    border-color: #d97706 !important;
-    color: #fff !important;
-    box-shadow: 0 2px 8px rgba(245,158,11,0.4) !important;
-}
 
 /* ── Tabs: dark navy bar with bright active pill ── */
 .stTabs [data-baseweb="tab-list"] {
