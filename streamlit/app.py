@@ -2723,7 +2723,7 @@ def render_email_maker():
         </div>
     </div>""", unsafe_allow_html=True)
 
-    tab_compose, tab_ai = st.tabs(["📤  Compose & Send", "🤖  AI Check"])
+    tab_compose, tab_gallery, tab_ai = st.tabs(["📤  Compose & Send", "🎨  Draft Gallery", "🤖  AI Check"])
 
     # ── Compose & Send ────────────────────────────────────────────────────────
     with tab_compose:
@@ -2755,11 +2755,17 @@ def render_email_maker():
         with cc1: d["client"]     = st.text_input("Client Name", value=d["client"],   key=f"cc_client_{ci}", placeholder="e.g. Acme Corp")
         with cc2: d["report_link"] = st.text_input("Report URL",  value=d["report_link"], key=f"cc_link_{ci}", placeholder="https://docs.google.com/…")
 
+        # Auto-suggest subject with client name when field is empty
+        _client_val = d.get("client", "").strip()
+        _subj_default = d.get("subject", "")
+        if not _subj_default and _client_val:
+            import datetime as _dt_em
+            _subj_default = f"{_client_val} — AI Performance Report · {_dt_em.date.today().strftime('%B %Y')}"
         d["subject"]  = st.text_input(
             "Email Subject Line",
-            value=d.get("subject", ""),
+            value=_subj_default,
             key=f"cc_subj_{ci}",
-            placeholder="e.g. Your February Analytics Report is Ready",
+            placeholder="e.g. Acme Corp — Your February Analytics Report is Ready",
         )
         d["body"]     = st.text_area("Email Body",                    value=d["body"],     key=f"cc_body_{ci}", height=120, placeholder="Write the main body of the email…")
 
@@ -2931,6 +2937,157 @@ def render_email_maker():
                 components.html(build_email_html(d, d.get("template", 1), **_email_font_kwargs()), height=2000, scrolling=True)
             except Exception as e:
                 st.error(f"Preview error: {e}")
+
+        st.markdown("---")
+
+        # ── Step 2b: Dashboard Sections (tick/untick) ──────────────────────
+        st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">② Include Dashboard Data</div>', unsafe_allow_html=True)
+        with st.expander("📊 Select Dashboard Sections to Include", expanded=False):
+            st.caption("Tick sections to auto-generate content from your latest audit data and append it to the email.")
+            _ds_c1, _ds_c2, _ds_c3 = st.columns(3)
+            _ds_options = {
+                "kpi_summary":       ("📊 KPI Summary",          _ds_c1),
+                "score_trend":       ("📈 Score Trend",           _ds_c1),
+                "qa_leaderboard":    ("👤 QA Leaderboard",        _ds_c1),
+                "campaign_rankings": ("🎯 Campaign Rankings",     _ds_c2),
+                "tier_breakdown":    ("🏗️ Tier Breakdown",        _ds_c2),
+                "top_params":        ("✅ Top Parameters",        _ds_c2),
+                "weak_params":       ("⚠️ Failing Parameters",    _ds_c3),
+                "lead_stage":        ("🔥 Lead Stage Breakdown",  _ds_c3),
+                "call_insights":     ("💡 Call Insights",         _ds_c3),
+                "priority_actions":  ("🎯 Priority Actions",      _ds_c3),
+            }
+            _ds_checked = {}
+            for _ds_key, (_ds_label, _ds_col) in _ds_options.items():
+                with _ds_col:
+                    _ds_checked[_ds_key] = st.checkbox(_ds_label, value=False, key=f"ds_chk_{_ds_key}_{ci}")
+
+            _ds_gen_btn = st.button("⚡ Generate & Append to Email Body", key=f"ds_gen_{ci}", type="primary", use_container_width=True)
+            if _ds_gen_btn:
+                try:
+                    _ds_log = _audit_log_load() or []
+                    _ds_df = pd.DataFrame(_ds_log) if _ds_log else pd.DataFrame()
+                    if _ds_df.empty:
+                        st.warning("No audit data found — submit audits first.")
+                    else:
+                        _ds_total = len(_ds_df)
+                        _ds_bs = pd.to_numeric(_ds_df.get("Bot Score", pd.Series(dtype=float)), errors="coerce")
+                        _ds_avg = round(_ds_bs.dropna().mean(), 1) if not _ds_bs.dropna().empty else None
+                        _ds_st = _ds_df["Status"].astype(str).str.strip() if "Status" in _ds_df.columns else pd.Series([""] * _ds_total)
+                        _ds_pr = round(int((_ds_st == "Pass").sum()) / _ds_total * 100, 1) if _ds_total else 0
+                        _ds_fatal = int((_ds_st == "Auto-Fail").sum())
+                        _ds_lines = []
+
+                        if _ds_checked.get("kpi_summary"):
+                            _ds_lines.append(f"📊 KPI SUMMARY\n• Total Audits: {_ds_total}\n• Avg Bot Score: {_ds_avg or '—'}%\n• Pass Rate: {_ds_pr}%\n• Auto-Fails: {_ds_fatal}")
+
+                        if _ds_checked.get("score_trend") and "Audit Date" in _ds_df.columns:
+                            try:
+                                _st_df = _ds_df[["Audit Date","Bot Score"]].copy()
+                                _st_df["Audit Date"] = pd.to_datetime(_st_df["Audit Date"], errors="coerce")
+                                _st_df["Bot Score"] = pd.to_numeric(_st_df["Bot Score"], errors="coerce")
+                                _st_df = _st_df.dropna().sort_values("Audit Date")
+                                if len(_st_df) >= 6:
+                                    _h = len(_st_df) // 2
+                                    _d1 = round(_st_df.iloc[:_h]["Bot Score"].mean(), 1)
+                                    _d2 = round(_st_df.iloc[_h:]["Bot Score"].mean(), 1)
+                                    _dif = round(_d2 - _d1, 1)
+                                    _dir = "↑ Improving" if _dif > 0 else "↓ Declining" if _dif < 0 else "→ Stable"
+                                    _ds_lines.append(f"📈 SCORE TREND\n• Earlier avg: {_d1}%  →  Recent avg: {_d2}%\n• Direction: {_dir} ({_dif:+.1f}%)")
+                            except Exception:
+                                pass
+
+                        if _ds_checked.get("qa_leaderboard") and "QA" in _ds_df.columns:
+                            _qa_rows = []
+                            for _qn, _qg in _ds_df.groupby("QA"):
+                                _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
+                                if len(_qbs):
+                                    _qa_rows.append(f"  • {_qn}: {round(_qbs.mean(),1)}% avg ({len(_qg)} audits)")
+                            _qa_rows.sort()
+                            if _qa_rows:
+                                _ds_lines.append("👤 QA LEADERBOARD\n" + "\n".join(_qa_rows[:5]))
+
+                        if _ds_checked.get("campaign_rankings") and "Campaign Name" in _ds_df.columns:
+                            _cr_rows = []
+                            for _cn, _cg in _ds_df.groupby("Campaign Name"):
+                                _cbs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                                if len(_cbs):
+                                    _cr_rows.append((str(_cn), round(_cbs.mean(), 1), len(_cg)))
+                            _cr_rows.sort(key=lambda x: -x[1])
+                            if _cr_rows:
+                                _ds_lines.append("🎯 CAMPAIGN RANKINGS\n" + "\n".join([f"  • {r[0]}: {r[1]}% ({r[2]} audits)" for r in _cr_rows[:5]]))
+
+                        if _ds_checked.get("tier_breakdown"):
+                            _tb_lines = []
+                            for _tt in _QA_SCHEMA.get("tiers", []):
+                                _tsc = []
+                                for _tp in _tt.get("params", []):
+                                    if _tp["col"] in _ds_df.columns:
+                                        _pmx = max([int(o) for o in _tp.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
+                                        _tv = pd.to_numeric(_ds_df[_tp["col"]].astype(str).str.strip().replace(
+                                            {"NA": "", "nan": "", "Fatal": "", "Yes": "0", "No": str(_pmx)}), errors="coerce").dropna()
+                                        if len(_tv):
+                                            _tsc.append(_tv.mean() / _pmx * 100)
+                                if _tsc:
+                                    _tlabel = _tt["label"].split("·")[1].strip() if "·" in _tt["label"] else _tt["label"]
+                                    _tb_lines.append(f"  • {_tlabel} ({_tt.get('weight_pct',0)}% weight): {round(sum(_tsc)/len(_tsc),1)}%")
+                            if _tb_lines:
+                                _ds_lines.append("🏗️ TIER BREAKDOWN\n" + "\n".join(_tb_lines))
+
+                        if _ds_checked.get("top_params") or _ds_checked.get("weak_params"):
+                            _all_pa = []
+                            for _tt2 in _QA_SCHEMA.get("tiers", []):
+                                for _tp2 in _tt2.get("params", []):
+                                    if _tp2["col"] in _ds_df.columns:
+                                        _pmx2 = max([int(o) for o in _tp2.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
+                                        _pv2 = pd.to_numeric(_ds_df[_tp2["col"]].astype(str).str.strip().replace(
+                                            {"NA": "", "nan": "", "Fatal": ""}), errors="coerce").dropna()
+                                        if len(_pv2):
+                                            _all_pa.append((_tp2["col"], round(_pv2.mean() / _pmx2 * 100, 1)))
+                            if _ds_checked.get("top_params"):
+                                _tops = sorted([p for p in _all_pa if p[1] >= 75], key=lambda x: -x[1])[:5]
+                                if _tops:
+                                    _ds_lines.append("✅ TOP PARAMETERS\n" + "\n".join([f"  • {p[0]}: {p[1]}%" for p in _tops]))
+                            if _ds_checked.get("weak_params"):
+                                _wks = sorted([p for p in _all_pa if p[1] < 70], key=lambda x: x[1])[:5]
+                                if _wks:
+                                    _ds_lines.append("⚠️ FAILING PARAMETERS (need attention)\n" + "\n".join([f"  • {p[0]}: {p[1]}%" for p in _wks]))
+
+                        if _ds_checked.get("lead_stage") and "Lead Stage" in _ds_df.columns:
+                            _lsv = _ds_df["Lead Stage"].astype(str).str.strip().value_counts()
+                            _lsv = _lsv[_lsv.index != "nan"]
+                            _lt = sum(_lsv.values)
+                            _ds_lines.append("🔥 LEAD STAGE BREAKDOWN\n" + "\n".join(
+                                [f"  • {k}: {v} ({round(v/_lt*100,1)}%)" for k, v in _lsv.items()]))
+
+                        if _ds_checked.get("call_insights"):
+                            try:
+                                _ci_res = _gen_call_insights(_ds_df)
+                                _ci_texts = [f"  • {ins['title']}: {ins['detail'][:120]}…" for ins in (_ci_res.get("insights") or [])[:5]]
+                                if _ci_texts:
+                                    _ds_lines.append("💡 CALL PERFORMANCE INSIGHTS\n" + "\n".join(_ci_texts))
+                            except Exception:
+                                pass
+
+                        if _ds_checked.get("priority_actions"):
+                            try:
+                                _pa_res = _gen_call_insights(_ds_df)
+                                _pa_texts = [f"  [{a['priority'].upper()}] {a['action'][:120]}…" for a in (_pa_res.get("actions") or [])[:4]]
+                                if _pa_texts:
+                                    _ds_lines.append("🎯 PRIORITY ACTIONS\n" + "\n".join(_pa_texts))
+                            except Exception:
+                                pass
+
+                        if _ds_lines:
+                            _appended = "\n\n---\n📊 DASHBOARD DATA\n\n" + "\n\n".join(_ds_lines)
+                            _existing = d.get("body", "").rstrip()
+                            d["body"] = _existing + _appended
+                            st.success(f"✅ Added {len(_ds_lines)} section(s) to the email body.")
+                            st.rerun()
+                        else:
+                            st.info("No matching data found for the selected sections.")
+                except Exception as _ds_exc:
+                    st.error(f"Error generating content: {_ds_exc}")
 
         st.markdown("---")
 
@@ -3130,6 +3287,374 @@ def render_email_maker():
                         f'</div>',
                         unsafe_allow_html=True,
                     )
+
+    # ── 🎨 Draft Gallery ──────────────────────────────────────────────────────
+    with tab_gallery:
+        st.markdown('<div style="color:#0f172a;font-size:1rem;font-weight:600;margin-bottom:4px;">Email Draft Gallery</div>', unsafe_allow_html=True)
+        st.caption("10 classy pre-built drafts — preview any design, then load it into your active draft slot.")
+        st.markdown("")
+
+        # 10 preset draft definitions
+        _GALLERY_PRESETS = [
+            {
+                "title": "Executive Performance Report",
+                "subtitle": "Dark · Convin brand · C-Suite delivery",
+                "tag": "Monthly Report",
+                "tag_color": "#2563EB",
+                "template": 1,
+                "draft": {
+                    "client": "Convin Data Labs",
+                    "headline": "Your Monthly AI Performance Report is Ready",
+                    "body": (
+                        "Dear [Client Name],\n\n"
+                        "We're pleased to share your Monthly AI Performance Report for the period ending this month.\n\n"
+                        "Your bot achieved an overall Bot Score of 83.2%, a 4.1% improvement over last month, with a Pass Rate of 78%. "
+                        "Tier-1 Critical parameters held strong at 85% — a testament to the quality of conversation flows your team has built.\n\n"
+                        "Key highlights this month:\n"
+                        "• Disposition Accuracy improved to 88% (+6pp)\n"
+                        "• Auto-Fail rate dropped to 2.3% (from 5.1%)\n"
+                        "• Lead Conversion Readiness: 64% Hot + Warm\n\n"
+                        "Please review the full report using the button below and share any feedback with your account manager.\n\n"
+                        "Warm regards,\nConvin Data Labs Team"
+                    ),
+                    "survey_question": "Was this performance report helpful?",
+                    "report_link": "#",
+                    "subject": "Your Monthly AI Performance Report — Convin Data Labs",
+                    "status": "draft",
+                },
+            },
+            {
+                "title": "Campaign Deep Dive",
+                "subtitle": "Bold Blue · Campaign analytics",
+                "tag": "Campaign Update",
+                "tag_color": "#1a62f2",
+                "template": 3,
+                "draft": {
+                    "client": "HDFC Bank",
+                    "headline": "Campaign Deep Dive: Loan Outreach Q1 Results",
+                    "body": (
+                        "Hi [Team],\n\n"
+                        "Your Q1 Loan Outreach campaign has completed its audit cycle. Here's the quick summary:\n\n"
+                        "The campaign averaged a Bot Score of 79.4% across 142 audited calls. "
+                        "Strong performance on Context Passing (91%) and Introduction quality (88%) — two pillars of great first impressions. "
+                        "The main opportunity lies in Message Content Accuracy (62%) — the bot struggled with loan-amount clarification scenarios.\n\n"
+                        "Recommended actions:\n"
+                        "1. Retrain the intent model for EMI-related queries\n"
+                        "2. Add fallback handling for high-ticket objections\n"
+                        "3. Review calls with Disposition = 'Not Interested' for pattern analysis\n\n"
+                        "Full details are in the attached report.\n\nBest,\nConvin Analytics"
+                    ),
+                    "survey_question": "Was this campaign analysis actionable?",
+                    "report_link": "#",
+                    "subject": "Campaign Deep Dive — Loan Outreach Q1 · HDFC Bank",
+                    "status": "draft",
+                },
+            },
+            {
+                "title": "Weekly Quality Digest",
+                "subtitle": "Clean White · Convin Blue · Weekly briefing",
+                "tag": "Weekly Digest",
+                "tag_color": "#0891b2",
+                "template": 2,
+                "draft": {
+                    "client": "Bajaj Finance",
+                    "headline": "Weekly QA Digest — Week of April 21",
+                    "body": (
+                        "Hello [Team],\n\n"
+                        "Here's your weekly quality snapshot for the Bajaj Finance bot portfolio:\n\n"
+                        "This week: 38 calls audited · Avg Bot Score: 76.8% · Pass Rate: 71%\n\n"
+                        "Wins this week:\n"
+                        "• Zero abrupt disconnections — clean call completion across all campaigns\n"
+                        "• Bot Repetition rate fell to 4% (down from 11% last week)\n"
+                        "• Follow-up SLA compliance improved to 82%\n\n"
+                        "Watch list:\n"
+                        "• Flow Issues: 18% of calls — investigate 'Hot Lead Re-engagement' script\n"
+                        "• Dead Air rate on the Pre-Approved Offers campaign: 22%\n\n"
+                        "Next steps have been logged in the action tracker.\n\nThanks,\nQA Team"
+                    ),
+                    "survey_question": "Was the weekly digest useful?",
+                    "report_link": "#",
+                    "subject": "Weekly QA Digest · Bajaj Finance · Apr 21",
+                    "status": "draft",
+                },
+            },
+            {
+                "title": "Client Success Spotlight",
+                "subtitle": "Warm Sunrise · Positive milestone celebration",
+                "tag": "Success Story",
+                "tag_color": "#d97706",
+                "template": 7,
+                "draft": {
+                    "client": "Airtel",
+                    "headline": "🎉 Congratulations — Your Bot Just Hit 90%!",
+                    "body": (
+                        "Dear Airtel Team,\n\n"
+                        "We're thrilled to share a milestone: your AI bot has achieved an average Bot Score of 90.3% this month — "
+                        "the highest score in your account history and placing you in the top 5% of all clients on the Convin platform.\n\n"
+                        "What got you here:\n"
+                        "• Disposition Accuracy: 96% — near-perfect outcome classification\n"
+                        "• Context Passing: 93% — seamless multi-turn conversations\n"
+                        "• Pass Rate: 87% — only 13% of calls need coaching attention\n\n"
+                        "Your team's investment in script quality and the recent NLU retraining sprint has clearly paid off. "
+                        "We're featuring your bot as a case study in our upcoming insights newsletter.\n\n"
+                        "Keep up the excellent work!\n\nWith appreciation,\nConvin Data Labs"
+                    ),
+                    "survey_question": "How would you rate this experience?",
+                    "report_link": "#",
+                    "subject": "🎉 Your Bot Hit 90% — Congratulations, Airtel!",
+                    "status": "draft",
+                },
+            },
+            {
+                "title": "Performance Alert",
+                "subtitle": "Charcoal · Bold Orange · Urgent alert",
+                "tag": "Urgent Alert",
+                "tag_color": "#dc2626",
+                "template": 9,
+                "draft": {
+                    "client": "ICICI Bank",
+                    "headline": "⚠️ Performance Below Target — Action Required",
+                    "body": (
+                        "Dear [Account Manager],\n\n"
+                        "This is an automated performance alert for the ICICI Bank Bot portfolio.\n\n"
+                        "Current status: Bot Score 58.4% — 21.6% below the 80% target threshold.\n\n"
+                        "Critical issues detected:\n"
+                        "• Auto-Fail Rate: 12.3% (target: <3%) — caused by Abrupt Disconnections\n"
+                        "• Flow Issues: 41% of calls — bot is exiting the script path frequently\n"
+                        "• Context Passing: 44% — severe context loss between turns\n"
+                        "• Message Content Accuracy: 51% — bot is misunderstanding customer intent\n\n"
+                        "Immediate actions recommended:\n"
+                        "1. Freeze new traffic to the affected campaign until root cause is resolved\n"
+                        "2. Schedule an emergency review call with the bot development team\n"
+                        "3. Pull the top 20 worst-scoring calls and trace to the triggering node\n\n"
+                        "This alert has been escalated to your account manager.\n\nConvin Monitoring System"
+                    ),
+                    "survey_question": "Was this alert notification useful?",
+                    "report_link": "#",
+                    "subject": "🚨 ALERT: Performance Below Target — ICICI Bank Bot",
+                    "status": "draft",
+                },
+            },
+            {
+                "title": "Quarterly Business Review",
+                "subtitle": "Dark Gradient · Convin Pro · Executive QBR",
+                "tag": "Quarterly Review",
+                "tag_color": "#7c3aed",
+                "template": 4,
+                "draft": {
+                    "client": "Axis Bank",
+                    "headline": "Q1 2025 Business Review — Convin AI Platform",
+                    "body": (
+                        "Dear Axis Bank Leadership,\n\n"
+                        "Please find below the highlights from your Q1 2025 Quarterly Business Review on the Convin AI platform:\n\n"
+                        "Quarter in Numbers:\n"
+                        "• 1,248 calls audited across 7 active campaigns\n"
+                        "• Average Bot Score: 81.7% (up from 74.3% in Q4 2024)\n"
+                        "• Pass Rate: 76% (+14pp quarter-over-quarter)\n"
+                        "• Auto-Fail Rate reduced from 8.9% → 2.1%\n"
+                        "• Lead Conversion Readiness: 59% Hot + Warm\n\n"
+                        "Top Campaign: 'Home Loan Pre-Qualification' at 89.2% avg score\n"
+                        "Needs Attention: 'Credit Card Upgrade' at 66.1% — flow rewrite in progress\n\n"
+                        "Q2 roadmap, detailed performance breakdowns, and action items are in the full report.\n\n"
+                        "Thank you for a strong Q1.\n\nConvin Data Labs Account Team"
+                    ),
+                    "survey_question": "Was the QBR presentation comprehensive?",
+                    "report_link": "#",
+                    "subject": "Q1 2025 QBR — Axis Bank · Convin AI Platform",
+                    "status": "draft",
+                },
+            },
+            {
+                "title": "New Campaign Launch",
+                "subtitle": "Dark Neon · Cyan glow · Campaign kickoff",
+                "tag": "Campaign Launch",
+                "tag_color": "#0891b2",
+                "template": 6,
+                "draft": {
+                    "client": "SBI Life Insurance",
+                    "headline": "Your New Campaign is Live — Let's Drive Results",
+                    "body": (
+                        "Hi [Team],\n\n"
+                        "We're excited to confirm that your new Renewal Reminder campaign has been activated on the Convin AI platform as of today.\n\n"
+                        "Campaign details:\n"
+                        "• Campaign Name: SBI Life Renewal Outreach 2025\n"
+                        "• Target Segment: Policy holders with renewal due in 30-60 days\n"
+                        "• Bot Script: Updated with 2025 premium tables and offer codes\n"
+                        "• QA Audit Frequency: Daily during ramp-up (first 14 days)\n\n"
+                        "What to expect:\n"
+                        "→ First audit results will be available within 48 hours of go-live\n"
+                        "→ A performance baseline will be established after 50 calls\n"
+                        "→ Weekly digests will auto-generate every Monday\n\n"
+                        "Your account manager is monitoring the launch closely. Reach out at any time with questions.\n\n"
+                        "Here's to a successful campaign!\nConvin Data Labs"
+                    ),
+                    "survey_question": "How ready do you feel for this campaign launch?",
+                    "report_link": "#",
+                    "subject": "🚀 Campaign Live — SBI Life Renewal Outreach 2025",
+                    "status": "draft",
+                },
+            },
+            {
+                "title": "AI Insights Roundup",
+                "subtitle": "Pink · Coral · Blue gradient · Premium AI report",
+                "tag": "AI Insights",
+                "tag_color": "#d22c84",
+                "template": 10,
+                "draft": {
+                    "client": "Kotak Mahindra Bank",
+                    "headline": "Your AI-Powered Insights Roundup — April 2025",
+                    "body": (
+                        "Hi [Client Name],\n\n"
+                        "Our AI has analysed 312 calls from your portfolio this month and surfaced the following insights:\n\n"
+                        "🔍 Context Passing dropped 11pp in Week 3 — correlates with a script update pushed on Apr 14. "
+                        "Recommend rolling back the opening prompt change.\n\n"
+                        "🔥 'Hot' leads score 9.3pp higher than 'Warm' leads on Message Content Accuracy — "
+                        "your bot is significantly better at handling highly-interested customers. "
+                        "Consider a separate, leaner script for the Warm segment.\n\n"
+                        "📈 Positive momentum: Bot Score has trended up for 3 consecutive weeks. "
+                        "The training investment is working — keep the current cadence.\n\n"
+                        "⚠️ Co-failure alert: 'Flow Issue' + 'Bot Repetition' co-fail in 38% of calls — "
+                        "a single broken node is likely triggering both. Priority fix.\n\n"
+                        "Full AI report with conversation-level drill-down is attached.\n\nConvin Intelligence Team"
+                    ),
+                    "survey_question": "Were these AI insights actionable?",
+                    "report_link": "#",
+                    "subject": "AI Insights Roundup · April 2025 · Kotak Mahindra",
+                    "status": "draft",
+                },
+            },
+            {
+                "title": "Client Onboarding Welcome",
+                "subtitle": "Warm Cream · Serif · Professional welcome",
+                "tag": "Onboarding",
+                "tag_color": "#059669",
+                "template": 5,
+                "draft": {
+                    "client": "Tata Capital",
+                    "headline": "Welcome to Convin Data Labs — You're All Set!",
+                    "body": (
+                        "Dear Tata Capital Team,\n\n"
+                        "Welcome aboard! We're delighted to have you as a Convin Data Labs client. "
+                        "Your AI audit platform is now fully configured and ready to go.\n\n"
+                        "What happens next:\n"
+                        "① Your first batch of calls will be audited within 24 hours of bot go-live\n"
+                        "② You'll receive your first Weekly Quality Digest every Monday at 9 AM\n"
+                        "③ Your dedicated account manager will schedule a 30-minute onboarding call this week\n"
+                        "④ Access your live dashboard at the link below — it updates every 15 minutes\n\n"
+                        "Your platform is configured with:\n"
+                        "• QA Schema: Convin Standard (3 tiers, 19 parameters)\n"
+                        "• Pass Threshold: 80%\n"
+                        "• Auto-Fail Triggers: Abrupt Disconnection\n"
+                        "• Integrations: Telephony, CRM\n\n"
+                        "We're excited to partner with you on driving bot excellence.\n\n"
+                        "With warmth,\nConvin Data Labs Onboarding Team"
+                    ),
+                    "survey_question": "How smooth was your onboarding experience?",
+                    "report_link": "#",
+                    "subject": "Welcome to Convin Data Labs, Tata Capital! 🎉",
+                    "status": "draft",
+                },
+            },
+            {
+                "title": "Monthly Wrap-Up",
+                "subtitle": "Slate Grey · Blue Accent · Clean summary",
+                "tag": "Month End",
+                "tag_color": "#3d4f6b",
+                "template": 11,
+                "draft": {
+                    "client": "Piramal Finance",
+                    "headline": "April 2025 Wrap-Up — Your Month in Numbers",
+                    "body": (
+                        "Hi [Client Name],\n\n"
+                        "April is a wrap! Here's your month-end summary for the Piramal Finance bot portfolio:\n\n"
+                        "April at a Glance:\n"
+                        "• Total Calls Audited: 267\n"
+                        "• Bot Score: 77.9% (↑ 3.2% from March)\n"
+                        "• Pass Rate: 72% (target: 80%)\n"
+                        "• Auto-Fails: 6 (2.2% — down 50% from March)\n"
+                        "• Best Campaign: Personal Loan Pre-Approval (84.1%)\n"
+                        "• Needs Work: EMI Restructure Outreach (61.3%)\n\n"
+                        "What worked in April:\n"
+                        "✅ NLU retraining on the Objection Handling module — Context Passing up to 81%\n"
+                        "✅ New Introduction script — compliance improved to 93%\n\n"
+                        "Focus for May:\n"
+                        "🎯 Resolve Dead Air issues in the EMI campaign\n"
+                        "🎯 Push Pass Rate from 72% → 80% by mid-month\n\n"
+                        "Thank you for a productive April.\n\nConvin Data Labs"
+                    ),
+                    "survey_question": "Was this monthly summary valuable?",
+                    "report_link": "#",
+                    "subject": "April 2025 Wrap-Up · Piramal Finance · Convin AI",
+                    "status": "draft",
+                },
+            },
+        ]
+
+        # ── Render gallery grid ────────────────────────────────────────────────
+        for _gi in range(0, len(_GALLERY_PRESETS), 2):
+            _gcol1, _gcol2 = st.columns(2)
+            for _gci, (_gcol, _gp) in enumerate(zip([_gcol1, _gcol2], _GALLERY_PRESETS[_gi:_gi+2])):
+                _gidx = _gi + _gci
+                with _gcol:
+                    _tname_g = TEMPLATE_NAMES[_gp["template"] - 1]
+                    _swatch_g = _tname_g[2]
+                    # Card header
+                    st.markdown(
+                        f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:12px;overflow:hidden;margin-bottom:4px;">'
+                        f'<div style="background:{_swatch_g};padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">'
+                        f'<div style="font-size:0.85rem;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.3);">'
+                        f'#{_gidx+1} · {_gp["title"]}</div>'
+                        f'<span style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.58rem;font-weight:700;'
+                        f'letter-spacing:0.08em;text-transform:uppercase;padding:3px 8px;border-radius:20px;">'
+                        f'{_gp["tag"]}</span>'
+                        f'</div>'
+                        f'<div style="padding:10px 14px 6px;">'
+                        f'<div style="font-size:0.68rem;color:#64748b;margin-bottom:6px;">'
+                        f'🎨 Template: <b>{_tname_g[0]}</b> · {_gp["subtitle"]}</div>'
+                        f'<div style="font-size:0.70rem;color:#374151;background:#f8faff;border-radius:6px;'
+                        f'padding:8px 10px;border-left:3px solid {_gp["tag_color"]};'
+                        f'font-style:italic;max-height:60px;overflow:hidden;'
+                        f'line-height:1.5;">'
+                        f'{_gp["draft"]["body"][:180].replace(chr(10)," ")}…'
+                        f'</div></div></div>',
+                        unsafe_allow_html=True
+                    )
+                    # Buttons row
+                    _gbtn1, _gbtn2, _gbtn3 = st.columns(3)
+                    _show_key = f"gallery_preview_{_gidx}"
+                    with _gbtn1:
+                        if st.button("👁 Preview", key=f"gal_prev_{_gidx}", use_container_width=True):
+                            _cur = st.session_state.get(_show_key, False)
+                            st.session_state[_show_key] = not _cur
+                            st.rerun()
+                    with _gbtn2:
+                        if st.button("📋 Load → Draft 1", key=f"gal_load1_{_gidx}", use_container_width=True):
+                            _nd = dict(_gp["draft"])
+                            _nd["name"] = st.session_state.drafts[0]["name"]
+                            _nd["template"] = _gp["template"]
+                            st.session_state.drafts[0] = _nd
+                            st.toast(f"'{_gp['title']}' loaded into Draft 1", icon="✅")
+                            st.rerun()
+                    with _gbtn3:
+                        if st.button("📋 Load → Draft 2", key=f"gal_load2_{_gidx}", use_container_width=True):
+                            _nd2 = dict(_gp["draft"])
+                            _nd2["name"] = st.session_state.drafts[1]["name"]
+                            _nd2["template"] = _gp["template"]
+                            st.session_state.drafts[1] = _nd2
+                            st.toast(f"'{_gp['title']}' loaded into Draft 2", icon="✅")
+                            st.rerun()
+
+                    # Full HTML preview (toggle)
+                    if st.session_state.get(_show_key, False):
+                        st.markdown(f'<div style="font-size:0.72rem;font-weight:600;color:#0B1F3A;margin:8px 0 4px;">Full Preview · {_gp["title"]}</div>', unsafe_allow_html=True)
+                        try:
+                            _gd = dict(_gp["draft"])
+                            _gd["template"] = _gp["template"]
+                            _ghtml = build_email_html(_gd, _gp["template"])
+                            components.html(_ghtml, height=1800, scrolling=True)
+                        except Exception as _ge:
+                            st.error(f"Preview error: {_ge}")
+                    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
     # ── AI Grammar & Spell Check ───────────────────────────────────────────────
     with tab_ai:
