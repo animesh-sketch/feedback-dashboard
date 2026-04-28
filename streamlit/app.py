@@ -10485,419 +10485,708 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         except Exception:
             pass
 
-    # ── Section 14 — Insight Report Builder (tick → email) ───────────────────
-    st.markdown('<div class="section-chip">📧 Insight Report Builder — Select & Send</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:10px;">Tick the insights you want to include in the email report, then fill in recipients and hit Send.</div>', unsafe_allow_html=True)
+    # ── Section 14 — Full Dashboard Email Builder (all panels tick/untick) ────
+    st.markdown('<div class="section-chip">📧 Send Dashboard as Email — Select Any Section</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:14px;">Tick every section you want to include. Each panel is converted to email-safe HTML and assembled into a single professional report email.</div>', unsafe_allow_html=True)
 
-    # ── Precompute all insight cards ─────────────────────────────────────────
-    _IRPT_CARDS = []  # list of {id, title, emoji, type, body_html, email_html}
-
-    def _irpt(cid, emoji, title, itype, lines, kv_pairs=None):
-        """Build one insight card dict."""
-        _type_color = {"critical": "#dc2626", "warning": "#d97706", "success": "#059669", "info": "#2563EB"}.get(itype, "#2563EB")
-        _type_bg = {"critical": "#fef2f2", "warning": "#fffbeb", "success": "#f0fdf4", "info": "#eff6ff"}.get(itype, "#eff6ff")
-        _body = f'<div style="background:{_type_bg};border-left:4px solid {_type_color};border-radius:8px;padding:12px 14px;">'
-        _body += f'<div style="font-size:0.73rem;font-weight:700;color:#0B1F3A;margin-bottom:6px;">{emoji} {title}</div>'
-        for _ln in lines:
-            _body += f'<div style="font-size:0.68rem;color:#374151;margin-bottom:3px;">{_ln}</div>'
-        if kv_pairs:
-            _body += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">'
-            for _k, _v in kv_pairs:
-                _body += f'<span style="background:#fff;border:1px solid {_type_color}44;border-radius:5px;padding:3px 8px;font-size:0.66rem;color:#0B1F3A;"><b>{_k}:</b> {_v}</span>'
-            _body += '</div>'
-        _body += '</div>'
-        # Email HTML version (same content, email-safe inline styles)
-        _email = (
-            f'<div style="background:{_type_bg};border-left:4px solid {_type_color};border-radius:8px;'
-            f'padding:14px 16px;margin-bottom:12px;font-family:Arial,sans-serif;">'
-            f'<div style="font-size:14px;font-weight:700;color:#0B1F3A;margin-bottom:6px;">{emoji} {title}</div>'
+    # ── Email-safe table helper ───────────────────────────────────────────────
+    def _em_tbl(title, icon, headers, rows, hdr_color="#0B1F3A"):
+        """Generate email-safe HTML table block."""
+        _th = "".join(f'<th style="background:{hdr_color};color:#fff;padding:8px 10px;font-size:11px;font-weight:700;text-align:left;white-space:nowrap;">{h}</th>' for h in headers)
+        _tr_html = ""
+        for _ri, _row in enumerate(rows):
+            _rb = "#f8faff" if _ri % 2 == 0 else "#ffffff"
+            _td = "".join(f'<td style="padding:7px 10px;font-size:11px;color:#374151;border-bottom:1px solid #e2e8f0;">{cell}</td>' for cell in _row)
+            _tr_html += f'<tr style="background:{_rb};">{_td}</tr>'
+        return (
+            f'<div style="font-family:Arial,sans-serif;margin-bottom:16px;">'
+            f'<div style="background:{hdr_color};color:#fff;padding:10px 14px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;">{icon} {title}</div>'
+            f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;overflow:hidden;">'
+            f'<table style="width:100%;border-collapse:collapse;"><thead><tr>{_th}</tr></thead>'
+            f'<tbody>{_tr_html}</tbody></table></div></div>'
         )
-        for _ln in lines:
-            _email += f'<div style="font-size:13px;color:#374151;margin-bottom:4px;">{_ln}</div>'
-        if kv_pairs:
-            _email += '<table style="border-collapse:collapse;margin-top:8px;">'
-            for _k, _v in kv_pairs:
-                _email += f'<tr><td style="padding:2px 10px 2px 0;font-size:12px;color:#64748b;white-space:nowrap;"><b>{_k}</b></td><td style="padding:2px 0;font-size:12px;color:#0B1F3A;">{_v}</td></tr>'
-            _email += '</table>'
-        _email += '</div>'
-        return {"id": cid, "emoji": emoji, "title": title, "type": itype,
-                "body_html": _body, "email_html": _email}
 
-    # 1. Executive Summary
+    def _em_kv_card(title, icon, pairs, accent="#2563EB"):
+        """Email-safe key-value card."""
+        _rows = "".join(
+            f'<tr><td style="padding:6px 10px;font-size:11px;color:#64748b;font-weight:600;width:50%;border-bottom:1px solid #f0f4fa;">{k}</td>'
+            f'<td style="padding:6px 10px;font-size:12px;font-weight:700;color:#0B1F3A;border-bottom:1px solid #f0f4fa;">{v}</td></tr>'
+            for k, v in pairs
+        )
+        return (
+            f'<div style="font-family:Arial,sans-serif;border:1px solid {accent}33;border-radius:8px;overflow:hidden;margin-bottom:12px;">'
+            f'<div style="background:{accent};color:#fff;padding:9px 12px;font-size:12px;font-weight:700;">{icon} {title}</div>'
+            f'<table style="width:100%;border-collapse:collapse;">{_rows}</table></div>'
+        )
+
+    def _em_insight_card(title, detail, itype):
+        _tc = {"critical": "#dc2626", "warning": "#d97706", "success": "#059669", "info": "#2563EB"}.get(itype, "#2563EB")
+        _bg = {"critical": "#fef2f2", "warning": "#fffbeb", "success": "#f0fdf4", "info": "#eff6ff"}.get(itype, "#eff6ff")
+        return (
+            f'<div style="background:{_bg};border-left:4px solid {_tc};border-radius:6px;padding:10px 14px;margin-bottom:8px;font-family:Arial,sans-serif;">'
+            f'<div style="font-size:12px;font-weight:700;color:#0B1F3A;margin-bottom:4px;">{title}</div>'
+            f'<div style="font-size:11px;color:#374151;">{detail}</div></div>'
+        )
+
+    def _em_bar_row(label, pct, color):
+        _pct = max(0, min(100, pct))
+        return (
+            f'<tr><td style="padding:5px 10px;font-size:11px;color:#0B1F3A;font-weight:600;width:160px;white-space:nowrap;">{label}</td>'
+            f'<td style="padding:5px 10px;"><table width="100%" style="border-collapse:collapse;"><tr>'
+            f'<td style="background:#f0f4fa;border-radius:4px;height:10px;padding:0;overflow:hidden;">'
+            f'<div style="background:{color};height:10px;width:{_pct:.0f}%;border-radius:4px;"></div></td></tr></table></td>'
+            f'<td style="padding:5px 10px;font-size:11px;font-weight:800;color:{color};width:42px;text-align:right;">{_pct:.1f}%</td></tr>'
+        )
+
+    # ── Build all dashboard sections ──────────────────────────────────────────
+    _ALL_SECTIONS = []   # {id, label, icon, default, preview_html, email_html}
+
+    def _add_section(sid, label, icon, default, preview_fn, email_fn):
+        try:
+            _prev = preview_fn()
+            _eml  = email_fn()
+            _ALL_SECTIONS.append({"id": sid, "label": label, "icon": icon,
+                                   "default": default, "preview": _prev, "email": _eml})
+        except Exception:
+            pass
+
+    # ── S1: KPI Overview ─────────────────────────────────────────────────────
+    def _s1_prev():
+        _sd_cfg2 = [("Total Audits", str(_total_d), "#0B1F3A"), ("Avg Bot Score", f"{_avg_d or '—'}%", "#0891b2"),
+                    ("Pass Rate", f"{_pr_d}%", "#059669"), ("Passed", str(_pass_d), "#059669"),
+                    ("Needs Review", str(_rev_d), "#d97706"), ("Auto-Fails", str(_fatal_d), "#dc2626")]
+        _h = '<div style="display:flex;flex-wrap:wrap;gap:6px;">'
+        for _lbl, _val, _clr in _sd_cfg2:
+            _h += (f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:8px 12px;min-width:90px;">'
+                   f'<div style="font-size:1.2rem;font-weight:900;color:{_clr};">{_val}</div>'
+                   f'<div style="font-size:0.6rem;color:#64748b;font-weight:700;text-transform:uppercase;">{_lbl}</div></div>')
+        return _h + "</div>"
+
+    def _s1_eml():
+        _pairs = [("Total Audits", _total_d), ("Avg Bot Score", f"{_avg_d or '—'}%"), ("Pass Rate", f"{_pr_d}%"),
+                  ("Passed ✅", _pass_d), ("Needs Review 🟡", _rev_d), ("Auto-Fails 🚨", _fatal_d),
+                  ("Score Momentum", f"{_momentum_arrow} {_momentum_txt}")]
+        _cells = "".join(
+            f'<td style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;text-align:center;width:16%;">'
+            f'<div style="font-size:18px;font-weight:900;color:#0B1F3A;">{v}</div>'
+            f'<div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;margin-top:4px;">{k}</div></td>'
+            for k, v in _pairs
+        )
+        return (f'<div style="font-family:Arial,sans-serif;background:#0B1F3A;padding:10px 14px;border-radius:8px 8px 0 0;'
+                f'color:#fff;font-size:13px;font-weight:700;">📊 KPI Overview</div>'
+                f'<table width="100%" style="border-collapse:separate;border-spacing:4px;background:#f8faff;'
+                f'padding:10px;border-radius:0 0 8px 8px;margin-bottom:16px;">'
+                f'<tr>{_cells}</tr></table>')
+    _add_section("kpi", "KPI Overview", "📊", True, _s1_prev, _s1_eml)
+
+    # ── S2: Status Distribution ──────────────────────────────────────────────
+    def _s2_prev():
+        _cfg = [("✅ Pass", "#0ebc6e", _pass_d), ("🟡 Needs Review", "#f59e0b", _rev_d),
+                ("❌ Fail", "#ef4444", _fail_d), ("🚨 Auto-Fail", "#dc2626", _fatal_d)]
+        _h = ""
+        for _sn, _sc, _sv in _cfg:
+            _sp = round(_sv / _total_d * 100, 1) if _total_d else 0
+            _h += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+                   f'<div style="width:100px;font-size:0.68rem;font-weight:600;color:#0B1F3A;">{_sn}</div>'
+                   f'<div style="flex:1;height:10px;background:#f0f2f5;border-radius:5px;">'
+                   f'<div style="width:{_sp}%;height:100%;background:{_sc};border-radius:5px;"></div></div>'
+                   f'<div style="width:55px;font-size:0.68rem;font-weight:700;color:{_sc};text-align:right;">{_sv} ({_sp}%)</div></div>')
+        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h}</div>'
+
+    def _s2_eml():
+        _cfg = [("✅ Pass", "#059669", _pass_d), ("🟡 Needs Review", "#d97706", _rev_d),
+                ("❌ Fail", "#ef4444", _fail_d), ("🚨 Auto-Fail", "#dc2626", _fatal_d)]
+        _rows = [(_sn, str(_sv), f"{round(_sv/_total_d*100,1) if _total_d else 0}%",
+                  "█" * int(_sv/_total_d*20) if _total_d else "") for _sn, _, _sv in _cfg]
+        return _em_tbl("Status Distribution", "📊", ["Status", "Count", "Rate", "Bar"], _rows, "#0B1F3A")
+    _add_section("status_dist", "Status Distribution", "📊", True, _s2_prev, _s2_eml)
+
+    # ── S3: Score Trend ──────────────────────────────────────────────────────
+    def _s3_prev():
+        if "Audit Date" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+            return '<div style="font-size:0.70rem;color:#64748b;">No date/score data.</div>'
+        _td = _dash_df[["Audit Date","Bot Score"]].copy()
+        _td["Audit Date"] = pd.to_datetime(_td["Audit Date"], errors="coerce")
+        _td["Bot Score"] = pd.to_numeric(_td["Bot Score"], errors="coerce")
+        _td = _td.dropna().sort_values("Audit Date").groupby("Audit Date")["Bot Score"].mean().reset_index().tail(7)
+        _h = '<div style="font-size:0.68rem;color:#64748b;margin-bottom:4px;">Last 7 data points (daily avg):</div>'
+        for _, _row in _td.iterrows():
+            _v = round(_row["Bot Score"], 1)
+            _c = "#059669" if _v >= 80 else "#d97706" if _v >= 60 else "#dc2626"
+            _h += (f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
+                   f'<span style="font-size:0.65rem;color:#64748b;width:72px;">{str(_row["Audit Date"])[:10]}</span>'
+                   f'<div style="flex:1;height:8px;background:#f0f2f5;border-radius:4px;">'
+                   f'<div style="width:{_v}%;height:100%;background:{_c};border-radius:4px;"></div></div>'
+                   f'<span style="font-size:0.68rem;font-weight:700;color:{_c};width:35px;">{_v}%</span></div>')
+        return _h
+
+    def _s3_eml():
+        if "Audit Date" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+            return ""
+        _td2 = _dash_df[["Audit Date","Bot Score"]].copy()
+        _td2["Audit Date"] = pd.to_datetime(_td2["Audit Date"], errors="coerce")
+        _td2["Bot Score"] = pd.to_numeric(_td2["Bot Score"], errors="coerce")
+        _td2 = _td2.dropna().sort_values("Audit Date").groupby("Audit Date")["Bot Score"].mean().reset_index()
+        _rows2 = []
+        for _, _r in _td2.iterrows():
+            _v = round(_r["Bot Score"], 1)
+            _status = "✅ Above Target" if _v >= 80 else "🟡 Below Target" if _v >= 60 else "🔴 Critical"
+            _rows2.append((str(_r["Audit Date"])[:10], f"{_v}%", str(len(_td2)), _status))
+        return _em_tbl("Score Trend Over Time", "📈", ["Date", "Avg Bot Score", "Data Points", "Status"], _rows2[-14:], "#0891b2")
+    _add_section("score_trend", "Score Trend", "📈", True, _s3_prev, _s3_eml)
+
+    # ── S4: QA Leaderboard ────────────────────────────────────────────────────
+    def _s4_prev_fn():
+        if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+            return '<div style="font-size:0.70rem;color:#64748b;">No QA data.</div>'
+        _rows3 = []
+        for _qn, _qg in _dash_df.groupby("QA"):
+            _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
+            _qst = _qg["Status"].astype(str).str.strip() if "Status" in _qg.columns else pd.Series([])
+            _rows3.append({"n": str(_qn), "avg": round(_qbs.mean(),1) if len(_qbs) else 0,
+                           "cnt": len(_qg), "pr": round(int((_qst=="Pass").sum())/len(_qg)*100,1) if len(_qg) else 0,
+                           "af": int((_qst=="Auto-Fail").sum())})
+        _rows3.sort(key=lambda x: -x["avg"])
+        _h2 = '<table style="width:100%;border-collapse:collapse;font-size:0.68rem;">'
+        for _mi, _r in enumerate(_rows3[:6]):
+            _bg3 = "#f8faff" if _mi % 2 == 0 else "#fff"
+            _mdl = ["🥇","🥈","🥉"][_mi] if _mi < 3 else ""
+            _h2 += (f'<tr style="background:{_bg3};">'
+                    f'<td style="padding:5px 8px;font-weight:600;">{_mdl} {_r["n"]}</td>'
+                    f'<td style="padding:5px 8px;color:#2563EB;">{_r["cnt"]}</td>'
+                    f'<td style="padding:5px 8px;font-weight:700;color:#059669;">{_r["avg"]}%</td>'
+                    f'<td style="padding:5px 8px;">{_r["pr"]}%</td>'
+                    f'<td style="padding:5px 8px;color:#dc2626;">{_r["af"]}</td></tr>')
+        _h2 += "</table>"
+        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h2}</div>'
+
+    def _s4_eml_fn():
+        if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+            return ""
+        _erows = []
+        for _qn, _qg in _dash_df.groupby("QA"):
+            _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
+            _qst = _qg["Status"].astype(str).str.strip() if "Status" in _qg.columns else pd.Series([])
+            _erows.append((str(_qn), str(len(_qg)), f"{round(_qbs.mean(),1) if len(_qbs) else 0}%",
+                           f"{round(int((_qst=='Pass').sum())/len(_qg)*100,1) if len(_qg) else 0}%",
+                           str(int((_qst=="Auto-Fail").sum()))))
+        _erows.sort(key=lambda x: -float(x[2].rstrip("%")))
+        return _em_tbl("QA Leaderboard", "👤", ["QA Auditor", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"], _erows, "#059669")
+    _add_section("qa_lb", "QA Leaderboard", "👤", True, _s4_prev_fn, _s4_eml_fn)
+
+    # ── S5: Campaign Rankings ─────────────────────────────────────────────────
+    def _s5_prev_fn():
+        if "Campaign Name" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+            return '<div style="font-size:0.70rem;color:#64748b;">No campaign data.</div>'
+        _rows5 = []
+        for _cn, _cg in _dash_df.groupby("Campaign Name"):
+            _cbs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+            _cst = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
+            _rows5.append({"n": str(_cn)[:22], "avg": round(_cbs.mean(),1) if len(_cbs) else 0,
+                           "cnt": len(_cg), "pr": round(int((_cst=="Pass").sum())/len(_cg)*100,1) if len(_cg) else 0,
+                           "af": int((_cst=="Auto-Fail").sum())})
+        _rows5.sort(key=lambda x: -x["avg"])
+        _h5 = '<table style="width:100%;border-collapse:collapse;font-size:0.68rem;">'
+        for _mi5, _r5 in enumerate(_rows5[:5]):
+            _bg5 = "#f8faff" if _mi5 % 2 == 0 else "#fff"
+            _h5 += (f'<tr style="background:{_bg5};">'
+                    f'<td style="padding:5px 8px;font-weight:600;">{_r5["n"]}</td>'
+                    f'<td style="padding:5px 8px;color:#2563EB;">{_r5["cnt"]}</td>'
+                    f'<td style="padding:5px 8px;font-weight:700;color:#059669;">{_r5["avg"]}%</td>'
+                    f'<td style="padding:5px 8px;">{_r5["pr"]}%</td>'
+                    f'<td style="padding:5px 8px;color:#dc2626;">{_r5["af"]}</td></tr>')
+        _h5 += "</table>"
+        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h5}</div>'
+
+    def _s5_eml_fn():
+        if "Campaign Name" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+            return ""
+        _erows5 = []
+        for _cn, _cg in _dash_df.groupby("Campaign Name"):
+            _cbs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+            _cst = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
+            _erows5.append((str(_cn), str(len(_cg)), f"{round(_cbs.mean(),1) if len(_cbs) else 0}%",
+                            f"{round(int((_cst=='Pass').sum())/len(_cg)*100,1) if len(_cg) else 0}%",
+                            str(int((_cst=="Auto-Fail").sum()))))
+        _erows5.sort(key=lambda x: -float(x[2].rstrip("%")))
+        return _em_tbl("Campaign Rankings", "🎯", ["Campaign", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"], _erows5, "#1a62f2")
+    _add_section("campaign_lb", "Campaign Rankings", "🎯", True, _s5_prev_fn, _s5_eml_fn)
+
+    # ── S6: Auditor Calibration ───────────────────────────────────────────────
+    def _s6_prev_fn():
+        if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+            return '<div style="font-size:0.70rem;color:#64748b;">No QA data.</div>'
+        _rows6 = []
+        for _qn, _qg in _dash_df.groupby("QA"):
+            _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
+            if len(_qbs) >= 2:
+                _rows6.append({"n": str(_qn), "avg": round(_qbs.mean(),1), "std": round(_qbs.std(),1), "cnt": len(_qbs)})
+        _rows6.sort(key=lambda x: x["std"])
+        _h6 = '<table style="width:100%;border-collapse:collapse;font-size:0.68rem;">'
+        for _mi6, _r6 in enumerate(_rows6[:6]):
+            _bg6 = "#f8faff" if _mi6 % 2 == 0 else "#fff"
+            _cc6 = "#059669" if _r6["std"] < 8 else "#d97706" if _r6["std"] < 15 else "#dc2626"
+            _h6 += (f'<tr style="background:{_bg6};">'
+                    f'<td style="padding:5px 8px;font-weight:600;">{_r6["n"]}</td>'
+                    f'<td style="padding:5px 8px;color:#2563EB;">{_r6["cnt"]}</td>'
+                    f'<td style="padding:5px 8px;font-weight:700;color:#059669;">{_r6["avg"]}%</td>'
+                    f'<td style="padding:5px 8px;font-weight:700;color:{_cc6};">σ {_r6["std"]}</td></tr>')
+        _h6 += "</table>"
+        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h6}</div>'
+
+    def _s6_eml_fn():
+        if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+            return ""
+        _erows6 = []
+        for _qn, _qg in _dash_df.groupby("QA"):
+            _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
+            if len(_qbs) >= 2:
+                _std6 = round(_qbs.std(), 1)
+                _cons = "✅ Consistent" if _std6 < 8 else "🟡 Moderate" if _std6 < 15 else "🔴 High Variance"
+                _erows6.append((str(_qn), str(len(_qbs)), f"{round(_qbs.mean(),1)}%", f"σ={_std6}", _cons))
+        _erows6.sort(key=lambda x: float(x[3].lstrip("σ=")))
+        return _em_tbl("Auditor Calibration", "📐", ["QA Auditor", "Audits", "Avg Score", "Std Dev", "Consistency"], _erows6, "#7c3aed")
+    _add_section("auditor_cal", "Auditor Calibration", "📐", False, _s6_prev_fn, _s6_eml_fn)
+
+    # ── S7: Tier Breakdown ────────────────────────────────────────────────────
+    def _s7_data():
+        _rows7 = []
+        for _t7 in _QA_SCHEMA.get("tiers", []):
+            _tsc7 = []
+            for _p7 in _t7.get("params", []):
+                if _p7["col"] not in _dash_df.columns:
+                    continue
+                _pmx7 = max([int(o) for o in _p7.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
+                _pv7 = pd.to_numeric(_dash_df[_p7["col"]].astype(str).str.strip().replace(
+                    {"NA": "", "nan": "", "Fatal": "", "Yes": "0", "No": str(_pmx7)}), errors="coerce").dropna()
+                if len(_pv7):
+                    _tsc7.append(_pv7.mean() / _pmx7 * 100)
+            if _tsc7:
+                _avg7 = round(sum(_tsc7) / len(_tsc7), 1)
+                _lbl7 = _t7["label"].split("·")[1].strip() if "·" in _t7["label"] else _t7["label"]
+                _rows7.append((_lbl7, _t7.get("weight_pct", 0), _avg7, _t7.get("color", "#2563EB")))
+        return _rows7
+
+    def _s7_prev():
+        _rows7 = _s7_data()
+        if not _rows7:
+            return '<div style="font-size:0.70rem;color:#64748b;">No tier data.</div>'
+        _h7 = ""
+        for _ln7, _wt7, _av7, _cl7 in _rows7:
+            _h7 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                    f'<span style="font-size:0.68rem;font-weight:700;color:{_cl7};width:90px;">{_ln7}</span>'
+                    f'<div style="flex:1;height:10px;background:#f0f2f5;border-radius:5px;">'
+                    f'<div style="width:{_av7}%;height:100%;background:{_cl7};border-radius:5px;"></div></div>'
+                    f'<span style="font-size:0.68rem;font-weight:800;color:{_cl7};width:40px;">{_av7}%</span>'
+                    f'<span style="font-size:0.60rem;color:#64748b;">(wt:{_wt7}%)</span></div>')
+        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h7}</div>'
+
+    def _s7_eml():
+        _rows7 = _s7_data()
+        _erows7 = [(_ln, f"{_wt}%", f"{_av}%", "✅ On Target" if _av >= 80 else "🟡 Below Target" if _av >= 65 else "🔴 Critical")
+                   for _ln, _wt, _av, _ in _rows7]
+        return _em_tbl("Tier Breakdown", "🏗️", ["Tier", "Weight", "Avg Score", "Status"], _erows7, "#dc2626")
+    _add_section("tier_breakdown", "Tier Breakdown", "🏗️", True, _s7_prev, _s7_eml)
+
+    # ── S8: Disposition Breakdown ─────────────────────────────────────────────
+    def _s8_data():
+        _dc8 = next((c for c in ["Disposition", "Correct Disposition", "Correct Disposition (Expected)"] if c in _dash_df.columns), None)
+        if not _dc8:
+            return None, []
+        _cnt8 = _dash_df[_dc8].astype(str).str.strip().value_counts()
+        _cnt8 = _cnt8[_cnt8.index != "nan"][:10]
+        return _dc8, _cnt8
+
+    def _s8_prev():
+        _, _cnt8 = _s8_data()
+        if not len(_cnt8):
+            return '<div style="font-size:0.70rem;color:#64748b;">No disposition data.</div>'
+        _colors8 = ["#2563EB","#0891b2","#059669","#d97706","#dc2626","#7c3aed","#db2777","#0d9488","#b45309","#374151"]
+        _h8 = ""
+        for _i8, (_k8, _v8) in enumerate(_cnt8.items()):
+            _p8 = round(_v8 / _cnt8.sum() * 100, 1)
+            _c8 = _colors8[_i8 % len(_colors8)]
+            _h8 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+                    f'<span style="font-size:0.65rem;font-weight:600;color:#0B1F3A;width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_k8}</span>'
+                    f'<div style="flex:1;height:8px;background:#f0f2f5;border-radius:4px;">'
+                    f'<div style="width:{_p8}%;height:100%;background:{_c8};border-radius:4px;"></div></div>'
+                    f'<span style="font-size:0.65rem;font-weight:700;color:{_c8};width:55px;text-align:right;">{_v8} ({_p8}%)</span></div>')
+        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h8}</div>'
+
+    def _s8_eml():
+        _, _cnt8 = _s8_data()
+        if not len(_cnt8):
+            return ""
+        _t8 = _cnt8.sum()
+        _erows8 = [(str(_k), str(_v), f"{round(_v/_t8*100,1)}%") for _k, _v in _cnt8.items()]
+        return _em_tbl("Disposition Breakdown", "📂", ["Disposition", "Count", "Percentage"], _erows8, "#0891b2")
+    _add_section("disposition", "Disposition Breakdown", "📂", True, _s8_prev, _s8_eml)
+
+    # ── S9: Lead Stage Breakdown ──────────────────────────────────────────────
+    def _s9_data():
+        if "Lead Stage" not in _dash_df.columns:
+            return {}
+        _lsv9 = _dash_df["Lead Stage"].astype(str).str.strip().value_counts()
+        return {k: v for k, v in _lsv9.items() if k != "nan"}
+
+    def _s9_prev():
+        _lsd9 = _s9_data()
+        if not _lsd9:
+            return '<div style="font-size:0.70rem;color:#64748b;">No Lead Stage data.</div>'
+        _LS_C9 = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB", "Not Interested": "#6b7280", "RNR": "#7c3aed"}
+        _t9 = sum(_lsd9.values())
+        _h9 = ""
+        for _k9, _v9 in _lsd9.items():
+            _p9 = round(_v9 / _t9 * 100, 1)
+            _c9 = _LS_C9.get(_k9, "#94a3b8")
+            _h9 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+                    f'<span style="font-size:0.70rem;font-weight:700;color:{_c9};width:90px;">{_k9}</span>'
+                    f'<div style="flex:1;height:10px;background:#f0f2f5;border-radius:5px;">'
+                    f'<div style="width:{_p9}%;height:100%;background:{_c9};border-radius:5px;"></div></div>'
+                    f'<span style="font-size:0.70rem;font-weight:800;color:{_c9};width:70px;text-align:right;">{_v9} ({_p9}%)</span></div>')
+        _conv9 = round((_lsd9.get("Hot", 0) + _lsd9.get("Warm", 0)) / _t9 * 100, 1) if _t9 else 0
+        _h9 += f'<div style="font-size:0.65rem;color:#059669;margin-top:6px;font-weight:700;">Conversion Readiness (Hot+Warm): {_conv9}%</div>'
+        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h9}</div>'
+
+    def _s9_eml():
+        _lsd9 = _s9_data()
+        if not _lsd9:
+            return ""
+        _t9 = sum(_lsd9.values())
+        _LS_C9 = {"Hot": "🔥 Hot", "Warm": "🌤 Warm", "Cold": "❄️ Cold", "Not Interested": "👎 Not Interested", "RNR": "📵 RNR"}
+        _erows9 = [(_LS_C9.get(k, k), str(v), f"{round(v/_t9*100,1)}%",
+                    "High Priority" if k == "Hot" else "Follow-up" if k == "Warm" else "Low Priority" if k == "Cold" else "—")
+                   for k, v in _lsd9.items()]
+        return _em_tbl("Lead Stage Breakdown", "🔥", ["Lead Stage", "Count", "Percentage", "Priority"], _erows9, "#d97706")
+    _add_section("lead_stage", "Lead Stage Breakdown", "🔥", True, _s9_prev, _s9_eml)
+
+    # ── S10: Client Health Matrix ─────────────────────────────────────────────
+    def _s10_data():
+        if "Client" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
+            return []
+        _rows10 = []
+        for _cn10, _cg10 in _dash_df.groupby("Client"):
+            _cbs10 = pd.to_numeric(_cg10["Bot Score"], errors="coerce").dropna()
+            _cst10 = _cg10["Status"].astype(str).str.strip() if "Status" in _cg10.columns else pd.Series([])
+            _avg10 = round(_cbs10.mean(), 1) if len(_cbs10) else 0
+            _pr10 = round(int((_cst10 == "Pass").sum()) / len(_cg10) * 100, 1) if len(_cg10) else 0
+            _af10 = int((_cst10 == "Auto-Fail").sum())
+            _h10 = "🟢 Healthy" if _avg10 >= 80 and _pr10 >= 75 else "🟡 Monitor" if _avg10 >= 65 or _pr10 >= 55 else "🔴 At Risk"
+            _rows10.append((str(_cn10), len(_cg10), _avg10, f"{_pr10}%", _af10, _h10))
+        _rows10.sort(key=lambda x: -x[2])
+        return _rows10
+
+    def _s10_prev():
+        _rows10 = _s10_data()
+        if not _rows10:
+            return '<div style="font-size:0.70rem;color:#64748b;">No client data.</div>'
+        _h10 = '<table style="width:100%;border-collapse:collapse;font-size:0.67rem;">'
+        for _mi10, _r10 in enumerate(_rows10[:6]):
+            _bg10 = "#f0fdf4" if "Healthy" in _r10[5] else "#fffbeb" if "Monitor" in _r10[5] else "#fef2f2"
+            _h10 += (f'<tr style="background:{_bg10};">'
+                     f'<td style="padding:4px 8px;font-weight:600;">{_r10[0][:18]}</td>'
+                     f'<td style="padding:4px 8px;color:#2563EB;">{_r10[1]}</td>'
+                     f'<td style="padding:4px 8px;font-weight:700;color:#059669;">{_r10[2]}%</td>'
+                     f'<td style="padding:4px 8px;">{_r10[3]}</td>'
+                     f'<td style="padding:4px 8px;color:#dc2626;">{_r10[4]}</td>'
+                     f'<td style="padding:4px 8px;font-weight:700;">{_r10[5]}</td></tr>')
+        _h10 += "</table>"
+        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h10}</div>'
+
+    def _s10_eml():
+        _rows10 = _s10_data()
+        _erows10 = [(r[0], str(r[1]), f"{r[2]}%", r[3], str(r[4]), r[5]) for r in _rows10]
+        return _em_tbl("Client Health Matrix", "🏢", ["Client", "Audits", "Avg Score", "Pass Rate", "Auto-Fails", "Health"], _erows10, "#374151")
+    _add_section("client_health", "Client Health Matrix", "🏢", True, _s10_prev, _s10_eml)
+
+    # ── S11: Parameter Performance (Top + Bottom) ─────────────────────────────
+    def _s11_data():
+        _pa11 = []
+        for _t11 in _QA_SCHEMA.get("tiers", []):
+            for _p11 in _t11.get("params", []):
+                if _p11["col"] not in _dash_df.columns:
+                    continue
+                _pmx11 = max([int(o) for o in _p11.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
+                _pv11 = pd.to_numeric(_dash_df[_p11["col"]].astype(str).str.strip().replace(
+                    {"NA": "", "nan": "", "Fatal": ""}), errors="coerce").dropna()
+                if len(_pv11):
+                    _pa11.append((_p11["col"], round(_pv11.mean() / _pmx11 * 100, 1),
+                                  _t11["label"].split("·")[0].strip() if "·" in _t11["label"] else "TIER"))
+        return sorted(_pa11, key=lambda x: -x[1])
+
+    def _s11_prev():
+        _pa11 = _s11_data()
+        if not _pa11:
+            return '<div style="font-size:0.70rem;color:#64748b;">No parameter data.</div>'
+        _h11 = '<table style="width:100%;border-collapse:collapse;">'
+        for _pn, _pv, _pt in _pa11:
+            _c11 = "#059669" if _pv >= 80 else "#d97706" if _pv >= 60 else "#dc2626"
+            _h11 += _em_bar_row(_pn[:22], _pv, _c11)
+        _h11 += "</table>"
+        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;overflow:hidden;">{_h11}</div>'
+
+    def _s11_eml():
+        _pa11 = _s11_data()
+        _erows11 = [(_pn, _pt, f"{_pv}%",
+                     "✅ Strong" if _pv >= 80 else "🟡 Moderate" if _pv >= 65 else "🔴 Critical")
+                    for _pn, _pv, _pt in _pa11]
+        return _em_tbl("All Parameter Scores", "📊", ["Parameter", "Tier", "Avg Score", "Status"], _erows11, "#0B1F3A")
+    _add_section("params", "Parameter Scores", "📊", True, _s11_prev, _s11_eml)
+
+    # ── S12: Co-failure Analysis ──────────────────────────────────────────────
+    def _s12_data():
+        if _total_d < 5:
+            return []
+        _all_pc = [_p for _t in _QA_SCHEMA.get("tiers", []) for _p in _t.get("params", []) if _p["col"] in _dash_df.columns]
+        _fm12 = {}
+        for _p12 in _all_pc:
+            _pmx12 = max([int(o) for o in _p12.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
+            _pv12 = pd.to_numeric(_dash_df[_p12["col"]].astype(str).str.strip().replace(
+                {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmx12)}), errors="coerce")
+            _fm12[_p12["col"]] = (_pv12 < _pmx12 * 0.5).astype(int)
+        _fm12_df = pd.DataFrame(_fm12)
+        _cl12 = list(_fm12_df.columns)
+        _pairs12 = []
+        for _i12 in range(len(_cl12)):
+            for _j12 in range(_i12 + 1, len(_cl12)):
+                _both = ((_fm12_df[_cl12[_i12]] == 1) & (_fm12_df[_cl12[_j12]] == 1)).sum()
+                _r12 = round(_both / _total_d * 100, 1)
+                if _r12 >= 10:
+                    _pairs12.append((_cl12[_i12], _cl12[_j12], _r12, int(_both)))
+        return sorted(_pairs12, key=lambda x: -x[2])[:10]
+
+    def _s12_prev():
+        _pairs12 = _s12_data()
+        if not _pairs12:
+            return '<div style="font-size:0.70rem;color:#059669;padding:8px;">No significant co-failures detected.</div>'
+        _h12 = ""
+        for _p1, _p2, _r12, _c12 in _pairs12:
+            _cc12 = "#dc2626" if _r12 >= 35 else "#d97706" if _r12 >= 20 else "#2563EB"
+            _h12 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;padding:5px 8px;'
+                     f'background:#fff;border:1px solid #E2EAF6;border-radius:6px;">'
+                     f'<div style="flex:1;font-size:0.65rem;font-weight:600;color:#0B1F3A;">✗ {_p1} + ✗ {_p2}</div>'
+                     f'<div style="background:{_cc12};color:#fff;font-size:0.60rem;font-weight:800;'
+                     f'padding:2px 7px;border-radius:4px;white-space:nowrap;">{_r12}%</div></div>')
+        return _h12
+
+    def _s12_eml():
+        _pairs12 = _s12_data()
+        if not _pairs12:
+            return ""
+        _erows12 = [(_p1, _p2, f"{_r12}%", str(_c12),
+                     "🔴 Critical" if _r12 >= 35 else "🟡 Warning" if _r12 >= 20 else "ℹ️ Noted")
+                    for _p1, _p2, _r12, _c12 in _pairs12]
+        return _em_tbl("Co-failure Analysis", "🔴", ["Parameter 1", "Parameter 2", "Co-fail Rate", "Count", "Risk"], _erows12, "#dc2626")
+    _add_section("cofail", "Co-failure Analysis", "🔴", True, _s12_prev, _s12_eml)
+
+    # ── S13: Campaign Score Divergence ────────────────────────────────────────
+    def _s13_data():
+        if "Campaign Name" not in _dash_df.columns or "Bot Score" not in _dash_df.columns or _total_d < 5:
+            return None, []
+        _pavg = _bs_d.dropna().mean()
+        _rows13 = []
+        for _cn13, _cg13 in _dash_df.groupby("Campaign Name"):
+            _cbs13 = pd.to_numeric(_cg13["Bot Score"], errors="coerce").dropna()
+            if len(_cbs13) >= 2:
+                _ca13 = _cbs13.mean()
+                _rows13.append((str(_cn13), round(_ca13, 1), round(_ca13 - _pavg, 1), len(_cbs13)))
+        return _pavg, sorted(_rows13, key=lambda x: x[2])
+
+    def _s13_prev():
+        _pavg13, _rows13 = _s13_data()
+        if not _rows13:
+            return '<div style="font-size:0.70rem;color:#64748b;">No campaign divergence data.</div>'
+        _h13 = f'<div style="font-size:0.65rem;color:#64748b;margin-bottom:6px;">Portfolio avg: {round(_pavg13,1) if _pavg13 else "—"}%</div>'
+        for _cn13, _av13, _dv13, _n13 in _rows13:
+            _c13 = "#059669" if _dv13 >= 0 else "#dc2626"
+            _w13 = min(abs(_dv13) / 20 * 100, 100)
+            _h13 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+                     f'<span style="font-size:0.65rem;font-weight:600;color:#0B1F3A;width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_cn13}</span>'
+                     f'<div style="width:80px;height:8px;background:#f0f2f5;border-radius:4px;">'
+                     f'<div style="width:{_w13}%;height:100%;background:{_c13};border-radius:4px;"></div></div>'
+                     f'<span style="font-size:0.65rem;font-weight:700;color:{_c13};width:50px;">{_dv13:+.1f}%</span>'
+                     f'<span style="font-size:0.60rem;color:#64748b;">{_av13}% ({_n13})</span></div>')
+        return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;">{_h13}</div>'
+
+    def _s13_eml():
+        _pavg13, _rows13 = _s13_data()
+        if not _rows13:
+            return ""
+        _erows13 = [(r[0], f"{r[1]}%", f"{r[2]:+.1f}%", str(r[3]),
+                     "✅ Above Avg" if r[2] >= 0 else "🔴 Below Avg") for r in _rows13]
+        return _em_tbl(f"Campaign Score Divergence (Portfolio Avg: {round(_pavg13,1) if _pavg13 else '—'}%)",
+                       "↔️", ["Campaign", "Avg Score", "vs Portfolio", "Calls", "Status"], _erows13, "#374151")
+    _add_section("camp_div", "Campaign Divergence", "↔️", False, _s13_prev, _s13_eml)
+
+    # ── S14: Call Performance Insights ────────────────────────────────────────
+    _ci_d14 = {}
     try:
-        _date_range = ""
-        if "Audit Date" in _dash_df.columns:
-            _dc = pd.to_datetime(_dash_df["Audit Date"], errors="coerce").dropna()
-            if not _dc.empty:
-                _date_range = f'{_dc.min().strftime("%b %d")} – {_dc.max().strftime("%b %d, %Y")}'
-        _ex_type = "success" if _pr_d >= 80 else "warning" if _pr_d >= 60 else "critical"
-        _IRPT_CARDS.append(_irpt("exec_summary", "📋", "Executive Summary", _ex_type,
-            [f"Audit period: {_date_range or 'All time'}" if _date_range else "All-time data"],
-            [("Total Audits", _total_d), ("Avg Bot Score", f"{_avg_d or '—'}%"),
-             ("Pass Rate", f"{_pr_d}%"), ("Auto-Fails", _fatal_d),
-             ("Score Momentum", f"{_momentum_arrow} {_momentum_txt}")]))
+        _ci_d14 = _gen_call_insights(_dash_df)
     except Exception:
         pass
 
-    # 2. Score Percentiles
-    try:
-        if not _bs_d.dropna().empty:
-            _p25 = round(_bs_d.dropna().quantile(0.25), 1)
-            _p50 = round(_bs_d.dropna().quantile(0.50), 1)
-            _p75 = round(_bs_d.dropna().quantile(0.75), 1)
-            _p90 = round(_bs_d.dropna().quantile(0.90), 1)
-            _ptype = "success" if _p50 >= 80 else "warning" if _p50 >= 60 else "critical"
-            _IRPT_CARDS.append(_irpt("percentiles", "📊", "Score Percentile Breakdown", _ptype,
-                ["Distribution of Bot Scores across all audited calls in the selected period."],
-                [("25th pctile", f"{_p25}%"), ("Median (p50)", f"{_p50}%"),
-                 ("75th pctile", f"{_p75}%"), ("90th pctile", f"{_p90}%")]))
-    except Exception:
-        pass
+    def _s14_prev():
+        _ins14 = (_ci_d14.get("insights") or [])[:8]
+        if not _ins14:
+            return '<div style="font-size:0.70rem;color:#64748b;">No call insights.</div>'
+        _TYPE_C = {"critical": ("#dc2626", "#fef2f2"), "warning": ("#d97706", "#fffbeb"),
+                   "success": ("#059669", "#f0fdf4"), "info": ("#2563EB", "#eff6ff")}
+        _h14 = ""
+        for _ins14i in _ins14:
+            _bdr14, _bg14 = _TYPE_C.get(_ins14i.get("type", "info"), ("#2563EB", "#eff6ff"))
+            _h14 += (f'<div style="background:{_bg14};border-left:3px solid {_bdr14};border-radius:6px;'
+                     f'padding:8px 10px;margin-bottom:6px;">'
+                     f'<div style="font-size:0.70rem;font-weight:700;color:#0B1F3A;">{_ins14i.get("title","")}</div>'
+                     f'<div style="font-size:0.63rem;color:#374151;margin-top:2px;">{_ins14i.get("detail","")[:100]}…</div></div>')
+        return _h14
 
-    # 3. Top Performing Parameters
-    try:
-        _top_params = sorted(_param_avgs_d, key=lambda x: -x["pct"])[:5]
-        if _top_params:
-            _IRPT_CARDS.append(_irpt("top_params", "✅", "Top Performing Parameters", "success",
-                ["Parameters consistently scoring ≥80% — these are your strengths to maintain."],
-                [(p["col"], f"{p['pct']}%") for p in _top_params]))
-    except Exception:
-        pass
+    def _s14_eml():
+        _ins14 = (_ci_d14.get("insights") or [])
+        if not _ins14:
+            return ""
+        _ehtml14 = '<div style="font-family:Arial,sans-serif;margin-bottom:16px;"><div style="background:#0B1F3A;color:#fff;padding:10px 14px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;">📞 Call Performance Insights</div><div style="border:1px solid #e2e8f0;border-top:none;padding:12px;border-radius:0 0 8px 8px;">'
+        for _ins in _ins14:
+            _ehtml14 += _em_insight_card(_ins.get("title", ""), _ins.get("detail", ""), _ins.get("type", "info"))
+        _ehtml14 += "</div></div>"
+        return _ehtml14
+    _add_section("call_insights", "Call Performance Insights", "📞", True, _s14_prev, _s14_eml)
 
-    # 4. Failing Parameters Alert
-    try:
-        _bot_params = sorted(_param_avgs_d, key=lambda x: x["pct"])[:5]
-        if _bot_params:
-            _bpt = "critical" if _bot_params[0]["pct"] < 50 else "warning"
-            _IRPT_CARDS.append(_irpt("fail_params", "⚠️", "Failing Parameters — Needs Attention", _bpt,
-                ["These parameters are dragging down your overall score. Prioritise coaching here."],
-                [(p["col"], f"{p['pct']}% avg") for p in _bot_params]))
-    except Exception:
-        pass
+    # ── S15: Priority Actions ─────────────────────────────────────────────────
+    def _s15_prev():
+        _acts15 = (_ci_d14.get("actions") or [])
+        if not _acts15:
+            return '<div style="font-size:0.70rem;color:#64748b;">No actions.</div>'
+        _PRI_C15 = {"high": "#dc2626", "medium": "#d97706", "low": "#2563EB"}
+        _h15 = ""
+        for _a15 in _acts15[:6]:
+            _pri15 = str(_a15.get("priority", "low")).lower()
+            _ac15 = _PRI_C15.get(_pri15, "#2563EB")
+            _h15 += (f'<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;padding:8px 10px;'
+                     f'background:#fff;border:1px solid #E2EAF6;border-radius:6px;">'
+                     f'<span style="background:{_ac15};color:#fff;font-size:0.55rem;font-weight:800;'
+                     f'padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;margin-top:1px;">{_pri15.upper()}</span>'
+                     f'<div style="font-size:0.67rem;font-weight:600;color:#0B1F3A;">{_a15.get("action","")[:100]}</div></div>')
+        return _h15
 
-    # 5. Best Campaign Spotlight
-    try:
-        if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-            _c_avgs = _dash_df.groupby("Campaign Name").apply(
-                lambda g: pd.to_numeric(g["Bot Score"], errors="coerce").dropna().mean()).dropna()
-            if not _c_avgs.empty:
-                _best_c = _c_avgs.idxmax()
-                _best_cv = round(_c_avgs.max(), 1)
-                _best_n = len(_dash_df[_dash_df["Campaign Name"] == _best_c])
-                _IRPT_CARDS.append(_irpt("best_camp", "🏆", "Best Campaign Spotlight", "success",
-                    [f"<b>{_best_c}</b> is your top-performing campaign this period."],
-                    [("Campaign", _best_c), ("Avg Score", f"{_best_cv}%"), ("Audits", _best_n)]))
-    except Exception:
-        pass
+    def _s15_eml():
+        _acts15 = (_ci_d14.get("actions") or [])
+        if not _acts15:
+            return ""
+        _PRI_E15 = {"high": "🔴 High", "medium": "🟡 Medium", "low": "🔵 Low"}
+        _erows15 = [(_PRI_E15.get(str(_a.get("priority","low")).lower(), "—"),
+                     str(_a.get("action", ""))[:80], str(_a.get("impact", ""))[:80])
+                    for _a in _acts15]
+        return _em_tbl("Priority Actions", "🎯", ["Priority", "Action", "Impact"], _erows15, "#dc2626")
+    _add_section("actions", "Priority Actions", "🎯", True, _s15_prev, _s15_eml)
 
-    # 6. Worst Campaign Alert
-    try:
-        if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-            _c_avgs2 = _dash_df.groupby("Campaign Name").apply(
-                lambda g: pd.to_numeric(g["Bot Score"], errors="coerce").dropna().mean()).dropna()
-            if len(_c_avgs2) >= 2:
-                _worst_c = _c_avgs2.idxmin()
-                _worst_cv = round(_c_avgs2.min(), 1)
-                _worst_n = len(_dash_df[_dash_df["Campaign Name"] == _worst_c])
-                _wct = "critical" if _worst_cv < 60 else "warning"
-                _IRPT_CARDS.append(_irpt("worst_camp", "🔴", "Campaign Needs Attention", _wct,
-                    [f"<b>{_worst_c}</b> is underperforming and requires immediate review."],
-                    [("Campaign", _worst_c), ("Avg Score", f"{_worst_cv}%"), ("Audits", _worst_n)]))
-    except Exception:
-        pass
+    # ── Render all sections with tick/untick ─────────────────────────────────
+    st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
 
-    # 7. QA Auditor Variance Alert
-    try:
-        if "QA" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-            _qa_stds = []
-            for _qn2, _qg2 in _dash_df.groupby("QA"):
-                _qbs2 = pd.to_numeric(_qg2["Bot Score"], errors="coerce").dropna()
-                if len(_qbs2) >= 3:
-                    _qa_stds.append({"QA": str(_qn2), "std": round(_qbs2.std(), 1),
-                                     "avg": round(_qbs2.mean(), 1), "n": len(_qbs2)})
-            if _qa_stds:
-                _qa_stds.sort(key=lambda x: -x["std"])
-                _hv = _qa_stds[0]
-                _lv = _qa_stds[-1]
-                _vtype = "warning" if _hv["std"] > 15 else "info"
-                _IRPT_CARDS.append(_irpt("qa_variance", "📐", "Auditor Calibration Report", _vtype,
-                    ["High score variance from a QA auditor may indicate inconsistent scoring criteria."],
-                    [("Least Consistent", f'{_hv["QA"]} (σ={_hv["std"]})'),
-                     ("Most Consistent", f'{_lv["QA"]} (σ={_lv["std"]})'),
-                     ("Recommendation", "Align scoring rubric in team review")]))
-    except Exception:
-        pass
+    # Select / Deselect All row
+    _sel_all_col, _desel_all_col, _sel_count_col = st.columns([1, 1, 4])
+    if _sel_all_col.button("☑ Select All", key="dash_sel_all", use_container_width=True):
+        for _s in _ALL_SECTIONS:
+            st.session_state[f"dbsec_{_s['id']}"] = True
+        st.rerun()
+    if _desel_all_col.button("☐ Deselect All", key="dash_desel_all", use_container_width=True):
+        for _s in _ALL_SECTIONS:
+            st.session_state[f"dbsec_{_s['id']}"] = False
+        st.rerun()
 
-    # 8. Auto-Fail Root Cause
-    try:
-        _af_counts = {}
-        for _t in _QA_SCHEMA.get("tiers", []):
-            for _p in _t.get("params", []):
-                if _p.get("fatal") and _p["col"] in _dash_df.columns:
-                    _fatal_hits = (_dash_df[_p["col"]].astype(str).str.strip() == "Fatal").sum()
-                    if _fatal_hits > 0:
-                        _af_counts[_p["col"]] = int(_fatal_hits)
-        if not _af_counts:
-            if "Status" in _dash_df.columns and _fatal_d > 0:
-                _af_counts["Abrupt Disconnection (or other)"] = _fatal_d
-        if _af_counts:
-            _af_type = "critical" if sum(_af_counts.values()) >= 3 else "warning"
-            _IRPT_CARDS.append(_irpt("autofail_root", "🚨", "Auto-Fail Root Cause Analysis", _af_type,
-                [f"Total auto-fails this period: <b>{_fatal_d}</b>. Root causes identified:"],
-                [(k, f"{v} occurrences") for k, v in sorted(_af_counts.items(), key=lambda x: -x[1])]))
-    except Exception:
-        pass
-
-    # 9. Week-over-Week Score Change
-    try:
-        if "Audit Date" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-            _wow_df = _dash_df[["Audit Date", "Bot Score"]].copy()
-            _wow_df["Audit Date"] = pd.to_datetime(_wow_df["Audit Date"], errors="coerce")
-            _wow_df["Bot Score"] = pd.to_numeric(_wow_df["Bot Score"], errors="coerce")
-            _wow_df = _wow_df.dropna()
-            _tnow = pd.Timestamp.now()
-            _this_wk = _wow_df[_wow_df["Audit Date"] >= _tnow - pd.Timedelta(days=7)]["Bot Score"]
-            _prev_wk = _wow_df[(_wow_df["Audit Date"] >= _tnow - pd.Timedelta(days=14)) &
-                               (_wow_df["Audit Date"] < _tnow - pd.Timedelta(days=7))]["Bot Score"]
-            if len(_this_wk) >= 2 and len(_prev_wk) >= 2:
-                _ww_delta = round(_this_wk.mean() - _prev_wk.mean(), 1)
-                _ww_dir = "↑ Improved" if _ww_delta > 0 else "↓ Declined" if _ww_delta < 0 else "→ Flat"
-                _wwt = "success" if _ww_delta > 2 else "critical" if _ww_delta < -2 else "info"
-                _IRPT_CARDS.append(_irpt("wow_trend", "📅", "Week-over-Week Performance", _wwt,
-                    [f"Score change vs previous 7 days: <b>{_ww_dir} ({_ww_delta:+.1f}%)</b>"],
-                    [("This week avg", f"{round(_this_wk.mean(),1)}%  ({len(_this_wk)} audits)"),
-                     ("Prior week avg", f"{round(_prev_wk.mean(),1)}%  ({len(_prev_wk)} audits)"),
-                     ("Change", f"{_ww_delta:+.1f}%")]))
-    except Exception:
-        pass
-
-    # 10. Client Risk Alert
-    try:
-        if "Client" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-            _at_risk = []
-            for _cn3, _cg3 in _dash_df.groupby("Client"):
-                _c_bs3 = pd.to_numeric(_cg3["Bot Score"], errors="coerce").dropna()
-                if len(_c_bs3) >= 2 and _c_bs3.mean() < 65:
-                    _at_risk.append((str(_cn3), round(_c_bs3.mean(), 1)))
-            if _at_risk:
-                _at_risk.sort(key=lambda x: x[1])
-                _IRPT_CARDS.append(_irpt("client_risk", "🏢", "Client Risk Alert", "critical",
-                    ["The following clients have an average Bot Score below 65% — immediate action recommended."],
-                    [(c, f"{v}% avg") for c, v in _at_risk]))
-    except Exception:
-        pass
-
-    # 11. Co-failure Pattern Warning
-    try:
-        _top_cofail = None
-        if _total_d >= 5:
-            _cfp_list = []
-            _all_pcols2 = [_p["col"] for _t in _QA_SCHEMA.get("tiers", []) for _p in _t.get("params", []) if _p["col"] in _dash_df.columns]
-            _fm2 = {}
-            for _pcol2 in _all_pcols2:
-                _p2 = next((_p for _t in _QA_SCHEMA["tiers"] for _p in _t["params"] if _p["col"] == _pcol2), None)
-                _pmx2 = max([int(o) for o in _p2.get("options", []) if str(o).lstrip("-").isdigit()], default=2) if _p2 else 2
-                _pv2 = pd.to_numeric(_dash_df[_pcol2].astype(str).str.strip().replace(
-                    {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmx2)}), errors="coerce")
-                _fm2[_pcol2] = (_pv2 < _pmx2 * 0.5).astype(int)
-            _fm2_df = pd.DataFrame(_fm2)
-            _cl2 = list(_fm2_df.columns)
-            for _i2 in range(len(_cl2)):
-                for _j2 in range(_i2 + 1, len(_cl2)):
-                    _both2 = ((_fm2_df[_cl2[_i2]] == 1) & (_fm2_df[_cl2[_j2]] == 1)).sum()
-                    _rate2 = round(_both2 / _total_d * 100, 1)
-                    if _rate2 >= 15:
-                        _cfp_list.append({"p1": _cl2[_i2], "p2": _cl2[_j2], "rate": _rate2, "count": int(_both2)})
-            _cfp_list.sort(key=lambda x: -x["rate"])
-            if _cfp_list:
-                _top_cofail = _cfp_list[0]
-                _cft = "critical" if _top_cofail["rate"] >= 35 else "warning"
-                _IRPT_CARDS.append(_irpt("cofail_pattern", "🔴", "Co-failure Pattern Detected", _cft,
-                    [f"These parameters fail together in <b>{_top_cofail['rate']}%</b> of audits — likely a systemic issue."],
-                    [("Parameter 1", _top_cofail["p1"]), ("Parameter 2", _top_cofail["p2"]),
-                     ("Co-fail rate", f'{_top_cofail["rate"]}% ({_top_cofail["count"]} audits)'),
-                     ("Action", "Review call flows where both issues co-occur")]))
-    except Exception:
-        pass
-
-    # 12. Lead Quality Snapshot
-    try:
-        if "Lead Stage" in _dash_df.columns:
-            _ls_snap = _dash_df["Lead Stage"].astype(str).str.strip().value_counts().to_dict()
-            _hot = _ls_snap.get("Hot", 0)
-            _warm = _ls_snap.get("Warm", 0)
-            _cold = _ls_snap.get("Cold", 0)
-            _ni = _ls_snap.get("Not Interested", 0)
-            _rnr = _ls_snap.get("RNR", 0)
-            _total_ls = sum(_ls_snap.values())
-            _conv_rate = round((_hot + _warm) / _total_ls * 100, 1) if _total_ls else 0
-            _lqt = "success" if _conv_rate >= 50 else "warning" if _conv_rate >= 30 else "critical"
-            _IRPT_CARDS.append(_irpt("lead_quality", "🔥", "Lead Quality Snapshot", _lqt,
-                [f"Conversion-ready (Hot + Warm): <b>{_conv_rate}%</b> of leads"],
-                [("Hot", f"{_hot} ({round(_hot/_total_ls*100,1) if _total_ls else 0}%)"),
-                 ("Warm", f"{_warm} ({round(_warm/_total_ls*100,1) if _total_ls else 0}%)"),
-                 ("Cold", f"{_cold}"), ("Not Interested", f"{_ni}"), ("RNR", f"{_rnr}")]))
-    except Exception:
-        pass
-
-    # 13. QA Productivity Summary
-    try:
-        if "QA" in _dash_df.columns:
-            _qa_counts = _dash_df["QA"].value_counts().head(5)
-            if not _qa_counts.empty:
-                _IRPT_CARDS.append(_irpt("qa_productivity", "👤", "QA Productivity Summary", "info",
-                    ["Number of audits completed per QA analyst in this period."],
-                    [(qa, f"{cnt} audits") for qa, cnt in _qa_counts.items()]))
-    except Exception:
-        pass
-
-    # 14. Bot Name Performance
-    try:
-        if "Bot Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-            _bn_avgs = _dash_df.groupby("Bot Name").apply(
-                lambda g: pd.to_numeric(g["Bot Score"], errors="coerce").dropna().mean()).dropna()
-            if len(_bn_avgs) >= 1:
-                _bn_type = "success" if _bn_avgs.mean() >= 80 else "warning"
-                _IRPT_CARDS.append(_irpt("bot_performance", "🤖", "Bot Performance by Bot Name", _bn_type,
-                    ["Average Bot Score per bot variant."],
-                    [(str(b), f"{round(v, 1)}%") for b, v in _bn_avgs.sort_values(ascending=False).items()]))
-    except Exception:
-        pass
-
-    # 15. Improvement Recommendations (derived)
-    try:
-        _recs = []
-        if _fatal_d >= 2:
-            _recs.append(("Critical", f"Investigate {_fatal_d} Auto-Fail calls — check Abrupt Disconnection triggers"))
-        if _avg_d and _avg_d < 70:
-            _recs.append(("Critical", f"Overall score {_avg_d}% is below 70% — initiate a full QA review cycle"))
-        _worst_p = min(_param_avgs_d, key=lambda x: x["pct"]) if _param_avgs_d else None
-        if _worst_p and _worst_p["pct"] < 50:
-            _recs.append(("High", f"'{_worst_p['col']}' scored only {_worst_p['pct']}% — schedule focused training"))
-        if _pr_d < 60:
-            _recs.append(("High", f"Pass rate {_pr_d}% is critically low — review scoring criteria and bot flows"))
-        if not _recs:
-            _recs.append(("Low", "Performance is within acceptable range — continue regular monitoring"))
-        _IRPT_CARDS.append(_irpt("recommendations", "💡", "Action Recommendations", "critical" if any(r[0]=="Critical" for r in _recs) else "warning",
-            ["Prioritised actions based on the current audit data:"],
-            [(_p, _msg) for _p, _msg in _recs]))
-    except Exception:
-        pass
-
-    # ── Render cards with checkboxes ────────────────────────────────────────
-    _selected_card_ids = []
-    _card_chunks = [_IRPT_CARDS[i:i+2] for i in range(0, len(_IRPT_CARDS), 2)]
-    for _chunk in _card_chunks:
-        _cc1, _cc2 = st.columns(2)
-        for _ci, (_card, _col) in enumerate(zip(_chunk, [_cc1, _cc2])):
-            with _col:
-                _checked = st.checkbox(
-                    f'{_card["emoji"]} {_card["title"]}',
-                    value=True,
-                    key=f'irpt_chk_{_card["id"]}',
+    _selected_section_ids = []
+    _chunks = [_ALL_SECTIONS[i:i+2] for i in range(0, len(_ALL_SECTIONS), 2)]
+    for _chunk in _chunks:
+        _rc1, _rc2 = st.columns(2)
+        for _s, _rc in zip(_chunk, [_rc1, _rc2]):
+            with _rc:
+                _default_val = st.session_state.get(f"dbsec_{_s['id']}", _s["default"])
+                _is_checked = st.checkbox(
+                    f'{_s["icon"]} {_s["label"]}',
+                    value=_default_val,
+                    key=f"dbsec_{_s['id']}",
                 )
-                if _checked:
-                    _selected_card_ids.append(_card["id"])
-                st.markdown(_card["body_html"], unsafe_allow_html=True)
-                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+                if _is_checked:
+                    _selected_section_ids.append(_s["id"])
+                if _is_checked or _s["default"]:
+                    st.markdown(
+                        f'<div style="background:#f8faff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;margin-bottom:4px;">'
+                        f'{_s["preview"]}</div>',
+                        unsafe_allow_html=True
+                    )
+                st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-    # ── Email send controls ──────────────────────────────────────────────────
-    st.markdown('<div style="height:10px"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-chip">✉️ Send Selected Insights via Email</div>', unsafe_allow_html=True)
-    _ec1, _ec2, _ec3 = st.columns([3, 2, 1])
-    with _ec1:
-        _irpt_to = st.text_input("Recipient email(s)", placeholder="email1@co.com, email2@co.com",
-                                  key="irpt_to_email")
-    with _ec2:
-        _irpt_subj = st.text_input("Subject", value=f"Audit Insight Report — {pd.Timestamp.now().strftime('%b %d, %Y')}",
-                                    key="irpt_subject")
-    with _ec3:
+    # ── Email controls ────────────────────────────────────────────────────────
+    st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-chip">✉️ Send Selected Dashboard Sections via Email</div>', unsafe_allow_html=True)
+
+    _em_c1, _em_c2, _em_c3 = st.columns([3, 2, 1])
+    with _em_c1:
+        _em_to = st.text_input("Recipient email(s)", placeholder="email1@co.com, email2@co.com", key="dbem_to")
+    with _em_c2:
+        _em_client = _sel_client if _sel_client != "All" else "Your Client"
+        _em_subj = st.text_input("Subject",
+            value=f"{_em_client} — Dashboard Report · {pd.Timestamp.now().strftime('%b %d, %Y')}",
+            key="dbem_subj")
+    with _em_c3:
         st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-        _irpt_send_btn = st.button("📤 Send", key="irpt_send", type="primary", use_container_width=True)
+        _em_send_btn = st.button("📤 Send", key="dbem_send", type="primary", use_container_width=True)
 
-    if _irpt_send_btn:
-        _sel_cards = [c for c in _IRPT_CARDS if c["id"] in _selected_card_ids]
-        if not _sel_cards:
-            st.warning("No insights selected — tick at least one card above.")
-        elif not _irpt_to.strip():
+    _sel_sections = [s for s in _ALL_SECTIONS if s["id"] in _selected_section_ids]
+    st.markdown(f'<div style="font-size:0.68rem;color:#64748b;margin-top:4px;">{len(_sel_sections)} of {len(_ALL_SECTIONS)} sections selected</div>', unsafe_allow_html=True)
+
+    if _em_send_btn:
+        if not _sel_sections:
+            st.warning("No sections selected — tick at least one above.")
+        elif not _em_to.strip():
             st.warning("Enter at least one recipient email.")
         else:
-            _to_list = [e.strip() for e in _irpt_to.replace(";", ",").split(",") if e.strip() and "@" in e]
-            if not _to_list:
+            _to_list_em = [e.strip() for e in _em_to.replace(";", ",").split(",") if e.strip() and "@" in e]
+            if not _to_list_em:
                 st.error("No valid email addresses found.")
             else:
-                # Build email HTML
-                _irpt_html = f"""
-                <div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;background:#f8faff;padding:0;">
-                  <div style="background:linear-gradient(135deg,#0B1F3A,#2563EB);padding:28px 30px;border-radius:10px 10px 0 0;">
-                    <div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:-0.02em;">Audit Insight Report</div>
-                    <div style="font-size:13px;color:#93c5fd;margin-top:4px;">Generated {pd.Timestamp.now().strftime("%B %d, %Y at %H:%M")} · {_total_d} audits · Avg {_avg_d or "—"}% · Pass rate {_pr_d}%</div>
-                  </div>
-                  <div style="padding:20px 24px;">
-                    {"".join(c["email_html"] for c in _sel_cards)}
-                    <div style="margin-top:20px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;text-align:center;">
-                      Sent via Convin Data Labs QA Dashboard · {pd.Timestamp.now().strftime("%Y")}
-                    </div>
-                  </div>
-                </div>"""
+                _sections_html = "".join(s["email"] for s in _sel_sections if s["email"])
+                _full_em_html = f"""
+<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;background:#f8faff;padding:0;">
+  <div style="background:linear-gradient(135deg,#0B1F3A 0%,#1a62f2 100%);padding:28px 30px;border-radius:10px 10px 0 0;">
+    <div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.02em;">📊 Dashboard Report</div>
+    <div style="font-size:13px;color:#93c5fd;margin-top:5px;">
+      {_em_client} · Generated {pd.Timestamp.now().strftime("%B %d, %Y at %H:%M")} ·
+      {_total_d} audits · Avg {_avg_d or "—"}% · Pass rate {_pr_d}%
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+      <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;
+        padding:3px 10px;border-radius:20px;letter-spacing:0.05em;">{_sel_client}</span>
+      <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;
+        padding:3px 10px;border-radius:20px;letter-spacing:0.05em;">{_sel_camp}</span>
+      <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;
+        padding:3px 10px;border-radius:20px;letter-spacing:0.05em;">{_sel_period}</span>
+    </div>
+  </div>
+  <div style="padding:20px 24px;">
+    {_sections_html}
+    <div style="margin-top:24px;padding-top:14px;border-top:1px solid #e2e8f0;
+      font-size:11px;color:#94a3b8;text-align:center;">
+      Sent via Convin Data Labs QA Dashboard ·
+      {pd.Timestamp.now().strftime("%B %Y")} ·
+      {len(_sel_sections)} sections
+    </div>
+  </div>
+</div>"""
                 try:
-                    import gmail_sender as _gs_irpt
-                    _irpt_result = _gs_irpt.send_report_email(
+                    import gmail_sender as _gs_em
+                    _em_result = _gs_em.send_report_email(
                         credentials_dict={},
-                        to_emails=_to_list,
-                        subject=_irpt_subj,
-                        html_body=_irpt_html,
+                        to_emails=_to_list_em,
+                        subject=_em_subj,
+                        html_body=_full_em_html,
                         from_email=st.session_state.get("user_email", ""),
                     )
-                    _sent_ok = _irpt_result.get("sent", [])
-                    _sent_fail = _irpt_result.get("failed", [])
-                    if _sent_ok:
-                        st.success(f"✅ Report sent to: {', '.join(_sent_ok)}  ({len(_sel_cards)} insights)")
-                    for _sf in _sent_fail:
-                        st.error(f"Failed → {_sf.get('email','?')}: {_sf.get('error','')}")
-                except Exception as _irpt_exc:
-                    st.error(f"Send error: {_irpt_exc}")
-
-    # ── Section 15 — Call Performance Insights ───────────────────────────────
-    st.markdown('<div class="section-chip">📞 Call Performance Insights</div>', unsafe_allow_html=True)
-    _ci_d = {}
-    try:
-        _ci_d = _gen_call_insights(_dash_df)
-        _ci_ins = (_ci_d.get("insights") or [])
-        if _ci_ins:
-            _TYPE_STYLES2 = {"critical": ("#dc2626", "#fef2f2"), "warning": ("#d97706", "#fffbeb"),
-                             "success": ("#059669", "#f0fdf4"), "info": ("#2563EB", "#eff6ff")}
-            _ci_cols = st.columns(2)
-            for _cii, _ci in enumerate(_ci_ins):
-                _cbdr, _cbg = _TYPE_STYLES2.get(_ci.get("type", "info"), ("#2563EB", "#eff6ff"))
-                _ci_cols[_cii % 2].markdown(
-                    f'<div style="background:{_cbg};border-left:4px solid {_cbdr};border-radius:8px;padding:12px 14px;margin-bottom:10px;">'
-                    f'<div style="font-size:0.73rem;font-weight:700;color:#0B1F3A;margin-bottom:4px;">{_ci.get("title","")}</div>'
-                    f'<div style="font-size:0.68rem;color:#374151;">{_ci.get("detail","")}</div>'
-                    f'</div>', unsafe_allow_html=True)
-        else:
-            st.info("No call performance insights available for this selection.")
-    except Exception:
-        pass
-
-    # ── Section 16 — Priority Actions (call-focused) ─────────────────────────
-    st.markdown('<div class="section-chip">🎯 Priority Actions</div>', unsafe_allow_html=True)
-    try:
-        _ci_acts = (_ci_d.get("actions") or [])
-        if _ci_acts:
-            _PRI_STYLES2 = {"high": ("#dc2626", "#fef2f2"), "medium": ("#d97706", "#fffbeb"), "low": ("#2563EB", "#eff6ff")}
-            _cact_cols = st.columns(2)
-            for _cai, _ca in enumerate(_ci_acts):
-                _cpri = str(_ca.get("priority", "low")).lower()
-                _cac, _cab = _PRI_STYLES2.get(_cpri, ("#2563EB", "#eff6ff"))
-                _cact_cols[_cai % 2].markdown(
-                    f'<div style="background:{_cab};border-left:4px solid {_cac};border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;">'
-                    f'<span style="background:{_cac};color:#fff;font-size:0.55rem;font-weight:800;padding:2px 7px;border-radius:4px;letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;margin-top:2px;">{_cpri.upper()}</span>'
-                    f'<div><div style="font-size:0.72rem;font-weight:600;color:#0B1F3A;">{_ca.get("action","")}</div>'
-                    f'<div style="font-size:0.65rem;color:#64748b;margin-top:2px;">{_ca.get("impact","")}</div></div>'
-                    f'</div>', unsafe_allow_html=True)
-    except Exception:
-        pass
+                    if _em_result.get("sent"):
+                        st.success(f"✅ Dashboard report sent to: {', '.join(_em_result['sent'])}  ({len(_sel_sections)} sections)")
+                    for _sf_em in _em_result.get("failed", []):
+                        st.error(f"Failed → {_sf_em.get('email','?')}: {_sf_em.get('error','')}")
+                except Exception as _em_exc:
+                    st.error(f"Send error: {_em_exc}")
 
     # ── Section 16 — Download ─────────────────────────────────────────────────
     try:
