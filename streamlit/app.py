@@ -11253,7 +11253,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
         # ── TAB 3: Draft Gallery (15 preset classy emails) ───────────────────────
         with _db_tab_gallery:
-            st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:12px;">15 pre-built professional email drafts. Click <b>👁 Preview</b> to see the full email or <b>📋 Load</b> to populate the Compose tab.</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:0.72rem;color:#64748b;margin-bottom:12px;">15 pre-built professional email drafts ({len(_ALL_SECTIONS)} data sections loaded). Click <b>👁 Preview</b> to see the full email or <b>📋 Load</b> to populate the Compose tab.</div>', unsafe_allow_html=True)
 
             # Helper: build a gallery draft HTML using current dashboard data
             def _gallery_email(header_bg, header_color, accent, title, subtitle, sec_ids):
@@ -11430,46 +11430,53 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 },
             ]
 
-            _gal_chunks = [_GALLERY_PRESETS[i:i+2] for i in range(0, len(_GALLERY_PRESETS), 2)]
-            for _gi, _gchunk in enumerate(_gal_chunks):
-                _gc1, _gc2 = st.columns(2)
-                for _gp, _gcol in zip(_gchunk, [_gc1, _gc2]):
-                    with _gcol:
-                        _gidx = _GALLERY_PRESETS.index(_gp)
-                        st.markdown(
-                            f'<div style="background:{_gp["hdr_bg"]};border-radius:10px 10px 0 0;padding:14px 16px;">'
-                            f'<div style="font-size:0.85rem;font-weight:800;color:#fff;">{_gp["title"]}</div>'
-                            f'<div style="font-size:0.65rem;color:rgba(255,255,255,0.75);margin-top:3px;">{_gp["tag"]}</div>'
-                            f'</div>'
-                            f'<div style="border:1px solid #E2EAF6;border-top:none;border-radius:0 0 10px 10px;padding:10px 14px;background:#fff;margin-bottom:12px;">'
-                            f'<div style="font-size:0.68rem;color:#374151;margin-bottom:8px;">{_gp["desc"]}</div>'
-                            f'<div style="font-size:0.62rem;color:#64748b;">{len(_gp["sec_ids"])} sections included</div>'
-                            f'</div>',
-                            unsafe_allow_html=True
-                        )
-                        _gpv_col, _gld_col = st.columns(2)
-                        if _gpv_col.button("👁 Preview", key=f"dbgal_prev_{_gidx}", use_container_width=True):
-                            st.session_state[f"dbgal_show_{_gidx}"] = not st.session_state.get(f"dbgal_show_{_gidx}", False)
-                            st.rerun()
-                        if _gld_col.button("📋 Load", key=f"dbgal_load_{_gidx}", use_container_width=True):
-                            for _s in _ALL_SECTIONS:
-                                st.session_state[f"dbsec_{_s['id']}"] = _s["id"] in _gp["sec_ids"]
-                            st.toast(f'Loaded "{_gp["title"]}" into Compose tab', icon="✅")
-                            st.rerun()
-                        if st.session_state.get(f"dbgal_show_{_gidx}", False):
-                            _gh = _gallery_email(
-                                _gp["hdr_bg"], _gp["hdr_color"], _gp["accent"],
-                                _gp["title"], _gp["tag"], _gp["sec_ids"]
-                            )
-                            _gw = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
-    <style>body{{margin:0;padding:16px;background:#e8ecf4;font-family:Arial,sans-serif;}}</style></head>
-    <body>{_gh}</body></html>"""
-                            import base64 as _b64g
-                            _gb64 = _b64g.b64encode(_gw.encode()).decode()
-                            st.markdown(
-                                f'<iframe src="data:text/html;base64,{_gb64}" width="100%" height="520" style="border:1px solid #E2EAF6;border-radius:8px;margin-top:4px;"></iframe>',
-                                unsafe_allow_html=True
-                            )
+            try:
+                _gal_chunks = [_GALLERY_PRESETS[i:i+2] for i in range(0, len(_GALLERY_PRESETS), 2)]
+                for _gi, _gchunk in enumerate(_gal_chunks):
+                    _gc1, _gc2 = st.columns(2)
+                    for _gp, _gcol in zip(_gchunk, [_gc1, _gc2]):
+                        with _gcol:
+                            _gidx = _GALLERY_PRESETS.index(_gp)
+                            try:
+                                _sec_count = len(_gp.get("sec_ids", []))
+                                st.markdown(
+                                    f'<div style="background:{_gp["hdr_bg"]};border-radius:10px 10px 0 0;padding:14px 16px;">'
+                                    f'<div style="font-size:0.85rem;font-weight:800;color:#fff;">{_gp["title"]}</div>'
+                                    f'<div style="font-size:0.65rem;color:rgba(255,255,255,0.75);margin-top:3px;">{_gp["tag"]}</div>'
+                                    f'</div>'
+                                    f'<div style="border:1px solid #E2EAF6;border-top:none;border-radius:0 0 10px 10px;padding:10px 14px;background:#fff;margin-bottom:4px;">'
+                                    f'<div style="font-size:0.68rem;color:#374151;margin-bottom:8px;">{_gp["desc"]}</div>'
+                                    f'<div style="font-size:0.62rem;color:#64748b;">{_sec_count} sections</div>'
+                                    f'</div>',
+                                    unsafe_allow_html=True
+                                )
+                                _gpv_col, _gld_col = st.columns(2)
+                                if _gpv_col.button("👁 Preview", key=f"dbgal_prev_{_gidx}", use_container_width=True):
+                                    st.session_state[f"dbgal_show_{_gidx}"] = not st.session_state.get(f"dbgal_show_{_gidx}", False)
+                                    st.rerun()
+                                if _gld_col.button("📋 Load", key=f"dbgal_load_{_gidx}", use_container_width=True):
+                                    for _s in _ALL_SECTIONS:
+                                        st.session_state[f"dbsec_{_s['id']}"] = _s["id"] in _gp["sec_ids"]
+                                    st.toast(f'Loaded "{_gp["title"]}" into Compose tab', icon="✅")
+                                    st.rerun()
+                                if st.session_state.get(f"dbgal_show_{_gidx}", False):
+                                    _gh = _gallery_email(
+                                        _gp["hdr_bg"], _gp["hdr_color"], _gp["accent"],
+                                        _gp["title"], _gp["tag"], _gp["sec_ids"]
+                                    )
+                                    import base64 as _b64g
+                                    _gw = (f'<!DOCTYPE html><html><head><meta charset="utf-8">'
+                                           f'<style>body{{margin:0;padding:16px;background:#e8ecf4;}}</style></head>'
+                                           f'<body>{_gh}</body></html>')
+                                    _gb64 = _b64g.b64encode(_gw.encode()).decode()
+                                    st.markdown(
+                                        f'<iframe src="data:text/html;base64,{_gb64}" width="100%" height="520" style="border:1px solid #E2EAF6;border-radius:8px;margin-top:4px;"></iframe>',
+                                        unsafe_allow_html=True
+                                    )
+                            except Exception as _gcard_err:
+                                st.caption(f"⚠ {_gp.get('title','card')} — {_gcard_err}")
+            except Exception as _gal_err:
+                st.error(f"Gallery error: {_gal_err}")
 
     # ── Section 16 — Download ─────────────────────────────────────────────────
     try:
