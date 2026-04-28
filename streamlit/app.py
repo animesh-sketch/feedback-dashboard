@@ -4175,6 +4175,7 @@ def _sense_clear_cache():
 def _audit_log_save(records):
     pass  # no-op — writes go through audit_store.append() directly
 
+@st.cache_data(ttl=60)
 def _audit_log_load():
     return audit_store.load()
 
@@ -4641,11 +4642,7 @@ def _render_sense_scorecard(sheets, legend_map):
             audit_name = _best_k
 
     # ── Merge form-submitted audit log into audit_df ──────────────────────────
-    _form_log = st.session_state.get("sense_audit_log")
-    if _form_log is None:
-        _form_log = _audit_log_load()
-        if _form_log:
-            st.session_state["sense_audit_log"] = _form_log
+    _form_log = _audit_log_load()
     if _form_log:
         _log_df = pd.DataFrame([{k: v for k, v in r.items() if k != "_row_id"} for r in _form_log])
         if audit_df is not None:
@@ -6252,11 +6249,7 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
         st.info(f"📊 Showing data from {_ins_filter_start} to {_ins_filter_end}")
 
     # ── Build audit_df — always seeds from form log / seed records ────────────
-    _form_log_ins = st.session_state.get("sense_audit_log")
-    if _form_log_ins is None:
-        _form_log_ins = _audit_log_load()
-        if _form_log_ins:
-            st.session_state["sense_audit_log"] = _form_log_ins
+    _form_log_ins = _audit_log_load()
 
     _audit_df_ins = None
     _all_sheets   = sheets or {}
@@ -8744,7 +8737,7 @@ def _render_audit_form(legend_map, fname):
                                 _err = audit_store.delete(_del_id)
                                 if not _err:
                                     _del_count += 1
-                            st.session_state["sense_audit_log"] = audit_store.load()
+                            _audit_log_load.clear()
                             st.session_state["selected_audits"] = set()
                             st.session_state.pop("confirm_bulk_delete", None)
                             st.success(f"✅ Deleted {_del_count} audits")
@@ -8811,7 +8804,7 @@ def _render_audit_form(legend_map, fname):
                                     if _del_err:
                                         st.error(f"Delete failed: {_del_err}")
                                     else:
-                                        st.session_state["sense_audit_log"] = audit_store.load()
+                                        _audit_log_load.clear()
                                         st.session_state["selected_audits"].discard(_audit_id)
                                         st.session_state.pop("audit_del_confirm", None)
                                         st.success(f"✅ Audit {_audit_id} deleted")
@@ -9348,7 +9341,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 st.session_state.pop("audit_edit_id", None)
                 st.session_state.pop("audit_edit_data", None)
                 st.session_state.pop("_prefill_from_edit", None)
-                st.session_state["sense_audit_log"] = audit_store.load()
+                _audit_log_load.clear()
                 st.success(_success_msg)
 
                 if _q_idx >= 0 and _lead_q_form:
@@ -10559,6 +10552,11 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     _tab_idx = 0
 
     with _tabs[_tab_idx]:
+        _sc_col1, _sc_col2 = st.columns([10, 1])
+        with _sc_col2:
+            if st.button("🔄", help="Refresh audit data", key="scorecard_refresh"):
+                _audit_log_load.clear()
+                st.rerun()
         _render_sense_scorecard(sheets, _legend_map)
     _tab_idx += 1
 
@@ -10582,6 +10580,11 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         _render_registry()
 
     with _tabs[_registry_idx + 1]:
+        _ins_col1, _ins_col2 = st.columns([10, 1])
+        with _ins_col2:
+            if st.button("🔄", help="Refresh audit data", key="insights_refresh"):
+                _audit_log_load.clear()
+                st.rerun()
         # Prefer the Audit sheet as the primary df; fall back to first sheet
         _primary_df = next(
             (v for k, v in sheets.items() if any(kw in k.lower() for kw in ("audit","qa","review","score"))),
