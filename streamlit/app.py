@@ -9129,9 +9129,8 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             for _cp in _custom_params:
                 _cp_key = f"af_cp_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
                 _cp_cmt_key = f"af_cp_cmt_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
-                _cp_stage_key = f"af_cp_stage_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
                 _cp_notcap_key = f"af_cp_notcap_{_cp['name'][:22].replace(' ','_').replace('/','_')}"
-                _cpa, _cpb, _cpb2, _cpc, _cpd = st.columns([3, 1, 1, 3, 3])
+                _cpa, _cpb, _cpc, _cpd = st.columns([3, 1, 3, 3])
                 with _cpa:
                     _guide = _cp.get("guide", "")
                     _guide_html = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:2px;">{_guide}</div>' if _guide else ""
@@ -9146,13 +9145,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                         _cp["name"],
                         ["—", "Yes", "No", "NA"],
                         key=_cp_key,
-                        label_visibility="collapsed",
-                    )
-                with _cpb2:
-                    _pv[f"{_cp['name']} Stage"] = st.selectbox(
-                        f"{_cp['name']} Stage",
-                        ["—", "1st", "2nd", "3rd"],
-                        key=_cp_stage_key,
                         label_visibility="collapsed",
                     )
                 with _cpc:
