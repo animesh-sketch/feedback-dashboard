@@ -2779,78 +2779,123 @@ def render_email_maker():
             d["survey_question"] = st.text_input("Survey Question", value=d["survey_question"], key=f"cc_sq_{ci}")
 
         # ── Scoreboard ────────────────────────────────────────────────────────
-        with st.expander("📊  Scoreboard (embed in email)", expanded=d.get("scoreboard_enabled", False)):
-            _sb_enabled = st.toggle(
-                "Include Scoreboard in email",
-                value=d.get("scoreboard_enabled", False),
-                key=f"cc_sb_on_{ci}",
-            )
-            d["scoreboard_enabled"] = _sb_enabled
+        st.markdown("---")
+        _sb_hdr_col, _sb_tog_col = st.columns([6, 2])
+        with _sb_hdr_col:
+            st.markdown('<div class="section-chip">📊 Performance Scoreboard</div>', unsafe_allow_html=True)
+        with _sb_tog_col:
+            _sb_enabled = st.toggle("Include in email", value=d.get("scoreboard_enabled", False), key=f"cc_sb_on_{ci}")
+        d["scoreboard_enabled"] = _sb_enabled
 
-            if _sb_enabled:
+        if _sb_enabled:
+            # Load params
+            if "sense_custom_audit_params" not in st.session_state:
+                st.session_state["sense_custom_audit_params"] = param_store.load()
+            _param_names = [p["name"] for p in st.session_state["sense_custom_audit_params"]]
+            _param_map   = {p["name"]: p for p in st.session_state["sense_custom_audit_params"]}
+
+            if "sb_rows" not in d or not isinstance(d.get("sb_rows"), list):
+                d["sb_rows"] = []
+
+            _sb_left, _sb_right = st.columns([3, 2])
+
+            with _sb_left:
                 d["scoreboard_title"] = st.text_input(
-                    "Scoreboard Title",
+                    "Title",
                     value=d.get("scoreboard_title", "Performance Scoreboard"),
                     key=f"cc_sb_title_{ci}",
+                    placeholder="e.g. Bot Performance — April",
                 )
 
-                # Load params to offer as metric labels
-                if "sense_custom_audit_params" not in st.session_state:
-                    st.session_state["sense_custom_audit_params"] = param_store.load()
-                _param_names = [p["name"] for p in st.session_state["sense_custom_audit_params"]]
-                _param_map   = {p["name"]: p for p in st.session_state["sense_custom_audit_params"]}
-
-                if "sb_rows" not in d or not isinstance(d.get("sb_rows"), list):
-                    d["sb_rows"] = []
-
-                st.markdown('<div style="font-size:0.7rem;color:#64748b;font-weight:600;margin-bottom:6px;">Metrics</div>', unsafe_allow_html=True)
+                _STATUS_OPTS  = ["good", "warning", "bad", "neutral"]
+                _STATUS_ICONS = {"good": "🟢", "warning": "🟡", "bad": "🔴", "neutral": "⚪"}
 
                 _rows_updated = []
                 for _ri, _row in enumerate(d["sb_rows"]):
-                    _rc1, _rc2, _rc3, _rc4 = st.columns([3, 1.5, 2.5, 0.6])
-                    with _rc1:
+                    st.markdown(f'<div style="font-size:0.68rem;font-weight:700;color:#64748b;'
+                                f'letter-spacing:0.07em;text-transform:uppercase;margin:10px 0 4px;">'
+                                f'Metric {_ri + 1}</div>', unsafe_allow_html=True)
+
+                    _mc1, _mc2, _mc_del = st.columns([4, 1, 0.6])
+                    with _mc1:
                         _use_custom = _row.get("label", "") not in _param_names
-                        _label_opts = _param_names + (["✏️ Custom…"] if _param_names else [])
-                        if _param_names and not _use_custom:
-                            _sel_idx = _param_names.index(_row["label"]) if _row["label"] in _param_names else 0
-                            _sel     = st.selectbox("Metric", _label_opts, index=_sel_idx, key=f"sb_lbl_{ci}_{_ri}", label_visibility="collapsed")
-                            if _sel == "✏️ Custom…":
-                                _label = st.text_input("Custom label", value="", key=f"sb_cust_{ci}_{_ri}", label_visibility="collapsed")
-                            else:
-                                _label = _sel
+                        if _param_names:
+                            _label_opts = _param_names + ["✏️ Custom…"]
+                            _sel_idx    = _param_names.index(_row["label"]) if _row["label"] in _param_names else len(_param_names)
+                            _sel        = st.selectbox("Label", _label_opts, index=min(_sel_idx, len(_label_opts)-1), key=f"sb_lbl_{ci}_{_ri}", label_visibility="collapsed")
+                            _label      = st.text_input("Custom", value=_row.get("label",""), key=f"sb_cust_{ci}_{_ri}", label_visibility="collapsed", placeholder="Custom label…") if _sel == "✏️ Custom…" else _sel
                         else:
-                            _label = st.text_input("Metric label", value=_row.get("label", ""), key=f"sb_lbl_t_{ci}_{_ri}", label_visibility="collapsed", placeholder="Metric label")
-                    with _rc2:
-                        _rtype_opts = list(_TYPE_LABELS.keys())
-                        _rtype_src  = _param_map.get(_label, {}).get("input_type", _row.get("type", "text"))
-                        _rtype_idx  = _rtype_opts.index(_rtype_src) if _rtype_src in _rtype_opts else 3
-                        _rtype = st.selectbox("Type", _rtype_opts, index=_rtype_idx, format_func=lambda k: _TYPE_LABELS[k], key=f"sb_type_{ci}_{_ri}", label_visibility="collapsed")
-                    with _rc3:
+                            _label = st.text_input("Label", value=_row.get("label",""), key=f"sb_lbl_t_{ci}_{_ri}", label_visibility="collapsed", placeholder="Metric name")
+                    with _mc2:
+                        _rtype_src = _param_map.get(_label, {}).get("input_type", _row.get("type", "text"))
+                        _rtype_idx = _TYPE_KEYS.index(_rtype_src) if _rtype_src in _TYPE_KEYS else 3
+                        _rtype     = st.selectbox("Type", _TYPE_KEYS, index=_rtype_idx, format_func=lambda k: _TYPE_LABELS[k], key=f"sb_type_{ci}_{_ri}", label_visibility="collapsed")
+                    with _mc_del:
+                        if st.button("✕", key=f"sb_rm_{ci}_{_ri}", use_container_width=True, help="Remove"):
+                            continue
+
+                    _mv1, _mv2 = st.columns([3, 1])
+                    with _mv1:
                         if _rtype == "scoring":
-                            _val = str(st.slider("Score", 1, 5, int(_row.get("value", 3)) if str(_row.get("value", "3")).isdigit() else 3, key=f"sb_val_{ci}_{_ri}", label_visibility="collapsed"))
+                            _raw_v = _row.get("value", "3")
+                            _int_v = int(_raw_v) if str(_raw_v).isdigit() and 1 <= int(_raw_v) <= 5 else 3
+                            _val   = str(st.slider("Score 1–5", 1, 5, _int_v, key=f"sb_val_{ci}_{_ri}", label_visibility="collapsed"))
                         elif _rtype == "dropdown" and _label in _param_map:
                             _opts = _param_map[_label].get("options", ["Yes", "No"])
                             _cur  = _row.get("value", _opts[0]) if _row.get("value") in _opts else _opts[0]
                             _val  = st.selectbox("Value", _opts, index=_opts.index(_cur), key=f"sb_val_{ci}_{_ri}", label_visibility="collapsed")
                         elif _rtype == "number":
-                            _val = str(st.number_input("Value", value=float(_row.get("value", 0)) if _row.get("value", "") else 0.0, key=f"sb_val_{ci}_{_ri}", label_visibility="collapsed"))
+                            _val = str(st.number_input("Value", value=float(_row.get("value") or 0), key=f"sb_val_{ci}_{_ri}", label_visibility="collapsed"))
                         else:
-                            _val = st.text_input("Value", value=str(_row.get("value", "")), key=f"sb_val_{ci}_{_ri}", label_visibility="collapsed", placeholder="e.g. 87%")
-                    with _rc4:
-                        if st.button("✕", key=f"sb_rm_{ci}_{_ri}", use_container_width=True, help="Remove row"):
-                            continue  # skip this row
-                    _rows_updated.append({"label": _label, "value": _val, "type": _rtype})
+                            _val = st.text_input("Value", value=str(_row.get("value","")), key=f"sb_val_{ci}_{_ri}", label_visibility="collapsed", placeholder="e.g. 87%")
+                    with _mv2:
+                        _cur_status = _row.get("status", "neutral")
+                        _stat_idx   = _STATUS_OPTS.index(_cur_status) if _cur_status in _STATUS_OPTS else 3
+                        _status     = st.selectbox(
+                            "Status", _STATUS_OPTS, index=_stat_idx,
+                            format_func=lambda s: f"{_STATUS_ICONS[s]} {s.capitalize()}",
+                            key=f"sb_status_{ci}_{_ri}", label_visibility="collapsed",
+                        )
+
+                    _rows_updated.append({"label": _label, "value": _val, "type": _rtype, "status": _status})
 
                 d["sb_rows"] = _rows_updated
                 d["scoreboard_rows"] = d["sb_rows"]
 
-                if st.button("➕ Add Metric", key=f"sb_add_row_{ci}", use_container_width=False):
-                    d["sb_rows"].append({"label": "", "value": "", "type": "text"})
-                    d["scoreboard_rows"] = d["sb_rows"]
-                    st.rerun()
+                _qadd1, _qadd2, _qadd3, _qadd4 = st.columns(4)
+                with _qadd1:
+                    if st.button("➕ Metric", key=f"sb_add_{ci}", use_container_width=True):
+                        d["sb_rows"].append({"label": "", "value": "", "type": "text", "status": "neutral"})
+                        d["scoreboard_rows"] = d["sb_rows"]
+                        st.rerun()
+                with _qadd2:
+                    if st.button("⭐ Scoring", key=f"sb_qadd_score_{ci}", use_container_width=True, help="Add a 1–5 scoring row"):
+                        d["sb_rows"].append({"label": "Score", "value": "4", "type": "scoring", "status": "good"})
+                        d["scoreboard_rows"] = d["sb_rows"]
+                        st.rerun()
+                with _qadd3:
+                    if st.button("📈 Number", key=f"sb_qadd_num_{ci}", use_container_width=True, help="Add a numeric metric"):
+                        d["sb_rows"].append({"label": "Metric", "value": "85", "type": "number", "status": "neutral"})
+                        d["scoreboard_rows"] = d["sb_rows"]
+                        st.rerun()
+                with _qadd4:
+                    if st.button("✅ Yes/No", key=f"sb_qadd_drop_{ci}", use_container_width=True, help="Add a Yes/No metric"):
+                        d["sb_rows"].append({"label": "Check", "value": "Yes", "type": "dropdown", "status": "good"})
+                        d["scoreboard_rows"] = d["sb_rows"]
+                        st.rerun()
 
                 if not d["sb_rows"]:
-                    st.caption("No metrics yet. Click ➕ Add Metric to start.")
+                    st.caption("No metrics yet — use the buttons above to add one.")
+
+            with _sb_right:
+                st.markdown('<div style="font-size:0.68rem;font-weight:700;color:#64748b;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">Live Preview</div>', unsafe_allow_html=True)
+                if d["sb_rows"]:
+                    from email_builder import _build_scoreboard_html as _sbprev
+                    _prev_html = _sbprev(d.get("scoreboard_title","Performance Scoreboard"), d["sb_rows"])
+                    _prev_html_wrap = f'<div style="transform:scale(0.78);transform-origin:top left;width:128%;pointer-events:none;">{_prev_html}</div>'
+                    st.markdown(_prev_html_wrap, unsafe_allow_html=True)
+                else:
+                    st.markdown('<div style="border:2px dashed #e2e8f0;border-radius:10px;padding:32px 16px;text-align:center;color:#94a3b8;font-size:0.8rem;">Add metrics to see preview</div>', unsafe_allow_html=True)
 
         pc1, pc2, pc3, pc4 = st.columns(4)
         with pc1:

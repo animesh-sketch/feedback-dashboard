@@ -140,51 +140,120 @@ def build_email_html(draft: dict, template_id: int = 1, send_id: str = None, rec
 # ─── Scoreboard HTML block ────────────────────────────────────────────────────
 
 def _build_scoreboard_html(title: str, rows: list) -> str:
-    """Render a scoreboard table as an email-safe HTML block."""
-    def _stars_html(val):
+    """Render a scoreboard card as an email-safe HTML block."""
+    _STATUS_COLORS = {
+        "good":    ("#dcfce7", "#166534", "#16a34a"),  # bg, text, dot
+        "warning": ("#fef9c3", "#854d0e", "#ca8a04"),
+        "bad":     ("#fee2e2", "#991b1b", "#dc2626"),
+        "neutral": ("#f1f5f9", "#334155", "#64748b"),
+    }
+
+    def _bar_html(pct: float, color: str) -> str:
+        pct = max(0, min(100, pct))
+        return (
+            f'<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">'
+            f'<tr>'
+            f'<td style="background:#e2e8f0;border-radius:99px;height:7px;padding:0;overflow:hidden;">'
+            f'<div style="background:{color};height:7px;width:{pct:.0f}%;border-radius:99px;"></div>'
+            f'</td>'
+            f'</tr>'
+            f'</table>'
+        )
+
+    def _stars_html(val: str, color: str) -> str:
         try:
             n = round(float(val))
         except (ValueError, TypeError):
             n = 0
-        filled = min(max(n, 0), 5)
-        return "".join(
-            ['<span style="color:#f59e0b;font-size:16px;">★</span>'] * filled +
-            ['<span style="color:#d1d5db;font-size:16px;">★</span>'] * (5 - filled)
+        n = min(max(n, 0), 5)
+        star_filled = f'<span style="color:{color};font-size:15px;letter-spacing:1px;">★</span>'
+        star_empty  = f'<span style="color:#d1d5db;font-size:15px;letter-spacing:1px;">★</span>'
+        bar = _bar_html(n / 5 * 100, color)
+        return (
+            f'<div>{star_filled * n}{star_empty * (5 - n)}</div>'
+            f'<div style="margin-top:4px;">{bar}</div>'
         )
 
     rows_html = ""
     for i, row in enumerate(rows):
-        label = row.get("label") or ""
-        value = str(row.get("value") or "—")
-        rtype = row.get("type", "text")
-        bg    = "#f8faff" if i % 2 == 0 else "#ffffff"
+        label  = row.get("label") or ""
+        value  = str(row.get("value") or "—")
+        rtype  = row.get("type", "text")
+        status = row.get("status", "neutral")
+        if status not in _STATUS_COLORS:
+            status = "neutral"
+        s_bg, s_text, s_dot = _STATUS_COLORS[status]
+        row_bg = "#f8faff" if i % 2 == 0 else "#ffffff"
+
+        status_badge = (
+            f'<span style="display:inline-block;background:{s_bg};color:{s_text};'
+            f'font-size:9px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;'
+            f'padding:2px 7px;border-radius:99px;white-space:nowrap;">'
+            f'<span style="color:{s_dot};margin-right:3px;">●</span>{status.capitalize()}</span>'
+        )
 
         if rtype == "scoring":
-            val_html = _stars_html(value)
+            val_html = _stars_html(value, s_dot)
+        elif rtype == "number":
+            try:
+                pct = float(value)
+                bar = _bar_html(min(pct, 100), s_dot)
+            except (ValueError, TypeError):
+                bar = ""
+            val_html = (
+                f'<span style="font-size:16px;font-weight:800;color:{s_dot};">{value}</span>'
+                f'<div style="margin-top:4px;">{bar}</div>'
+            )
         else:
-            val_html = (f'<span style="font-size:14px;font-weight:700;color:#1a62f2;">'
-                        f'{value}</span>')
+            val_html = f'<span style="font-size:14px;font-weight:700;color:{s_dot};">{value}</span>'
 
         rows_html += (
-            f'<tr style="background:{bg};">'
-            f'<td style="padding:10px 16px;font-size:12px;font-weight:600;color:#374151;'
-            f'border-bottom:1px solid #e5e7eb;width:55%;">{label}</td>'
-            f'<td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;'
-            f'text-align:right;">{val_html}</td>'
+            f'<tr style="background:{row_bg};">'
+            f'<td style="padding:12px 18px;font-size:12px;font-weight:600;color:#374151;'
+            f'border-bottom:1px solid #e5e7eb;width:40%;vertical-align:middle;">'
+            f'<div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.06em;'
+            f'text-transform:uppercase;margin-bottom:2px;">{label}</div>'
+            f'<div style="margin-top:4px;">{status_badge}</div>'
+            f'</td>'
+            f'<td style="padding:12px 18px;border-bottom:1px solid #e5e7eb;'
+            f'vertical-align:middle;">{val_html}</td>'
             f'</tr>'
         )
 
+    total = len(rows)
+    good_count = sum(1 for r in rows if r.get("status") == "good")
+    footer = (
+        f'<tr style="background:#f8faff;">'
+        f'<td colspan="2" style="padding:10px 18px;font-size:10px;color:#94a3b8;'
+        f'text-align:right;letter-spacing:0.05em;">'
+        f'{good_count} / {total} metrics on track'
+        f'</td></tr>'
+    ) if total else ""
+
     return (
-        f'<div style="padding:0 44px 24px;">'
-        f'<div style="border:1px solid #dbeafe;border-radius:10px;overflow:hidden;">'
-        f'<div style="background:linear-gradient(90deg,#1a62f2,#2563eb);'
-        f'padding:10px 16px;display:flex;align-items:center;gap:8px;">'
-        f'<span style="font-size:16px;">📊</span>'
-        f'<span style="color:#fff;font-size:13px;font-weight:700;letter-spacing:0.02em;">{title}</span>'
+        f'<div style="padding:0 44px 28px;">'
+        f'<div style="border:1px solid #dbeafe;border-radius:14px;overflow:hidden;'
+        f'box-shadow:0 2px 12px rgba(26,98,242,0.08);">'
+        # Header
+        f'<div style="background:linear-gradient(90deg,#0b1f3a 0%,#1a62f2 100%);'
+        f'padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">'
+        f'<div style="display:flex;align-items:center;gap:10px;">'
+        f'<div style="width:30px;height:30px;background:rgba(255,255,255,0.15);'
+        f'border-radius:8px;display:flex;align-items:center;justify-content:center;'
+        f'font-size:15px;">📊</div>'
+        f'<div>'
+        f'<div style="color:#fff;font-size:13px;font-weight:700;letter-spacing:0.01em;">{title}</div>'
+        f'<div style="color:rgba(255,255,255,0.55);font-size:10px;margin-top:1px;">'
+        f'{total} metric{"s" if total != 1 else ""}</div>'
+        f'</div></div>'
+        f'<div style="background:rgba(255,255,255,0.15);border-radius:99px;'
+        f'padding:4px 12px;font-size:10px;font-weight:700;color:#fff;letter-spacing:0.05em;">'
+        f'{good_count}/{total} ✓</div>'
         f'</div>'
+        # Table
         f'<table width="100%" cellpadding="0" cellspacing="0" '
         f'style="border-collapse:collapse;background:#fff;">'
-        f'{rows_html}'
+        f'{rows_html}{footer}'
         f'</table>'
         f'</div></div>'
     )
