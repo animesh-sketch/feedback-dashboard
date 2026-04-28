@@ -11125,7 +11125,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         _sel_sections_c = [s for s in _ALL_SECTIONS if s["id"] in _selected_section_ids]
         st.markdown(f'<div style="font-size:0.68rem;color:#64748b;margin-bottom:8px;">{len(_sel_sections_c)} of {len(_ALL_SECTIONS)} sections selected</div>', unsafe_allow_html=True)
 
-        _em_c1, _em_c2, _em_c3 = st.columns([3, 2, 1])
+        _em_c1, _em_c2, _em_c3, _em_c4 = st.columns([3, 2, 1, 1])
         with _em_c1:
             _em_to = st.text_input("Recipient email(s)", placeholder="email1@co.com, email2@co.com", key="dbem_to")
         with _em_c2:
@@ -11134,7 +11134,13 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 key="dbem_subj")
         with _em_c3:
             st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+            _em_prev_btn = st.button("👁 Preview", key="dbem_prev", use_container_width=True)
+        with _em_c4:
+            st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
             _em_send_btn = st.button("📤 Send", key="dbem_send", type="primary", use_container_width=True)
+
+        if _em_prev_btn:
+            st.session_state["dbem_show_prev"] = not st.session_state.get("dbem_show_prev", False)
 
         def _build_dashboard_email_html(sel_secs, client_name):
             _sh = "".join(s["email"] for s in sel_secs if s["email"])
@@ -11184,6 +11190,24 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                             st.error(f"Failed → {_sf_em.get('email','?')}: {_sf_em.get('error','')}")
                     except Exception as _em_exc:
                         st.error(f"Send error: {_em_exc}")
+
+        if st.session_state.get("dbem_show_prev", False):
+            _prev_secs_c = _sel_sections_c if _sel_sections_c else [s for s in _ALL_SECTIONS if s["default"]]
+            if _prev_secs_c:
+                _prev_html_c = _build_dashboard_email_html(_prev_secs_c, _em_client)
+                _prev_wrap_c = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>body{{margin:0;padding:16px;background:#e8ecf4;font-family:Arial,sans-serif;}}</style></head>
+<body>{_prev_html_c}</body></html>"""
+                import base64 as _b64c
+                _prev_b64c = _b64c.b64encode(_prev_wrap_c.encode()).decode()
+                st.markdown(
+                    f'<div style="font-size:0.72rem;color:#64748b;margin:8px 0 4px;">Preview — {len(_prev_secs_c)} sections · <em>Close by clicking 👁 Preview again</em></div>',
+                    unsafe_allow_html=True
+                )
+                st.markdown(
+                    f'<iframe src="data:text/html;base64,{_prev_b64c}" width="100%" height="680" style="border:1px solid #E2EAF6;border-radius:10px;background:#e8ecf4;"></iframe>',
+                    unsafe_allow_html=True
+                )
 
     # ── TAB 2: Preview Email ──────────────────────────────────────────────────
     with _db_tab_preview:
