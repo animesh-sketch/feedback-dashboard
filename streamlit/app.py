@@ -116,17 +116,16 @@ def _email_font_kwargs():
 if not st.session_state.get("gmail_app_password"):
     try:
         pw = st.secrets.get("GMAIL_APP_PASSWORD", "")
-        if pw:
-            st.session_state["gmail_app_password"] = pw
     except Exception:
-        pass
+        pw = ""
+    if pw:
+        st.session_state["gmail_app_password"] = pw.replace(" ", "")
 if not st.session_state.get("user_email"):
     try:
         sender = st.secrets.get("GMAIL_SENDER", "")
-        if sender:
-            st.session_state["user_email"] = sender
     except Exception:
-        pass
+        sender = ""
+    st.session_state["user_email"] = sender or "convinlabs@convin.ai"
 
 # ─── Feedback landing page (from email star links) ────────────────────────────
 
