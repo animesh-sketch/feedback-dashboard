@@ -112,16 +112,21 @@ def _email_font_kwargs():
     }
 
 # Auto-load Gmail credentials from secrets — only on the very first load,
-# NOT on every rerun (so the sidebar "Change" button actually works).
-if "gmail_secrets_loaded" not in st.session_state:
-    st.session_state["gmail_secrets_loaded"] = True
-    if not st.session_state.get("gmail_app_password"):
+# Always load from secrets when session state values are missing.
+if not st.session_state.get("gmail_app_password"):
+    try:
         pw = st.secrets.get("GMAIL_APP_PASSWORD", "")
         if pw:
             st.session_state["gmail_app_password"] = pw
-    if not st.session_state.get("user_email"):
-        sender = st.secrets.get("GMAIL_SENDER", "") or "convinlabs@convin.ai"
-        st.session_state["user_email"] = sender
+    except Exception:
+        pass
+if not st.session_state.get("user_email"):
+    try:
+        sender = st.secrets.get("GMAIL_SENDER", "")
+        if sender:
+            st.session_state["user_email"] = sender
+    except Exception:
+        pass
 
 # ─── Feedback landing page (from email star links) ────────────────────────────
 
