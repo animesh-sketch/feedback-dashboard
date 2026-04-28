@@ -10451,7 +10451,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         _empty_tabs = ["📊  Scorecard"]
         if st.session_state.get("show_new_audit_tab", True):
             _empty_tabs.append("✍️  New Audit")
-        _empty_tabs.append("🤖  Insights")
+        _empty_tabs += ["📄  Weights", "🤖  Insights"]
 
         _tabs_empty = st.tabs(_empty_tabs)
         _idx = 0
@@ -10464,6 +10464,10 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
             with _tabs_empty[_idx]:
                 _render_audit_form(_legend_map_pre, "")
             _idx += 1
+
+        with _tabs_empty[_idx]:
+            _render_legend_page()
+        _idx += 1
 
         with _tabs_empty[_idx]:
             _render_sense_insights(pd.DataFrame(), "Seed Data", {}, legend_map=_legend_map_pre)
@@ -10540,6 +10544,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     _base_tabs = ["📊  Scorecard"]
     if st.session_state.get("show_new_audit_tab", True):
         _base_tabs.append("✍️  New Audit")
+    _base_tabs.append("📄  Weights")
 
     _HIDDEN_SHEET_KEYWORDS = ("legend", "summary", "dashboard")
     _visible_sheets = {k: v for k, v in sheets.items()
@@ -10559,6 +10564,11 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         with _tabs[_tab_idx]:
             _render_audit_form(_legend_map, fname)
         _tab_idx += 1
+
+    # ── Weights tab ────────────────────────────────────────────────────────────
+    with _tabs[_tab_idx]:
+        _render_legend_page()
+    _tab_idx += 1
 
     for i, (sheet_name, df) in enumerate(_visible_sheets.items()):
         with _tabs[_tab_idx + i]:
