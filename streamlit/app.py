@@ -6303,9 +6303,30 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
         except:
             pass
 
+    # ── Audit data source banner ───────────────────────────────────────────────
+    _log_count_ins = len(_form_log_ins) if _form_log_ins else 0
+    _upload_count_ins = max(0, (len(_audit_df_ins) if _audit_df_ins is not None else 0) - _log_count_ins)
+    _total_recs_ins = len(_audit_df_ins) if _audit_df_ins is not None else 0
+    _src_parts_ins = []
+    if _log_count_ins:
+        _src_parts_ins.append(f'<span style="background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;border-radius:6px;padding:2px 10px;font-size:0.67rem;font-weight:700;">📡 {_log_count_ins} from Audit Log</span>')
+    if _upload_count_ins > 0:
+        _src_parts_ins.append(f'<span style="background:#EBF5FF;color:#2563EB;border:1px solid #BFDBFE;border-radius:6px;padding:2px 10px;font-size:0.67rem;font-weight:700;">📂 {_upload_count_ins} from Upload</span>')
+    if not _src_parts_ins:
+        _src_parts_ins.append('<span style="background:#F1F5F9;color:#64748b;border:1px solid #E2E8F0;border-radius:6px;padding:2px 10px;font-size:0.67rem;">No records yet — submit audits via ✍️ New Audit</span>')
+    st.markdown(
+        f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:8px 16px;'
+        f'background:#fff;border:1px solid #E2EAF6;border-radius:10px;box-shadow:0 1px 4px rgba(11,31,58,0.06);">'
+        f'<div style="font-size:0.62rem;font-weight:700;color:#475569;letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;">Data Source</div>'
+        f'<div style="display:flex;gap:8px;flex-wrap:wrap;">{"".join(_src_parts_ins)}</div>'
+        f'<div style="margin-left:auto;font-size:0.62rem;color:#94a3b8;flex-shrink:0;white-space:nowrap;">{_total_recs_ins:,} total records</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
     # ── TABS ──────────────────────────────────────────────────────────────────
-    _itab_labels = ["📊 Overview", "🏆 Performance", "📈 Trends", "🔬 Parameters", "📋 Reports"]
-    _i1, _i2, _i3, _i4, _i5 = st.tabs(_itab_labels)
+    _itab_labels = ["📊 Overview", "🏆 Performance", "📈 Trends", "🔬 Parameters", "📋 Reports", "🧠 Intelligence"]
+    _i1, _i2, _i3, _i4, _i5, _i6 = st.tabs(_itab_labels)
 
     # ══════════════════════════════════════════════════════════════════════════
     # Tab 1 — Overview
@@ -6807,6 +6828,82 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                                 f'</div>',
                                 unsafe_allow_html=True,
                             )
+
+            # ── Score Momentum (Last N vs Previous N) ─────────────────────────
+            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+            if _avg_i is not None and total_i >= 10:
+                st.markdown('<div class="section-chip">🔄 Score Momentum</div>', unsafe_allow_html=True)
+                _mom_bs = pd.to_numeric(_audit_df_ins_view["Bot Score"], errors="coerce").dropna()
+                _n_win = min(10, max(3, len(_mom_bs) // 3))
+                if len(_mom_bs) >= _n_win * 2:
+                    _recent_avg_m = round(float(_mom_bs.iloc[-_n_win:].mean()), 1)
+                    _prev_avg_m   = round(float(_mom_bs.iloc[-2*_n_win:-_n_win].mean()), 1)
+                    _mom_delta    = round(_recent_avg_m - _prev_avg_m, 1)
+                    _mom_color    = "#059669" if _mom_delta >= 0 else "#dc2626"
+                    _mom_arrow    = "↑" if _mom_delta > 0 else ("↓" if _mom_delta < 0 else "→")
+                    _mom_label    = "Improving" if _mom_delta >= 2 else ("Declining" if _mom_delta <= -2 else "Stable")
+                    _mom_grad     = "linear-gradient(135deg,#ECFDF5,#D1FAE5)" if _mom_delta >= 0 else "linear-gradient(135deg,#FFF1F2,#FECDD3)"
+                    _mom_border   = "#A7F3D0" if _mom_delta >= 0 else "#FECDD3"
+                    st.markdown(
+                        f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1rem;">'
+                        f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:12px;padding:18px;text-align:center;">'
+                        f'<div style="font-size:0.58rem;font-weight:700;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Prev {_n_win} Audits</div>'
+                        f'<div style="font-size:1.7rem;font-weight:900;color:#0B1F3A;">{_prev_avg_m}%</div></div>'
+                        f'<div style="background:{_mom_grad};border:1px solid {_mom_border};border-radius:12px;padding:18px;text-align:center;">'
+                        f'<div style="font-size:0.58rem;font-weight:700;color:{_mom_color};letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Momentum</div>'
+                        f'<div style="font-size:1.9rem;font-weight:900;color:{_mom_color};">{_mom_arrow} {abs(_mom_delta)}%</div>'
+                        f'<div style="font-size:0.63rem;font-weight:700;color:{_mom_color};margin-top:2px;">{_mom_label}</div></div>'
+                        f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:12px;padding:18px;text-align:center;">'
+                        f'<div style="font-size:0.58rem;font-weight:700;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Latest {_n_win} Audits</div>'
+                        f'<div style="font-size:1.7rem;font-weight:900;color:#0B1F3A;">{_recent_avg_m}%</div></div>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+
+            # ── Auditor Consistency Analysis ───────────────────────────────────
+            if "QA" in _audit_df_ins_view.columns:
+                st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+                st.markdown('<div class="section-chip">🎯 Auditor Consistency</div>', unsafe_allow_html=True)
+                _cons_rows_ov = []
+                for _qa_c_ov, _qa_grp_ov in _audit_df_ins_view.groupby("QA"):
+                    _qa_bs_ov = pd.to_numeric(_qa_grp_ov["Bot Score"], errors="coerce").dropna()
+                    if len(_qa_bs_ov) >= 3:
+                        _qa_avg_ov = round(float(_qa_bs_ov.mean()), 1)
+                        _qa_std_ov = round(float(_qa_bs_ov.std()), 1)
+                        _qa_n_ov   = len(_qa_bs_ov)
+                        _cons_level_ov = "Consistent" if _qa_std_ov < 8 else ("Moderate" if _qa_std_ov < 15 else "Volatile")
+                        _cons_clr_ov   = "#059669" if _qa_std_ov < 8 else "#d97706" if _qa_std_ov < 15 else "#dc2626"
+                        _cons_rows_ov.append({"auditor": str(_qa_c_ov), "avg": _qa_avg_ov, "std": _qa_std_ov, "n": _qa_n_ov, "level": _cons_level_ov, "color": _cons_clr_ov})
+                if _cons_rows_ov:
+                    _cons_rows_ov.sort(key=lambda x: x["std"])
+                    _cons_html_ov = (
+                        '<div style="display:grid;grid-template-columns:140px 1fr 58px 90px;align-items:center;gap:12px;'
+                        'padding:6px 0;border-bottom:2px solid #E2EAF6;margin-bottom:4px;">'
+                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;">Auditor</div>'
+                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;">Consistency (σ = std dev)</div>'
+                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;text-align:right;">Avg</div>'
+                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;text-align:right;">Rating</div>'
+                        '</div>'
+                    )
+                    for _cr_ov in _cons_rows_ov:
+                        _bar_pct_ov = min(100, int(_cr_ov["std"] * 4))
+                        _cons_html_ov += (
+                            f'<div style="display:grid;grid-template-columns:140px 1fr 58px 90px;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #F1F5F9;">'
+                            f'<div style="font-size:0.72rem;font-weight:700;color:#0B1F3A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">👤 {_cr_ov["auditor"][:18]}</div>'
+                            f'<div><div style="font-size:0.59rem;color:#94a3b8;margin-bottom:3px;">σ = {_cr_ov["std"]} (n={_cr_ov["n"]})</div>'
+                            f'<div style="height:8px;background:#F1F5F9;border-radius:4px;overflow:hidden;">'
+                            f'<div style="width:{_bar_pct_ov}%;height:100%;background:{_cr_ov["color"]};border-radius:4px;"></div></div></div>'
+                            f'<div style="font-size:0.71rem;font-weight:800;color:#0B1F3A;text-align:right;">{_cr_ov["avg"]}%</div>'
+                            f'<div style="text-align:right;"><span style="font-size:0.6rem;font-weight:700;color:#fff;background:{_cr_ov["color"]};border-radius:10px;padding:2px 8px;">{_cr_ov["level"]}</span></div>'
+                            f'</div>'
+                        )
+                    st.markdown(
+                        f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:12px;padding:14px 18px;margin-bottom:1rem;">'
+                        f'<div style="font-size:0.68rem;color:#475569;margin-bottom:10px;line-height:1.5;">'
+                        f'Low σ = calibrated scoring. High σ = auditor interpretation varies — flag for calibration sessions.</div>'
+                        f'{_cons_html_ov}</div>',
+                        unsafe_allow_html=True
+                    )
 
             # ── Build & Send One-Pager Email ──────────────────────────────────
             st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
@@ -8236,6 +8333,175 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                                 st.session_state[err_key] = f"AI error: {e}"
                             st.rerun()
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # Tab 6 — Intelligence (Co-failure · Momentum · Calibration · Score Gap)
+    # ══════════════════════════════════════════════════════════════════════════
+    with _i6:
+        if not _has_qa_ins or _audit_df_ins is None:
+            st.info("No QA schema data found. Submit audits via ✍️ New Audit first.")
+        else:
+            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+
+            # ── 1. Parameter Co-failure Analysis ──────────────────────────────
+            st.markdown('<div class="section-chip">🔗 Parameter Co-failure Analysis</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div style="font-size:0.71rem;color:#475569;margin-bottom:12px;line-height:1.55;">'
+                'When one parameter fails, which others fail at the same time? Co-failure patterns reveal systemic bot logic issues '
+                'that single-parameter coaching cannot fix — they need script-level changes.</div>',
+                unsafe_allow_html=True
+            )
+            _cf_tier_params = [_p for _t in _QA_SCHEMA["tiers"] for _p in _t["params"]]
+            _cf_cols = [p["col"] for p in _cf_tier_params if p["col"] in _audit_df_ins.columns]
+            if len(_cf_cols) >= 4 and len(_audit_df_ins) >= 5:
+                _cofail_pairs_i6 = []
+                for _i_cf in range(len(_cf_cols)):
+                    for _j_cf in range(_i_cf + 1, len(_cf_cols)):
+                        _ca, _cb = _cf_cols[_i_cf], _cf_cols[_j_cf]
+                        _va = _audit_df_ins[_ca].astype(str).str.strip()
+                        _vb = _audit_df_ins[_cb].astype(str).str.strip()
+                        _fa = (_va == "0") | (_va.str.lower() == "fatal")
+                        _fb = (_vb == "0") | (_vb.str.lower() == "fatal")
+                        _both = int((_fa & _fb).sum())
+                        _a_tot = int(_fa.sum())
+                        if _a_tot >= 2 and _both >= 2:
+                            _pct_cf = round(_both / _a_tot * 100)
+                            if _pct_cf >= 35:
+                                _cofail_pairs_i6.append({"a": _ca, "b": _cb, "pct": _pct_cf, "both": _both, "a_total": _a_tot})
+                _cofail_pairs_i6.sort(key=lambda x: -x["pct"])
+                if _cofail_pairs_i6:
+                    _cf_cols_split = st.columns(2)
+                    for _cfi, _cfp in enumerate(_cofail_pairs_i6[:8]):
+                        _cf_clr = "#dc2626" if _cfp["pct"] >= 70 else "#d97706" if _cfp["pct"] >= 50 else "#64748b"
+                        _cf_bg  = "#FFF1F2" if _cfp["pct"] >= 70 else "#FFFBEB" if _cfp["pct"] >= 50 else "#F8FAFC"
+                        _cf_brd = "#FECDD3" if _cfp["pct"] >= 70 else "#FDE68A" if _cfp["pct"] >= 50 else "#E2E8F0"
+                        with _cf_cols_split[_cfi % 2]:
+                            st.markdown(
+                                f'<div style="background:{_cf_bg};border:1px solid {_cf_brd};border-left:4px solid {_cf_clr};'
+                                f'border-radius:10px;padding:12px 16px;margin-bottom:8px;">'
+                                f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+                                f'<div style="font-size:1.3rem;font-weight:900;color:{_cf_clr};">{_cfp["pct"]}%</div>'
+                                f'<div style="font-size:0.6rem;font-weight:700;color:#fff;background:{_cf_clr};border-radius:10px;padding:2px 9px;">{_cfp["both"]} co-fails</div>'
+                                f'</div>'
+                                f'<div style="font-size:0.7rem;font-weight:700;color:#0B1F3A;margin-bottom:3px;">'
+                                f'<span style="background:#FEE2E2;border-radius:4px;padding:2px 6px;margin-right:4px;">{_cfp["a"][:22]}</span>'
+                                f'<span style="color:#94a3b8;font-weight:400;">+ </span>'
+                                f'<span style="background:#FEE2E2;border-radius:4px;padding:2px 6px;">{_cfp["b"][:22]}</span>'
+                                f'</div>'
+                                f'<div style="font-size:0.63rem;color:#64748b;margin-top:5px;">'
+                                f'When <strong>{_cfp["a"]}</strong> fails → <strong>{_cfp["b"]}</strong> also fails {_cfp["pct"]}% of the time '
+                                f'({_cfp["both"]} of {_cfp["a_total"]} cases)</div>'
+                                f'</div>',
+                                unsafe_allow_html=True
+                            )
+                else:
+                    st.markdown(
+                        '<div style="background:#F0FDF4;border:1px solid #A7F3D0;border-radius:10px;padding:14px 18px;'
+                        'font-size:0.73rem;color:#059669;">✅ No strong co-failure patterns found — parameters are failing independently. '
+                        'This is a healthy sign; single-parameter coaching should be effective.</div>',
+                        unsafe_allow_html=True
+                    )
+            else:
+                st.info("Need at least 4 parameter columns and 5 audit records to compute co-failure patterns.")
+
+            st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+            # ── 2. Score Distribution Histogram ───────────────────────────────
+            st.markdown('<div class="section-chip">📊 Score Distribution Histogram</div>', unsafe_allow_html=True)
+            _hist_bs = pd.to_numeric(_audit_df_ins["Bot Score"], errors="coerce").dropna()
+            if len(_hist_bs) >= 3:
+                _buckets_i6 = [
+                    ("<50",  "#7F1D1D", 0,  50),
+                    ("50–59","#dc2626", 50, 60),
+                    ("60–69","#ef4444", 60, 70),
+                    ("70–79","#d97706", 70, 80),
+                    ("80–89","#16a34a", 80, 90),
+                    ("90–100","#059669",90, 101),
+                ]
+                _hcols = st.columns(6)
+                for _hci, (_hl, _hc, _hlo, _hhi) in enumerate(_buckets_i6):
+                    _cnt = int(((_hist_bs >= _hlo) & (_hist_bs < _hhi)).sum())
+                    _pct = round(_cnt / len(_hist_bs) * 100, 1)
+                    with _hcols[_hci]:
+                        st.markdown(
+                            f'<div style="background:#fff;border:1px solid #E2EAF6;border-top:4px solid {_hc};'
+                            f'border-radius:10px;padding:12px 10px;text-align:center;">'
+                            f'<div style="font-size:1.4rem;font-weight:900;color:{_hc};">{_cnt}</div>'
+                            f'<div style="font-size:0.6rem;font-weight:700;color:#0B1F3A;margin:3px 0;">{_hl}</div>'
+                            f'<div style="font-size:0.63rem;color:#94a3b8;">{_pct}%</div>'
+                            f'</div>',
+                            unsafe_allow_html=True
+                        )
+                _hist_fig = go.Figure()
+                _hist_fig.add_trace(go.Histogram(
+                    x=_hist_bs.tolist(), nbinsx=20, name="Score",
+                    marker=dict(color="#2563EB", line=dict(color="#1D4ED8", width=1)),
+                    opacity=0.85,
+                    hovertemplate="Score %{x}<br>Count: %{y}<extra></extra>",
+                ))
+                _hist_fig.add_vline(x=80, line_dash="dash", line_color="#d97706",
+                                    annotation_text="Target 80%", annotation_position="top right",
+                                    annotation_font=dict(size=10, color="#d97706"))
+                _hist_fig.update_layout(
+                    plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    font=dict(family="Inter,sans-serif", size=11, color="#475569"),
+                    xaxis=dict(title="Bot Score", showgrid=False, range=[0, 105]),
+                    yaxis=dict(title="# Audits", showgrid=True, gridcolor="#F1F5F9"),
+                    margin=dict(l=10, r=10, t=20, b=10), height=260,
+                    bargap=0.08,
+                    hoverlabel=dict(bgcolor="#0B1F3A", font_color="#fff", font_size=11),
+                )
+                st.plotly_chart(_hist_fig, use_container_width=True, config={"displayModeBar": False})
+
+            st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+            # ── 3. Pass-rate Gap by Campaign (vs overall avg) ─────────────────
+            if "Campaign Name" in _audit_df_ins.columns:
+                st.markdown('<div class="section-chip">📉 Campaign Score Gap Analysis</div>', unsafe_allow_html=True)
+                st.markdown(
+                    '<div style="font-size:0.71rem;color:#475569;margin-bottom:10px;">'
+                    'Shows each campaign\'s average score relative to the overall portfolio average. '
+                    'Large negative gaps are priority coaching targets.</div>',
+                    unsafe_allow_html=True
+                )
+                _gap_bs_all = pd.to_numeric(_audit_df_ins["Bot Score"], errors="coerce").dropna()
+                _gap_overall = round(float(_gap_bs_all.mean()), 1) if len(_gap_bs_all) else None
+                if _gap_overall is not None:
+                    _gap_rows = []
+                    for _gcn, _gcg in _audit_df_ins.groupby("Campaign Name"):
+                        _gbs = pd.to_numeric(_gcg["Bot Score"], errors="coerce").dropna()
+                        if len(_gbs) >= 2:
+                            _gavg = round(float(_gbs.mean()), 1)
+                            _gdelta = round(_gavg - _gap_overall, 1)
+                            _gpr = round(int((_gcg["Status"].astype(str).str.strip() == "Pass").sum()) / len(_gcg) * 100, 1) if len(_gcg) else 0
+                            _gap_rows.append({"campaign": str(_gcn), "avg": _gavg, "delta": _gdelta, "n": len(_gcg), "pass_rate": _gpr})
+                    _gap_rows.sort(key=lambda x: x["delta"])
+                    if _gap_rows:
+                        _gap_html = (
+                            f'<div style="font-size:0.6rem;color:#64748b;margin-bottom:10px;">'
+                            f'Portfolio avg: <strong style="color:#0B1F3A;">{_gap_overall}%</strong></div>'
+                        )
+                        for _gr in _gap_rows:
+                            _gclr = "#dc2626" if _gr["delta"] < -5 else "#d97706" if _gr["delta"] < 0 else "#059669"
+                            _gbar_w = min(100, abs(_gr["delta"]) * 5)
+                            _gbar_dir = "right" if _gr["delta"] >= 0 else "left"
+                            _gap_html += (
+                                f'<div style="display:grid;grid-template-columns:180px 1fr 60px 80px 70px;'
+                                f'align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #F1F5F9;">'
+                                f'<div style="font-size:0.71rem;font-weight:600;color:#0B1F3A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{str(_gr["campaign"])[:24]}</div>'
+                                f'<div style="height:10px;background:#F1F5F9;border-radius:5px;overflow:hidden;position:relative;">'
+                                f'<div style="position:absolute;{"right" if _gr["delta"] < 0 else "left"}:50%;width:{_gbar_w/2}%;height:100%;background:{_gclr};border-radius:5px;"></div>'
+                                f'<div style="position:absolute;left:50%;width:1px;height:100%;background:#CBD5E1;"></div>'
+                                f'</div>'
+                                f'<div style="font-size:0.71rem;font-weight:800;color:#0B1F3A;text-align:right;">{_gr["avg"]}%</div>'
+                                f'<div style="font-size:0.71rem;font-weight:800;color:{_gclr};text-align:right;">{("+" if _gr["delta"]>=0 else "")}{_gr["delta"]}pp</div>'
+                                f'<div style="font-size:0.63rem;color:#94a3b8;text-align:right;">{_gr["n"]} audits</div>'
+                                f'</div>'
+                            )
+                        st.markdown(
+                            f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:12px;padding:14px 18px;margin-bottom:1rem;">'
+                            f'{_gap_html}</div>',
+                            unsafe_allow_html=True
+                        )
 
 
 def _render_registry():
