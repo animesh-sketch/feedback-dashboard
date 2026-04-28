@@ -9789,7 +9789,7 @@ def render_convin_sense():
 .stTabs [data-baseweb="tab"] {
     font-size: 0.76rem !important;
     font-weight: 600 !important;
-    color: rgba(148,163,184,0.9) !important;
+    color: rgba(255,255,255,0.85) !important;
     background: transparent !important;
     border: none !important;
     border-radius: 9px !important;
