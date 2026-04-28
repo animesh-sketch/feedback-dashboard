@@ -10535,8 +10535,23 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     _base_tabs.append("📄  Weights")
 
     _HIDDEN_SHEET_KEYWORDS = ("legend", "summary", "dashboard")
+    _SIDEBAR_SHEET_KEYWORDS = ("voice bot audit", "voice bot", "vba")
+
+    # Sheets moved to sidebar Settings
+    _sidebar_sheets = {k: v for k, v in sheets.items()
+                       if any(kw in k.lower() for kw in _SIDEBAR_SHEET_KEYWORDS)}
+    # Sheets shown as tabs (exclude hidden + sidebar sheets)
     _visible_sheets = {k: v for k, v in sheets.items()
-                       if not any(kw in k.lower() for kw in _HIDDEN_SHEET_KEYWORDS)}
+                       if not any(kw in k.lower() for kw in _HIDDEN_SHEET_KEYWORDS)
+                       and k not in _sidebar_sheets}
+
+    # ── Sidebar: Voice Bot Audit sheet(s) ─────────────────────────────────────
+    if _sidebar_sheets:
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("### 📋 Voice Bot Audit")
+        for _sb_name, _sb_df in _sidebar_sheets.items():
+            with st.sidebar.expander(f"📋 {_sb_name}", expanded=False):
+                st.dataframe(_sb_df, use_container_width=True, height=300)
 
     _tab_labels = _base_tabs + [_tab_label(s) for s in _visible_sheets] + ["🗂️  Registry", "🤖  Insights"]
     _tabs = st.tabs(_tab_labels)
