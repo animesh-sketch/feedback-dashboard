@@ -4373,6 +4373,15 @@ _SENSE_BUILTIN_PARAMS = {
         "icon":        "⚡",
         "guide":       "2 = Response within acceptable latency (<500ms)  |  1 = Slight delay (500ms–1s)  |  0 = High latency (>1s) impacted conversation quality",
     },
+    "TTS": {
+        "description": "Text-to-Speech output quality — clarity, naturalness, understandability",
+        "options":     ["0", "1", "2", "NA"],
+        "inverted":    False,
+        "weight":      0.03,
+        "color":       "#7c3aed",
+        "icon":        "🔊",
+        "guide":       "2 = TTS clear, natural & easily understandable  |  1 = Minor mispronunciation or unnatural pause  |  0 = TTS significantly impacted clarity  |  NA = Not applicable / not assessable",
+    },
 }
 _DEFAULT_PARAM_WEIGHT = 1.0   # weight for any legend param not listed above
 
@@ -4481,6 +4490,13 @@ _QA_SCHEMA = {
                     "options": ["0", "1", "2"],
                     "fatal": False,
                     "guide": "2 = Response within acceptable latency (<500ms)  |  1 = Slight delay (500ms–1s)  |  0 = High latency (>1s) impacted conversation quality",
+                },
+                {
+                    "col": "TTS",
+                    "weight": 0.03,
+                    "options": ["0", "1", "2", "NA"],
+                    "fatal": False,
+                    "guide": "2 = TTS clear, natural & easily understandable  |  1 = Minor mispronunciation or unnatural pause  |  0 = TTS significantly impacted clarity  |  NA = Not applicable / not assessable",
                 },
             ],
         },
