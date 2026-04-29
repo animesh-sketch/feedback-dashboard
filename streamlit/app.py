@@ -11542,10 +11542,14 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
 
 def _render_registry():
-    """Registry management — add/edit/delete PMs, CMs, QA, Clients, and Email Contacts."""
+    """Registry management — add/edit/delete PMs, CMs, QA, Clients, Email Contacts, Parameters, and Audits."""
     _registry_init()
     st.markdown('<div class="section-chip">🗂️ Registry Management</div>', unsafe_allow_html=True)
-    _reg_tabs = st.tabs(["👤 PM", "🤖 Bot Name", "🎯 QA", "🏢 Clients", "📧 Email Contacts"])
+    _is_reg_admin = auth.current_user().get("role", "admin") == "admin"
+    _reg_tab_list = ["👤 PM", "🤖 Bot Name", "🎯 QA", "🏢 Clients", "📧 Email Contacts", "⭐ Parameters"]
+    if _is_reg_admin:
+        _reg_tab_list.append("🗑️ Audits")
+    _reg_tabs = st.tabs(_reg_tab_list)
 
     # ── PM Registry ────────────────────────────────────────────────────────────
     with _reg_tabs[0]:
@@ -11817,6 +11821,107 @@ def _render_registry():
                             st.session_state["sense_registry_contacts"] = _contacts
                             _registry_persist()
                             st.rerun()
+
+    # ── Parameters tab ────────────────────────────────────────────────────────
+    _params_tab_idx = 5
+    with _reg_tabs[_params_tab_idx]:
+        _render_param_manager(key_sfx="_reg")
+
+    # ── Audits (Admin) tab ────────────────────────────────────────────────────
+    if _is_reg_admin:
+        with _reg_tabs[6]:
+            _reg_all_audits = audit_store.load()
+            if not _reg_all_audits:
+                st.info("No audits found in the database.")
+            else:
+                _ra_s, _ra_l = st.columns([3, 1])
+                with _ra_s:
+                    _ra_search = st.text_input("🔍 Search (Client, Campaign, QA, Bot)", key="reg_audit_search", placeholder="type to filter…")
+                with _ra_l:
+                    _ra_limit = st.number_input("Show last N", min_value=5, max_value=500, value=30, step=10, key="reg_audit_limit")
+
+                _ra_filtered = _reg_all_audits[:_ra_limit]
+                if _ra_search.strip():
+                    _q = _ra_search.lower()
+                    _ra_filtered = [a for a in _ra_filtered if any(_q in str(a.get(f, "")).lower()
+                                    for f in ["Client", "Campaign Name", "QA", "Bot Name"])]
+
+                st.markdown(f'<div style="font-size:0.72rem;color:#5588bb;margin-bottom:8px;">{len(_ra_filtered)} of {len(_reg_all_audits)} audits shown</div>', unsafe_allow_html=True)
+
+                # Bulk controls
+                _rb1, _rb2, _rb3 = st.columns([2, 2, 2])
+                with _rb1:
+                    if st.button("☑️ Select All", key="reg_audit_sel_all", use_container_width=True):
+                        st.session_state.setdefault("reg_selected_audits", set())
+                        for _a in _ra_filtered:
+                            st.session_state["reg_selected_audits"].add(_a.get("_row_id"))
+                        st.rerun()
+                with _rb2:
+                    if st.button("☐ Deselect All", key="reg_audit_desel_all", use_container_width=True):
+                        st.session_state["reg_selected_audits"] = set()
+                        st.rerun()
+                with _rb3:
+                    _reg_sel = st.session_state.get("reg_selected_audits", set())
+                    if _reg_sel and st.button(f"🗑️ Delete {len(_reg_sel)} selected", key="reg_audit_bulk_del",
+                                              use_container_width=True, type="secondary"):
+                        st.session_state["reg_audit_confirm_bulk"] = True
+
+                if st.session_state.get("reg_audit_confirm_bulk"):
+                    st.warning(f"⚠️ Permanently delete {len(st.session_state.get('reg_selected_audits', set()))} audits? This cannot be undone.")
+                    _rc1, _rc2 = st.columns(2)
+                    with _rc1:
+                        if st.button("✅ Yes, delete", key="reg_audit_bulk_yes", use_container_width=True, type="primary"):
+                            _cnt = 0
+                            for _rid in list(st.session_state.get("reg_selected_audits", set())):
+                                if not audit_store.delete(_rid):
+                                    _cnt += 1
+                            _audit_log_load.clear()
+                            st.session_state["reg_selected_audits"] = set()
+                            st.session_state.pop("reg_audit_confirm_bulk", None)
+                            st.success(f"✅ Deleted {_cnt} audit(s)")
+                            st.rerun()
+                    with _rc2:
+                        if st.button("❌ Cancel", key="reg_audit_bulk_no", use_container_width=True):
+                            st.session_state.pop("reg_audit_confirm_bulk", None)
+                            st.rerun()
+
+                st.markdown("---")
+                st.session_state.setdefault("reg_selected_audits", set())
+
+                for _ra in _ra_filtered:
+                    _ra_id = _ra.get("_row_id")
+                    _rc0, _rc1, _rc2 = st.columns([0.5, 5, 1])
+                    with _rc0:
+                        _checked = _ra_id in st.session_state["reg_selected_audits"]
+                        if st.checkbox("", value=_checked, key=f"reg_ach_{_ra_id}"):
+                            st.session_state["reg_selected_audits"].add(_ra_id)
+                        else:
+                            st.session_state["reg_selected_audits"].discard(_ra_id)
+                    with _rc1:
+                        st.markdown(
+                            f'<div style="font-size:0.78rem;padding:6px 0;color:#0d1d3a;">'
+                            f'<strong>{_ra.get("Client","—")}</strong> · {_ra.get("Campaign Name","—")}<br/>'
+                            f'<span style="font-size:0.70rem;color:#667085;">QA: {_ra.get("QA","—")} | Bot: {_ra.get("Bot Name","—")} | {_ra.get("Audit Date","—")}</span>'
+                            f'</div>', unsafe_allow_html=True)
+                    with _rc2:
+                        if st.button("🗑️", key=f"reg_adel_{_ra_id}", use_container_width=True, help="Delete this audit"):
+                            st.session_state["reg_audit_del_confirm"] = _ra_id
+                        if st.session_state.get("reg_audit_del_confirm") == _ra_id:
+                            _rdy, _rdn = st.columns(2)
+                            with _rdy:
+                                if st.button("Yes", key=f"reg_adel_yes_{_ra_id}", use_container_width=True):
+                                    _e = audit_store.delete(_ra_id)
+                                    if _e:
+                                        st.error(f"Error: {_e}")
+                                    else:
+                                        _audit_log_load.clear()
+                                        st.session_state["reg_selected_audits"].discard(_ra_id)
+                                        st.session_state.pop("reg_audit_del_confirm", None)
+                                        st.rerun()
+                            with _rdn:
+                                if st.button("No", key=f"reg_adel_no_{_ra_id}", use_container_width=True):
+                                    st.session_state.pop("reg_audit_del_confirm", None)
+                                    st.rerun()
 
 
 def _render_param_manager(key_sfx=""):
