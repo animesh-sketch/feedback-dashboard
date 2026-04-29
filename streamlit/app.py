@@ -112,20 +112,19 @@ def _email_font_kwargs():
     }
 
 # Auto-load Gmail credentials from secrets — only on the very first load,
-# Always load from secrets when session state values are missing.
-if not st.session_state.get("gmail_app_password"):
-    try:
-        pw = st.secrets.get("GMAIL_APP_PASSWORD", "")
-    except Exception:
-        pw = ""
-    if pw:
-        st.session_state["gmail_app_password"] = pw.replace(" ", "")
-if not st.session_state.get("user_email"):
-    try:
-        sender = st.secrets.get("GMAIL_SENDER", "")
-    except Exception:
-        sender = ""
-    st.session_state["user_email"] = sender or "convinlabs@convin.ai"
+# Always reload email credentials from secrets on every run (never cache stale passwords).
+try:
+    _pw = st.secrets.get("GMAIL_APP_PASSWORD", "").replace(" ", "")
+except Exception:
+    _pw = ""
+if _pw:
+    st.session_state["gmail_app_password"] = _pw
+
+try:
+    _sender = st.secrets.get("GMAIL_SENDER", "")
+except Exception:
+    _sender = ""
+st.session_state["user_email"] = _sender or "convinlabs@convin.ai"
 
 # ─── Feedback landing page (from email star links) ────────────────────────────
 
@@ -841,36 +840,15 @@ with st.sidebar:
     st.markdown("---")
     auth.render_login_sidebar()
 
-    # ── Gmail settings ──────────────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">Gmail Sender</div>', unsafe_allow_html=True)
-    if st.session_state.get("gmail_app_password"):
+    # ── Gmail status (admin only, config moved to Registry → Admin tab) ──────────
+    if auth.current_user().get("role", "admin") == "admin":
+        st.markdown("---")
+        _gm_ok = bool(st.session_state.get("gmail_app_password"))
         st.markdown(
-            f'<div style="color:#16a34a;font-size:0.75rem;font-weight:600;margin-bottom:6px;">✓ {st.session_state.get("user_email","")}</div>',
+            f'<div style="font-size:0.7rem;font-weight:700;color:#64748b;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:4px;">Email Sender</div>'
+            f'<div style="font-size:0.75rem;font-weight:600;color:{"#16a34a" if _gm_ok else "#dc2626"};">{"✓ " + st.session_state.get("user_email","") if _gm_ok else "⚠ Not configured — set in Registry → Admin"}</div>',
             unsafe_allow_html=True,
         )
-        if st.button("Change", key="gmail_change_btn", use_container_width=True):
-            st.session_state.pop("gmail_app_password", None)
-            st.rerun()
-    else:
-        sb_email = st.text_input(
-            "Google / Gmail Address", value=st.session_state.get("user_email", ""),
-            placeholder="you@gmail.com or you@yourworkspace.com", key="sb_gmail_email", label_visibility="collapsed",
-        )
-        sb_apppw = st.text_input(
-            "App Password", type="password",
-            placeholder="abcd efgh ijkl mnop", key="sb_gmail_pw", label_visibility="collapsed",
-        )
-        st.caption("Need an App Password? [Google Account → Security → App Passwords](https://myaccount.google.com/apppasswords)")
-        if st.button("Connect Gmail", key="sb_gmail_save", type="primary", use_container_width=True):
-            _pw = sb_apppw.replace(" ", "")
-            if "@" in sb_email and len(_pw) >= 16:
-                st.session_state["user_email"]       = sb_email.strip().lower()
-                st.session_state["gmail_app_password"] = _pw
-                st.toast("Gmail connected.", icon="✅")
-                st.rerun()
-            else:
-                st.error("Enter your Google address and the 16-character App Password.")
 
     # ── Custom Parameters Manager ──────────────────────────────────────────────
     st.markdown("---")
@@ -11548,7 +11526,7 @@ def _render_registry():
     _is_reg_admin = auth.current_user().get("role", "admin") == "admin"
     _reg_tab_list = ["👤 PM", "🤖 Bot Name", "🎯 QA", "🏢 Clients", "📧 Email Contacts", "⭐ Parameters"]
     if _is_reg_admin:
-        _reg_tab_list.append("🗑️ Audits")
+        _reg_tab_list += ["🗑️ Audits", "⚙️ Admin"]
     _reg_tabs = st.tabs(_reg_tab_list)
 
     # ── PM Registry ────────────────────────────────────────────────────────────
@@ -11924,6 +11902,49 @@ def _render_registry():
                                 if st.button("No", key=f"reg_adel_no_{_ra_id}", use_container_width=True):
                                     st.session_state.pop("reg_audit_del_confirm", None)
                                     st.rerun()
+
+    # ── Admin tab (email credentials) ─────────────────────────────────────────
+    if _is_reg_admin:
+        with _reg_tabs[7]:
+            st.markdown('<div class="section-chip">⚙️ Admin — Email Configuration</div>', unsafe_allow_html=True)
+
+            # ── Current status ─────────────────────────────────────────────────
+            _adm_email = st.session_state.get("user_email", "")
+            _adm_pw_ok = bool(st.session_state.get("gmail_app_password"))
+            st.markdown(
+                f'<div style="background:{"#f0fdf4" if _adm_pw_ok else "#fef2f2"};border:1px solid {"#bbf7d0" if _adm_pw_ok else "#fecaca"};'
+                f'border-radius:8px;padding:10px 14px;margin-bottom:14px;">'
+                f'<div style="font-size:0.8rem;font-weight:700;color:{"#166534" if _adm_pw_ok else "#991b1b"};">'
+                f'{"✅ Gmail connected — " + _adm_email if _adm_pw_ok else "⚠️ Gmail not configured"}</div>'
+                f'<div style="font-size:0.7rem;color:#64748b;margin-top:3px;">Emails send from this address across CDL and Convin Sense dashboards.</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            # ── Update credentials form ────────────────────────────────────────
+            with st.expander("✏️ Update Gmail Credentials", expanded=not _adm_pw_ok):
+                _adm_c1, _adm_c2 = st.columns(2)
+                with _adm_c1:
+                    _adm_new_email = st.text_input(
+                        "Sender Email", value=_adm_email,
+                        placeholder="convinlabs@convin.ai", key="adm_gmail_email",
+                    )
+                with _adm_c2:
+                    _adm_new_pw = st.text_input(
+                        "App Password", type="password",
+                        placeholder="xxxx xxxx xxxx xxxx", key="adm_gmail_pw",
+                        help="Generate at myaccount.google.com → Security → App Passwords",
+                    )
+                st.caption("📌 App Password ≠ your Google account password. Generate one at [myaccount.google.com → Security → App Passwords](https://myaccount.google.com/apppasswords)")
+                if st.button("💾 Save & Connect", key="adm_gmail_save", type="primary", use_container_width=True):
+                    _np = _adm_new_pw.replace(" ", "")
+                    if "@" in _adm_new_email and len(_np) >= 16:
+                        st.session_state["user_email"] = _adm_new_email.strip().lower()
+                        st.session_state["gmail_app_password"] = _np
+                        st.success(f"✅ Gmail updated — sending from {_adm_new_email.strip().lower()}")
+                        st.rerun()
+                    else:
+                        st.error("Enter a valid email and the 16-character App Password.")
 
 
 def _render_param_manager(key_sfx=""):
