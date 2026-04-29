@@ -12879,7 +12879,7 @@ def _render_legend_page():
             '<div style="display:grid;grid-template-columns:2rem 1fr 0.55fr 0.55fr 2.8fr;'
             'gap:0;padding:8px 16px;background:rgba(61,130,245,0.06);'
             'font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5588bb;">'
-            '<div>#</div><div>Parameter</div><div>Weight</div><div>Scoring</div><div>Definition &amp; Guide</div>'
+            '<div>#</div><div>Parameter</div><div>Legend</div><div>Scoring</div><div>Definition &amp; Guide</div>'
             '</div>'
         )
 
@@ -13696,7 +13696,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
             break
 
     if not sheets:
-        # No file yet — still allow all tabs; Insights uses seed data
+        # No file yet — show empty-state tabs
         _show_new_audit_empty = st.session_state.get("show_new_audit_tab", True)
         st.sidebar.markdown("### ⚙️ Tab Settings")
         _toggle_new_audit_empty = st.sidebar.checkbox("Show ✍️ New Audit Tab", value=_show_new_audit_empty, key="toggle_new_audit_empty")
@@ -13707,7 +13707,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         _empty_tabs = ["📊  Scorecard"]
         if st.session_state.get("show_new_audit_tab", True):
             _empty_tabs.append("✍️  New Audit")
-        _empty_tabs += ["📈  Dashboard", "📄  Weights", "🤖  Insights"]
+        _empty_tabs += ["📈  Dashboard", "📄  Legend"]
 
         _tabs_empty = st.tabs(_empty_tabs)
         _idx = 0
@@ -13727,10 +13727,6 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
 
         with _tabs_empty[_idx]:
             _render_legend_page()
-        _idx += 1
-
-        with _tabs_empty[_idx]:
-            _render_sense_insights(pd.DataFrame(), "Seed Data", {}, legend_map=_legend_map_pre)
         return
 
     # ── File info bar ─────────────────────────────────────────────────────────
@@ -13804,7 +13800,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     _base_tabs = ["📊  Scorecard"]
     if st.session_state.get("show_new_audit_tab", True):
         _base_tabs.append("✍️  New Audit")
-    _base_tabs += ["📈  Dashboard", "📄  Weights"]
+    _base_tabs += ["📈  Dashboard", "📄  Legend"]
 
     _HIDDEN_SHEET_KEYWORDS = ("legend", "summary", "dashboard", "weights", "weight")
     _SIDEBAR_SHEET_KEYWORDS = ("voice bot audit", "voice bot", "vba")
@@ -13825,7 +13821,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
             with st.sidebar.expander(f"📋 {_sb_name}", expanded=False):
                 st.dataframe(_sb_df, use_container_width=True, height=300)
 
-    _tab_labels = _base_tabs + [_tab_label(s) for s in _visible_sheets] + ["🗂️  Registry", "🤖  Insights"]
+    _tab_labels = _base_tabs + [_tab_label(s) for s in _visible_sheets] + ["🗂️  Registry"]
     _tabs = st.tabs(_tab_labels)
 
     _tab_idx = 0
@@ -13862,13 +13858,6 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     _registry_idx = _tab_idx + len(_visible_sheets)
     with _tabs[_registry_idx]:
         _render_registry()
-
-    with _tabs[_registry_idx + 1]:
-        _pdf = next(
-            (v for k, v in sheets.items() if any(kw in k.lower() for kw in ("audit","qa","review","score"))),
-            next(iter(sheets.values())) if sheets else pd.DataFrame()
-        )
-        _render_sense_insights(_pdf, fname, sheets, legend_map=_legend_map)
 
 
 if not st.session_state["show_sidebar"]:
