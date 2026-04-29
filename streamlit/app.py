@@ -13704,17 +13704,13 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
             st.session_state["show_new_audit_tab"] = _toggle_new_audit_empty
             st.rerun()
 
-        _empty_tabs = ["📊  Scorecard"]
+        _empty_tabs = []
         if st.session_state.get("show_new_audit_tab", True):
             _empty_tabs.append("✍️  New Audit")
         _empty_tabs += ["📈  Dashboard", "📄  Legend"]
 
         _tabs_empty = st.tabs(_empty_tabs)
         _idx = 0
-
-        with _tabs_empty[_idx]:
-            _render_sense_scorecard({}, {})
-        _idx += 1
 
         if st.session_state.get("show_new_audit_tab", True):
             with _tabs_empty[_idx]:
@@ -13790,14 +13786,14 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
         st.session_state["show_new_audit_tab"] = _toggle_new_audit
         st.rerun()
 
-    # ── Dynamic tabs: Scorecard, New Audit, one per sheet, AI Insights ───────
+    # ── Dynamic tabs: New Audit, one per sheet, Registry ─────────────────────
     def _tab_label(name):
         icon = _sheet_icon(name)
         lock = " 🔒" if _is_protected_sheet(name) else ""
         return f"{icon}  {name}{lock}"
 
     # Build tab list based on settings
-    _base_tabs = ["📊  Scorecard"]
+    _base_tabs = []
     if st.session_state.get("show_new_audit_tab", True):
         _base_tabs.append("✍️  New Audit")
     _base_tabs += ["📈  Dashboard", "📄  Legend"]
@@ -13825,15 +13821,6 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     _tabs = st.tabs(_tab_labels)
 
     _tab_idx = 0
-
-    with _tabs[_tab_idx]:
-        _sc_col1, _sc_col2 = st.columns([10, 1])
-        with _sc_col2:
-            if st.button("🔄", help="Refresh audit data", key="scorecard_refresh"):
-                _audit_log_load.clear()
-                st.rerun()
-        _render_sense_scorecard(sheets, _legend_map)
-    _tab_idx += 1
 
     # ── New Audit tab (conditional) ────────────────────────────────────────────
     if st.session_state.get("show_new_audit_tab", True):
