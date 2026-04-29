@@ -11898,9 +11898,11 @@ def _render_registry():
                         else:
                             st.session_state["reg_selected_audits"].discard(_ra_id)
                     with _rc1:
+                        _ra_lead = _ra.get("Lead Number") or _ra.get("Phone Number") or "—"
                         st.markdown(
                             f'<div style="font-size:0.78rem;padding:6px 0;color:#0d1d3a;">'
-                            f'<strong>{_ra.get("Client","—")}</strong> · {_ra.get("Campaign Name","—")}<br/>'
+                            f'<strong>{_ra.get("Client","—")}</strong> · {_ra.get("Campaign Name","—")}'
+                            f' · <span style="color:#2563EB;font-weight:700;">#{_ra_lead}</span><br/>'
                             f'<span style="font-size:0.70rem;color:#667085;">QA: {_ra.get("QA","—")} | Bot: {_ra.get("Bot Name","—")} | {_ra.get("Audit Date","—")}</span>'
                             f'</div>', unsafe_allow_html=True)
                     with _rc2:
