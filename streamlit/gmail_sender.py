@@ -66,16 +66,15 @@ def _resend_post(resend_key: str, from_str: str, to_emails: list,
 
 def _send_via_resend(resend_key: str, from_addr: str, to_emails: list,
                      subject: str, html_body: str) -> dict:
-    """Try custom domain first, fall back to onboarding@resend.dev."""
+    """Try custom domain first; on 403/422 domain error fall back to onboarding@resend.dev."""
     result = _resend_post(resend_key,
                           f"Convin Data Labs <{from_addr}>",
                           to_emails, subject, html_body)
     if not result.get("failed"):
         return result
 
-    # If domain not verified (422) retry with Resend's default sender
     errs = " ".join(f.get("error", "") for f in result["failed"])
-    if "422" in errs or "domain" in errs.lower() or "not verified" in errs.lower():
+    if "403" in errs or "422" in errs or "domain" in errs.lower() or "not verified" in errs.lower():
         return _resend_post(resend_key,
                             "Convin Data Labs <onboarding@resend.dev>",
                             to_emails, subject, html_body)
