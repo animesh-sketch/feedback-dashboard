@@ -16,6 +16,9 @@ from email.mime.text import MIMEText
 
 import streamlit as st
 
+# Domains that returned 403 (unverified) — skip on subsequent calls to avoid double round-trip
+_UNVERIFIED_DOMAINS: set = set()
+
 
 def _get_secret(key: str, default: str = "") -> str:
     try:
@@ -52,7 +55,7 @@ def _resend_post(resend_key: str, from_str: str, to_emails: list,
                          "Content-Type": "application/json"},
                 json={"from": from_str, "to": [addr],
                       "subject": subject, "html": html_body},
-                timeout=15,
+                timeout=8,
             )
             if resp.status_code in (200, 201):
                 sent.append(addr)
@@ -64,21 +67,36 @@ def _resend_post(resend_key: str, from_str: str, to_emails: list,
     return {"sent": sent, "failed": failed}
 
 
+def _domain_of(addr: str) -> str:
+    try:
+        return addr.split("@")[1].lower()
+    except Exception:
+        return ""
+
+
 def _send_via_resend(resend_key: str, from_addr: str, to_emails: list,
                      subject: str, html_body: str) -> dict:
-    """Try custom domain first; on 403/422 domain error fall back to onboarding@resend.dev."""
-    result = _resend_post(resend_key,
-                          f"Convin Data Labs <{from_addr}>",
-                          to_emails, subject, html_body)
-    if not result.get("failed"):
-        return result
+    """Send via Resend. Skips custom domain if previously unverified; falls back to onboarding@resend.dev."""
+    domain = _domain_of(from_addr)
 
-    errs = " ".join(f.get("error", "") for f in result["failed"])
-    if "403" in errs or "422" in errs or "domain" in errs.lower() or "not verified" in errs.lower():
-        return _resend_post(resend_key,
-                            "Convin Data Labs <onboarding@resend.dev>",
-                            to_emails, subject, html_body)
-    return result
+    # If domain already known to be unverified, go straight to fallback
+    if domain not in _UNVERIFIED_DOMAINS:
+        result = _resend_post(resend_key,
+                              f"Convin Data Labs <{from_addr}>",
+                              to_emails, subject, html_body)
+        if not result.get("failed"):
+            return result
+
+        errs = " ".join(f.get("error", "") for f in result["failed"])
+        if "403" in errs or "422" in errs or "domain" in errs.lower() or "not verified" in errs.lower():
+            _UNVERIFIED_DOMAINS.add(domain)  # remember — skip next time
+        else:
+            return result
+
+    # Fallback: Resend's verified default sender
+    return _resend_post(resend_key,
+                        "Convin Data Labs <onboarding@resend.dev>",
+                        to_emails, subject, html_body)
 
 
 def _send_via_gmail(gmail_user: str, app_password: str, to_emails: list,
@@ -171,17 +189,17 @@ def send_report_email(
             results["failed"].extend(r.get("failed", []))
         return results
 
-    # ── Try Resend (preferred — no App Password needed) ──────────────────────
-    if resend_key:
-        return _send_via_resend(resend_key, from_addr, to_emails,
-                                subject, html_body)
-
-    # ── Fall back to Gmail SMTP ───────────────────────────────────────────────
+    # ── Try Gmail SMTP first (works for any recipient) ───────────────────────
     if app_password:
         return _send_via_gmail(from_addr, app_password, to_emails,
                                subject, html_body, attachment_name, attachment_data)
 
+    # ── Fall back to Resend (requires verified domain for non-owner recipients) ──
+    if resend_key:
+        return _send_via_resend(resend_key, from_addr, to_emails,
+                                subject, html_body)
+
     return {"sent": [], "failed": [{"email": "config", "error": (
         "No email provider configured. "
-        "Add RESEND_API_KEY to Streamlit secrets."
+        "Add GMAIL_APP_PASSWORD or RESEND_API_KEY to Streamlit secrets."
     )}]}
