@@ -4759,25 +4759,28 @@ def _registry_init():
     _default_qas = ["Animesh", "Navya", "Shubham Sharma", "Nora", "Alan", "Priya", "Raj", "Sara", "Mike", "Lisa"]
     _default_clients = [{"client": r["client"], "pm": r["pm"], "cm": "", "status": r["status"]} for r in _SENSE_CLIENTS]
     if _saved:
-        st.session_state.setdefault("sense_registry_pms",     _saved.get("pms",     _default_pms))
-        st.session_state.setdefault("sense_registry_cms",     _saved.get("cms",     _default_cms))
-        st.session_state.setdefault("sense_registry_qas",     _saved.get("qas",     _default_qas))
-        st.session_state.setdefault("sense_registry_clients", _saved.get("clients", _default_clients))
+        st.session_state.setdefault("sense_registry_pms",      _saved.get("pms",      _default_pms))
+        st.session_state.setdefault("sense_registry_cms",      _saved.get("cms",      _default_cms))
+        st.session_state.setdefault("sense_registry_qas",      _saved.get("qas",      _default_qas))
+        st.session_state.setdefault("sense_registry_clients",  _saved.get("clients",  _default_clients))
+        st.session_state.setdefault("sense_registry_contacts", _saved.get("contacts", []))
     else:
-        st.session_state.setdefault("sense_registry_pms",     _default_pms)
-        st.session_state.setdefault("sense_registry_cms",     _default_cms)
-        st.session_state.setdefault("sense_registry_qas",     _default_qas)
-        st.session_state.setdefault("sense_registry_clients", _default_clients)
+        st.session_state.setdefault("sense_registry_pms",      _default_pms)
+        st.session_state.setdefault("sense_registry_cms",      _default_cms)
+        st.session_state.setdefault("sense_registry_qas",      _default_qas)
+        st.session_state.setdefault("sense_registry_clients",  _default_clients)
+        st.session_state.setdefault("sense_registry_contacts", [])
     st.session_state["_registry_initialized"] = True
 
 def _registry_persist():
     """Write current session state registry to disk."""
     _registry_save({
         "_version": _REGISTRY_VERSION,
-        "pms":     st.session_state.get("sense_registry_pms", []),
-        "cms":     st.session_state.get("sense_registry_cms", []),
-        "qas":     st.session_state.get("sense_registry_qas", []),
-        "clients": st.session_state.get("sense_registry_clients", []),
+        "pms":      st.session_state.get("sense_registry_pms", []),
+        "cms":      st.session_state.get("sense_registry_cms", []),
+        "qas":      st.session_state.get("sense_registry_qas", []),
+        "clients":  st.session_state.get("sense_registry_clients", []),
+        "contacts": st.session_state.get("sense_registry_contacts", []),
     })
 
 
@@ -11152,7 +11155,22 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
             _em_c1, _em_c2, _em_c3, _em_c4 = st.columns([3, 2, 1, 1])
             with _em_c1:
-                _em_to = st.text_input("Recipient email(s)", placeholder="email1@co.com, email2@co.com", key="dbem_to")
+                _registry_init()
+                _saved_contacts = st.session_state.get("sense_registry_contacts", [])
+                _contact_opts   = [f'{c["name"]} <{c["email"]}>' for c in _saved_contacts]
+                _em_sel_contacts = st.multiselect(
+                    "Recipients",
+                    options=_contact_opts,
+                    default=[],
+                    placeholder="Select saved contacts…",
+                    key="dbem_sel_contacts",
+                )
+                _em_to_extra = st.text_input(
+                    "Additional emails (comma-separated)",
+                    placeholder="other@co.com",
+                    key="dbem_to",
+                    label_visibility="collapsed" if _contact_opts else "visible",
+                )
             with _em_c2:
                 _em_subj = st.text_input("Subject",
                     value=f"{_em_client} — Dashboard Report · {pd.Timestamp.now().strftime('%b %d, %Y')}",
@@ -11208,31 +11226,41 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
     </div>"""
 
             if _em_send_btn:
+                # collect emails from saved-contact multiselect
+                _to_list_em = []
+                for _opt in _em_sel_contacts:
+                    # format: "Name <email@x.com>"
+                    import re as _re_em
+                    _m = _re_em.search(r"<([^>]+)>", _opt)
+                    if _m:
+                        _to_list_em.append(_m.group(1).strip())
+                # add any freeform entries
+                for _e in _em_to_extra.replace(";", ",").split(","):
+                    _e = _e.strip()
+                    if _e and "@" in _e:
+                        _to_list_em.append(_e)
+                _to_list_em = list(dict.fromkeys(_to_list_em))  # deduplicate preserving order
                 if not _sel_sections_c:
                     st.warning("No sections selected — tick at least one above.")
-                elif not _em_to.strip():
-                    st.warning("Enter at least one recipient email.")
+                elif not _to_list_em:
+                    st.warning("Select at least one contact or enter a recipient email.")
                 else:
-                    _to_list_em = [e.strip() for e in _em_to.replace(";", ",").split(",") if e.strip() and "@" in e]
-                    if not _to_list_em:
-                        st.error("No valid email addresses found.")
-                    else:
-                        _full_em_html = _build_dashboard_email_html(_sel_sections_c, _em_client)
-                        try:
-                            import gmail_sender as _gs_em
-                            _em_result = _gs_em.send_report_email(
-                                credentials_dict={},
-                                to_emails=_to_list_em,
-                                subject=_em_subj,
-                                html_body=_full_em_html,
-                                from_email=st.session_state.get("user_email", "convinlabs@convin.ai"),
-                            )
-                            if _em_result.get("sent"):
-                                st.success(f"✅ Sent to: {', '.join(_em_result['sent'])}  ({len(_sel_sections_c)} sections)")
-                            for _sf_em in _em_result.get("failed", []):
-                                st.error(f"Failed → {_sf_em.get('email','?')}: {_sf_em.get('error','')}")
-                        except Exception as _em_exc:
-                            st.error(f"Send error: {_em_exc}")
+                    _full_em_html = _build_dashboard_email_html(_sel_sections_c, _em_client)
+                    try:
+                        import gmail_sender as _gs_em
+                        _em_result = _gs_em.send_report_email(
+                            credentials_dict={},
+                            to_emails=_to_list_em,
+                            subject=_em_subj,
+                            html_body=_full_em_html,
+                            from_email=st.session_state.get("user_email", "convinlabs@convin.ai"),
+                        )
+                        if _em_result.get("sent"):
+                            st.success(f"✅ Sent to: {', '.join(_em_result['sent'])}  ({len(_sel_sections_c)} sections)")
+                        for _sf_em in _em_result.get("failed", []):
+                            st.error(f"Failed → {_sf_em.get('email','?')}: {_sf_em.get('error','')}")
+                    except Exception as _em_exc:
+                        st.error(f"Send error: {_em_exc}")
 
             if st.session_state.get("dbem_show_prev", False):
                 _prev_secs_c = _sel_sections_c if _sel_sections_c else [s for s in _ALL_SECTIONS if s["default"]]
@@ -11514,10 +11542,10 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
 
 def _render_registry():
-    """Registry management — add/edit/delete PMs, CMs, QA, and Clients."""
+    """Registry management — add/edit/delete PMs, CMs, QA, Clients, and Email Contacts."""
     _registry_init()
     st.markdown('<div class="section-chip">🗂️ Registry Management</div>', unsafe_allow_html=True)
-    _reg_tabs = st.tabs(["👤 PM", "🤖 Bot Name", "🎯 QA", "🏢 Clients"])
+    _reg_tabs = st.tabs(["👤 PM", "🤖 Bot Name", "🎯 QA", "🏢 Clients", "📧 Email Contacts"])
 
     # ── PM Registry ────────────────────────────────────────────────────────────
     with _reg_tabs[0]:
@@ -11715,7 +11743,80 @@ def _render_registry():
                     _registry_persist()
                     st.rerun()
 
+    # ── Email Contacts Registry ────────────────────────────────────────────────
+    with _reg_tabs[4]:
+        _contacts = st.session_state.get("sense_registry_contacts", [])
+        st.markdown(
+            f'<div style="font-size:0.72rem;color:#5588bb;margin-bottom:8px;">'
+            f'{len(_contacts)} contact{"s" if len(_contacts) != 1 else ""} saved · select from Email Builder to send reports</div>',
+            unsafe_allow_html=True,
+        )
+        if _contacts:
+            _ct_html = ""
+            for _ct in _contacts:
+                _ct_html += (
+                    f'<div style="display:flex;align-items:center;gap:10px;padding:6px 12px;border-bottom:1px solid #edf2fb;">'
+                    f'<span style="font-size:0.76rem;font-weight:700;color:#0d1d3a;min-width:120px;">{_ct.get("name","")}</span>'
+                    f'<span style="font-size:0.74rem;color:#2563EB;">{_ct.get("email","")}</span>'
+                    f'</div>'
+                )
+            st.markdown(
+                f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:8px;margin-bottom:12px;">{_ct_html}</div>',
+                unsafe_allow_html=True,
+            )
 
+        with st.expander("➕ Add Contact", expanded=len(_contacts) == 0):
+            _ctc1, _ctc2, _ctc3 = st.columns([2, 3, 1])
+            with _ctc1:
+                _new_ct_name = st.text_input("Name", placeholder="e.g. Rahul Gupta", key="reg_new_ct_name")
+            with _ctc2:
+                _new_ct_email = st.text_input("Email address", placeholder="rahul@company.com", key="reg_new_ct_email")
+            with _ctc3:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                if st.button("Add", key="reg_add_ct", use_container_width=True, type="primary"):
+                    _ne = _new_ct_email.strip().lower()
+                    _nn = _new_ct_name.strip()
+                    if _ne and "@" in _ne:
+                        _existing_emails = [c["email"].lower() for c in _contacts]
+                        if _ne not in _existing_emails:
+                            _contacts.append({"name": _nn or _ne.split("@")[0].title(), "email": _ne})
+                            _contacts.sort(key=lambda x: x["name"].lower())
+                            st.session_state["sense_registry_contacts"] = _contacts
+                            _registry_persist()
+                            st.rerun()
+                        else:
+                            st.warning("This email is already saved.")
+                    else:
+                        st.warning("Enter a valid email address.")
+
+        if _contacts:
+            with st.expander("✏️ Edit / 🗑️ Delete Contact", expanded=False):
+                _ct_opts = [f'{c["name"]} <{c["email"]}>' for c in _contacts]
+                _ct_sel = st.selectbox("Select contact", ["— select —"] + _ct_opts, key="reg_sel_ct")
+                if _ct_sel != "— select —":
+                    _ct_idx = _ct_opts.index(_ct_sel)
+                    _ct_entry = _contacts[_ct_idx]
+                    _ctec1, _ctec2 = st.columns(2)
+                    with _ctec1:
+                        _edit_ct_name = st.text_input("Name", value=_ct_entry["name"], key="reg_edit_ct_name")
+                    with _ctec2:
+                        _edit_ct_email = st.text_input("Email", value=_ct_entry["email"], key="reg_edit_ct_email")
+                    _cte_s, _cte_d = st.columns(2)
+                    with _cte_s:
+                        if st.button("💾 Save", key="reg_edit_ct_save", use_container_width=True, type="primary"):
+                            _ne = _edit_ct_email.strip().lower()
+                            if _ne and "@" in _ne:
+                                _contacts[_ct_idx] = {"name": _edit_ct_name.strip() or _ne.split("@")[0].title(), "email": _ne}
+                                _contacts.sort(key=lambda x: x["name"].lower())
+                                st.session_state["sense_registry_contacts"] = _contacts
+                                _registry_persist()
+                                st.rerun()
+                    with _cte_d:
+                        if st.button("🗑️ Delete", key="reg_del_ct_btn", use_container_width=True, type="secondary"):
+                            _contacts.pop(_ct_idx)
+                            st.session_state["sense_registry_contacts"] = _contacts
+                            _registry_persist()
+                            st.rerun()
 
 
 def _render_param_manager(key_sfx=""):
