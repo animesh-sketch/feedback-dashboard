@@ -6279,7 +6279,8 @@ def _render_sense_scorecard(sheets, legend_map):
         if cp["name"] in audit_df.columns
     ]
     if _custom_params_in_data:
-        with st.expander("⭐ Custom Parameters Analysis", expanded=True):
+        st.markdown('<div class="section-chip">⭐ Custom Parameters Analysis</div>', unsafe_allow_html=True)
+        with st.container():
             try:
                 _cp_cols = st.columns(min(len(_custom_params_in_data), 3))
                 for _cpi, _cp in enumerate(_custom_params_in_data):
