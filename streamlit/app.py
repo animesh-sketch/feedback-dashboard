@@ -10622,6 +10622,108 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             except Exception:
                 pass
 
+        # ── Section 14a — Custom Parameters Analysis ──────────────────────────────
+        if "sense_custom_audit_params" not in st.session_state:
+            st.session_state["sense_custom_audit_params"] = param_store.load()
+        _dash_cps = [
+            cp for cp in st.session_state["sense_custom_audit_params"]
+            if cp["name"] in _dash_df.columns
+        ]
+        if _dash_cps:
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+            st.markdown('<div class="section-chip">⭐ Custom Parameters</div>', unsafe_allow_html=True)
+            try:
+                _dcp_cols = st.columns(min(len(_dash_cps), 3))
+                for _dcpi, _dcp in enumerate(_dash_cps):
+                    with _dcp_cols[_dcpi % len(_dcp_cols)]:
+                        _dcpv = _dash_df[_dcp["name"]].replace("", None).dropna().astype(str).str.strip()
+                        _dcpv = _dcpv[_dcpv.str.lower() != "nan"]
+                        _dyes = int((_dcpv.str.lower() == "yes").sum())
+                        _dno  = int((_dcpv.str.lower() == "no").sum())
+                        _dna  = int((_dcpv.str.lower() == "na").sum())
+                        _dtot = len(_dcpv)
+                        _dyes_pct = round(_dyes / _dtot * 100, 1) if _dtot else 0
+                        _dno_pct  = round(_dno  / _dtot * 100, 1) if _dtot else 0
+                        st.markdown(
+                            f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:14px 16px;margin-bottom:8px;">'
+                            f'<div style="font-size:0.68rem;font-weight:700;color:#0ebc6e;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">⭐ {_dcp["name"]}</div>'
+                            f'<div style="display:flex;gap:8px;margin-bottom:10px;">'
+                            f'<div style="flex:1;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:8px;text-align:center;">'
+                            f'<div style="font-size:1.4rem;font-weight:900;color:#0ebc6e;">{_dyes}</div>'
+                            f'<div style="font-size:0.62rem;color:#059669;font-weight:700;">Yes</div>'
+                            f'<div style="font-size:0.62rem;color:#5588bb;">{_dyes_pct}%</div>'
+                            f'</div>'
+                            f'<div style="flex:1;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px;text-align:center;">'
+                            f'<div style="font-size:1.4rem;font-weight:900;color:#dc2626;">{_dno}</div>'
+                            f'<div style="font-size:0.62rem;color:#dc2626;font-weight:700;">No</div>'
+                            f'<div style="font-size:0.62rem;color:#5588bb;">{_dno_pct}%</div>'
+                            f'</div>'
+                            f'<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;text-align:center;">'
+                            f'<div style="font-size:1.4rem;font-weight:900;color:#94a3b8;">{_dna}</div>'
+                            f'<div style="font-size:0.62rem;color:#94a3b8;font-weight:700;">NA</div>'
+                            f'</div>'
+                            f'</div>'
+                            f'<div style="height:6px;background:#f0f2f5;border-radius:3px;overflow:hidden;display:flex;">'
+                            f'<div style="width:{_dyes_pct}%;background:#0ebc6e;"></div>'
+                            f'<div style="width:{_dno_pct}%;background:#dc2626;"></div>'
+                            f'</div>'
+                            f'<div style="font-size:0.62rem;color:#5588bb;margin-top:6px;">{_dtot} responses</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+            except Exception:
+                pass
+
+            # ── Insights + Action Items ────────────────────────────────────────
+            _dcp_qi = _gen_custom_param_insights(_dash_df, _dash_cps)
+            _dcp_ins  = _dcp_qi.get("insights", [])
+            _dcp_acts = _dcp_qi.get("actions", [])
+            if _dcp_ins or _dcp_acts:
+                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+                _dcp_ic, _dcp_ac = st.columns([3, 2])
+                _TCFG = {
+                    "critical": ("#fff1f2", "#e11d48", "#9f1239", "#fecdd3"),
+                    "warning":  ("#fffbf0", "#d97706", "#92400e", "#fde68a"),
+                    "success":  ("#ecfdf5", "#059669", "#064e3b", "#a7f3d0"),
+                    "info":     ("#eef2ff", "#4f46e5", "#312e81", "#c7d2fe"),
+                }
+                with _dcp_ic:
+                    st.markdown('<div class="section-chip">💡 Key Insights</div>', unsafe_allow_html=True)
+                    for _di in _dcp_ins:
+                        _dtc = _TCFG.get(_di["type"], _TCFG["info"])
+                        st.markdown(
+                            f'<div style="background:{_dtc[0]};border:1px solid {_dtc[3]};'
+                            f'border-left:4px solid {_dtc[1]};border-radius:10px;'
+                            f'padding:12px 16px;margin-bottom:8px;">'
+                            f'<div style="font-size:0.78rem;font-weight:700;color:{_dtc[2]};margin-bottom:4px;">{_di["title"]}</div>'
+                            f'<div style="font-size:0.72rem;color:{_dtc[2]};opacity:0.85;line-height:1.5;">{_di["detail"]}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+                with _dcp_ac:
+                    st.markdown('<div class="section-chip">🎯 Action Items</div>', unsafe_allow_html=True)
+                    _PCFG = {
+                        "high":   ("#dc2626", "🔴", "#fef2f2"),
+                        "medium": ("#f59e0b", "🟡", "#fffbeb"),
+                        "low":    ("#16a34a", "🟢", "#f0fdf4"),
+                    }
+                    for _da in _dcp_acts:
+                        _dpc = _PCFG.get(_da["priority"], _PCFG["low"])
+                        st.markdown(
+                            f'<div style="background:{_dpc[2]};border:1px solid {_dpc[0]}33;'
+                            f'border-radius:10px;padding:12px 15px;margin-bottom:8px;">'
+                            f'<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">'
+                            f'<span style="font-size:0.75rem;">{_dpc[1]}</span>'
+                            f'<span style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;'
+                            f'text-transform:uppercase;color:{_dpc[0]};">{_da["priority"].upper()} · {_da["category"]}</span>'
+                            f'</div>'
+                            f'<div style="font-size:0.73rem;font-weight:600;color:#0d1d3a;margin-bottom:5px;line-height:1.4;">{_da["action"]}</div>'
+                            f'<div style="font-size:0.65rem;color:#5588bb;line-height:1.4;border-top:1px solid {_dpc[0]}22;padding-top:5px;">'
+                            f'Impact: {_da["impact"]}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+
 
     with _tab_email:
         # ── Section 14 — Full Dashboard Email Builder (all panels tick/untick) ────
