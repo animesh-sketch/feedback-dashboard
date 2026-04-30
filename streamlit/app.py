@@ -5106,6 +5106,89 @@ def _gen_qa_insights(audit_df):
     return {"insights": insights, "actions": actions}
 
 
+def _gen_custom_param_insights(audit_df, custom_params):
+    """Rule-based insights + action items for custom audit parameters."""
+    insights, actions = [], []
+    if audit_df is None or audit_df.empty or not custom_params:
+        return {"insights": insights, "actions": actions}
+
+    stats = []
+    for cp in custom_params:
+        col = cp["name"]
+        if col not in audit_df.columns:
+            continue
+        cpv = audit_df[col].replace("", None).dropna().astype(str).str.strip()
+        cpv = cpv[cpv.str.lower() != "nan"]
+        tot = len(cpv)
+        if tot == 0:
+            continue
+        yes = int((cpv.str.lower() == "yes").sum())
+        no  = int((cpv.str.lower() == "no").sum())
+        na  = int((cpv.str.lower() == "na").sum())
+        yes_pct = round(yes / tot * 100, 1)
+        no_pct  = round(no  / tot * 100, 1)
+        na_pct  = round(na  / tot * 100, 1)
+        stats.append({"name": col, "tot": tot, "yes": yes, "no": no, "na": na,
+                      "yes_pct": yes_pct, "no_pct": no_pct, "na_pct": na_pct})
+
+    if not stats:
+        return {"insights": insights, "actions": actions}
+
+    # Overall compliance
+    total_yes = sum(s["yes"] for s in stats)
+    total_ans = sum(s["yes"] + s["no"] for s in stats)
+    overall_pct = round(total_yes / total_ans * 100, 1) if total_ans else 0
+    if overall_pct >= 80:
+        insights.append({"type": "success",
+            "title": f"✅ Strong Custom-Param Compliance: {overall_pct}%",
+            "detail": f"{total_yes} of {total_ans} responses across {len(stats)} parameter(s) were marked Yes — above the 80% benchmark."})
+    elif overall_pct >= 60:
+        insights.append({"type": "warning",
+            "title": f"⚠️ Moderate Compliance: {overall_pct}%",
+            "detail": f"{total_yes} of {total_ans} responses across {len(stats)} parameter(s) marked Yes. Some parameters need attention."})
+    else:
+        insights.append({"type": "critical",
+            "title": f"🚨 Low Compliance: {overall_pct}%",
+            "detail": f"Only {total_yes} of {total_ans} responses marked Yes across {len(stats)} parameter(s). Immediate coaching action required."})
+
+    # Per-parameter: critical failures
+    for s in sorted(stats, key=lambda x: x["no_pct"], reverse=True):
+        if s["no_pct"] >= 50:
+            insights.append({"type": "critical",
+                "title": f"🚨 '{s['name']}' Failing: {s['no_pct']}% No",
+                "detail": f"{s['no']} of {s['tot']} responses marked No. This parameter is failing in more than half of audited calls."})
+            actions.append({"priority": "high", "category": "Compliance",
+                "action": f"Investigate root cause for '{s['name']}' failures — review call recordings flagged No and identify training gaps",
+                "impact": f"Fixing '{s['name']}' would move {s['no']} calls ({s['no_pct']}%) from non-compliant to compliant."})
+        elif s["no_pct"] >= 30:
+            insights.append({"type": "warning",
+                "title": f"⚠️ '{s['name']}' Needs Attention: {s['no_pct']}% No",
+                "detail": f"{s['no']} of {s['tot']} responses marked No — above the 30% warning threshold."})
+            actions.append({"priority": "medium", "category": "Coaching",
+                "action": f"Schedule targeted coaching on '{s['name']}' — focus on agents with repeated No marks",
+                "impact": f"Reducing '{s['name']}' No rate to <20% would improve overall compliance by {round((s['no_pct']-20)*s['tot']/total_ans, 1)}pp."})
+
+    # Per-parameter: top performers
+    top = [s for s in stats if s["yes_pct"] >= 85]
+    if top:
+        names = ", ".join(f"'{s['name']}'" for s in top[:3])
+        insights.append({"type": "success",
+            "title": f"🏆 Top-Performing Parameter{'s' if len(top) > 1 else ''}: {', '.join(s['name'] for s in top[:3])}",
+            "detail": f"{names} {'are' if len(top) > 1 else 'is'} scoring above 85% — use these as benchmarks in team coaching."})
+
+    # High NA rate warning
+    high_na = [s for s in stats if s["na_pct"] >= 20]
+    for s in high_na:
+        insights.append({"type": "info",
+            "title": f"ℹ️ High NA Rate for '{s['name']}': {s['na_pct']}%",
+            "detail": f"{s['na']} responses marked NA — this may indicate the parameter is not applicable to many call types, or auditors are skipping it."})
+        actions.append({"priority": "low", "category": "Process",
+            "action": f"Clarify NA criteria for '{s['name']}' with the audit team to reduce ambiguity",
+            "impact": "Reducing NA usage gives a cleaner compliance signal."})
+
+    return {"insights": insights, "actions": actions}
+
+
 def _gen_call_insights(audit_df):
     """Call-performance focused insights — about the calls, not the auditors."""
     insights, actions = [], []
@@ -6247,6 +6330,56 @@ def _render_sense_scorecard(sheets, legend_map):
                             )
             except Exception:
                 pass
+
+            # ── Key Insights + Action Items ────────────────────────────────
+            _cp_qi = _gen_custom_param_insights(audit_df, _custom_params_in_data)
+            _cp_ins  = _cp_qi.get("insights", [])
+            _cp_acts = _cp_qi.get("actions", [])
+            if _cp_ins or _cp_acts:
+                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+                _cp_ins_cols = st.columns([3, 2])
+                _TYPE_CFG_CP = {
+                    "critical": ("#fff1f2", "#e11d48", "#9f1239", "#fecdd3"),
+                    "warning":  ("#fffbf0", "#d97706", "#92400e", "#fde68a"),
+                    "success":  ("#ecfdf5", "#059669", "#064e3b", "#a7f3d0"),
+                    "info":     ("#eef2ff", "#4f46e5", "#312e81", "#c7d2fe"),
+                }
+                with _cp_ins_cols[0]:
+                    st.markdown('<div class="section-chip">💡 Key Insights</div>', unsafe_allow_html=True)
+                    for _cpi2 in _cp_ins:
+                        _tc2 = _TYPE_CFG_CP.get(_cpi2["type"], _TYPE_CFG_CP["info"])
+                        st.markdown(
+                            f'<div style="background:{_tc2[0]};border:1px solid {_tc2[3]};'
+                            f'border-left:4px solid {_tc2[1]};border-radius:10px;'
+                            f'padding:12px 16px;margin-bottom:8px;">'
+                            f'<div style="font-size:0.78rem;font-weight:700;color:{_tc2[2]};margin-bottom:4px;">{_cpi2["title"]}</div>'
+                            f'<div style="font-size:0.72rem;color:{_tc2[2]};opacity:0.85;line-height:1.5;">{_cpi2["detail"]}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+                with _cp_ins_cols[1]:
+                    st.markdown('<div class="section-chip">🎯 Action Items</div>', unsafe_allow_html=True)
+                    _PRI_CFG_CP = {
+                        "high":   ("#dc2626", "🔴", "#fef2f2"),
+                        "medium": ("#f59e0b", "🟡", "#fffbeb"),
+                        "low":    ("#16a34a", "🟢", "#f0fdf4"),
+                    }
+                    for _ca in _cp_acts:
+                        _pc2 = _PRI_CFG_CP.get(_ca["priority"], _PRI_CFG_CP["low"])
+                        st.markdown(
+                            f'<div style="background:{_pc2[2]};border:1px solid {_pc2[0]}33;'
+                            f'border-radius:10px;padding:12px 15px;margin-bottom:8px;">'
+                            f'<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">'
+                            f'<span style="font-size:0.75rem;">{_pc2[1]}</span>'
+                            f'<span style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;'
+                            f'text-transform:uppercase;color:{_pc2[0]};">{_ca["priority"].upper()} · {_ca["category"]}</span>'
+                            f'</div>'
+                            f'<div style="font-size:0.73rem;font-weight:600;color:#0d1d3a;margin-bottom:5px;line-height:1.4;">{_ca["action"]}</div>'
+                            f'<div style="font-size:0.65rem;color:#5588bb;line-height:1.4;border-top:1px solid {_pc2[0]}22;padding-top:5px;">'
+                            f'Impact: {_ca["impact"]}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
 
             # ── Remarks Summary ────────────────────────────────────────────
             st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
