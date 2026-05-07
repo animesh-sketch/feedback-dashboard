@@ -184,6 +184,9 @@ def send_report_email(
                 credentials_dict={}, to_emails=[addr],
                 subject=subject, html_body=body,
                 from_email=from_addr,
+                attachment_name=attachment_name,
+                attachment_data=attachment_data,
+                attachment_mime=attachment_mime,
             )
             results["sent"].extend(r.get("sent", []))
             results["failed"].extend(r.get("failed", []))
