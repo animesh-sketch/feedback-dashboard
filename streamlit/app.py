@@ -135,24 +135,58 @@ if _rating_param:
     except (ValueError, TypeError):
         _r = 0
     if _r:
-        # Log rating event if tracking params present
         _rating_id = st.query_params.get("id", "")
         _rating_em = st.query_params.get("em", "")
+        _rating_email = ""
         if _rating_id and _rating_em:
             try:
                 import base64 as _b64r
                 _rating_email = _b64r.b64decode(_rating_em.encode()).decode("utf-8", errors="replace")
-                tracking_store.log_rating(_rating_id, _rating_email, _r)
-                tracking_store.log_event(_rating_id, _rating_email, "open")
+                _log_key = f"_rated_{_rating_id}_{_rating_em}"
+                if not st.session_state.get(_log_key):
+                    tracking_store.log_rating(_rating_id, _rating_email, _r)
+                    tracking_store.log_event(_rating_id, _rating_email, "open")
+                    st.session_state[_log_key] = True
             except Exception:
                 pass
         _stars_filled = "★" * _r + "☆" * (5 - _r)
-        st.markdown(f"""
-<style>
-html, body, [class*="css"] {{ font-family: 'Inter', -apple-system, sans-serif; }}
-#MainMenu {{ visibility: hidden; }} footer {{ visibility: hidden; }} header {{ visibility: hidden; }}
-.stApp {{ background: #040d1e !important; }}
-</style>
+        st.markdown("""<style>
+html, body, [class*="css"] { font-family: 'Inter', -apple-system, sans-serif; }
+#MainMenu { visibility: hidden; } footer { visibility: hidden; } header { visibility: hidden; }
+.stApp { background: #040d1e !important; }
+</style>""", unsafe_allow_html=True)
+        _done_key = f"_improvement_done_{_rating_id}_{_rating_em}"
+        if _r <= 4 and not st.session_state.get(_done_key):
+            st.markdown(f"""
+<div style="display:flex;align-items:center;justify-content:center;padding:40px 16px 0;">
+  <div style="background:#071428;border-radius:24px;padding:48px 40px 28px;max-width:460px;width:100%;
+              text-align:center;box-shadow:0 0 60px rgba(37,99,235,0.3),0 4px 32px rgba(0,0,0,0.6);border:1px solid rgba(37,99,235,0.2);">
+    <div style="font-size:52px;margin-bottom:16px;">✅</div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
+                background:linear-gradient(135deg,#0B1F3A,#2563EB);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px;">Feedback received</div>
+    <div style="font-size:26px;font-weight:700;color:#e8f0fc;margin-bottom:10px;">Thank you!</div>
+    <div style="font-size:15px;color:#6699cc;line-height:1.65;margin-bottom:16px;">
+      You rated this report <strong style="color:#e0ecf8;">{_r} out of 5 stars</strong>.
+    </div>
+    <div style="font-size:36px;color:#ffaa00;letter-spacing:5px;margin-bottom:24px;text-shadow:0 0 16px rgba(255,170,0,0.5);">{_stars_filled}</div>
+    <div style="font-size:15px;color:#a0c0e0;font-weight:600;margin-bottom:4px;">How can we improve?</div>
+  </div>
+</div>""", unsafe_allow_html=True)
+            _imp_cols = st.columns([1, 10, 1])
+            with _imp_cols[1]:
+                _improvement = st.text_area("", placeholder="Tell us what we could do better…",
+                                            label_visibility="collapsed", height=110,
+                                            key="improvement_input")
+                if st.button("Submit feedback", type="primary", use_container_width=True):
+                    if _improvement.strip() and _rating_email and _rating_id:
+                        tracking_store.log_improvement(_rating_id, _rating_email, _improvement.strip())
+                    st.session_state[_done_key] = True
+                    st.rerun()
+        else:
+            _msg = ("We appreciate your honest feedback and will work on improving."
+                    if st.session_state.get(_done_key)
+                    else "Your feedback helps us improve future reports.")
+            st.markdown(f"""
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 16px;">
   <div style="background:#071428;border-radius:24px;padding:56px 48px;max-width:460px;width:100%;
               text-align:center;box-shadow:0 0 60px rgba(37,99,235,0.3),0 4px 32px rgba(0,0,0,0.6);border:1px solid rgba(37,99,235,0.2);">
@@ -162,13 +196,12 @@ html, body, [class*="css"] {{ font-family: 'Inter', -apple-system, sans-serif; }
     <div style="font-size:26px;font-weight:700;color:#e8f0fc;margin-bottom:10px;">Thank you!</div>
     <div style="font-size:15px;color:#6699cc;line-height:1.65;margin-bottom:28px;">
       You rated this report <strong style="color:#e0ecf8;">{_r} out of 5 stars</strong>.<br>
-      Your feedback helps us improve future reports.
+      {_msg}
     </div>
     <div style="font-size:36px;color:#ffaa00;letter-spacing:5px;margin-bottom:28px;text-shadow:0 0 16px rgba(255,170,0,0.5);">{_stars_filled}</div>
     <div style="font-size:13px;color:#334466;">You can close this tab.</div>
   </div>
-</div>
-""", unsafe_allow_html=True)
+</div>""", unsafe_allow_html=True)
         st.stop()
 
 # ─── Click tracking (from email links) ────────────────────────────────────────

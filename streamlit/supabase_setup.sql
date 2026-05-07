@@ -52,6 +52,8 @@ create table if not exists public.tracking_events (
   time        text not null default ''
 );
 
+alter table public.tracking_events add column if not exists feedback_text text;
+
 alter table public.tracking_events enable row level security;
 drop policy if exists "allow all" on public.tracking_events;
 create policy "allow all" on public.tracking_events for all using (true) with check (true);

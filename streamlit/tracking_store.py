@@ -97,6 +97,16 @@ def log_rating(record_id: str, email: str, rating: int) -> None:
         pass
 
 
+def log_improvement(record_id: str, email: str, feedback_text: str) -> None:
+    """Store improvement text against the existing rating row."""
+    try:
+        _sb().table(_TABLE).update({
+            "feedback_text": feedback_text,
+        }).eq("record_id", record_id).eq("email", email).eq("type", "rating").execute()
+    except Exception:
+        pass
+
+
 def get_stats_for_send(record_id: str) -> dict:
     """Return open/click/rating counts for a single sent record."""
     try:
