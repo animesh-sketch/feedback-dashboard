@@ -82,7 +82,7 @@ def _send_via_resend(resend_key: str, from_addr: str, to_emails: list,
     # If domain already known to be unverified, go straight to fallback
     if domain not in _UNVERIFIED_DOMAINS:
         result = _resend_post(resend_key,
-                              f"Convin Data Labs <{from_addr}>",
+                              f"Convin data labs <{from_addr}>",
                               to_emails, subject, html_body)
         if not result.get("failed"):
             return result
@@ -95,7 +95,7 @@ def _send_via_resend(resend_key: str, from_addr: str, to_emails: list,
 
     # Fallback: Resend's verified default sender
     return _resend_post(resend_key,
-                        "Convin Data Labs <onboarding@resend.dev>",
+                        "Convin data labs <onboarding@resend.dev>",
                         to_emails, subject, html_body)
 
 
@@ -128,7 +128,7 @@ def _send_via_gmail(gmail_user: str, app_password: str, to_emails: list,
             else:
                 outer = related = MIMEMultipart("related")
             outer["Subject"] = subject
-            outer["From"] = gmail_user
+            outer["From"] = f"Convin data labs <{gmail_user}>"
             outer["To"] = addr
             alt = MIMEMultipart("alternative")
             alt.attach(MIMEText(modified_html, "html"))
