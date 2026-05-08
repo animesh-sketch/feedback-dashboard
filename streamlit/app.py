@@ -5458,6 +5458,170 @@ def _gen_call_insights(audit_df):
     return {"insights": insights, "actions": actions}
 
 
+def _compute_call_level_stats(audit_df, scored_cols, legend_map, has_qa_schema=False):
+    """
+    Call-level accuracy: a call is Clean only when every scored parameter passes perfectly.
+    Issue Call = 1 or more parameters with a non-perfect answer.
+    Returns summary dict with call counts, accuracy %, issue rate %, param issue counts.
+    """
+    if audit_df is None or audit_df.empty:
+        return None
+
+    total = len(audit_df)
+    issue_flags = {}
+
+    if has_qa_schema:
+        for _tier in _QA_SCHEMA["tiers"]:
+            for _p in _tier["params"]:
+                col = _p["col"]
+                if col not in audit_df.columns:
+                    continue
+                _opts = _p.get("options", ["0", "1", "2"])
+                _bcfg = _builtin_cfg(col)
+                _inv  = _bcfg["inverted"] if _bcfg else False
+                _ns   = _score_to_numeric(audit_df[col], _opts, inverted=_inv)
+                if _ns is not None:
+                    issue_flags[col] = (_ns.notna()) & (_ns < 1.0)
+        for _ip in _QA_SCHEMA["intelligence"]:
+            _icol = next(
+                (c for c in audit_df.columns
+                 if _ip["col"].lower() in str(c).lower() or str(c).lower() in _ip["col"].lower()),
+                None,
+            )
+            if _icol:
+                _bcfg = _builtin_cfg(_icol)
+                _inv  = _bcfg["inverted"] if _bcfg else False
+                _ns   = _score_to_numeric(audit_df[_icol], _ip.get("options", []), inverted=_inv)
+                if _ns is not None:
+                    issue_flags[_ip["col"]] = (_ns.notna()) & (_ns < 1.0)
+
+    if not issue_flags and scored_cols:
+        for col in scored_cols:
+            if col not in audit_df.columns:
+                continue
+            opts  = legend_map.get(col) or _match_legend(col, legend_map) or []
+            _bcfg = _builtin_cfg(col)
+            _inv  = _bcfg["inverted"] if _bcfg else False
+            _ns   = _score_to_numeric(audit_df[col], opts, inverted=_inv)
+            if _ns is not None:
+                issue_flags[col] = (_ns.notna()) & (_ns < 1.0)
+
+    if not issue_flags:
+        return None
+
+    issue_df             = pd.DataFrame(issue_flags)
+    per_call_issue_count = issue_df.sum(axis=1)
+    clean_calls          = int((per_call_issue_count == 0).sum())
+    issue_calls          = total - clean_calls
+    single_issue_calls   = int((per_call_issue_count == 1).sum())
+    multi_issue_calls    = int((per_call_issue_count > 1).sum())
+    call_accuracy_pct    = round(clean_calls / total * 100, 1) if total else 0
+    issue_rate_pct       = round(issue_calls / total * 100, 1) if total else 0
+    param_issue_counts   = {col: int(s.sum()) for col, s in issue_flags.items()}
+
+    return {
+        "total":               total,
+        "clean_calls":         clean_calls,
+        "issue_calls":         issue_calls,
+        "single_issue_calls":  single_issue_calls,
+        "multi_issue_calls":   multi_issue_calls,
+        "call_accuracy_pct":   call_accuracy_pct,
+        "issue_rate_pct":      issue_rate_pct,
+        "param_issue_counts":  param_issue_counts,
+        "per_call_issue_count": per_call_issue_count,
+        "issue_dist": {
+            "0":  clean_calls,
+            "1":  single_issue_calls,
+            "2":  int((per_call_issue_count == 2).sum()),
+            "3+": int((per_call_issue_count >= 3).sum()),
+        },
+    }
+
+
+def _gen_call_level_insights(call_stats):
+    """Rule-based Key Insights from call-level accuracy stats."""
+    if not call_stats:
+        return {"insights": [], "actions": []}
+
+    insights, actions = [], []
+    _cs     = call_stats
+    _acc    = _cs["call_accuracy_pct"]
+    _ir     = _cs["issue_rate_pct"]
+    _mi     = _cs["multi_issue_calls"]
+    _total  = _cs["total"]
+    _target = 80.0
+
+    if _acc >= _target:
+        insights.append({"type": "success",
+            "title": f"✅ Call Accuracy {_acc}% — Above {int(_target)}% Target",
+            "detail": (
+                f"{_cs['clean_calls']:,} of {_total:,} calls were fully clean "
+                f"(zero parameter issues). Performance is above the {int(_target)}% benchmark."
+            )})
+    elif _acc >= 60:
+        _gap = round(_target - _acc, 1)
+        insights.append({"type": "warning",
+            "title": f"⚠️ Call Accuracy {_acc}% — {_gap}% Below Target",
+            "detail": (
+                f"{_cs['issue_calls']:,} calls carry at least one parameter issue. "
+                f"Close the {_gap}% gap with focused coaching on the top failing parameters."
+            )})
+        actions.append({"priority": "medium", "category": "Coaching",
+            "action": "Review the top 3 highest-issue parameters and run targeted bot-tuning sessions.",
+            "impact": f"Fixing the single worst parameter could recover up to {round(max(_cs['param_issue_counts'].values()) / _total * 100, 1) if _cs['param_issue_counts'] else 0}pp of call accuracy."})
+    else:
+        _gap = round(_target - _acc, 1)
+        insights.append({"type": "critical",
+            "title": f"🚨 Low Call Accuracy: {_acc}% — {_gap}% Below Target",
+            "detail": (
+                f"Only {_cs['clean_calls']:,} of {_total:,} calls are fully clean. "
+                f"{_ir}% of all calls carry at least one parameter issue — immediate action required."
+            )})
+        actions.append({"priority": "high", "category": "Coaching",
+            "action": "Emergency coaching sprint — review all failed parameters, prioritise the top 3 by issue count.",
+            "impact": "Restoring call accuracy to the 80% baseline directly protects conversion rates and client trust."})
+
+    if _mi > 0:
+        _mi_pct = round(_mi / _total * 100, 1) if _total else 0
+        if _mi_pct >= 20:
+            insights.append({"type": "critical",
+                "title": f"🚨 {_mi:,} Multi-Issue Calls ({_mi_pct}%)",
+                "detail": (
+                    f"{_mi:,} calls failed in 2+ parameters simultaneously — highest-risk conversations. "
+                    f"Prioritise review and coaching on these calls first."
+                )})
+            actions.append({"priority": "high", "category": "Audit",
+                "action": f"Pull the {_mi:,} multi-issue calls and triage by parameter combination for systemic bot logic failures.",
+                "impact": "Fixing multi-issue call patterns has the highest compound impact on call accuracy."})
+        elif _mi_pct >= 5:
+            insights.append({"type": "warning",
+                "title": f"⚠️ {_mi:,} Multi-Issue Calls ({_mi_pct}%)",
+                "detail": (
+                    f"{_mi:,} calls failed on 2+ parameters — compound failures often indicate "
+                    f"bot logic gaps rather than isolated errors."
+                )})
+            actions.append({"priority": "medium", "category": "Bot Quality",
+                "action": f"Investigate common parameter combinations in the {_mi:,} multi-issue calls to identify root-cause logic errors.",
+                "impact": "Addressing root-cause logic errors fixes multiple parameter issues at once."})
+
+    if _cs["param_issue_counts"]:
+        _worst_param = max(_cs["param_issue_counts"], key=_cs["param_issue_counts"].get)
+        _worst_ct    = _cs["param_issue_counts"][_worst_param]
+        _worst_pct   = round(_worst_ct / _total * 100, 1) if _total else 0
+        if _worst_pct >= 15:
+            insights.append({"type": "warning",
+                "title": f"🔴 Top Failing Parameter: {_worst_param} ({_worst_pct}%)",
+                "detail": (
+                    f"{_worst_ct:,} calls had issues in '{_worst_param}' — "
+                    f"this is the #1 driver of call failures."
+                )})
+            actions.append({"priority": "high", "category": "Bot Quality",
+                "action": f"Focus the next bot-tuning sprint on '{_worst_param}' — review failure patterns and update logic/training data.",
+                "impact": f"Resolving '{_worst_param}' issues alone could improve call accuracy by up to {_worst_pct}pp."})
+
+    return {"insights": insights, "actions": actions}
+
+
 def _render_sense_scorecard(sheets, legend_map):
     """Full QA Scorecard — weighted scoring, intelligence params, agent breakdown."""
 
@@ -5700,6 +5864,9 @@ def _render_sense_scorecard(sheets, legend_map):
                                        "color": _ip["color"], "icon": _ip["icon"],
                                        "desc": _ip["desc"]}
 
+    # ── Call-level accuracy stats ─────────────────────────────────────────────
+    _call_stats = _compute_call_level_stats(audit_df, scored_cols, legend_map, _has_qa_schema)
+
     # ── Page header ───────────────────────────────────────────────────────────
     _src_label      = "Convin.ai QA Schema" if _has_qa_schema else audit_name
     _auditor_count  = audit_df["QA"].nunique() if "QA" in audit_df.columns else 0
@@ -5723,118 +5890,175 @@ def _render_sense_scorecard(sheets, legend_map):
         unsafe_allow_html=True,
     )
 
-    # ── Hero row: gauge + KPI cards ───────────────────────────────────────────
-    if _has_qa_schema:
-        _fc        = "#dc2626" if (fatal_count or 0) > 0 else "#0ebc6e"
-        _gs        = avg_score or 0
-        _gc_gauge  = "#0ebc6e" if _gs >= 80 else "#f59e0b" if _gs >= 60 else "#dc2626"
-        _arc_total = 219.9   # π × 70
-        _arc_fill  = round(_arc_total * _gs / 100, 1)
-        _slabel    = _qa_status(_gs, False)
-        _sc_col    = _qa_status_color(_slabel)
-        _rr        = round(review_count / total_rows * 100, 1) if total_rows else 0
-        _fr2       = round(fail_count   / total_rows * 100, 1) if total_rows else 0
-        _afr       = round(fatal_count  / total_rows * 100, 1) if total_rows else 0
-        _compl_c   = "#0ebc6e" if completion_pct >= 80 else "#f59e0b" if completion_pct >= 50 else "#dc2626"
-        # Disposition accuracy KPI
-        if "Correct Disposition" in audit_df.columns:
-            _cd_col   = audit_df["Correct Disposition"].replace("", None).dropna().astype(str).str.strip()
-            _cd_yes   = int((_cd_col.str.lower() == "yes").sum())
-            _cd_total = len(_cd_col)
-            _disp_acc = round(_cd_yes / _cd_total * 100, 1) if _cd_total else None
-        else:
-            _disp_acc = None
-
-        _gauge_svg = (
-            f'<svg width="160" height="100" viewBox="0 0 160 100" style="display:block;margin:auto;">'
-            f'<path d="M 10 85 A 70 70 0 0 1 150 85" fill="none" stroke="#edf2fb" stroke-width="14" stroke-linecap="round"/>'
-            f'<path d="M 10 85 A 70 70 0 0 1 150 85" fill="none" stroke="{_gc_gauge}" stroke-width="14"'
-            f' stroke-linecap="round" stroke-dasharray="{_arc_fill} 1000"/>'
-            f'<text x="80" y="73" text-anchor="middle" font-size="27" font-weight="900" fill="{_gc_gauge}"'
-            f' font-family="Inter,sans-serif">{_gs}%</text>'
-            f'<text x="80" y="90" text-anchor="middle" font-size="9.5" fill="#5588bb" font-family="Inter,sans-serif">Avg Bot Score</text>'
-            f'</svg>'
-        )
-
+    # ── Section 1: Call-Level Audit Summary Box ───────────────────────────────
+    st.markdown('<div class="section-chip">📋 Call-Level Audit Summary</div>', unsafe_allow_html=True)
+    if _call_stats:
+        _cs    = _call_stats
+        _acc_c = "#059669" if _cs["call_accuracy_pct"] >= 80 else "#d97706" if _cs["call_accuracy_pct"] >= 60 else "#dc2626"
+        _ir_c  = "#dc2626" if _cs["issue_rate_pct"] > 30 else "#d97706" if _cs["issue_rate_pct"] > 15 else "#059669"
         st.markdown(f"""
-<div style="display:grid;grid-template-columns:190px 1fr;gap:16px;margin-bottom:1.4rem;align-items:stretch;">
-  <div style="background:#fff;border:1px solid #e4e7ec;border-radius:14px;
-    padding:18px 12px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-    {_gauge_svg}
-    <div style="margin-top:8px;background:{_sc_col}18;border:1px solid {_sc_col}55;
-      border-radius:20px;padding:3px 16px;font-size:0.72rem;font-weight:800;color:{_sc_col};">{_slabel}</div>
-    <div style="font-size:0.62rem;color:#aabbcc;margin-top:6px;">{total_rows:,} total audits</div>
+<div style="background:linear-gradient(135deg,#f8faff 0%,#fff 100%);border:1.5px solid #dbeafe;
+  border-radius:14px;padding:20px 24px;margin-bottom:1.2rem;">
+  <div style="font-size:0.6rem;font-weight:700;color:#5588bb;letter-spacing:0.1em;text-transform:uppercase;
+    margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #EFF6FF;">
+    ✦ Accuracy calculated at CALL level — a call is Clean only when every parameter passes
   </div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;grid-auto-rows:min-content;">
-    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid #2563EB;border-radius:10px;padding:13px 14px;">
-      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563EB;margin-bottom:4px;">Total Audits</div>
-      <div style="font-size:1.65rem;font-weight:900;color:#2563EB;line-height:1;">{total_rows:,}</div>
-      <div style="font-size:0.62rem;color:#aabbcc;margin-top:3px;">{_auditor_count} auditor{"s" if _auditor_count != 1 else ""}</div>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+    <div style="background:#fff;border:1px solid #dbeafe;border-top:3px solid #2563EB;
+      border-radius:10px;padding:16px 14px;text-align:center;">
+      <div style="font-size:0.53rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+        color:#2563EB;margin-bottom:8px;">Total Calls</div>
+      <div style="font-size:2rem;font-weight:900;color:#2563EB;line-height:1;">{_cs["total"]:,}</div>
+      <div style="font-size:0.58rem;color:#94a3b8;margin-top:4px;">audited calls</div>
     </div>
-    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid #0ebc6e;border-radius:10px;padding:13px 14px;">
-      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#0ebc6e;margin-bottom:4px;">Pass ≥80%</div>
-      <div style="font-size:1.65rem;font-weight:900;color:#0ebc6e;line-height:1;">{pass_count:,}</div>
-      <div style="height:4px;background:#f0f2f5;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{pass_rate or 0}%;height:100%;background:#0ebc6e;border-radius:2px;"></div></div>
-      <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">{pass_rate}% pass rate</div>
+    <div style="background:#fff;border:1px solid #fecaca;border-top:3px solid #dc2626;
+      border-radius:10px;padding:16px 14px;text-align:center;">
+      <div style="font-size:0.53rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+        color:#dc2626;margin-bottom:8px;">Calls with Issues</div>
+      <div style="font-size:2rem;font-weight:900;color:#dc2626;line-height:1;">{_cs["issue_calls"]:,}</div>
+      <div style="font-size:0.58rem;color:#94a3b8;margin-top:4px;">1+ parameter failed</div>
     </div>
-    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid #f59e0b;border-radius:10px;padding:13px 14px;">
-      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f59e0b;margin-bottom:4px;">Needs Review</div>
-      <div style="font-size:1.65rem;font-weight:900;color:#f59e0b;line-height:1;">{review_count:,}</div>
-      <div style="height:4px;background:#f0f2f5;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{_rr}%;height:100%;background:#f59e0b;border-radius:2px;"></div></div>
-      <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">60–79% range</div>
+    <div style="background:#fff;border:1px solid #bbf7d0;border-top:3px solid #059669;
+      border-radius:10px;padding:16px 14px;text-align:center;">
+      <div style="font-size:0.53rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+        color:#059669;margin-bottom:8px;">Calls without Issues</div>
+      <div style="font-size:2rem;font-weight:900;color:#059669;line-height:1;">{_cs["clean_calls"]:,}</div>
+      <div style="font-size:0.58rem;color:#94a3b8;margin-top:4px;">zero issues detected</div>
     </div>
-    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid #dc2626;border-radius:10px;padding:13px 14px;">
-      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#dc2626;margin-bottom:4px;">Fail &lt;60%</div>
-      <div style="font-size:1.65rem;font-weight:900;color:#dc2626;line-height:1;">{fail_count:,}</div>
-      <div style="height:4px;background:#f0f2f5;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{_fr2}%;height:100%;background:#dc2626;border-radius:2px;"></div></div>
-      <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">{_fr2}% of total</div>
+    <div style="background:#fff;border:1px solid {_acc_c}44;border-top:3px solid {_acc_c};
+      border-radius:10px;padding:16px 14px;text-align:center;">
+      <div style="font-size:0.53rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+        color:{_acc_c};margin-bottom:8px;">Call Accuracy</div>
+      <div style="font-size:2rem;font-weight:900;color:{_acc_c};line-height:1;">{_cs["call_accuracy_pct"]}%</div>
+      <div style="height:4px;background:#f0f2f5;border-radius:2px;margin:6px 0 2px;overflow:hidden;">
+        <div style="width:{_cs['call_accuracy_pct']}%;height:100%;background:{_acc_c};border-radius:2px;"></div>
+      </div>
+      <div style="font-size:0.55rem;color:#94a3b8;">Clean ÷ Total</div>
     </div>
-    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid {_fc};border-radius:10px;padding:13px 14px;">
-      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{_fc};margin-bottom:4px;">Auto-Fail</div>
-      <div style="font-size:1.65rem;font-weight:900;color:{_fc};line-height:1;">{fatal_count:,}</div>
-      <div style="height:4px;background:#f0f2f5;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{_afr}%;height:100%;background:{_fc};border-radius:2px;"></div></div>
-      <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">Fatal trigger</div>
+    <div style="background:#fff;border:1px solid {_ir_c}44;border-top:3px solid {_ir_c};
+      border-radius:10px;padding:16px 14px;text-align:center;">
+      <div style="font-size:0.53rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+        color:{_ir_c};margin-bottom:8px;">Issue Rate</div>
+      <div style="font-size:2rem;font-weight:900;color:{_ir_c};line-height:1;">{_cs["issue_rate_pct"]}%</div>
+      <div style="height:4px;background:#f0f2f5;border-radius:2px;margin:6px 0 2px;overflow:hidden;">
+        <div style="width:{_cs['issue_rate_pct']}%;height:100%;background:{_ir_c};border-radius:2px;"></div>
+      </div>
+      <div style="font-size:0.55rem;color:#94a3b8;">Issue Calls ÷ Total</div>
     </div>
-    <div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid {_compl_c};border-radius:10px;padding:13px 14px;">
-      <div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{_compl_c};margin-bottom:4px;">Completion</div>
-      <div style="font-size:1.65rem;font-weight:900;color:{_compl_c};line-height:1;">{completion_pct}%</div>
-      <div style="height:4px;background:#f0f2f5;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:{completion_pct}%;height:100%;background:{_compl_c};border-radius:2px;"></div></div>
-      <div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">{scored_rows:,} scored</div>
-    </div>
-    {'<div style="background:#fff;border:1px solid #e4e7ec;border-left:3px solid ' + ("#0ebc6e" if (_disp_acc or 0) >= 80 else "#f59e0b" if (_disp_acc or 0) >= 60 else "#dc2626") + ';border-radius:10px;padding:13px 14px;"><div style="font-size:0.57rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:' + ("#0ebc6e" if (_disp_acc or 0) >= 80 else "#f59e0b" if (_disp_acc or 0) >= 60 else "#dc2626") + ';margin-bottom:4px;">Disposition Accuracy</div><div style="font-size:1.65rem;font-weight:900;color:' + ("#0ebc6e" if (_disp_acc or 0) >= 80 else "#f59e0b" if (_disp_acc or 0) >= 60 else "#dc2626") + ';line-height:1;">' + str(_disp_acc) + '%</div><div style="height:4px;background:#f0f2f5;border-radius:2px;margin-top:5px;overflow:hidden;"><div style="width:' + str(_disp_acc) + '%;height:100%;background:' + ("#0ebc6e" if (_disp_acc or 0) >= 80 else "#f59e0b" if (_disp_acc or 0) >= 60 else "#dc2626") + ';border-radius:2px;"></div></div><div style="font-size:0.62rem;color:#5588bb;margin-top:2px;">correct dispositions</div></div>' if _disp_acc is not None else ''}
   </div>
 </div>""", unsafe_allow_html=True)
     else:
-        st.markdown(f"""<div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1rem;">
-          <div class="stat-card" style="border-top:2px solid #2563EB;">
-            <div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">Total Rows</div>
-            <div style="color:#2563EB;font-size:1.7rem;font-weight:800;">{total_rows:,}</div>
-          </div>
-          <div class="stat-card" style="border-top:2px solid #0ebc6e;">
-            <div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">Fully Scored</div>
-            <div style="color:#0ebc6e;font-size:1.7rem;font-weight:800;">{scored_rows:,}</div>
-            <div style="font-size:0.65rem;color:#5588bb;margin-top:2px;">{partial_rows} partial</div>
-          </div>
-          <div class="stat-card" style="border-top:2px solid {'#dc2626' if completion_pct<50 else '#f59e0b' if completion_pct<80 else '#0ebc6e'};">
-            <div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">Completion</div>
-            <div style="color:{'#dc2626' if completion_pct<50 else '#f59e0b' if completion_pct<80 else '#0ebc6e'};font-size:1.7rem;font-weight:800;">{completion_pct}%</div>
-          </div>
-          <div class="stat-card" style="border-top:2px solid #7c3aed;">
-            <div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">Weighted Score</div>
-            <div style="color:#7c3aed;font-size:1.7rem;font-weight:800;">{"—" if avg_score is None else f"{avg_score}%"}</div>
-          </div>
-          <div class="stat-card" style="border-top:2px solid {'#0ebc6e' if pass_rate and pass_rate>=70 else '#dc2626' if pass_rate is not None else '#aabbcc'};">
-            <div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">Pass Rate</div>
-            <div style="color:{'#0ebc6e' if pass_rate and pass_rate>=70 else '#dc2626' if pass_rate is not None else '#aabbcc'};font-size:1.7rem;font-weight:800;">{"—" if pass_rate is None else f"{pass_rate}%"}</div>
-          </div>
-        </div>""", unsafe_allow_html=True)
+        _avg_str = f"{avg_score}%" if avg_score is not None else "—"
+        st.markdown(f"""
+<div style="background:#fff;border:1.5px solid #E2EAF6;border-radius:14px;padding:20px 24px;margin-bottom:1.2rem;">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+    <div style="background:#F8FAFF;border:1px solid #dbeafe;border-top:3px solid #2563EB;
+      border-radius:10px;padding:16px;text-align:center;">
+      <div style="font-size:0.53rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+        color:#2563EB;margin-bottom:8px;">Total Calls</div>
+      <div style="font-size:2rem;font-weight:900;color:#2563EB;">{total_rows:,}</div>
+    </div>
+    <div style="background:#F8FAFF;border:1px solid #E2EAF6;border-top:3px solid #7c3aed;
+      border-radius:10px;padding:16px;text-align:center;">
+      <div style="font-size:0.53rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+        color:#7c3aed;margin-bottom:8px;">Avg Score</div>
+      <div style="font-size:2rem;font-weight:900;color:#7c3aed;">{_avg_str}</div>
+    </div>
+    <div style="background:#F8FAFF;border:1px solid #E2EAF6;border-top:3px solid #0ebc6e;
+      border-radius:10px;padding:16px;text-align:center;">
+      <div style="font-size:0.53rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+        color:#0ebc6e;margin-bottom:8px;">Completion</div>
+      <div style="font-size:2rem;font-weight:900;color:#0ebc6e;">{completion_pct}%</div>
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
 
-    # ── Key Insights + Action Items ───────────────────────────────────────────
+    # ── Section 2: Parameter Performance (issue counts) ───────────────────────
+    if _call_stats and _call_stats["param_issue_counts"]:
+        st.markdown('<div class="section-chip">📊 Parameter Performance</div>', unsafe_allow_html=True)
+        _pp_sorted = sorted(_call_stats["param_issue_counts"].items(), key=lambda x: x[1], reverse=True)
+        _pp_total  = _call_stats["total"]
+        _pp_html   = ""
+        for _pname, _pissue_ct in _pp_sorted:
+            _pissue_pct = round(_pissue_ct / _pp_total * 100, 1) if _pp_total else 0
+            _pclean_ct  = _pp_total - _pissue_ct
+            _pclean_pct = round(_pclean_ct / _pp_total * 100, 1) if _pp_total else 0
+            _pclr = "#dc2626" if _pissue_pct > 30 else "#d97706" if _pissue_pct > 10 else "#059669"
+            _pp_html += (
+                f'<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;'
+                f'border:1px solid #E2EAF6;border-left:3px solid {_pclr};border-radius:8px;margin-bottom:6px;">'
+                f'<div style="flex:1;font-size:0.75rem;font-weight:600;color:#0B1F3A;'
+                f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_pname}</div>'
+                f'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">'
+                f'<span style="background:#fef2f2;border:1px solid #fecaca;border-radius:5px;'
+                f'padding:2px 8px;font-size:0.62rem;font-weight:700;color:#dc2626;">'
+                f'{_pissue_ct:,} issues ({_pissue_pct}%)</span>'
+                f'<span style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:5px;'
+                f'padding:2px 8px;font-size:0.62rem;font-weight:700;color:#059669;">'
+                f'{_pclean_ct:,} clean ({_pclean_pct}%)</span>'
+                f'</div>'
+                f'<div style="width:110px;height:6px;background:#f0f2f5;border-radius:3px;overflow:hidden;flex-shrink:0;">'
+                f'<div style="width:{_pissue_pct}%;height:100%;background:{_pclr};border-radius:3px;"></div></div>'
+                f'</div>'
+            )
+        st.markdown(f'<div style="margin-bottom:1.2rem;">{_pp_html}</div>', unsafe_allow_html=True)
+
+    # ── Section 3: Issue Snapshot ─────────────────────────────────────────────
+    if _call_stats:
+        _cs   = _call_stats
+        _dist = _cs["issue_dist"]
+        _tot  = _cs["total"]
+        st.markdown('<div class="section-chip">🔍 Issue Snapshot</div>', unsafe_allow_html=True)
+        _mi_pct = round(_cs["multi_issue_calls"] / _tot * 100, 1) if _tot else 0
+        st.markdown(f"""
+<div style="background:#fff;border:1px solid #E2EAF6;border-radius:14px;padding:20px 24px;margin-bottom:1.2rem;">
+  <div style="font-size:0.6rem;font-weight:700;color:#5588bb;letter-spacing:0.08em;
+    text-transform:uppercase;margin-bottom:14px;">
+    Issue distribution — how many parameters failed per call
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:1.8rem;font-weight:900;color:#059669;">{_dist["0"]:,}</div>
+      <div style="font-size:0.6rem;font-weight:700;color:#059669;text-transform:uppercase;
+        letter-spacing:0.08em;margin-top:4px;">0 Issues</div>
+      <div style="font-size:0.58rem;color:#94a3b8;margin-top:2px;">Clean Calls</div>
+    </div>
+    <div style="background:#fffbf0;border:1px solid #fde68a;border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:1.8rem;font-weight:900;color:#d97706;">{_dist["1"]:,}</div>
+      <div style="font-size:0.6rem;font-weight:700;color:#d97706;text-transform:uppercase;
+        letter-spacing:0.08em;margin-top:4px;">1 Issue</div>
+      <div style="font-size:0.58rem;color:#94a3b8;margin-top:2px;">Single-param fail</div>
+    </div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:1.8rem;font-weight:900;color:#dc2626;">{_dist["2"]:,}</div>
+      <div style="font-size:0.6rem;font-weight:700;color:#dc2626;text-transform:uppercase;
+        letter-spacing:0.08em;margin-top:4px;">2 Issues</div>
+      <div style="font-size:0.58rem;color:#94a3b8;margin-top:2px;">Needs coaching</div>
+    </div>
+    <div style="background:#fff1f2;border:1px solid #fca5a5;border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:1.8rem;font-weight:900;color:#9f1239;">{_dist["3+"]:,}</div>
+      <div style="font-size:0.6rem;font-weight:700;color:#9f1239;text-transform:uppercase;
+        letter-spacing:0.08em;margin-top:4px;">3+ Issues</div>
+      <div style="font-size:0.58rem;color:#94a3b8;margin-top:2px;">High-risk calls</div>
+    </div>
+  </div>
+  <div style="background:#f8faff;border-radius:8px;padding:12px 16px;font-size:0.72rem;
+    color:#0B1F3A;line-height:1.8;">
+    <strong>{_cs["multi_issue_calls"]:,}</strong> calls ({_mi_pct}%) had
+    <strong>multiple parameter failures</strong> — highest-risk calls requiring immediate attention.
+    &nbsp;·&nbsp; <strong>{_cs["clean_calls"]:,}</strong> calls ({_cs["call_accuracy_pct"]}%) had zero issues.
+  </div>
+</div>""", unsafe_allow_html=True)
+
+    # ── Section 4: Key Insights + Action Items ────────────────────────────────
+    _cli          = _gen_call_level_insights(_call_stats)
+    _all_insights = _cli.get("insights", [])
+    _all_actions  = _cli.get("actions",  [])
     if _has_qa_schema:
-        _qi = _gen_qa_insights(audit_df)
-        _all_insights = _qi.get("insights", [])
-        _all_actions  = _qi.get("actions",  [])
-        if _all_insights or _all_actions:
+        _qi           = _gen_qa_insights(audit_df)
+        _all_insights = _all_insights + _qi.get("insights", [])
+        _all_actions  = _all_actions  + _qi.get("actions",  [])
+    if _all_insights or _all_actions:
             _ins_cols = st.columns([3, 2])
             with _ins_cols[0]:
                 st.markdown('<div class="section-chip">💡 Key Insights</div>', unsafe_allow_html=True)
