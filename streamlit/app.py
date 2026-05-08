@@ -10092,14 +10092,42 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                                     f'<div style="font-size:13px;color:#78350F;line-height:1.65;white-space:pre-line;">{_sr_note.strip()}</div>'
                                     f'</div>'
                                 )
+
+                            # ── Build raw audit attachment (Date, QA, Time, Client) ────
+                            import io as _io
+                            _raw_col_date   = next((c for c in _sr_df.columns if any(k in str(c).lower() for k in ("audit date", "date"))), None)
+                            _raw_col_qa     = next((c for c in _sr_df.columns if str(c).strip().lower() in ("qa", "auditor", "reviewer")), None)
+                            _raw_col_time   = next((c for c in _sr_df.columns if any(k in str(c).lower() for k in ("time", "call time", "duration")) and "date" not in str(c).lower()), None)
+                            _raw_col_client = next((c for c in _sr_df.columns if "client" in str(c).lower()), None)
+                            _raw_cols = [c for c in [_raw_col_date, _raw_col_qa, _raw_col_time, _raw_col_client] if c is not None]
+                            if _raw_cols:
+                                _raw_att_df = _sr_df[_raw_cols].copy()
+                                if _raw_col_date and _raw_col_date in _raw_att_df.columns:
+                                    try:
+                                        _raw_att_df[_raw_col_date] = pd.to_datetime(_raw_att_df[_raw_col_date], errors="coerce").dt.strftime("%d %b %Y")
+                                    except Exception:
+                                        pass
+                                _raw_buf = _io.BytesIO()
+                                _raw_att_df.to_csv(_raw_buf, index=False)
+                                _raw_att_bytes = _raw_buf.getvalue()
+                                _cli_slug = _sr_cli.replace(" ", "_") if _sr_cli != "— All Clients —" else "all"
+                                _raw_att_name = f"raw_audit_{_cli_slug}_{pd.Timestamp.now().strftime('%Y%m%d')}.csv"
+                            else:
+                                _raw_att_bytes = None
+                                _raw_att_name  = None
+
                             try:
                                 _full_html = _note_html + _build_sr_html()
                                 _sr_result = gmail_sender.send_report_email(
                                     {}, _to_list, _sr_subj, _full_html,
-                                    from_email=st.session_state.get("user_email","")
+                                    from_email=st.session_state.get("user_email",""),
+                                    attachment_name=_raw_att_name,
+                                    attachment_data=_raw_att_bytes,
+                                    attachment_mime="text/csv",
                                 )
                                 if _sr_result.get("sent"):
-                                    st.success(f"✓ Sent to: {', '.join(_sr_result['sent'])}")
+                                    _att_note = f" · 📎 {_raw_att_name}" if _raw_att_name else ""
+                                    st.success(f"✓ Sent to: {', '.join(_sr_result['sent'])}{_att_note}")
                                     st.session_state.pop("sr_no_data_warning", None)
                                 for _sf in _sr_result.get("failed", []):
                                     st.error(f"✗ {_sf['email']}: {_sf['error']}")
