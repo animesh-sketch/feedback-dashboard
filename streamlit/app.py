@@ -13092,7 +13092,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
 
         _conv_col1, _conv_col2 = st.columns(2)
         with _conv_col1:
-            _f_conv_link = st.text_input("Conversation Link", key="f_conv_link", placeholder="https://...")
+            _f_conv_link = st.text_input("Conversation Link *", key="f_conv_link", placeholder="https://...")
 
         # ── Disposition correction ─────────────────────────────────────────────
         _ll1, _ll2 = st.columns(2)
@@ -13295,6 +13295,18 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 _errs.append("Bot Name is required")
             if not _f_pm_csm.strip():
                 _errs.append("PM / CSM is required")
+            if not _f_conv_link.strip():
+                _errs.append("Conversation Link is required")
+            else:
+                _existing_recs = _audit_log_load() or []
+                _existing_links = {
+                    r.get("Conversation Link", "").strip()
+                    for r in _existing_recs
+                    if r.get("Conversation Link", "").strip()
+                    and (not (_edit_mode and _edit_id) or str(r.get("_row_id", "")) != str(_edit_id))
+                }
+                if _f_conv_link.strip() in _existing_links:
+                    _errs.append("Conversation Link already exists — duplicate entries are not allowed")
             for _col, _val in _pv.items():
                 if _col.endswith(" Comment") or _col.endswith(" Not Captured"):
                     continue
