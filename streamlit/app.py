@@ -11042,12 +11042,14 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                         showscale=True,
                         colorbar=dict(title="Score %", thickness=12, len=0.9),
                     ))
+                    _hm_max_label = max((len(p[0]) for p in _hm_params), default=10)
+                    _hm_bottom = max(120, _hm_max_label * 5)
                     _hm_fig.update_layout(
                         plot_bgcolor="#fff", paper_bgcolor="#fff",
                         font=dict(family="Inter,sans-serif", size=10),
-                        margin=dict(l=10, r=10, t=20, b=80),
-                        height=max(200, len(_hm_qas) * 50 + 100),
-                        xaxis=dict(tickangle=-35, side="bottom"),
+                        margin=dict(l=10, r=10, t=20, b=_hm_bottom),
+                        height=max(200, len(_hm_qas) * 50 + _hm_bottom),
+                        xaxis=dict(tickangle=-45, side="bottom", automargin=True),
                     )
                     st.plotly_chart(_hm_fig, use_container_width=True, config={"displayModeBar": False})
             except Exception:
