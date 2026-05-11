@@ -2968,194 +2968,204 @@ def render_email_maker():
 
         st.markdown("---")
 
-        # ── Step 2b: Dashboard Sections (tick/untick) ──────────────────────
-        st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">② Include Dashboard Data</div>', unsafe_allow_html=True)
-        with st.expander("📊 Select Dashboard Sections to Include", expanded=False):
-            st.caption("Tick sections to auto-generate content from your latest audit data and append it to the email.")
-            _ds_c1, _ds_c2, _ds_c3 = st.columns(3)
+        # ── Step 2b: Dashboard Key Insights ────────────────────────────────
+        st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">③ Dashboard Key Insights</div>', unsafe_allow_html=True)
+        st.markdown('<div style="color:#94a3b8;font-size:0.72rem;margin-bottom:10px;">Custom parameter scores are always included. Tick any section to add it to the email.</div>', unsafe_allow_html=True)
+
+        # Load audit data once per session; Refresh button forces reload
+        _ds_refresh_col, _ds_status_col = st.columns([1, 4])
+        with _ds_refresh_col:
+            if st.button("🔄 Refresh", key=f"ds_refresh_{ci}", use_container_width=True, help="Reload latest audit data"):
+                st.session_state.pop("email_ds_df", None)
+                st.rerun()
+        if "email_ds_df" not in st.session_state:
+            _ec_raw = _audit_log_load() or []
+            st.session_state["email_ds_df"] = pd.DataFrame(_ec_raw) if _ec_raw else pd.DataFrame()
+        _ec_df = st.session_state["email_ds_df"]
+        with _ds_status_col:
+            if _ec_df.empty:
+                st.markdown('<div style="color:#f59e0b;font-size:0.72rem;padding-top:6px;">⚠ No audit data loaded — submit audits first, then Refresh.</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div style="color:#16a34a;font-size:0.72rem;padding-top:6px;">✓ {len(_ec_df)} audit records loaded</div>', unsafe_allow_html=True)
+
+        if not _ec_df.empty:
+            # ── Selectable insight sections ────────────────────────────────
             _ds_options = {
-                "kpi_summary":       ("📊 KPI Summary",          _ds_c1),
-                "score_trend":       ("📈 Score Trend",           _ds_c1),
-                "qa_leaderboard":    ("👤 QA Leaderboard",        _ds_c1),
-                "campaign_rankings": ("🎯 Campaign Rankings",     _ds_c2),
-                "tier_breakdown":    ("🏗️ Tier Breakdown",        _ds_c2),
-                "top_params":        ("✅ Top Parameters",        _ds_c2),
-                "weak_params":       ("⚠️ Failing Parameters",    _ds_c3),
-                "lead_stage":        ("🔥 Lead Stage Breakdown",  _ds_c3),
-                "call_insights":     ("💡 Call Insights",         _ds_c3),
-                "priority_actions":  ("🎯 Priority Actions",      _ds_c3),
+                "kpi_summary":       "📊 KPI Summary",
+                "score_trend":       "📈 Score Trend",
+                "campaign_rankings": "🎯 Campaign Rankings",
+                "tier_breakdown":    "🏗️ Tier Breakdown",
+                "top_params":        "✅ Strengths",
+                "weak_params":       "⚠️ Areas of Improvement",
+                "lead_stage":        "🔥 Lead Stage",
+                "call_insights":     "💡 Call Insights",
+                "priority_actions":  "🎯 Priority Actions",
             }
+            _chk_c1, _chk_c2, _chk_c3, _chk_c4, _chk_c5 = st.columns(5)
+            _chk_cols = [_chk_c1, _chk_c2, _chk_c3, _chk_c4, _chk_c5]
             _ds_checked = {}
-            for _ds_key, (_ds_label, _ds_col) in _ds_options.items():
-                with _ds_col:
-                    _ds_checked[_ds_key] = st.checkbox(_ds_label, value=False, key=f"ds_chk_{_ds_key}_{ci}")
-
-            _ds_gen_btn = st.button("⚡ Generate Insight Cards for Email", key=f"ds_gen_{ci}", type="primary", use_container_width=True)
-            if _ds_gen_btn:
-                try:
-                    _ds_log = _audit_log_load() or []
-                    _ds_df = pd.DataFrame(_ds_log) if _ds_log else pd.DataFrame()
-                    if _ds_df.empty:
-                        st.warning("No audit data found — submit audits first.")
-                    else:
-                        _ds_total = len(_ds_df)
-                        _ds_bs = pd.to_numeric(_ds_df.get("Bot Score", pd.Series(dtype=float)), errors="coerce")
-                        _ds_avg = round(_ds_bs.dropna().mean(), 1) if not _ds_bs.dropna().empty else None
-                        _ds_st = _ds_df["Status"].astype(str).str.strip() if "Status" in _ds_df.columns else pd.Series([""] * _ds_total)
-                        _ds_pr = round(int((_ds_st == "Pass").sum()) / _ds_total * 100, 1) if _ds_total else 0
-                        _ds_fatal = int((_ds_st == "Auto-Fail").sum())
-                        _new_sections = []
-
-                        if _ds_checked.get("kpi_summary"):
-                            _new_sections.append({
-                                "icon": "📊", "title": "KPI Summary",
-                                "rows": [
-                                    {"label": "Total Audits",  "value": str(_ds_total)},
-                                    {"label": "Avg Bot Score", "value": f"{_ds_avg or '—'}%", "highlight": True},
-                                    {"label": "Pass Rate",     "value": f"{_ds_pr}%"},
-                                    {"label": "Auto-Fails",    "value": str(_ds_fatal)},
-                                ],
-                            })
-
-                        if _ds_checked.get("score_trend") and "Audit Date" in _ds_df.columns:
-                            try:
-                                _st_df = _ds_df[["Audit Date","Bot Score"]].copy()
-                                _st_df["Audit Date"] = pd.to_datetime(_st_df["Audit Date"], errors="coerce")
-                                _st_df["Bot Score"] = pd.to_numeric(_st_df["Bot Score"], errors="coerce")
-                                _st_df = _st_df.dropna().sort_values("Audit Date")
-                                if len(_st_df) >= 6:
-                                    _h = len(_st_df) // 2
-                                    _d1 = round(_st_df.iloc[:_h]["Bot Score"].mean(), 1)
-                                    _d2 = round(_st_df.iloc[_h:]["Bot Score"].mean(), 1)
-                                    _dif = round(_d2 - _d1, 1)
-                                    _dir = "↑ Improving" if _dif > 0 else "↓ Declining" if _dif < 0 else "→ Stable"
-                                    _new_sections.append({
-                                        "icon": "📈", "title": "Score Trend",
-                                        "rows": [
-                                            {"label": "Earlier Period Avg", "value": f"{_d1}%"},
-                                            {"label": "Recent Period Avg",  "value": f"{_d2}%"},
-                                            {"label": "Direction",          "value": f"{_dir} ({_dif:+.1f}%)", "highlight": True},
-                                        ],
-                                    })
-                            except Exception:
-                                pass
-
-                        if _ds_checked.get("qa_leaderboard") and "QA" in _ds_df.columns:
-                            _qa_rows_s = []
-                            for _qn, _qg in _ds_df.groupby("QA"):
-                                _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
-                                if len(_qbs):
-                                    _qa_rows_s.append({"label": str(_qn), "value": f"{round(_qbs.mean(),1)}%  ({len(_qg)} audits)"})
-                            _qa_rows_s.sort(key=lambda r: r["label"])
-                            if _qa_rows_s:
-                                _new_sections.append({"icon": "👤", "title": "QA Leaderboard", "rows": _qa_rows_s[:5]})
-
-                        if _ds_checked.get("campaign_rankings") and "Campaign Name" in _ds_df.columns:
-                            _cr_rows_s = []
-                            for _cn, _cg in _ds_df.groupby("Campaign Name"):
-                                _cbs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
-                                if len(_cbs):
-                                    _cr_rows_s.append({"label": str(_cn), "value": f"{round(_cbs.mean(),1)}%  ({len(_cg)} audits)"})
-                            _cr_rows_s.sort(key=lambda r: -float(r["value"].split("%")[0]))
-                            if _cr_rows_s:
-                                _cr_rows_s[0]["highlight"] = True
-                                _new_sections.append({"icon": "🎯", "title": "Campaign Rankings", "rows": _cr_rows_s[:5]})
-
-                        if _ds_checked.get("tier_breakdown"):
-                            _tb_rows_s = []
-                            for _tt in _QA_SCHEMA.get("tiers", []):
-                                _tsc = []
-                                for _tp in _tt.get("params", []):
-                                    if _tp["col"] in _ds_df.columns:
-                                        _pmx = max([int(o) for o in _tp.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
-                                        _tv = pd.to_numeric(_ds_df[_tp["col"]].astype(str).str.strip().replace(
-                                            {"NA": "", "nan": "", "Fatal": "", "Yes": "0", "No": str(_pmx)}), errors="coerce").dropna()
-                                        if len(_tv):
-                                            _tsc.append(_tv.mean() / _pmx * 100)
-                                if _tsc:
-                                    _tlabel = _tt["label"].split("·")[1].strip() if "·" in _tt["label"] else _tt["label"]
-                                    _score  = round(sum(_tsc) / len(_tsc), 1)
-                                    _tb_rows_s.append({"label": f"{_tlabel}  ({_tt.get('weight_pct',0)}% wt)", "value": f"{_score}%", "highlight": _score >= 75})
-                            if _tb_rows_s:
-                                _new_sections.append({"icon": "🏗️", "title": "Tier Breakdown", "rows": _tb_rows_s})
-
-                        if _ds_checked.get("top_params") or _ds_checked.get("weak_params"):
-                            _all_pa = []
-                            for _tt2 in _QA_SCHEMA.get("tiers", []):
-                                for _tp2 in _tt2.get("params", []):
-                                    if _tp2["col"] in _ds_df.columns:
-                                        _pmx2 = max([int(o) for o in _tp2.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
-                                        _pv2 = pd.to_numeric(_ds_df[_tp2["col"]].astype(str).str.strip().replace(
-                                            {"NA": "", "nan": "", "Fatal": ""}), errors="coerce").dropna()
-                                        if len(_pv2):
-                                            _all_pa.append((_tp2["col"], round(_pv2.mean() / _pmx2 * 100, 1)))
-                            if _ds_checked.get("top_params"):
-                                _tops = sorted([p for p in _all_pa if p[1] >= 75], key=lambda x: -x[1])[:5]
-                                if _tops:
-                                    _new_sections.append({
-                                        "icon": "✅", "title": "Top Performing Parameters",
-                                        "rows": [{"label": p[0], "value": f"{p[1]}%", "highlight": True} for p in _tops],
-                                    })
-                            if _ds_checked.get("weak_params"):
-                                _wks = sorted([p for p in _all_pa if p[1] < 70], key=lambda x: x[1])[:5]
-                                if _wks:
-                                    _new_sections.append({
-                                        "icon": "⚠️", "title": "Parameters Needing Attention",
-                                        "rows": [{"label": p[0], "value": f"{p[1]}%"} for p in _wks],
-                                    })
-
-                        if _ds_checked.get("lead_stage") and "Lead Stage" in _ds_df.columns:
-                            _lsv = _ds_df["Lead Stage"].astype(str).str.strip().value_counts()
-                            _lsv = _lsv[_lsv.index != "nan"]
-                            _lt = sum(_lsv.values)
-                            if _lt:
-                                _new_sections.append({
-                                    "icon": "🔥", "title": "Lead Stage Breakdown",
-                                    "rows": [{"label": k, "value": f"{v}  ({round(v/_lt*100,1)}%)"} for k, v in _lsv.items()],
-                                })
-
-                        if _ds_checked.get("call_insights"):
-                            try:
-                                _ci_res = _gen_call_insights(_ds_df)
-                                _ci_rows = [{"label": ins["title"], "value": ins["detail"][:90] + ("…" if len(ins["detail"]) > 90 else "")}
-                                            for ins in (_ci_res.get("insights") or [])[:5]]
-                                if _ci_rows:
-                                    _new_sections.append({"icon": "💡", "title": "Call Performance Insights", "rows": _ci_rows})
-                            except Exception:
-                                pass
-
-                        if _ds_checked.get("priority_actions"):
-                            try:
-                                _pa_res = _gen_call_insights(_ds_df)
-                                _pa_rows = [{"label": f"[{a['priority'].upper()}]", "value": a["action"][:100] + ("…" if len(a["action"]) > 100 else "")}
-                                            for a in (_pa_res.get("actions") or [])[:4]]
-                                if _pa_rows:
-                                    _new_sections.append({"icon": "🎯", "title": "Priority Actions", "rows": _pa_rows})
-                            except Exception:
-                                pass
-
-                        if _new_sections:
-                            d["insights_sections"] = _new_sections
-                            st.success(f"✅ {len(_new_sections)} insight card(s) added to the email — preview to see them.")
-                            st.rerun()
-                        else:
-                            st.info("No matching data found for the selected sections.")
-                except Exception as _ds_exc:
-                    st.error(f"Error generating content: {_ds_exc}")
-
-            _loaded_secs = d.get("insights_sections") or []
-            if _loaded_secs:
-                _ins_info_col, _ins_clr_col = st.columns([5, 1])
-                with _ins_info_col:
-                    st.markdown(
-                        f'<div style="color:#16a34a;font-size:0.72rem;font-weight:600;margin-top:6px;">'
-                        f'✓ {len(_loaded_secs)} insight card(s) ready in email</div>',
-                        unsafe_allow_html=True,
+            for _idx, (_ds_key, _ds_label) in enumerate(_ds_options.items()):
+                with _chk_cols[_idx % 5]:
+                    _ds_checked[_ds_key] = st.checkbox(
+                        _ds_label,
+                        value=d.get(f"_dschk_{_ds_key}", False),
+                        key=f"ds_chk_{_ds_key}_{ci}",
                     )
-                with _ins_clr_col:
-                    if st.button("✕ Clear", key=f"ins_clr_{ci}", use_container_width=True):
-                        d["insights_sections"] = []
-                        st.rerun()
+                d[f"_dschk_{_ds_key}"] = _ds_checked[_ds_key]
+
+            # ── Recompute insights live on every render ────────────────────
+            _live_sections = []
+
+            # ALWAYS: Custom Parameter Performance
+            try:
+                _cp_rows = []
+                for _tt in _QA_SCHEMA.get("tiers", []):
+                    for _tp in _tt.get("params", []):
+                        if _tp["col"] in _ec_df.columns:
+                            _pmx = max([int(o) for o in _tp.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
+                            _pv = pd.to_numeric(_ec_df[_tp["col"]].astype(str).str.strip().replace(
+                                {"NA": "", "nan": "", "Fatal": "", "Yes": "0", "No": str(_pmx)}), errors="coerce").dropna()
+                            if len(_pv):
+                                _pct = round(_pv.mean() / _pmx * 100, 1)
+                                _cp_rows.append({"label": _tp["col"], "value": f"{_pct}%", "highlight": _pct >= 75})
+                if _cp_rows:
+                    _live_sections.append({"icon": "🔧", "title": "Custom Parameter Performance", "rows": _cp_rows})
+            except Exception:
+                pass
+
+            _ds_total = len(_ec_df)
+            _ds_bs    = pd.to_numeric(_ec_df.get("Bot Score", pd.Series(dtype=float)), errors="coerce")
+            _ds_avg   = round(_ds_bs.dropna().mean(), 1) if not _ds_bs.dropna().empty else None
+            _ds_st    = _ec_df["Status"].astype(str).str.strip() if "Status" in _ec_df.columns else pd.Series([""] * _ds_total)
+            _ds_pr    = round(int((_ds_st == "Pass").sum()) / _ds_total * 100, 1) if _ds_total else 0
+            _ds_fatal = int((_ds_st == "Auto-Fail").sum())
+
+            if _ds_checked.get("kpi_summary"):
+                _live_sections.append({
+                    "icon": "📊", "title": "KPI Summary",
+                    "rows": [
+                        {"label": "Total Audits",  "value": str(_ds_total)},
+                        {"label": "Avg Bot Score", "value": f"{_ds_avg or '—'}%", "highlight": True},
+                        {"label": "Pass Rate",     "value": f"{_ds_pr}%"},
+                        {"label": "Auto-Fails",    "value": str(_ds_fatal)},
+                    ],
+                })
+
+            if _ds_checked.get("score_trend") and "Audit Date" in _ec_df.columns:
+                try:
+                    _st_df = _ec_df[["Audit Date","Bot Score"]].copy()
+                    _st_df["Audit Date"] = pd.to_datetime(_st_df["Audit Date"], errors="coerce")
+                    _st_df["Bot Score"]  = pd.to_numeric(_st_df["Bot Score"], errors="coerce")
+                    _st_df = _st_df.dropna().sort_values("Audit Date")
+                    if len(_st_df) >= 6:
+                        _h  = len(_st_df) // 2
+                        _d1 = round(_st_df.iloc[:_h]["Bot Score"].mean(), 1)
+                        _d2 = round(_st_df.iloc[_h:]["Bot Score"].mean(), 1)
+                        _dif = round(_d2 - _d1, 1)
+                        _dir = "↑ Improving" if _dif > 0 else "↓ Declining" if _dif < 0 else "→ Stable"
+                        _live_sections.append({
+                            "icon": "📈", "title": "Score Trend",
+                            "rows": [
+                                {"label": "Earlier Period Avg", "value": f"{_d1}%"},
+                                {"label": "Recent Period Avg",  "value": f"{_d2}%"},
+                                {"label": "Direction",         "value": f"{_dir} ({_dif:+.1f}%)", "highlight": True},
+                            ],
+                        })
+                except Exception:
+                    pass
+
+            if _ds_checked.get("campaign_rankings") and "Campaign Name" in _ec_df.columns:
+                _cr_rows_s = []
+                for _cn, _cg in _ec_df.groupby("Campaign Name"):
+                    _cbs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                    if len(_cbs):
+                        _cr_rows_s.append({"label": str(_cn), "value": f"{round(_cbs.mean(),1)}%  ({len(_cg)} audits)"})
+                _cr_rows_s.sort(key=lambda r: -float(r["value"].split("%")[0]))
+                if _cr_rows_s:
+                    _cr_rows_s[0]["highlight"] = True
+                    _live_sections.append({"icon": "🎯", "title": "Campaign Rankings", "rows": _cr_rows_s[:5]})
+
+            if _ds_checked.get("tier_breakdown"):
+                _tb_rows_s = []
+                for _tt in _QA_SCHEMA.get("tiers", []):
+                    _tsc = []
+                    for _tp in _tt.get("params", []):
+                        if _tp["col"] in _ec_df.columns:
+                            _pmx = max([int(o) for o in _tp.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
+                            _tv = pd.to_numeric(_ec_df[_tp["col"]].astype(str).str.strip().replace(
+                                {"NA": "", "nan": "", "Fatal": "", "Yes": "0", "No": str(_pmx)}), errors="coerce").dropna()
+                            if len(_tv):
+                                _tsc.append(_tv.mean() / _pmx * 100)
+                    if _tsc:
+                        _tlabel = _tt["label"].split("·")[1].strip() if "·" in _tt["label"] else _tt["label"]
+                        _sc     = round(sum(_tsc) / len(_tsc), 1)
+                        _tb_rows_s.append({"label": f"{_tlabel}  ({_tt.get('weight_pct',0)}% wt)", "value": f"{_sc}%", "highlight": _sc >= 75})
+                if _tb_rows_s:
+                    _live_sections.append({"icon": "🏗️", "title": "Tier Breakdown", "rows": _tb_rows_s})
+
+            if _ds_checked.get("top_params") or _ds_checked.get("weak_params"):
+                _all_pa = []
+                for _tt2 in _QA_SCHEMA.get("tiers", []):
+                    for _tp2 in _tt2.get("params", []):
+                        if _tp2["col"] in _ec_df.columns:
+                            _pmx2 = max([int(o) for o in _tp2.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
+                            _pv2 = pd.to_numeric(_ec_df[_tp2["col"]].astype(str).str.strip().replace(
+                                {"NA": "", "nan": "", "Fatal": ""}), errors="coerce").dropna()
+                            if len(_pv2):
+                                _all_pa.append((_tp2["col"], round(_pv2.mean() / _pmx2 * 100, 1)))
+                if _ds_checked.get("top_params"):
+                    _tops = sorted([p for p in _all_pa if p[1] >= 75], key=lambda x: -x[1])[:5]
+                    if _tops:
+                        _live_sections.append({
+                            "icon": "✅", "title": "Bot Strengths",
+                            "rows": [{"label": p[0], "value": f"{p[1]}%", "highlight": True} for p in _tops],
+                        })
+                if _ds_checked.get("weak_params"):
+                    _wks = sorted([p for p in _all_pa if p[1] < 70], key=lambda x: x[1])[:5]
+                    if _wks:
+                        _live_sections.append({
+                            "icon": "⚠️", "title": "Areas of Improvement (AOI)",
+                            "rows": [{"label": p[0], "value": f"{p[1]}%"} for p in _wks],
+                        })
+
+            if _ds_checked.get("lead_stage") and "Lead Stage" in _ec_df.columns:
+                _lsv = _ec_df["Lead Stage"].astype(str).str.strip().value_counts()
+                _lsv = _lsv[_lsv.index != "nan"]
+                _lt  = sum(_lsv.values)
+                if _lt:
+                    _live_sections.append({
+                        "icon": "🔥", "title": "Lead Stage Breakdown",
+                        "rows": [{"label": k, "value": f"{v}  ({round(v/_lt*100,1)}%)"} for k, v in _lsv.items()],
+                    })
+
+            if _ds_checked.get("call_insights"):
+                try:
+                    _ci_res  = _gen_call_insights(_ec_df)
+                    _ci_rows = [{"label": ins["title"], "value": ins["detail"][:90] + ("…" if len(ins["detail"]) > 90 else "")}
+                                for ins in (_ci_res.get("insights") or [])[:5]]
+                    if _ci_rows:
+                        _live_sections.append({"icon": "💡", "title": "Call Performance Insights", "rows": _ci_rows})
+                except Exception:
+                    pass
+
+            if _ds_checked.get("priority_actions"):
+                try:
+                    _pa_res  = _gen_call_insights(_ec_df)
+                    _pa_rows = [{"label": f"[{a['priority'].upper()}]", "value": a["action"][:100] + ("…" if len(a["action"]) > 100 else "")}
+                                for a in (_pa_res.get("actions") or [])[:4]]
+                    if _pa_rows:
+                        _live_sections.append({"icon": "🎯", "title": "Priority Actions", "rows": _pa_rows})
+                except Exception:
+                    pass
+
+            d["insights_sections"] = _live_sections
+            st.markdown(
+                f'<div style="color:#16a34a;font-size:0.72rem;font-weight:600;margin-top:6px;">'
+                f'✓ {len(_live_sections)} card(s) will appear in the email '
+                f'<span style="color:#94a3b8;font-weight:400;">(1 always-on: Custom Parameters'
+                f'{f" + {len(_live_sections)-1} selected" if len(_live_sections) > 1 else ""})</span></div>',
+                unsafe_allow_html=True,
+            )
 
         st.markdown("---")
 

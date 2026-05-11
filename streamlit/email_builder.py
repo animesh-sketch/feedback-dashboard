@@ -145,7 +145,9 @@ def build_email_html(draft: dict, template_id: int = 1, send_id: str = None, rec
 # ─── Voice Bot Insights HTML block ───────────────────────────────────────────
 
 def _build_insights_html(sections: list) -> str:
-    """Render structured dashboard insight sections as premium email-safe HTML cards."""
+    """Render structured dashboard insight sections as Convin Signature premium email cards.
+    Palette: deep pink #c2185b → electric blue #1a62f2, neon cyan #00e5d4 accents.
+    """
     if not sections:
         return ""
 
@@ -162,26 +164,26 @@ def _build_insights_html(sections: list) -> str:
             label     = row.get("label", "")
             value     = row.get("value", "")
             highlight = row.get("highlight", False)
-            row_bg    = "#f8faff" if i % 2 == 0 else "#ffffff"
-            val_color = "#1a62f2" if highlight else "#1e293b"
+            row_bg    = "#fdf2f8" if i % 2 == 0 else "#ffffff"
+            val_color = "#00c4b0" if highlight else "#1e293b"   # neon teal for highlights
             val_weight = "800" if highlight else "600"
+            arrow_color = "#f9a8d4"   # soft pink arrow
             rows_html += (
                 f'<tr style="background:{row_bg};">'
                 f'<td style="padding:9px 16px;font-size:11.5px;color:#64748b;font-weight:500;'
-                f'border-bottom:1px solid #eff6ff;width:58%;">'
-                f'<span style="color:#bfdbfe;margin-right:5px;">▸</span>{label}</td>'
+                f'border-bottom:1px solid #fce7f3;width:58%;">'
+                f'<span style="color:{arrow_color};margin-right:5px;">▸</span>{label}</td>'
                 f'<td style="padding:9px 16px;font-size:12px;color:{val_color};'
-                f'font-weight:{val_weight};border-bottom:1px solid #eff6ff;text-align:right;">'
+                f'font-weight:{val_weight};border-bottom:1px solid #fce7f3;text-align:right;">'
                 f'{value}</td>'
                 f'</tr>'
             )
 
         cards_html += (
             f'<div style="margin-bottom:12px;border-radius:10px;overflow:hidden;'
-            f'border:1px solid #dbeafe;box-shadow:0 2px 8px rgba(26,98,242,0.07);">'
+            f'border:1px solid #f9a8d4;box-shadow:0 2px 12px rgba(194,24,91,0.10);">'
             f'<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">'
-            # Section header row
-            f'<tr><td style="background:linear-gradient(90deg,#0b1f3a 0%,#1e3a8a 100%);'
+            f'<tr><td style="background:linear-gradient(90deg,#c2185b 0%,#6a1fb5 50%,#1a62f2 100%);'
             f'padding:10px 16px;">'
             f'<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr>'
             f'<td style="font-size:14px;padding-right:9px;vertical-align:middle;">{icon}</td>'
@@ -197,11 +199,12 @@ def _build_insights_html(sections: list) -> str:
 
     return (
         f'<div style="padding:0 44px 28px;">'
+        # Section label chip — neon-on-dark pill
         f'<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:16px;">'
         f'<tr><td>'
-        f'<span style="display:inline-block;background:#eff6ff;color:#1d4ed8;font-size:9px;'
-        f'font-weight:800;letter-spacing:0.14em;text-transform:uppercase;padding:5px 12px;'
-        f'border-radius:4px;border:1px solid #bfdbfe;">VOICE BOT INTELLIGENCE</span>'
+        f'<span style="display:inline-block;background:linear-gradient(90deg,#c2185b,#1a62f2);'
+        f'color:#ffffff;font-size:9px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;'
+        f'padding:5px 14px;border-radius:99px;">VOICE BOT INTELLIGENCE</span>'
         f'</td></tr></table>'
         f'{cards_html}'
         f'</div>'
