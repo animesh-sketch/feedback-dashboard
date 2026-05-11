@@ -11776,9 +11776,15 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         def _add_section(sid, label, icon, default, preview_fn, email_fn):
             try:
                 _prev = preview_fn()
-                _eml  = email_fn()
+                _result = email_fn()
+                if isinstance(_result, tuple):
+                    _data_h, _ins_h = _result
+                else:
+                    _data_h, _ins_h = (_result or ""), ""
                 _ALL_SECTIONS.append({"id": sid, "label": label, "icon": icon,
-                                       "default": default, "preview": _prev, "email": _eml})
+                                       "default": default, "preview": _prev,
+                                       "data_html": _data_h, "insight_html": _ins_h,
+                                       "email": _data_h + _ins_h})
             except Exception:
                 pass
 
@@ -11820,7 +11826,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 _kpi_ins = (f"Pass rate of <b>{_pr_d}%</b> is below target. "
                             f"{_fatal_d} auto-fails and {_rev_d} calls under review require immediate attention.")
                 _kpi_col = "#dc2626"
-            return _kpi_tbl + _em_insight_callout(_kpi_ins, _kpi_col)
+            return _kpi_tbl, _em_insight_callout(_kpi_ins, _kpi_col)
         _add_section("kpi", "KPI Overview", "📊", True, _s1_prev, _s1_eml)
 
         # ── S2: Status Distribution ──────────────────────────────────────────────
@@ -11864,11 +11870,11 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 _s2_ins = (f"'{_dominant2[0]}' is the most common status at <b>{_dom_pct2}%</b>. "
                            f"Focus on this category to improve overall bot quality scores.")
                 _s2_col = "#dc2626"
-            return (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
-                    f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📊 Status Distribution</div>'
-                    f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;padding:12px;margin-bottom:8px;">'
-                    f'{_body2}</div>'
-                    + _em_insight_callout(_s2_ins, _s2_col))
+            _s2_data = (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                        f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📊 Status Distribution</div>'
+                        f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;padding:12px;margin-bottom:8px;">'
+                        f'{_body2}</div>')
+            return _s2_data, _em_insight_callout(_s2_ins, _s2_col)
         _add_section("status_dist", "Status Distribution", "📊", True, _s2_prev, _s2_eml)
 
         # ── S3: Score Trend ──────────────────────────────────────────────────────
@@ -11908,12 +11914,12 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             _ins3_col = "#059669" if "improving" in _trend3 else "#dc2626" if "declining" in _trend3 else "#d97706"
             _ins3_txt = (f"Score trend is <b>{_trend3}</b> — latest avg {_vals_3[-1]}% "
                          f"vs {_vals_3[0]}% at period start. Red dotted line = 80% target.")
-            return (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
-                    f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📈 Score Trend Over Time</div>'
-                    f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;'
-                    f'padding:14px 10px 6px;margin-bottom:8px;background:#fff;text-align:center;">'
-                    f'{_chart_3}</div>'
-                    + _em_insight_callout(_ins3_txt, _ins3_col))
+            _s3_data = (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                        f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📈 Score Trend Over Time</div>'
+                        f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;'
+                        f'padding:14px 10px 6px;margin-bottom:8px;background:#fff;text-align:center;">'
+                        f'{_chart_3}</div>')
+            return _s3_data, _em_insight_callout(_ins3_txt, _ins3_col)
         _add_section("score_trend", "Score Trend", "📈", True, _s3_prev, _s3_eml)
 
         # ── S4: QA Leaderboard ────────────────────────────────────────────────────
@@ -12074,8 +12080,8 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                            f"Weakest: <b>{_weakest7[0]}</b> at {_weakest7[2]}% — "
                            f"prioritise coaching for this tier to drive the biggest overall score gain.")
                 _t7_col = "#059669" if _weakest7[2] >= 65 else "#dc2626"
-                return _t7_html + _em_insight_callout(_t7_ins, _t7_col)
-            return _t7_html
+                return _t7_html, _em_insight_callout(_t7_ins, _t7_col)
+            return _t7_html, ""
         _add_section("tier_breakdown", "Tier Breakdown", "🏗️", True, _s7_prev, _s7_eml)
 
         # ── S8: Disposition Breakdown ─────────────────────────────────────────────
@@ -12128,11 +12134,11 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             _top8_pct = round(int(_cnt8.iloc[0]) / _t8 * 100, 1)
             _s8_ins = (f"Most common disposition: <b>{_top8}</b> ({_top8_pct}% of calls). "
                        f"{'High concentration suggests consistent bot routing logic.' if _top8_pct > 60 else 'Diverse disposition spread — review for potential routing gaps.'}")
-            return (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
-                    f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📂 Disposition Breakdown</div>'
-                    f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;padding:12px;margin-bottom:8px;">'
-                    f'{_body8}</div>'
-                    + _em_insight_callout(_s8_ins, "#0891b2"))
+            _s8_data = (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                        f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📂 Disposition Breakdown</div>'
+                        f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;padding:12px;margin-bottom:8px;">'
+                        f'{_body8}</div>')
+            return _s8_data, _em_insight_callout(_s8_ins, "#0891b2")
         _add_section("disposition", "Disposition Breakdown", "📂", True, _s8_prev, _s8_eml)
 
         # ── S9: Lead Stage Breakdown ──────────────────────────────────────────────
@@ -12187,11 +12193,11 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             _conv_ins = (f"Conversion readiness (Hot + Warm): <b>{_conv9}%</b> of pipeline. "
                          f"Hot leads at {_hot9}% — "
                          f"{'strong pipeline health, bot is qualifying leads effectively.' if _conv9 >= 40 else 'nurture Warm leads to Hot to accelerate conversions.'}")
-            return (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
-                    f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">🔥 Lead Stage Breakdown</div>'
-                    f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;padding:12px;margin-bottom:8px;">'
-                    f'{_body9}</div>'
-                    + _em_insight_callout(_conv_ins, "#d97706"))
+            _s9_data = (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                        f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">🔥 Lead Stage Breakdown</div>'
+                        f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;padding:12px;margin-bottom:8px;">'
+                        f'{_body9}</div>')
+            return _s9_data, _em_insight_callout(_conv_ins, "#d97706")
         _add_section("lead_stage", "Lead Stage Breakdown", "🔥", True, _s9_prev, _s9_eml)
 
         # ── S10: Client Health Matrix ─────────────────────────────────────────────
@@ -12277,8 +12283,8 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     _p11_ins = (f"All parameters above 65% — <b>{len(_strong11)}</b> performing at 80%+. "
                                 f"Focus on maintaining consistency and pushing moderate scores to the strong tier.")
                     _p11_col = "#059669"
-                return _tbl11 + _em_insight_callout(_p11_ins, _p11_col)
-            return _tbl11
+                return _tbl11, _em_insight_callout(_p11_ins, _p11_col)
+            return _tbl11, ""
         _add_section("params", "Parameter Scores", "📊", True, _s11_prev, _s11_eml)
 
         # ── S12: Co-failure Analysis ──────────────────────────────────────────────
@@ -12462,12 +12468,12 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                       f"{_pcts16[0]}% are in the Critical range (&lt;60%) — "
                       f"{'excellent distribution' if _strong16 >= 60 else 'focus coaching on low-scoring calls to shift this distribution upward'}.")
             _ins16_col = "#059669" if _strong16 >= 60 else "#dc2626"
-            return (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
-                    f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📊 Score Distribution</div>'
-                    f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;'
-                    f'padding:14px 10px 6px;margin-bottom:8px;background:#fff;">'
-                    f'{_chart16}</div>'
-                    + _em_insight_callout(_ins16, _ins16_col))
+            _s16_data = (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                         f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📊 Score Distribution</div>'
+                         f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;'
+                         f'padding:14px 10px 6px;margin-bottom:8px;background:#fff;">'
+                         f'{_chart16}</div>')
+            return _s16_data, _em_insight_callout(_ins16, _ins16_col)
         _add_section("score_dist_chart", "Score Distribution Chart", "📊", True, _s16_prev, _s16_eml)
 
         # ── S17: Parameter Performance Chart (SVG horizontal bars) ───────────────
@@ -12495,12 +12501,12 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                       f"Top performer: <b>{_pa17[0][0]}</b> at {_pa17[0][1]}%. "
                       f"Weakest: <b>{_pa17[-1][0]}</b> at {_pa17[-1][1]}%.")
             _ins17_col = "#dc2626" if _crit17 else "#059669"
-            return (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
-                    f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📊 Parameter Performance Chart</div>'
-                    f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;'
-                    f'padding:14px 10px 6px;margin-bottom:8px;background:#fff;">'
-                    f'{_chart17}</div>'
-                    + _em_insight_callout(_ins17, _ins17_col))
+            _s17_data = (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                         f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📊 Parameter Performance Chart</div>'
+                         f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;'
+                         f'padding:14px 10px 6px;margin-bottom:8px;background:#fff;">'
+                         f'{_chart17}</div>')
+            return _s17_data, _em_insight_callout(_ins17, _ins17_col)
         _add_section("param_chart", "Parameter Performance Chart", "📊", True, _s17_prev, _s17_eml)
 
         # ── Render sections + tabs (Compose | Preview | Gallery) ────────────────
@@ -12514,14 +12520,25 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
         # ── TAB 1: Compose & Send ─────────────────────────────────────────────────
         with _db_tab_compose:
-            _sel_all_col2, _desel_all_col2, _sel_count_col2 = st.columns([1, 1, 4])
-            if _sel_all_col2.button("☑ Select All", key="dash_sel_all", use_container_width=True):
+            # ── Master controls row ───────────────────────────────────────────────
+            _mc1, _mc2, _mc3, _mc4, _mc5 = st.columns([1, 1, 0.3, 1, 1])
+            if _mc1.button("☑ Sections: All", key="dash_sel_all", use_container_width=True):
                 for _s in _ALL_SECTIONS:
                     st.session_state[f"dbsec_{_s['id']}"] = True
                 st.rerun()
-            if _desel_all_col2.button("☐ Deselect All", key="dash_desel_all", use_container_width=True):
+            if _mc2.button("☐ Sections: None", key="dash_desel_all", use_container_width=True):
                 for _s in _ALL_SECTIONS:
                     st.session_state[f"dbsec_{_s['id']}"] = False
+                st.rerun()
+            _mc3.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+            if _mc4.button("💡 Insights: All ON", key="dash_ins_all", use_container_width=True):
+                for _s in _ALL_SECTIONS:
+                    if _s.get("insight_html"):
+                        st.session_state[f"dbins_{_s['id']}"] = True
+                st.rerun()
+            if _mc5.button("💡 Insights: All OFF", key="dash_ins_none", use_container_width=True):
+                for _s in _ALL_SECTIONS:
+                    st.session_state[f"dbins_{_s['id']}"] = False
                 st.rerun()
 
             _selected_section_ids = []
@@ -12538,6 +12555,14 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                         )
                         if _is_checked:
                             _selected_section_ids.append(_s["id"])
+                        # per-section insight toggle (only shown when section is checked and has insight)
+                        if _is_checked and _s.get("insight_html"):
+                            _ins_default = st.session_state.get(f"dbins_{_s['id']}", True)
+                            st.checkbox(
+                                "💡 Include insight",
+                                value=_ins_default,
+                                key=f"dbins_{_s['id']}",
+                            )
                         if _is_checked or _s["default"]:
                             st.markdown(
                                 f'<div style="background:#f8faff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;margin-bottom:4px;">'
@@ -12548,7 +12573,15 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
             st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
             _sel_sections_c = [s for s in _ALL_SECTIONS if s["id"] in _selected_section_ids]
-            st.markdown(f'<div style="font-size:0.68rem;color:#64748b;margin-bottom:8px;">{len(_sel_sections_c)} of {len(_ALL_SECTIONS)} sections selected</div>', unsafe_allow_html=True)
+            _ins_on_ids = {s["id"] for s in _ALL_SECTIONS
+                          if s.get("insight_html") and st.session_state.get(f"dbins_{s['id']}", True)}
+            _ins_count = sum(1 for s in _sel_sections_c if s["id"] in _ins_on_ids)
+            st.markdown(
+                f'<div style="font-size:0.68rem;color:#64748b;margin-bottom:8px;">'
+                f'{len(_sel_sections_c)} of {len(_ALL_SECTIONS)} sections · '
+                f'{_ins_count} insight callout{"s" if _ins_count != 1 else ""} included</div>',
+                unsafe_allow_html=True
+            )
 
             _em_c1, _em_c2, _em_c3, _em_c4 = st.columns([3, 2, 1, 1])
             with _em_c1:
@@ -12582,8 +12615,13 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             if _em_prev_btn:
                 st.session_state["dbem_show_prev"] = not st.session_state.get("dbem_show_prev", False)
 
-            def _build_dashboard_email_html(sel_secs, client_name):
-                _sh = "".join(s["email"] for s in sel_secs if s["email"])
+            def _build_dashboard_email_html(sel_secs, client_name, insight_ids=None):
+                _all_ins = insight_ids is None  # None means include all
+                _sh = ""
+                for _sec in sel_secs:
+                    _sh += _sec.get("data_html") or _sec.get("email", "")
+                    if (_all_ins or _sec["id"] in (insight_ids or set())) and _sec.get("insight_html"):
+                        _sh += _sec["insight_html"]
                 return (
                     f'<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;background:#f4f6fb;">'
                     # ── HEADER ──
@@ -12675,7 +12713,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 elif not _to_list_em:
                     st.warning("Select at least one contact or enter a recipient email.")
                 else:
-                    _full_em_html = _build_dashboard_email_html(_sel_sections_c, _em_client)
+                    _full_em_html = _build_dashboard_email_html(_sel_sections_c, _em_client, _ins_on_ids)
                     try:
                         import gmail_sender as _gs_em
                         _em_result = _gs_em.send_report_email(
@@ -12695,7 +12733,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             if st.session_state.get("dbem_show_prev", False):
                 _prev_secs_c = _sel_sections_c if _sel_sections_c else [s for s in _ALL_SECTIONS if s["default"]]
                 if _prev_secs_c:
-                    _prev_html_c = _build_dashboard_email_html(_prev_secs_c, _em_client)
+                    _prev_html_c = _build_dashboard_email_html(_prev_secs_c, _em_client, _ins_on_ids)
                     _prev_wrap_c = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
     <style>body{{margin:0;padding:16px;background:#e8ecf4;font-family:Arial,sans-serif;}}</style></head>
     <body>{_prev_html_c}</body></html>"""
@@ -12717,7 +12755,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             if not _prev_sel_secs:
                 st.info("No sections selected in Compose tab — select at least one to preview.")
             else:
-                _prev_html = _build_dashboard_email_html(_prev_sel_secs, _em_client)
+                _prev_html = _build_dashboard_email_html(_prev_sel_secs, _em_client, _ins_on_ids)
                 st.markdown(f'<div style="font-size:0.72rem;color:#64748b;margin-bottom:8px;">Previewing {len(_prev_sel_secs)} selected sections as they will appear in the email.</div>', unsafe_allow_html=True)
                 _prev_wrapped = f"""<!DOCTYPE html><html><head><meta charset="utf-8">
     <style>body{{margin:0;padding:16px;background:#e8ecf4;font-family:Arial,sans-serif;}}</style></head>
