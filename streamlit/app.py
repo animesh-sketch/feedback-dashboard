@@ -13047,6 +13047,13 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 unsafe_allow_html=True,
             )
 
+        # ── Quick submit at top ───────────────────────────────────────────────
+        _sub_top = st.form_submit_button(
+            "💾 Save Changes" if (_edit_mode and _edit_id) else "✅ Submit Audit — Auto-Score",
+            use_container_width=True,
+            type="primary",
+        )
+
         # ── Audit & Lead details ──────────────────────────────────────────────
         st.markdown(
             '<div style="font-size:0.68rem;font-weight:700;color:#2a5080;letter-spacing:0.08em;'
@@ -13283,7 +13290,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 st.session_state.pop("_prefill_from_edit", None)
                 st.rerun()
 
-        if _sub:
+        if _sub or _sub_top:
             # Mandatory validation
             _errs = []
             if not _f_auditor.strip():
