@@ -61,7 +61,7 @@ def _tracking_pixel(send_id, em_b64):
     )
 
 
-def build_email_html(draft: dict, template_id: int = 1, send_id: str = None, recipient_email: str = None, font_size: str = None, font_family: str = None) -> str:
+def build_email_html(draft: dict, template_id: int = 1, send_id: str = None, recipient_email: str = None, font_size: str = None, font_family: str = None, insights_sections: list = None) -> str:
     c  = draft.get("client")              or "—"
     h  = draft.get("headline")            or "—"
     b  = (draft.get("body") or draft.get("intro") or "").replace("\n", "<br>")
@@ -118,6 +118,11 @@ def build_email_html(draft: dict, template_id: int = 1, send_id: str = None, rec
             f'</div>{dl_btn}</div></div>'
         )
 
+    # Insight sections (dashboard data cards) — rendered before scoreboard
+    _ins = insights_sections if insights_sections is not None else draft.get("insights_sections") or []
+    if _ins:
+        extra_parts.append(_build_insights_html(_ins))
+
     # Build scoreboard block — rendered before attachment, after images
     if draft.get("scoreboard_enabled") and draft.get("scoreboard_rows"):
         extra_parts.append(_build_scoreboard_html(
@@ -135,6 +140,72 @@ def build_email_html(draft: dict, template_id: int = 1, send_id: str = None, rec
     _pixel    = _tracking_pixel(send_id, em_b64)
     _stars    = [_rating_url(i, send_id, em_b64) for i in range(1, 6)]
     return builders.get(template_id, _tpl_executive)(c, h, b, ss, sc, _track_rl, sq, extra_imgs_html, _pixel, _stars)
+
+
+# ─── Voice Bot Insights HTML block ───────────────────────────────────────────
+
+def _build_insights_html(sections: list) -> str:
+    """Render structured dashboard insight sections as premium email-safe HTML cards."""
+    if not sections:
+        return ""
+
+    cards_html = ""
+    for sec in sections:
+        icon  = sec.get("icon", "📊")
+        title = sec.get("title", "")
+        rows  = sec.get("rows", [])
+        if not rows:
+            continue
+
+        rows_html = ""
+        for i, row in enumerate(rows):
+            label     = row.get("label", "")
+            value     = row.get("value", "")
+            highlight = row.get("highlight", False)
+            row_bg    = "#f8faff" if i % 2 == 0 else "#ffffff"
+            val_color = "#1a62f2" if highlight else "#1e293b"
+            val_weight = "800" if highlight else "600"
+            rows_html += (
+                f'<tr style="background:{row_bg};">'
+                f'<td style="padding:9px 16px;font-size:11.5px;color:#64748b;font-weight:500;'
+                f'border-bottom:1px solid #eff6ff;width:58%;">'
+                f'<span style="color:#bfdbfe;margin-right:5px;">▸</span>{label}</td>'
+                f'<td style="padding:9px 16px;font-size:12px;color:{val_color};'
+                f'font-weight:{val_weight};border-bottom:1px solid #eff6ff;text-align:right;">'
+                f'{value}</td>'
+                f'</tr>'
+            )
+
+        cards_html += (
+            f'<div style="margin-bottom:12px;border-radius:10px;overflow:hidden;'
+            f'border:1px solid #dbeafe;box-shadow:0 2px 8px rgba(26,98,242,0.07);">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">'
+            # Section header row
+            f'<tr><td style="background:linear-gradient(90deg,#0b1f3a 0%,#1e3a8a 100%);'
+            f'padding:10px 16px;">'
+            f'<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr>'
+            f'<td style="font-size:14px;padding-right:9px;vertical-align:middle;">{icon}</td>'
+            f'<td style="color:#ffffff;font-size:10px;font-weight:700;letter-spacing:0.09em;'
+            f'text-transform:uppercase;vertical-align:middle;">{title}</td>'
+            f'</tr></table></td></tr>'
+            f'{rows_html}'
+            f'</table></div>'
+        )
+
+    if not cards_html:
+        return ""
+
+    return (
+        f'<div style="padding:0 44px 28px;">'
+        f'<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:16px;">'
+        f'<tr><td>'
+        f'<span style="display:inline-block;background:#eff6ff;color:#1d4ed8;font-size:9px;'
+        f'font-weight:800;letter-spacing:0.14em;text-transform:uppercase;padding:5px 12px;'
+        f'border-radius:4px;border:1px solid #bfdbfe;">VOICE BOT INTELLIGENCE</span>'
+        f'</td></tr></table>'
+        f'{cards_html}'
+        f'</div>'
+    )
 
 
 # ─── Scoreboard HTML block ────────────────────────────────────────────────────

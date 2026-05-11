@@ -78,10 +78,12 @@ def _blank_draft(idx: int) -> dict:
         "attachment_data": "",   # base64-encoded bytes for MIME attachment
         "attachment_mime": "",
         "attachment_url": "",    # URL alternative (shown as Download button in email)
-        "scoreboard_enabled": False,
-        "scoreboard_title":   "Performance Scoreboard",
-        "scoreboard_rows":    [],
-        "sb_rows":            [],
+        "scoreboard_enabled":   False,
+        "scoreboard_title":     "Performance Scoreboard",
+        "scoreboard_rows":      [],
+        "sb_rows":              [],
+        "insights_sections":    [],
+        "_subject_auto_client": "",
     }
 
 if "drafts" not in st.session_state:
@@ -2720,7 +2722,7 @@ def render_drafts_tab():
             tpl_name = TEMPLATE_NAMES[draft.get("template", 1) - 1][0]
             st.markdown(f'<div style="color:#0f172a;font-size:0.88rem;font-weight:600;margin:8px 0;">Preview · {draft["name"]} · {tpl_name}</div>', unsafe_allow_html=True)
             try:
-                html_content = build_email_html(draft, draft.get("template", 1), **_email_font_kwargs())
+                html_content = build_email_html(draft, draft.get("template", 1), insights_sections=draft.get("insights_sections"), **_email_font_kwargs())
                 components.html(html_content, height=2200, scrolling=True)
             except Exception as e:
                 st.error(f"Preview error: {e}")
@@ -2769,17 +2771,29 @@ def render_email_maker():
         with cc1: d["client"]     = st.text_input("Client Name", value=d["client"],   key=f"cc_client_{ci}", placeholder="e.g. Acme Corp")
         with cc2: d["report_link"] = st.text_input("Report URL",  value=d["report_link"], key=f"cc_link_{ci}", placeholder="https://docs.google.com/…")
 
-        # Auto-suggest subject with client name when field is empty
+        # Subject auto-capture — tracks which client was used to generate the subject;
+        # only overwrites if subject is empty or still matches the previously auto-generated value.
         _client_val = d.get("client", "").strip()
-        _subj_default = d.get("subject", "")
-        if not _subj_default and _client_val:
-            import datetime as _dt_em
-            _subj_default = f"{_client_val} — AI Performance Report · {_dt_em.date.today().strftime('%B %Y')}"
-        d["subject"]  = st.text_input(
+        import datetime as _dt_em
+        _month_str = _dt_em.date.today().strftime('%B %Y')
+        _subj_key  = f"cc_subj_{ci}"
+        def _make_auto_subj(cn):
+            return f"{cn} — Voice Bot Performance Report · {_month_str}" if cn else ""
+        _subj_auto_client = d.get("_subject_auto_client", "")
+        _current_subj = st.session_state.get(_subj_key, d.get("subject", ""))
+        if _client_val and _client_val != _subj_auto_client:
+            _old_auto = _make_auto_subj(_subj_auto_client)
+            if not _current_subj or _current_subj == _old_auto:
+                st.session_state[_subj_key] = _make_auto_subj(_client_val)
+            d["_subject_auto_client"] = _client_val
+        elif not _current_subj and _client_val:
+            st.session_state[_subj_key] = _make_auto_subj(_client_val)
+            d["_subject_auto_client"] = _client_val
+        d["subject"] = st.text_input(
             "Email Subject Line",
-            value=_subj_default,
-            key=f"cc_subj_{ci}",
-            placeholder="e.g. Acme Corp — Your February Analytics Report is Ready",
+            value=st.session_state.get(_subj_key, d.get("subject", "")),
+            key=_subj_key,
+            placeholder="e.g. Acme Corp — Voice Bot Performance Report",
         )
         d["body"]     = st.text_area("Email Body",                    value=d["body"],     key=f"cc_body_{ci}", height=120, placeholder="Write the main body of the email…")
 
@@ -2929,7 +2943,7 @@ def render_email_maker():
                 st.rerun()
         with pc3:
             try:
-                _dl_html = build_email_html(d, d.get("template", 1), **_email_font_kwargs())
+                _dl_html = build_email_html(d, d.get("template", 1), insights_sections=d.get("insights_sections"), **_email_font_kwargs())
                 st.download_button(
                     "⬇️ HTML",
                     data=_dl_html,
@@ -2948,7 +2962,7 @@ def render_email_maker():
 
         if st.session_state.get(f"cc_show_prev_{ci}", False):
             try:
-                components.html(build_email_html(d, d.get("template", 1), **_email_font_kwargs()), height=2000, scrolling=True)
+                components.html(build_email_html(d, d.get("template", 1), insights_sections=d.get("insights_sections"), **_email_font_kwargs()), height=2000, scrolling=True)
             except Exception as e:
                 st.error(f"Preview error: {e}")
 
@@ -2976,7 +2990,7 @@ def render_email_maker():
                 with _ds_col:
                     _ds_checked[_ds_key] = st.checkbox(_ds_label, value=False, key=f"ds_chk_{_ds_key}_{ci}")
 
-            _ds_gen_btn = st.button("⚡ Generate & Append to Email Body", key=f"ds_gen_{ci}", type="primary", use_container_width=True)
+            _ds_gen_btn = st.button("⚡ Generate Insight Cards for Email", key=f"ds_gen_{ci}", type="primary", use_container_width=True)
             if _ds_gen_btn:
                 try:
                     _ds_log = _audit_log_load() or []
@@ -2990,10 +3004,18 @@ def render_email_maker():
                         _ds_st = _ds_df["Status"].astype(str).str.strip() if "Status" in _ds_df.columns else pd.Series([""] * _ds_total)
                         _ds_pr = round(int((_ds_st == "Pass").sum()) / _ds_total * 100, 1) if _ds_total else 0
                         _ds_fatal = int((_ds_st == "Auto-Fail").sum())
-                        _ds_lines = []
+                        _new_sections = []
 
                         if _ds_checked.get("kpi_summary"):
-                            _ds_lines.append(f"📊 KPI SUMMARY\n• Total Audits: {_ds_total}\n• Avg Bot Score: {_ds_avg or '—'}%\n• Pass Rate: {_ds_pr}%\n• Auto-Fails: {_ds_fatal}")
+                            _new_sections.append({
+                                "icon": "📊", "title": "KPI Summary",
+                                "rows": [
+                                    {"label": "Total Audits",  "value": str(_ds_total)},
+                                    {"label": "Avg Bot Score", "value": f"{_ds_avg or '—'}%", "highlight": True},
+                                    {"label": "Pass Rate",     "value": f"{_ds_pr}%"},
+                                    {"label": "Auto-Fails",    "value": str(_ds_fatal)},
+                                ],
+                            })
 
                         if _ds_checked.get("score_trend") and "Audit Date" in _ds_df.columns:
                             try:
@@ -3007,32 +3029,40 @@ def render_email_maker():
                                     _d2 = round(_st_df.iloc[_h:]["Bot Score"].mean(), 1)
                                     _dif = round(_d2 - _d1, 1)
                                     _dir = "↑ Improving" if _dif > 0 else "↓ Declining" if _dif < 0 else "→ Stable"
-                                    _ds_lines.append(f"📈 SCORE TREND\n• Earlier avg: {_d1}%  →  Recent avg: {_d2}%\n• Direction: {_dir} ({_dif:+.1f}%)")
+                                    _new_sections.append({
+                                        "icon": "📈", "title": "Score Trend",
+                                        "rows": [
+                                            {"label": "Earlier Period Avg", "value": f"{_d1}%"},
+                                            {"label": "Recent Period Avg",  "value": f"{_d2}%"},
+                                            {"label": "Direction",          "value": f"{_dir} ({_dif:+.1f}%)", "highlight": True},
+                                        ],
+                                    })
                             except Exception:
                                 pass
 
                         if _ds_checked.get("qa_leaderboard") and "QA" in _ds_df.columns:
-                            _qa_rows = []
+                            _qa_rows_s = []
                             for _qn, _qg in _ds_df.groupby("QA"):
                                 _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
                                 if len(_qbs):
-                                    _qa_rows.append(f"  • {_qn}: {round(_qbs.mean(),1)}% avg ({len(_qg)} audits)")
-                            _qa_rows.sort()
-                            if _qa_rows:
-                                _ds_lines.append("👤 QA LEADERBOARD\n" + "\n".join(_qa_rows[:5]))
+                                    _qa_rows_s.append({"label": str(_qn), "value": f"{round(_qbs.mean(),1)}%  ({len(_qg)} audits)"})
+                            _qa_rows_s.sort(key=lambda r: r["label"])
+                            if _qa_rows_s:
+                                _new_sections.append({"icon": "👤", "title": "QA Leaderboard", "rows": _qa_rows_s[:5]})
 
                         if _ds_checked.get("campaign_rankings") and "Campaign Name" in _ds_df.columns:
-                            _cr_rows = []
+                            _cr_rows_s = []
                             for _cn, _cg in _ds_df.groupby("Campaign Name"):
                                 _cbs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
                                 if len(_cbs):
-                                    _cr_rows.append((str(_cn), round(_cbs.mean(), 1), len(_cg)))
-                            _cr_rows.sort(key=lambda x: -x[1])
-                            if _cr_rows:
-                                _ds_lines.append("🎯 CAMPAIGN RANKINGS\n" + "\n".join([f"  • {r[0]}: {r[1]}% ({r[2]} audits)" for r in _cr_rows[:5]]))
+                                    _cr_rows_s.append({"label": str(_cn), "value": f"{round(_cbs.mean(),1)}%  ({len(_cg)} audits)"})
+                            _cr_rows_s.sort(key=lambda r: -float(r["value"].split("%")[0]))
+                            if _cr_rows_s:
+                                _cr_rows_s[0]["highlight"] = True
+                                _new_sections.append({"icon": "🎯", "title": "Campaign Rankings", "rows": _cr_rows_s[:5]})
 
                         if _ds_checked.get("tier_breakdown"):
-                            _tb_lines = []
+                            _tb_rows_s = []
                             for _tt in _QA_SCHEMA.get("tiers", []):
                                 _tsc = []
                                 for _tp in _tt.get("params", []):
@@ -3044,9 +3074,10 @@ def render_email_maker():
                                             _tsc.append(_tv.mean() / _pmx * 100)
                                 if _tsc:
                                     _tlabel = _tt["label"].split("·")[1].strip() if "·" in _tt["label"] else _tt["label"]
-                                    _tb_lines.append(f"  • {_tlabel} ({_tt.get('weight_pct',0)}% weight): {round(sum(_tsc)/len(_tsc),1)}%")
-                            if _tb_lines:
-                                _ds_lines.append("🏗️ TIER BREAKDOWN\n" + "\n".join(_tb_lines))
+                                    _score  = round(sum(_tsc) / len(_tsc), 1)
+                                    _tb_rows_s.append({"label": f"{_tlabel}  ({_tt.get('weight_pct',0)}% wt)", "value": f"{_score}%", "highlight": _score >= 75})
+                            if _tb_rows_s:
+                                _new_sections.append({"icon": "🏗️", "title": "Tier Breakdown", "rows": _tb_rows_s})
 
                         if _ds_checked.get("top_params") or _ds_checked.get("weak_params"):
                             _all_pa = []
@@ -3061,47 +3092,70 @@ def render_email_maker():
                             if _ds_checked.get("top_params"):
                                 _tops = sorted([p for p in _all_pa if p[1] >= 75], key=lambda x: -x[1])[:5]
                                 if _tops:
-                                    _ds_lines.append("✅ TOP PARAMETERS\n" + "\n".join([f"  • {p[0]}: {p[1]}%" for p in _tops]))
+                                    _new_sections.append({
+                                        "icon": "✅", "title": "Top Performing Parameters",
+                                        "rows": [{"label": p[0], "value": f"{p[1]}%", "highlight": True} for p in _tops],
+                                    })
                             if _ds_checked.get("weak_params"):
                                 _wks = sorted([p for p in _all_pa if p[1] < 70], key=lambda x: x[1])[:5]
                                 if _wks:
-                                    _ds_lines.append("⚠️ FAILING PARAMETERS (need attention)\n" + "\n".join([f"  • {p[0]}: {p[1]}%" for p in _wks]))
+                                    _new_sections.append({
+                                        "icon": "⚠️", "title": "Parameters Needing Attention",
+                                        "rows": [{"label": p[0], "value": f"{p[1]}%"} for p in _wks],
+                                    })
 
                         if _ds_checked.get("lead_stage") and "Lead Stage" in _ds_df.columns:
                             _lsv = _ds_df["Lead Stage"].astype(str).str.strip().value_counts()
                             _lsv = _lsv[_lsv.index != "nan"]
                             _lt = sum(_lsv.values)
-                            _ds_lines.append("🔥 LEAD STAGE BREAKDOWN\n" + "\n".join(
-                                [f"  • {k}: {v} ({round(v/_lt*100,1)}%)" for k, v in _lsv.items()]))
+                            if _lt:
+                                _new_sections.append({
+                                    "icon": "🔥", "title": "Lead Stage Breakdown",
+                                    "rows": [{"label": k, "value": f"{v}  ({round(v/_lt*100,1)}%)"} for k, v in _lsv.items()],
+                                })
 
                         if _ds_checked.get("call_insights"):
                             try:
                                 _ci_res = _gen_call_insights(_ds_df)
-                                _ci_texts = [f"  • {ins['title']}: {ins['detail'][:120]}…" for ins in (_ci_res.get("insights") or [])[:5]]
-                                if _ci_texts:
-                                    _ds_lines.append("💡 CALL PERFORMANCE INSIGHTS\n" + "\n".join(_ci_texts))
+                                _ci_rows = [{"label": ins["title"], "value": ins["detail"][:90] + ("…" if len(ins["detail"]) > 90 else "")}
+                                            for ins in (_ci_res.get("insights") or [])[:5]]
+                                if _ci_rows:
+                                    _new_sections.append({"icon": "💡", "title": "Call Performance Insights", "rows": _ci_rows})
                             except Exception:
                                 pass
 
                         if _ds_checked.get("priority_actions"):
                             try:
                                 _pa_res = _gen_call_insights(_ds_df)
-                                _pa_texts = [f"  [{a['priority'].upper()}] {a['action'][:120]}…" for a in (_pa_res.get("actions") or [])[:4]]
-                                if _pa_texts:
-                                    _ds_lines.append("🎯 PRIORITY ACTIONS\n" + "\n".join(_pa_texts))
+                                _pa_rows = [{"label": f"[{a['priority'].upper()}]", "value": a["action"][:100] + ("…" if len(a["action"]) > 100 else "")}
+                                            for a in (_pa_res.get("actions") or [])[:4]]
+                                if _pa_rows:
+                                    _new_sections.append({"icon": "🎯", "title": "Priority Actions", "rows": _pa_rows})
                             except Exception:
                                 pass
 
-                        if _ds_lines:
-                            _appended = "\n\n---\n📊 DASHBOARD DATA\n\n" + "\n\n".join(_ds_lines)
-                            _existing = d.get("body", "").rstrip()
-                            d["body"] = _existing + _appended
-                            st.success(f"✅ Added {len(_ds_lines)} section(s) to the email body.")
+                        if _new_sections:
+                            d["insights_sections"] = _new_sections
+                            st.success(f"✅ {len(_new_sections)} insight card(s) added to the email — preview to see them.")
                             st.rerun()
                         else:
                             st.info("No matching data found for the selected sections.")
                 except Exception as _ds_exc:
                     st.error(f"Error generating content: {_ds_exc}")
+
+            _loaded_secs = d.get("insights_sections") or []
+            if _loaded_secs:
+                _ins_info_col, _ins_clr_col = st.columns([5, 1])
+                with _ins_info_col:
+                    st.markdown(
+                        f'<div style="color:#16a34a;font-size:0.72rem;font-weight:600;margin-top:6px;">'
+                        f'✓ {len(_loaded_secs)} insight card(s) ready in email</div>',
+                        unsafe_allow_html=True,
+                    )
+                with _ins_clr_col:
+                    if st.button("✕ Clear", key=f"ins_clr_{ci}", use_container_width=True):
+                        d["insights_sections"] = []
+                        st.rerun()
 
         st.markdown("---")
 
@@ -3172,12 +3226,13 @@ def render_email_maker():
                     import uuid as _uuid
                     _send_id = str(_uuid.uuid4())[:8]
                     _fkw = _email_font_kwargs()
+                    _ins_secs_t = d.get("insights_sections")
                     def _html_builder_test(addr):
-                        return build_email_html(d, d.get("template", 1), send_id=_send_id, recipient_email=addr, **_fkw)
+                        return build_email_html(d, d.get("template", 1), send_id=_send_id, recipient_email=addr, insights_sections=_ins_secs_t, **_fkw)
                     with st.spinner("Sending test…"):
                         _res = gmail_sender.send_report_email(
                             None, [_test_addr], _subj[:80],
-                            build_email_html(d, d.get("template", 1), **_fkw),
+                            build_email_html(d, d.get("template", 1), insights_sections=_ins_secs_t, **_fkw),
                             _test_addr,
                             attachment_name=_att_name,
                             attachment_data=_att_bytes,
@@ -3221,12 +3276,13 @@ def render_email_maker():
                     import uuid as _uuid
                     _send_id = str(_uuid.uuid4())[:8]
                     _fkw = _email_font_kwargs()
+                    _ins_secs_p = d.get("insights_sections")
                     def _html_builder_prod(addr):
-                        return build_email_html(d, d.get("template", 1), send_id=_send_id, recipient_email=addr, **_fkw)
+                        return build_email_html(d, d.get("template", 1), send_id=_send_id, recipient_email=addr, insights_sections=_ins_secs_p, **_fkw)
                     with st.spinner(f"Sending to {len(all_emails)} recipient(s)…"):
                         result = gmail_sender.send_report_email(
                             None, all_emails, _subject,
-                            build_email_html(d, d.get("template", 1), **_fkw),
+                            build_email_html(d, d.get("template", 1), insights_sections=_ins_secs_p, **_fkw),
                             st.session_state.get("user_email", ""),
                             attachment_name=_att_name,
                             attachment_data=_att_bytes,
