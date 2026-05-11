@@ -11067,29 +11067,143 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
         # ── Section 13 — All-param score bars (full overview) ────────────────────
         if _param_avgs_d:
-            st.markdown('<div class="section-chip">📊 All Parameter Scores</div>', unsafe_allow_html=True)
             try:
                 _allp_sorted = sorted(_param_avgs_d, key=lambda x: x["pct"])
+                _n_pass  = sum(1 for p in _allp_sorted if p["pct"] >= 80)
+                _n_rev   = sum(1 for p in _allp_sorted if 60 <= p["pct"] < 80)
+                _n_fail  = sum(1 for p in _allp_sorted if p["pct"] < 60)
+                _avg_all = round(sum(p["pct"] for p in _allp_sorted) / len(_allp_sorted), 1)
+
+                # Build tier lookup for each param col
+                _tier_of = {}
+                for _td in _QA_SCHEMA.get("tiers", []):
+                    _tlabel = _td["label"].split("·")[1].strip() if "·" in _td["label"] else _td["label"]
+                    for _pp in _td.get("params", []):
+                        _tier_of[_pp["col"]] = _tlabel
+                for _ip2 in _QA_SCHEMA.get("intelligence", []):
+                    _tier_of[_ip2["col"]] = "Intelligence"
+
+                # ── Premium header ────────────────────────────────────────────
+                st.markdown(f"""
+<div style="background:linear-gradient(135deg,#0B1F3A 0%,#1e3a8a 55%,#0B1F3A 100%);
+  border-radius:16px;padding:22px 26px;margin-bottom:16px;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-30px;right:-30px;width:140px;height:140px;
+    background:rgba(255,255,255,0.04);border-radius:50%;"></div>
+  <div style="position:relative;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+    <div>
+      <div style="font-size:0.62rem;font-weight:700;color:rgba(147,197,253,0.9);
+        letter-spacing:0.12em;text-transform:uppercase;margin-bottom:5px;">📊 Parameter Health</div>
+      <div style="font-size:1.05rem;font-weight:900;color:#fff;">All Parameter Scores</div>
+      <div style="font-size:0.72rem;color:rgba(255,255,255,0.55);margin-top:3px;">
+        {len(_allp_sorted)} parameters · Portfolio avg {_avg_all}%</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <div style="background:rgba(5,150,105,0.22);border:1px solid rgba(52,211,153,0.4);
+        border-radius:12px;padding:10px 18px;text-align:center;">
+        <div style="font-size:1.5rem;font-weight:900;color:#34d399;">{_n_pass}</div>
+        <div style="font-size:0.56rem;color:rgba(52,211,153,0.85);font-weight:700;
+          letter-spacing:0.1em;text-transform:uppercase;margin-top:3px;">Passing ≥80%</div>
+      </div>
+      <div style="background:rgba(217,119,6,0.22);border:1px solid rgba(251,191,36,0.4);
+        border-radius:12px;padding:10px 18px;text-align:center;">
+        <div style="font-size:1.5rem;font-weight:900;color:#fbbf24;">{_n_rev}</div>
+        <div style="font-size:0.56rem;color:rgba(251,191,36,0.85);font-weight:700;
+          letter-spacing:0.1em;text-transform:uppercase;margin-top:3px;">Review 60–79%</div>
+      </div>
+      <div style="background:rgba(220,38,38,0.22);border:1px solid rgba(248,113,113,0.4);
+        border-radius:12px;padding:10px 18px;text-align:center;">
+        <div style="font-size:1.5rem;font-weight:900;color:#f87171;">{_n_fail}</div>
+        <div style="font-size:0.56rem;color:rgba(248,113,113,0.85);font-weight:700;
+          letter-spacing:0.1em;text-transform:uppercase;margin-top:3px;">At Risk &lt;60%</div>
+      </div>
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
+
+                # 5-shade colour scale
+                def _param_color(pct):
+                    if pct >= 90:   return "#059669"
+                    elif pct >= 80: return "#10b981"
+                    elif pct >= 70: return "#f59e0b"
+                    elif pct >= 60: return "#fb923c"
+                    else:           return "#dc2626"
+
+                _bar_clrs = [_param_color(p["pct"]) for p in _allp_sorted]
+
+                # Y-axis labels include tier badge
+                _ylabels = [
+                    f'{p["col"]}  [{_tier_of.get(p["col"], "")}]'
+                    for p in _allp_sorted
+                ]
+
                 _ap_fig = go.Figure()
                 _ap_fig.add_trace(go.Bar(
-                    y=[p["col"] for p in _allp_sorted],
+                    y=_ylabels,
                     x=[p["pct"] for p in _allp_sorted],
                     orientation="h",
-                    marker_color=["#059669" if p["pct"] >= 80 else "#f59e0b" if p["pct"] >= 60 else "#dc2626" for p in _allp_sorted],
-                    text=[f'{p["pct"]}%' for p in _allp_sorted],
+                    marker_color=_bar_clrs,
+                    marker_line=dict(width=0),
+                    customdata=[[p["col"], _tier_of.get(p["col"], "—"), p["pct"]] for p in _allp_sorted],
+                    hovertemplate=(
+                        "<b>%{customdata[0]}</b><br>"
+                        "Tier: %{customdata[1]}<br>"
+                        "Avg Score: <b>%{customdata[2]}%</b><extra></extra>"
+                    ),
+                    text=[f'  {p["pct"]}%' for p in _allp_sorted],
                     textposition="outside",
                     cliponaxis=False,
                     textfont=dict(size=12, color="#0B1F3A", family="Inter,sans-serif"),
                 ))
-                _ap_fig.add_vline(x=80, line_dash="dot", line_color="#6b7280", annotation_text="80%")
+                # Target line 80%
+                _ap_fig.add_vline(
+                    x=80, line_dash="solid", line_color="#059669", line_width=2,
+                    annotation_text="  Target 80%",
+                    annotation_position="top right",
+                    annotation_font=dict(size=11, color="#fff", family="Inter,sans-serif"),
+                    annotation_bgcolor="#059669",
+                    annotation_borderpad=4,
+                )
+                # Review threshold 60%
+                _ap_fig.add_vline(
+                    x=60, line_dash="dot", line_color="#d97706", line_width=1.5,
+                    annotation_text="  Review 60%",
+                    annotation_position="bottom right",
+                    annotation_font=dict(size=10, color="#d97706", family="Inter,sans-serif"),
+                )
                 _ap_fig.update_layout(
-                    plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    plot_bgcolor="#f8faff",
+                    paper_bgcolor="#fff",
                     font=dict(family="Inter,sans-serif", size=12),
-                    margin=dict(l=10, r=60, t=20, b=10),
-                    height=max(300, len(_allp_sorted) * 30 + 60),
-                    showlegend=False, xaxis_title="Avg Score %", xaxis_range=[0, 115],
+                    margin=dict(l=10, r=70, t=50, b=20),
+                    height=max(320, len(_allp_sorted) * 34 + 80),
+                    showlegend=False,
+                    xaxis=dict(
+                        title=dict(text="Avg Score %", font=dict(size=11, color="#64748b")),
+                        range=[0, 118],
+                        gridcolor="#e2e8f0",
+                        ticksuffix="%",
+                        tickfont=dict(size=11, color="#64748b"),
+                    ),
+                    yaxis=dict(tickfont=dict(size=11, color="#0B1F3A")),
+                    bargap=0.30,
                 )
                 st.plotly_chart(_ap_fig, use_container_width=True, config={"displayModeBar": False})
+
+                # Colour legend strip
+                st.markdown("""
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:-8px;margin-bottom:8px;">
+  <span style="font-size:0.62rem;color:#64748b;font-weight:600;align-self:center;">Score legend:</span>
+  <span style="background:#059669;color:#fff;font-size:0.6rem;font-weight:700;
+    padding:2px 10px;border-radius:20px;">≥90% Excellent</span>
+  <span style="background:#10b981;color:#fff;font-size:0.6rem;font-weight:700;
+    padding:2px 10px;border-radius:20px;">80–89% Pass</span>
+  <span style="background:#f59e0b;color:#fff;font-size:0.6rem;font-weight:700;
+    padding:2px 10px;border-radius:20px;">70–79% Watch</span>
+  <span style="background:#fb923c;color:#fff;font-size:0.6rem;font-weight:700;
+    padding:2px 10px;border-radius:20px;">60–69% Review</span>
+  <span style="background:#dc2626;color:#fff;font-size:0.6rem;font-weight:700;
+    padding:2px 10px;border-radius:20px;">&lt;60% At Risk</span>
+</div>""", unsafe_allow_html=True)
             except Exception:
                 pass
 
