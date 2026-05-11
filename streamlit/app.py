@@ -10415,7 +10415,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         f'</div></div>',
         unsafe_allow_html=True
     )
-    _tab_analytics, _tab_email = st.tabs(["📊 Analytics & Charts", "📧 Email Builder"])
+    _tab_email, _tab_analytics = st.tabs(["📧 Email Report — Select & Send", "📊 Analytics & Charts"])
 
     with _tab_analytics:
         st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
@@ -11600,8 +11600,8 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
     with _tab_email:
         # ── Section 14 — Full Dashboard Email Builder (all panels tick/untick) ────
-        st.markdown('<div class="section-chip">📧 Send Dashboard as Email — Select Any Section</div>', unsafe_allow_html=True)
-        st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:14px;">Tick every section you want to include. Each panel is converted to email-safe HTML and assembled into a single professional report email.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-chip">📧 Select Dashboard Sections & Send as Email</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:14px;">Tick the sections you want to include — each is converted to email-safe HTML and assembled into a professional report. Use <b>Select All</b> to include every section.</div>', unsafe_allow_html=True)
 
         # ── Email-safe table helper ───────────────────────────────────────────────
         def _em_tbl(title, icon, headers, rows, hdr_color="#0B1F3A"):
@@ -11860,7 +11860,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     _erows6.append((str(_qn), str(len(_qbs)), f"{round(_qbs.mean(),1)}%", f"σ={_std6}", _cons))
             _erows6.sort(key=lambda x: float(x[3].lstrip("σ=")))
             return _em_tbl("Auditor Calibration", "📐", ["QA Auditor", "Audits", "Avg Score", "Std Dev", "Consistency"], _erows6, "#7c3aed")
-        _add_section("auditor_cal", "Auditor Calibration", "📐", False, _s6_prev_fn, _s6_eml_fn)
+        _add_section("auditor_cal", "Auditor Calibration", "📐", True, _s6_prev_fn, _s6_eml_fn)
 
         # ── S7: Tier Breakdown ────────────────────────────────────────────────────
         def _s7_data():
@@ -12130,7 +12130,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                          "✅ Above Avg" if r[2] >= 0 else "🔴 Below Avg") for r in _rows13]
             return _em_tbl(f"Campaign Score Divergence (Portfolio Avg: {round(_pavg13,1) if _pavg13 else '—'}%)",
                            "↔️", ["Campaign", "Avg Score", "vs Portfolio", "Calls", "Status"], _erows13, "#374151")
-        _add_section("camp_div", "Campaign Divergence", "↔️", False, _s13_prev, _s13_eml)
+        _add_section("camp_div", "Campaign Divergence", "↔️", True, _s13_prev, _s13_eml)
 
         # ── S14: Call Performance Insights ────────────────────────────────────────
         _ci_d14 = {}
