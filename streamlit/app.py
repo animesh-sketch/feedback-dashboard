@@ -13203,12 +13203,11 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 unsafe_allow_html=True,
             )
             _custom_param_names = {_cp["name"] for _cp in _custom_params}
-            for _cp in _custom_params:
+            for _cpi, _cp in enumerate(_custom_params):
                 _cp_itype = _cp.get("input_type", "dropdown")
-                _cp_slug = f"{fname[:10].replace(' ','_').replace('/','_')}_{_cp['name'][:18].replace(' ','_').replace('/','_')}"
-                _cp_key = f"af_cp_{_cp_slug}"
-                _cp_cmt_key = f"af_cp_cmt_{_cp_slug}"
-                _cp_notcap_key = f"af_cp_notcap_{_cp_slug}"
+                _cp_key = f"af_cp_{_cpi}"
+                _cp_cmt_key = f"af_cp_cmt_{_cpi}"
+                _cp_notcap_key = f"af_cp_notcap_{_cpi}"
                 _guide = _cp.get("guide", "")
                 _guide_html = f'<div style="font-size:0.65rem;color:#94a3b8;margin-top:2px;">{_guide}</div>' if _guide else ""
                 if _cp_itype == "text":
