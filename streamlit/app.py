@@ -11652,6 +11652,124 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 f'<td style="padding:5px 10px;font-size:11px;font-weight:800;color:{color};width:42px;text-align:right;">{_pct:.1f}%</td></tr>'
             )
 
+        import math as _math_em
+        _CONVIN_GRAD = "linear-gradient(90deg,#c2185b 0%,#6a1fb5 50%,#1a62f2 100%)"
+
+        def _svg_donut(segments, size=130):
+            _tot = sum(v for _, v, _ in segments)
+            if not _tot:
+                return ""
+            _r, _sw, _cx, _cy = 42, 24, size / 2, size / 2
+            _circ = 2 * _math_em.pi * _r
+            _svg = (f'<svg width="{size}" height="{size}" viewBox="0 0 {size} {size}" '
+                    f'xmlns="http://www.w3.org/2000/svg">')
+            _cum = 0.0
+            for _lbl_sg, _val_sg, _col_sg in segments:
+                _pct_sg = _val_sg / _tot
+                _on = max(0.0, _pct_sg * _circ - 1)
+                _off = _circ - _on
+                _svg += (f'<circle cx="{_cx:.1f}" cy="{_cy:.1f}" r="{_r}" fill="none" stroke="{_col_sg}" '
+                         f'stroke-width="{_sw}" stroke-dasharray="{_on:.2f} {_off:.2f}" '
+                         f'transform="rotate({_cum * 360 - 90:.2f} {_cx:.1f} {_cy:.1f})"/>')
+                _cum += _pct_sg
+            _top = max(segments, key=lambda x: x[1])
+            _top_pct = round(_top[1] / _tot * 100)
+            _svg += (f'<text x="{_cx:.1f}" y="{_cy - 3:.1f}" text-anchor="middle" '
+                     f'font-family="Arial,sans-serif" font-size="15" font-weight="800" fill="{_top[2]}">{_top_pct}%</text>'
+                     f'<text x="{_cx:.1f}" y="{_cy + 12:.1f}" text-anchor="middle" '
+                     f'font-family="Arial,sans-serif" font-size="8" fill="#64748b">{_top[0][:8]}</text>')
+            _svg += '</svg>'
+            return _svg
+
+        def _em_insight_callout(text, color="#c2185b"):
+            return (f'<div style="background:linear-gradient(90deg,#fff5f8,#f0f4ff);border-left:4px solid {color};'
+                    f'border-radius:0 8px 8px 0;padding:10px 14px;margin:8px 0 14px;font-family:Arial,sans-serif;">'
+                    f'<div style="font-size:9px;font-weight:800;color:{color};letter-spacing:0.12em;'
+                    f'text-transform:uppercase;margin-bottom:4px;">💡 Key Insight</div>'
+                    f'<div style="font-size:11.5px;color:#1e293b;line-height:1.6;">{text}</div></div>')
+
+        def _em_side_donut(donut_svg, content_html):
+            return (f'<table width="100%" style="border-collapse:collapse;">'
+                    f'<tr><td style="padding:0 12px 0 0;vertical-align:middle;width:134px;">{donut_svg}</td>'
+                    f'<td style="padding:0;vertical-align:middle;">{content_html}</td></tr></table>')
+
+        def _svg_line_chart(dates, values, width=600, height=160, accent="#2563EB", target=80):
+            """Email-safe SVG polyline chart. dates/values are parallel lists."""
+            if len(values) < 2:
+                return ""
+            _pad = {"l": 36, "r": 12, "t": 18, "b": 30}
+            _cw = width - _pad["l"] - _pad["r"]
+            _ch = height - _pad["t"] - _pad["b"]
+            _mn = min(min(values), target - 8)
+            _mx = max(max(values), target + 4)
+            _rng = max(_mx - _mn, 1)
+            def _px(i): return _pad["l"] + _cw * i / max(len(values) - 1, 1)
+            def _py(v): return _pad["t"] + _ch * (1 - (v - _mn) / _rng)
+            _pts = " ".join(f"{_px(i):.1f},{_py(v):.1f}" for i, v in enumerate(values))
+            _ty = _py(target)
+            _svg = (f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">')
+            # grid lines
+            for _gv in [40, 60, 80, 100]:
+                if _mn <= _gv <= _mx:
+                    _gy = _py(_gv)
+                    _svg += (f'<line x1="{_pad["l"]}" y1="{_gy:.1f}" x2="{width-_pad["r"]}" y2="{_gy:.1f}" '
+                             f'stroke="#f1f5f9" stroke-width="1"/>')
+                    _svg += (f'<text x="{_pad["l"]-4}" y="{_gy+3:.1f}" text-anchor="end" '
+                             f'font-family="Arial" font-size="8" fill="#94a3b8">{_gv}</text>')
+            # target line
+            _svg += (f'<line x1="{_pad["l"]}" y1="{_ty:.1f}" x2="{width-_pad["r"]}" y2="{_ty:.1f}" '
+                     f'stroke="#ef4444" stroke-width="1.2" stroke-dasharray="5,3"/>')
+            _svg += (f'<text x="{width-_pad["r"]+2}" y="{_ty+3:.1f}" font-family="Arial" '
+                     f'font-size="8" fill="#ef4444">Target</text>')
+            # polyline
+            _svg += (f'<polyline points="{_pts}" fill="none" stroke="{accent}" stroke-width="2.5" '
+                     f'stroke-linejoin="round" stroke-linecap="round"/>')
+            # dots + value labels (show every Nth to avoid clutter)
+            _step = max(1, len(values) // 10)
+            for i, v in enumerate(values):
+                _cx, _cy = _px(i), _py(v)
+                _c = "#059669" if v >= 80 else "#d97706" if v >= 65 else "#dc2626"
+                _svg += (f'<circle cx="{_cx:.1f}" cy="{_cy:.1f}" r="3.5" fill="{_c}" stroke="#fff" stroke-width="1.5"/>')
+                if i % _step == 0 or i == len(values) - 1:
+                    _svg += (f'<text x="{_cx:.1f}" y="{_cy-7:.1f}" text-anchor="middle" font-family="Arial" '
+                             f'font-size="8.5" font-weight="700" fill="{_c}">{round(v)}%</text>')
+            # x-axis date labels (first, middle, last)
+            for _xi in sorted({0, len(dates)//2, len(dates)-1}):
+                if _xi < len(dates):
+                    _svg += (f'<text x="{_px(_xi):.1f}" y="{height-4}" text-anchor="middle" font-family="Arial" '
+                             f'font-size="8" fill="#94a3b8">{str(dates[_xi])[:10]}</text>')
+            _svg += '</svg>'
+            return _svg
+
+        def _svg_hbars(labels, values, colors, width=600, height=None):
+            """Email-safe horizontal SVG bar chart."""
+            _n = len(labels)
+            if not _n:
+                return ""
+            _row_h = 26
+            _pad_l, _pad_r, _pad_t = 140, 50, 10
+            _h = height or (_n * _row_h + _pad_t + 6)
+            _bar_w = width - _pad_l - _pad_r
+            _mx = max(values) or 1
+            _svg = (f'<svg width="{width}" height="{_h}" xmlns="http://www.w3.org/2000/svg">')
+            for i, (lbl, val, col) in enumerate(zip(labels, values, colors)):
+                _y = _pad_t + i * _row_h
+                _bw = max(2, _bar_w * val / _mx)
+                # label
+                _svg += (f'<text x="{_pad_l-6}" y="{_y+16:.1f}" text-anchor="end" font-family="Arial" '
+                         f'font-size="10" font-weight="600" fill="#374151">{lbl[:20]}</text>')
+                # bg bar
+                _svg += (f'<rect x="{_pad_l}" y="{_y+5}" width="{_bar_w}" height="16" '
+                         f'fill="#f1f5f9" rx="4"/>')
+                # value bar
+                _svg += (f'<rect x="{_pad_l}" y="{_y+5}" width="{_bw:.1f}" height="16" '
+                         f'fill="{col}" rx="4" opacity="0.9"/>')
+                # value label
+                _svg += (f'<text x="{_pad_l+_bw+4:.1f}" y="{_y+16:.1f}" font-family="Arial" '
+                         f'font-size="9" font-weight="800" fill="{col}">{round(val,1)}%</text>')
+            _svg += '</svg>'
+            return _svg
+
         # ── Build all dashboard sections ──────────────────────────────────────────
         _ALL_SECTIONS = []   # {id, label, icon, default, preview_html, email_html}
 
@@ -11681,16 +11799,28 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                       ("Passed ✅", _pass_d), ("Needs Review 🟡", _rev_d), ("Auto-Fails 🚨", _fatal_d),
                       ("Score Momentum", f"{_momentum_arrow} {_momentum_txt}")]
             _cells = "".join(
-                f'<td style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;text-align:center;width:16%;">'
+                f'<td style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;text-align:center;width:14%;">'
                 f'<div style="font-size:18px;font-weight:900;color:#0B1F3A;">{v}</div>'
                 f'<div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;margin-top:4px;">{k}</div></td>'
                 for k, v in _pairs
             )
-            return (f'<div style="font-family:Arial,sans-serif;background:#0B1F3A;padding:10px 14px;border-radius:8px 8px 0 0;'
-                    f'color:#fff;font-size:13px;font-weight:700;">📊 KPI Overview</div>'
-                    f'<table width="100%" style="border-collapse:separate;border-spacing:4px;background:#f8faff;'
-                    f'padding:10px;border-radius:0 0 8px 8px;margin-bottom:16px;">'
-                    f'<tr>{_cells}</tr></table>')
+            _kpi_tbl = (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                        f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📊 KPI Overview</div>'
+                        f'<table width="100%" style="border-collapse:separate;border-spacing:4px;background:#f8faff;'
+                        f'padding:10px;border-radius:0 0 8px 8px;margin-bottom:8px;"><tr>{_cells}</tr></table>')
+            if _pr_d >= 85:
+                _kpi_ins = (f"Bot performance is excellent — <b>{_pr_d}%</b> pass rate across {_total_d} audits. "
+                            f"Average score of {_avg_d}% reflects strong compliance adherence.")
+                _kpi_col = "#059669"
+            elif _pr_d >= 70:
+                _kpi_ins = (f"Bot performance is on track at <b>{_pr_d}%</b> pass rate. "
+                            f"{_rev_d} calls need review — a focused improvement cycle could push pass rate above 85%.")
+                _kpi_col = "#d97706"
+            else:
+                _kpi_ins = (f"Pass rate of <b>{_pr_d}%</b> is below target. "
+                            f"{_fatal_d} auto-fails and {_rev_d} calls under review require immediate attention.")
+                _kpi_col = "#dc2626"
+            return _kpi_tbl + _em_insight_callout(_kpi_ins, _kpi_col)
         _add_section("kpi", "KPI Overview", "📊", True, _s1_prev, _s1_eml)
 
         # ── S2: Status Distribution ──────────────────────────────────────────────
@@ -11708,11 +11838,37 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h}</div>'
 
         def _s2_eml():
-            _cfg = [("✅ Pass", "#059669", _pass_d), ("🟡 Needs Review", "#d97706", _rev_d),
-                    ("❌ Fail", "#ef4444", _fail_d), ("🚨 Auto-Fail", "#dc2626", _fatal_d)]
-            _rows = [(_sn, str(_sv), f"{round(_sv/_total_d*100,1) if _total_d else 0}%",
-                      "█" * int(_sv/_total_d*20) if _total_d else "") for _sn, _, _sv in _cfg]
-            return _em_tbl("Status Distribution", "📊", ["Status", "Count", "Rate", "Bar"], _rows, "#0B1F3A")
+            _cfg2 = [("Pass", "#059669", _pass_d), ("Needs Review", "#d97706", _rev_d),
+                     ("Fail", "#ef4444", _fail_d), ("Auto-Fail", "#dc2626", _fatal_d)]
+            _tot2 = _total_d or 1
+            _segs2 = [(lbl, val, col) for lbl, col, val in _cfg2 if val > 0]
+            _donut2 = _svg_donut(_segs2, size=130)
+            _rows_html2 = ""
+            for _sn2, _sc2, _sv2 in _cfg2:
+                _sp2 = round(_sv2 / _tot2 * 100, 1)
+                _rows_html2 += (
+                    f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">'
+                    f'<span style="display:inline-block;width:10px;height:10px;background:{_sc2};border-radius:50%;flex-shrink:0;"></span>'
+                    f'<span style="font-family:Arial,sans-serif;font-size:11px;font-weight:600;color:#0B1F3A;flex:1;">{_sn2}</span>'
+                    f'<span style="font-family:Arial,sans-serif;font-size:11px;font-weight:800;color:{_sc2};">{_sv2}'
+                    f'<span style="color:#94a3b8;font-weight:400;"> ({_sp2}%)</span></span></div>'
+                )
+            _body2 = _em_side_donut(_donut2, _rows_html2) if _donut2 else _rows_html2
+            _dominant2 = max(_cfg2, key=lambda x: x[2])
+            _dom_pct2 = round(_dominant2[2] / _tot2 * 100, 1)
+            if _dominant2[0] == "Pass":
+                _s2_ins = (f"<b>{_dom_pct2}%</b> of calls passed quality review — strong bot performance. "
+                           f"Auto-fails are {round(_fatal_d / _tot2 * 100, 1)}% of volume.")
+                _s2_col = "#059669"
+            else:
+                _s2_ins = (f"'{_dominant2[0]}' is the most common status at <b>{_dom_pct2}%</b>. "
+                           f"Focus on this category to improve overall bot quality scores.")
+                _s2_col = "#dc2626"
+            return (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                    f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📊 Status Distribution</div>'
+                    f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;padding:12px;margin-bottom:8px;">'
+                    f'{_body2}</div>'
+                    + _em_insight_callout(_s2_ins, _s2_col))
         _add_section("status_dist", "Status Distribution", "📊", True, _s2_prev, _s2_eml)
 
         # ── S3: Score Trend ──────────────────────────────────────────────────────
@@ -11741,12 +11897,23 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             _td2["Audit Date"] = pd.to_datetime(_td2["Audit Date"], errors="coerce")
             _td2["Bot Score"] = pd.to_numeric(_td2["Bot Score"], errors="coerce")
             _td2 = _td2.dropna().sort_values("Audit Date").groupby("Audit Date")["Bot Score"].mean().reset_index()
-            _rows2 = []
-            for _, _r in _td2.iterrows():
-                _v = round(_r["Bot Score"], 1)
-                _status = "✅ Above Target" if _v >= 80 else "🟡 Below Target" if _v >= 60 else "🔴 Critical"
-                _rows2.append((str(_r["Audit Date"])[:10], f"{_v}%", str(len(_td2)), _status))
-            return _em_tbl("Score Trend Over Time", "📈", ["Date", "Avg Bot Score", "Data Points", "Status"], _rows2[-14:], "#0891b2")
+            if _td2.empty:
+                return ""
+            _dates_3 = list(_td2["Audit Date"])
+            _vals_3 = [round(v, 1) for v in _td2["Bot Score"]]
+            _chart_3 = _svg_line_chart(_dates_3, _vals_3)
+            # trend direction
+            _trend3 = "improving 📈" if len(_vals_3) >= 3 and _vals_3[-1] > _vals_3[0] else \
+                      "declining 📉" if len(_vals_3) >= 3 and _vals_3[-1] < _vals_3[0] else "stable ➡️"
+            _ins3_col = "#059669" if "improving" in _trend3 else "#dc2626" if "declining" in _trend3 else "#d97706"
+            _ins3_txt = (f"Score trend is <b>{_trend3}</b> — latest avg {_vals_3[-1]}% "
+                         f"vs {_vals_3[0]}% at period start. Red dotted line = 80% target.")
+            return (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                    f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📈 Score Trend Over Time</div>'
+                    f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;'
+                    f'padding:14px 10px 6px;margin-bottom:8px;background:#fff;text-align:center;">'
+                    f'{_chart_3}</div>'
+                    + _em_insight_callout(_ins3_txt, _ins3_col))
         _add_section("score_trend", "Score Trend", "📈", True, _s3_prev, _s3_eml)
 
         # ── S4: QA Leaderboard ────────────────────────────────────────────────────
@@ -11899,7 +12066,16 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             _rows7 = _s7_data()
             _erows7 = [(_ln, f"{_wt}%", f"{_av}%", "✅ On Target" if _av >= 80 else "🟡 Below Target" if _av >= 65 else "🔴 Critical")
                        for _ln, _wt, _av, _ in _rows7]
-            return _em_tbl("Tier Breakdown", "🏗️", ["Tier", "Weight", "Avg Score", "Status"], _erows7, "#dc2626")
+            _t7_html = _em_tbl("Tier Breakdown", "🏗️", ["Tier", "Weight", "Avg Score", "Status"], _erows7, _CONVIN_GRAD)
+            if _rows7:
+                _weakest7 = min(_rows7, key=lambda x: x[2])
+                _strongest7 = max(_rows7, key=lambda x: x[2])
+                _t7_ins = (f"Strongest tier: <b>{_strongest7[0]}</b> at {_strongest7[2]}%. "
+                           f"Weakest: <b>{_weakest7[0]}</b> at {_weakest7[2]}% — "
+                           f"prioritise coaching for this tier to drive the biggest overall score gain.")
+                _t7_col = "#059669" if _weakest7[2] >= 65 else "#dc2626"
+                return _t7_html + _em_insight_callout(_t7_ins, _t7_col)
+            return _t7_html
         _add_section("tier_breakdown", "Tier Breakdown", "🏗️", True, _s7_prev, _s7_eml)
 
         # ── S8: Disposition Breakdown ─────────────────────────────────────────────
@@ -11932,8 +12108,31 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             if not len(_cnt8):
                 return ""
             _t8 = _cnt8.sum()
-            _erows8 = [(str(_k), str(_v), f"{round(_v/_t8*100,1)}%") for _k, _v in _cnt8.items()]
-            return _em_tbl("Disposition Breakdown", "📂", ["Disposition", "Count", "Percentage"], _erows8, "#0891b2")
+            _cols8 = ["#2563EB", "#0891b2", "#059669", "#d97706", "#dc2626", "#7c3aed", "#db2777", "#0d9488"]
+            _segs8 = [(str(k)[:12], int(v), _cols8[i % len(_cols8)]) for i, (k, v) in enumerate(_cnt8.items())]
+            _donut8 = _svg_donut(_segs8[:6], size=130)
+            _rows_html8 = ""
+            for _i8, (k8, v8) in enumerate(_cnt8.items()):
+                _p8 = round(v8 / _t8 * 100, 1)
+                _c8 = _cols8[_i8 % len(_cols8)]
+                _rows_html8 += (
+                    f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'
+                    f'<span style="display:inline-block;width:8px;height:8px;background:{_c8};border-radius:50%;flex-shrink:0;"></span>'
+                    f'<span style="font-family:Arial,sans-serif;font-size:10.5px;color:#0B1F3A;flex:1;'
+                    f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">{k8}</span>'
+                    f'<span style="font-family:Arial,sans-serif;font-size:10.5px;font-weight:700;color:{_c8};white-space:nowrap;">'
+                    f'{v8} ({_p8}%)</span></div>'
+                )
+            _body8 = _em_side_donut(_donut8, _rows_html8) if _donut8 else _rows_html8
+            _top8 = str(_cnt8.index[0])
+            _top8_pct = round(int(_cnt8.iloc[0]) / _t8 * 100, 1)
+            _s8_ins = (f"Most common disposition: <b>{_top8}</b> ({_top8_pct}% of calls). "
+                       f"{'High concentration suggests consistent bot routing logic.' if _top8_pct > 60 else 'Diverse disposition spread — review for potential routing gaps.'}")
+            return (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                    f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📂 Disposition Breakdown</div>'
+                    f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;padding:12px;margin-bottom:8px;">'
+                    f'{_body8}</div>'
+                    + _em_insight_callout(_s8_ins, "#0891b2"))
         _add_section("disposition", "Disposition Breakdown", "📂", True, _s8_prev, _s8_eml)
 
         # ── S9: Lead Stage Breakdown ──────────────────────────────────────────────
@@ -11967,11 +12166,32 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             if not _lsd9:
                 return ""
             _t9 = sum(_lsd9.values())
-            _LS_C9 = {"Hot": "🔥 Hot", "Warm": "🌤 Warm", "Cold": "❄️ Cold", "Not Interested": "👎 Not Interested", "RNR": "📵 RNR"}
-            _erows9 = [(_LS_C9.get(k, k), str(v), f"{round(v/_t9*100,1)}%",
-                        "High Priority" if k == "Hot" else "Follow-up" if k == "Warm" else "Low Priority" if k == "Cold" else "—")
-                       for k, v in _lsd9.items()]
-            return _em_tbl("Lead Stage Breakdown", "🔥", ["Lead Stage", "Count", "Percentage", "Priority"], _erows9, "#d97706")
+            _LS_COLS9 = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB", "Not Interested": "#6b7280", "RNR": "#7c3aed"}
+            _LS_EMOJIS9 = {"Hot": "🔥 Hot", "Warm": "🌤 Warm", "Cold": "❄️ Cold", "Not Interested": "👎 NI", "RNR": "📵 RNR"}
+            _segs9 = [(k, v, _LS_COLS9.get(k, "#94a3b8")) for k, v in _lsd9.items()]
+            _donut9 = _svg_donut(_segs9, size=130)
+            _rows_html9 = ""
+            for _k9, _v9 in _lsd9.items():
+                _p9 = round(_v9 / _t9 * 100, 1)
+                _c9 = _LS_COLS9.get(_k9, "#94a3b8")
+                _rows_html9 += (
+                    f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+                    f'<span style="display:inline-block;width:8px;height:8px;background:{_c9};border-radius:50%;flex-shrink:0;"></span>'
+                    f'<span style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:{_c9};flex:1;">{_LS_EMOJIS9.get(_k9, _k9)}</span>'
+                    f'<span style="font-family:Arial,sans-serif;font-size:11px;font-weight:800;color:{_c9};">{_v9}'
+                    f'<span style="color:#94a3b8;font-weight:400;"> ({_p9}%)</span></span></div>'
+                )
+            _conv9 = round((_lsd9.get("Hot", 0) + _lsd9.get("Warm", 0)) / _t9 * 100, 1) if _t9 else 0
+            _hot9 = round(_lsd9.get("Hot", 0) / _t9 * 100, 1) if _t9 else 0
+            _body9 = _em_side_donut(_donut9, _rows_html9) if _donut9 else _rows_html9
+            _conv_ins = (f"Conversion readiness (Hot + Warm): <b>{_conv9}%</b> of pipeline. "
+                         f"Hot leads at {_hot9}% — "
+                         f"{'strong pipeline health, bot is qualifying leads effectively.' if _conv9 >= 40 else 'nurture Warm leads to Hot to accelerate conversions.'}")
+            return (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                    f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">🔥 Lead Stage Breakdown</div>'
+                    f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;padding:12px;margin-bottom:8px;">'
+                    f'{_body9}</div>'
+                    + _em_insight_callout(_conv_ins, "#d97706"))
         _add_section("lead_stage", "Lead Stage Breakdown", "🔥", True, _s9_prev, _s9_eml)
 
         # ── S10: Client Health Matrix ─────────────────────────────────────────────
@@ -12044,7 +12264,21 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             _erows11 = [(_pn, _pt, f"{_pv}%",
                          "✅ Strong" if _pv >= 80 else "🟡 Moderate" if _pv >= 65 else "🔴 Critical")
                         for _pn, _pv, _pt in _pa11]
-            return _em_tbl("All Parameter Scores", "📊", ["Parameter", "Tier", "Avg Score", "Status"], _erows11, "#0B1F3A")
+            _tbl11 = _em_tbl("All Parameter Scores", "📊", ["Parameter", "Tier", "Avg Score", "Status"], _erows11, _CONVIN_GRAD)
+            if _pa11:
+                _crit11 = [p for p in _pa11 if p[1] < 65]
+                _strong11 = [p for p in _pa11 if p[1] >= 80]
+                if _crit11:
+                    _p11_ins = (f"<b>{len(_crit11)} parameter{'s' if len(_crit11) > 1 else ''}</b> in critical range: "
+                                f"<b>{', '.join(p[0] for p in _crit11[:3])}</b>. "
+                                f"These represent the highest-leverage coaching points for score improvement.")
+                    _p11_col = "#dc2626"
+                else:
+                    _p11_ins = (f"All parameters above 65% — <b>{len(_strong11)}</b> performing at 80%+. "
+                                f"Focus on maintaining consistency and pushing moderate scores to the strong tier.")
+                    _p11_col = "#059669"
+                return _tbl11 + _em_insight_callout(_p11_ins, _p11_col)
+            return _tbl11
         _add_section("params", "Parameter Scores", "📊", True, _s11_prev, _s11_eml)
 
         # ── S12: Co-failure Analysis ──────────────────────────────────────────────
@@ -12193,6 +12427,82 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             return _em_tbl("Priority Actions", "🎯", ["Priority", "Action", "Impact"], _erows15, "#dc2626")
         _add_section("actions", "Priority Actions", "🎯", True, _s15_prev, _s15_eml)
 
+        # ── S16: Score Distribution Chart (SVG bucket bars) ──────────────────────
+        def _s16_prev():
+            _bs_vals = pd.to_numeric(_dash_df.get("Bot Score", pd.Series()), errors="coerce").dropna()
+            if _bs_vals.empty:
+                return '<div style="font-size:0.70rem;color:#64748b;">No score data.</div>'
+            _bkts = [("0–59% Critical", int((_bs_vals < 60).sum()), "#dc2626"),
+                     ("60–79% Moderate", int(((_bs_vals >= 60) & (_bs_vals < 80)).sum()), "#d97706"),
+                     ("80–100% Strong", int((_bs_vals >= 80).sum()), "#059669")]
+            _h16 = ""
+            for _bl, _bv, _bc in _bkts:
+                _bp = round(_bv / len(_bs_vals) * 100, 1)
+                _h16 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                         f'<span style="font-size:0.65rem;font-weight:600;color:{_bc};width:110px;">{_bl}</span>'
+                         f'<div style="flex:1;height:10px;background:#f0f2f5;border-radius:5px;">'
+                         f'<div style="width:{_bp}%;height:100%;background:{_bc};border-radius:5px;"></div></div>'
+                         f'<span style="font-size:0.68rem;font-weight:700;color:{_bc};width:50px;text-align:right;">{_bv} ({_bp}%)</span></div>')
+            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:12px;">{_h16}</div>'
+
+        def _s16_eml():
+            _bs_v = pd.to_numeric(_dash_df.get("Bot Score", pd.Series()), errors="coerce").dropna()
+            if _bs_v.empty:
+                return ""
+            _tot16 = len(_bs_v)
+            _bkts16 = [("0–59%  Critical", int((_bs_v < 60).sum()), "#dc2626"),
+                       ("60–79% Moderate", int(((_bs_v >= 60) & (_bs_v < 80)).sum()), "#d97706"),
+                       ("80–100% Strong",  int((_bs_v >= 80).sum()), "#059669")]
+            _lbls16 = [b[0] for b in _bkts16]
+            _pcts16 = [round(b[1] / _tot16 * 100, 1) for b in _bkts16]
+            _cols16 = [b[2] for b in _bkts16]
+            _chart16 = _svg_hbars(_lbls16, _pcts16, _cols16)
+            _strong16 = _pcts16[2]
+            _ins16 = (f"<b>{_strong16}%</b> of calls score 80%+ (Strong). "
+                      f"{_pcts16[0]}% are in the Critical range (&lt;60%) — "
+                      f"{'excellent distribution' if _strong16 >= 60 else 'focus coaching on low-scoring calls to shift this distribution upward'}.")
+            _ins16_col = "#059669" if _strong16 >= 60 else "#dc2626"
+            return (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                    f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📊 Score Distribution</div>'
+                    f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;'
+                    f'padding:14px 10px 6px;margin-bottom:8px;background:#fff;">'
+                    f'{_chart16}</div>'
+                    + _em_insight_callout(_ins16, _ins16_col))
+        _add_section("score_dist_chart", "Score Distribution Chart", "📊", True, _s16_prev, _s16_eml)
+
+        # ── S17: Parameter Performance Chart (SVG horizontal bars) ───────────────
+        def _s17_prev():
+            _pa17 = _s11_data()
+            if not _pa17:
+                return '<div style="font-size:0.70rem;color:#64748b;">No parameter data.</div>'
+            _h17 = '<table style="width:100%;border-collapse:collapse;">'
+            for _pn, _pv, _ in _pa17[:12]:
+                _c17 = "#059669" if _pv >= 80 else "#d97706" if _pv >= 65 else "#dc2626"
+                _h17 += _em_bar_row(_pn[:22], _pv, _c17)
+            _h17 += "</table>"
+            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;">{_h17}</div>'
+
+        def _s17_eml():
+            _pa17 = _s11_data()
+            if not _pa17:
+                return ""
+            _lbls17 = [p[0][:22] for p in _pa17]
+            _vals17 = [p[1] for p in _pa17]
+            _cols17 = ["#059669" if v >= 80 else "#d97706" if v >= 65 else "#dc2626" for v in _vals17]
+            _chart17 = _svg_hbars(_lbls17, _vals17, _cols17)
+            _crit17 = [p for p in _pa17 if p[1] < 65]
+            _ins17 = (f"<b>{len(_crit17)} parameter{'s' if len(_crit17) != 1 else ''}</b> below 65% threshold. "
+                      f"Top performer: <b>{_pa17[0][0]}</b> at {_pa17[0][1]}%. "
+                      f"Weakest: <b>{_pa17[-1][0]}</b> at {_pa17[-1][1]}%.")
+            _ins17_col = "#dc2626" if _crit17 else "#059669"
+            return (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                    f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📊 Parameter Performance Chart</div>'
+                    f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;'
+                    f'padding:14px 10px 6px;margin-bottom:8px;background:#fff;">'
+                    f'{_chart17}</div>'
+                    + _em_insight_callout(_ins17, _ins17_col))
+        _add_section("param_chart", "Parameter Performance Chart", "📊", True, _s17_prev, _s17_eml)
+
         # ── Render sections + tabs (Compose | Preview | Gallery) ────────────────
         st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
 
@@ -12274,43 +12584,76 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
             def _build_dashboard_email_html(sel_secs, client_name):
                 _sh = "".join(s["email"] for s in sel_secs if s["email"])
-                return f"""<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;background:#f8faff;padding:0;">
-      <div style="background:linear-gradient(135deg,#0B1F3A 0%,#1a62f2 100%);padding:28px 30px;border-radius:10px 10px 0 0;">
-        <div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.02em;">📊 Dashboard Report</div>
-        <div style="font-size:13px;color:#93c5fd;margin-top:5px;">
-          {client_name} · Generated {pd.Timestamp.now().strftime("%B %d, %Y at %H:%M")} ·
-          {_total_d} audits · Avg {_avg_d or "—"}% · Pass rate {_pr_d}%
-        </div>
-        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-          <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">{_sel_client}</span>
-          <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">{_sel_camp}</span>
-          <span style="background:rgba(255,255,255,0.15);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">{_sel_period}</span>
-        </div>
-      </div>
-      <div style="padding:20px 24px;">{_sh}
-        <div style="margin-top:28px;padding-top:18px;border-top:2px solid #e2e8f0;">
-          <table width="100%" style="border-collapse:collapse;">
-            <tr>
-              <td style="padding:0;">
-                <div style="font-size:15px;font-weight:900;color:#0B1F3A;letter-spacing:-0.02em;line-height:1.2;">Convin Data Labs</div>
-                <div style="font-size:11px;color:#2563EB;font-weight:600;margin-top:2px;letter-spacing:0.03em;">AI-Powered Quality Intelligence</div>
-                <div style="font-size:10px;color:#94a3b8;margin-top:6px;">
-                  {pd.Timestamp.now().strftime("%B %Y")} · {len(sel_secs)} sections · QA Dashboard Report
-                </div>
-              </td>
-              <td style="padding:0;text-align:right;vertical-align:middle;">
-                <div style="display:inline-block;background:linear-gradient(135deg,#0B1F3A,#1a62f2);border-radius:8px;padding:8px 14px;">
-                  <div style="font-size:13px;font-weight:900;color:#fff;letter-spacing:0.02em;">CDL</div>
-                </div>
-              </td>
-            </tr>
-          </table>
-          <div style="margin-top:10px;font-size:10px;color:#cbd5e1;text-align:center;">
-            This report was generated and sent via Convin Data Labs QA Dashboard · convinlabs@convin.ai
-          </div>
-        </div>
-      </div>
-    </div>"""
+                return (
+                    f'<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;background:#f4f6fb;">'
+                    # ── HEADER ──
+                    f'<div style="background:linear-gradient(135deg,#c2185b 0%,#6a1fb5 50%,#1a62f2 100%);'
+                    f'padding:32px 30px 24px;border-radius:10px 10px 0 0;">'
+                    f'<div style="font-size:11px;font-weight:800;color:rgba(255,255,255,0.55);letter-spacing:0.18em;'
+                    f'text-transform:uppercase;margin-bottom:8px;">CONVIN DATA LABS · VOICE BOT INTELLIGENCE</div>'
+                    f'<div style="font-size:26px;font-weight:900;color:#fff;letter-spacing:-0.02em;line-height:1.15;">'
+                    f'📊 {client_name}</div>'
+                    f'<div style="font-size:12px;color:rgba(255,255,255,0.72);margin-top:6px;font-weight:500;">'
+                    f'Dashboard Report · {pd.Timestamp.now().strftime("%B %d, %Y")}</div>'
+                    # KPI badges row
+                    f'<table width="100%" style="border-collapse:collapse;margin-top:20px;">'
+                    f'<tr>'
+                    f'<td style="width:25%;padding:0 6px 0 0;text-align:center;vertical-align:top;">'
+                    f'<div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px 6px;">'
+                    f'<div style="font-size:22px;font-weight:900;color:#00f5d4;">{_total_d}</div>'
+                    f'<div style="font-size:9px;color:rgba(255,255,255,0.60);font-weight:700;letter-spacing:0.08em;'
+                    f'text-transform:uppercase;margin-top:3px;">Audits</div></div></td>'
+                    f'<td style="width:25%;padding:0 6px;text-align:center;vertical-align:top;">'
+                    f'<div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px 6px;">'
+                    f'<div style="font-size:22px;font-weight:900;color:#00f5d4;">{_avg_d or "—"}%</div>'
+                    f'<div style="font-size:9px;color:rgba(255,255,255,0.60);font-weight:700;letter-spacing:0.08em;'
+                    f'text-transform:uppercase;margin-top:3px;">Avg Score</div></div></td>'
+                    f'<td style="width:25%;padding:0 6px;text-align:center;vertical-align:top;">'
+                    f'<div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px 6px;">'
+                    f'<div style="font-size:22px;font-weight:900;color:#00f5d4;">{_pr_d}%</div>'
+                    f'<div style="font-size:9px;color:rgba(255,255,255,0.60);font-weight:700;letter-spacing:0.08em;'
+                    f'text-transform:uppercase;margin-top:3px;">Pass Rate</div></div></td>'
+                    f'<td style="width:25%;padding:0 0 0 6px;text-align:center;vertical-align:top;">'
+                    f'<div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px 6px;">'
+                    f'<div style="font-size:22px;font-weight:900;color:#ff6b9d;">{_fatal_d}</div>'
+                    f'<div style="font-size:9px;color:rgba(255,255,255,0.60);font-weight:700;letter-spacing:0.08em;'
+                    f'text-transform:uppercase;margin-top:3px;">Auto-Fails</div></div></td>'
+                    f'</tr></table>'
+                    # Filter chips
+                    f'<div style="margin-top:14px;">'
+                    f'<span style="display:inline-block;background:rgba(255,255,255,0.18);color:#fff;font-size:9.5px;'
+                    f'font-weight:700;padding:3px 11px;border-radius:20px;margin-right:5px;">{_sel_client}</span>'
+                    f'<span style="display:inline-block;background:rgba(255,255,255,0.18);color:#fff;font-size:9.5px;'
+                    f'font-weight:700;padding:3px 11px;border-radius:20px;margin-right:5px;">{_sel_camp}</span>'
+                    f'<span style="display:inline-block;background:rgba(255,255,255,0.18);color:#fff;font-size:9.5px;'
+                    f'font-weight:700;padding:3px 11px;border-radius:20px;">{_sel_period}</span>'
+                    f'</div>'
+                    f'</div>'
+                    # ── BODY ──
+                    f'<div style="padding:22px 24px;background:#fff;">{_sh}</div>'
+                    # ── FOOTER ──
+                    f'<div style="background:#0B1F3A;padding:20px 24px;border-radius:0 0 10px 10px;">'
+                    f'<table width="100%" style="border-collapse:collapse;">'
+                    f'<tr>'
+                    f'<td style="padding:0;vertical-align:middle;">'
+                    f'<div style="font-size:16px;font-weight:900;color:#fff;letter-spacing:-0.01em;">Convin Data Labs</div>'
+                    f'<div style="font-size:10px;color:#00f5d4;font-weight:700;margin-top:3px;letter-spacing:0.06em;'
+                    f'text-transform:uppercase;">AI-Powered Voice Bot Intelligence</div>'
+                    f'<div style="font-size:10px;color:#64748b;margin-top:8px;">'
+                    f'{pd.Timestamp.now().strftime("%B %Y")} · {len(sel_secs)} sections · QA Dashboard Report</div>'
+                    f'</td>'
+                    f'<td style="padding:0;text-align:right;vertical-align:middle;">'
+                    f'<div style="display:inline-block;background:linear-gradient(135deg,#c2185b,#1a62f2);'
+                    f'border-radius:8px;padding:10px 16px;">'
+                    f'<div style="font-size:14px;font-weight:900;color:#fff;letter-spacing:0.06em;">CDL</div>'
+                    f'</div></td>'
+                    f'</tr></table>'
+                    f'<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);'
+                    f'font-size:9.5px;color:#475569;text-align:center;">'
+                    f'This report was generated via Convin Data Labs QA Dashboard · convinlabs@convin.ai'
+                    f'</div></div>'
+                    f'</div>'
+                )
 
             if _em_send_btn:
                 # collect emails from saved-contact multiselect
