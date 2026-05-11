@@ -10195,6 +10195,17 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                                     _att_note = f" · 📎 {_raw_att_name}" if _raw_att_name else ""
                                     st.success(f"✓ Sent to: {', '.join(_sr_result['sent'])}{_att_note}")
                                     st.session_state.pop("sr_no_data_warning", None)
+                                    sent_store.log_send(
+                                        draft_name="Client Sense Report",
+                                        subject=_sr_subj,
+                                        template_num=0,
+                                        template_name="Sense Report Builder",
+                                        client=_sr_cli if _sr_cli != "— All Clients —" else "All Clients",
+                                        sent_to=_sr_result["sent"],
+                                        failed=_sr_result.get("failed", []),
+                                        attachment_name=_raw_att_name or "",
+                                        sender=st.session_state.get("user_email", ""),
+                                    )
                                 for _sf in _sr_result.get("failed", []):
                                     st.error(f"✗ {_sf['email']}: {_sf['error']}")
                             except Exception as _send_exc:
@@ -12725,6 +12736,17 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                         )
                         if _em_result.get("sent"):
                             st.success(f"✅ Sent to: {', '.join(_em_result['sent'])}  ({len(_sel_sections_c)} sections)")
+                            sent_store.log_send(
+                                draft_name="Dashboard Report",
+                                subject=_em_subj,
+                                template_num=0,
+                                template_name="Dashboard Email Builder",
+                                client=_em_client,
+                                sent_to=_em_result["sent"],
+                                failed=_em_result.get("failed", []),
+                                body_preview=f"{len(_sel_sections_c)} sections · {_ins_count} insights",
+                                sender=st.session_state.get("user_email", "convinlabs@convin.ai"),
+                            )
                         for _sf_em in _em_result.get("failed", []):
                             st.error(f"Failed → {_sf_em.get('email','?')}: {_sf_em.get('error','')}")
                     except Exception as _em_exc:
@@ -13014,7 +13036,7 @@ def _render_registry():
     _registry_init()
     st.markdown('<div class="section-chip">🗂️ Registry Management</div>', unsafe_allow_html=True)
     _is_reg_admin = auth.current_user().get("role", "admin") == "admin"
-    _reg_tab_list = ["👤 PM", "🤖 Bot Name", "🎯 QA", "🏢 Clients", "📧 Email Contacts", "⭐ Parameters"]
+    _reg_tab_list = ["👤 PM", "🤖 Bot Name", "🎯 QA", "🏢 Clients", "📧 Email Contacts", "⭐ Parameters", "📤 Sent Emails"]
     if _is_reg_admin:
         _reg_tab_list += ["🗑️ Audits", "⚙️ Admin"]
     _reg_tabs = st.tabs(_reg_tab_list)
@@ -13295,9 +13317,101 @@ def _render_registry():
     with _reg_tabs[_params_tab_idx]:
         _render_param_manager(key_sfx="_reg")
 
+    # ── Sent Emails tab (index 6, visible to all) ──────────────────────────────
+    with _reg_tabs[6]:
+        st.markdown('<div class="section-chip">📤 Sent Email History</div>', unsafe_allow_html=True)
+        try:
+            _sl_all = sent_store.load()
+        except Exception as _sl_exc:
+            _sl_all = []
+            st.caption(f"Could not load sent log: {_sl_exc}")
+
+        # ── Filter row ────────────────────────────────────────────────────────
+        _sl_f1, _sl_f2, _sl_f3 = st.columns([2, 2, 1])
+        with _sl_f1:
+            _sl_search = st.text_input("🔍 Filter by client / recipient / subject",
+                                       placeholder="type to filter…", key="sl_search")
+        with _sl_f2:
+            _sl_clients_all = sorted({r.get("client", "—") for r in _sl_all if r.get("client")})
+            _sl_cli_sel = st.selectbox("Client", ["All"] + _sl_clients_all, key="sl_cli_filter")
+        with _sl_f3:
+            _sl_limit = st.number_input("Show last N", min_value=10, max_value=500, value=50, step=10, key="sl_limit")
+
+        # ── Apply filters ─────────────────────────────────────────────────────
+        _sl_filtered = _sl_all
+        if _sl_cli_sel != "All":
+            _sl_filtered = [r for r in _sl_filtered if r.get("client", "") == _sl_cli_sel]
+        if _sl_search.strip():
+            _sq = _sl_search.strip().lower()
+            _sl_filtered = [r for r in _sl_filtered
+                            if _sq in r.get("client", "").lower()
+                            or _sq in r.get("subject", "").lower()
+                            or any(_sq in e.lower() for e in r.get("sent_to", []))
+                            or _sq in r.get("draft_name", "").lower()]
+        _sl_filtered = _sl_filtered[:int(_sl_limit)]
+
+        st.markdown(
+            f'<div style="font-size:0.72rem;color:#64748b;margin-bottom:10px;">'
+            f'{len(_sl_filtered)} record{"s" if len(_sl_filtered) != 1 else ""} shown '
+            f'(of {len(_sl_all)} total)</div>',
+            unsafe_allow_html=True,
+        )
+
+        if not _sl_filtered:
+            st.info("No sent emails found.")
+        else:
+            # ── Table header ─────────────────────────────────────────────────
+            _sl_hdr = (
+                '<div style="display:grid;grid-template-columns:110px 130px 1fr 160px 60px;'
+                'gap:0;background:#0B1F3A;color:#fff;padding:7px 10px;border-radius:8px 8px 0 0;'
+                'font-size:10px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;">'
+                '<div>Date / Time</div><div>Client</div><div>Subject</div>'
+                '<div>Recipients</div><div style="text-align:center;">Status</div></div>'
+            )
+            st.markdown(_sl_hdr, unsafe_allow_html=True)
+            _sl_rows_html = ""
+            for _sli, _slr in enumerate(_sl_filtered):
+                _sl_bg = "#f8faff" if _sli % 2 == 0 else "#ffffff"
+                _sl_ts = f'{_slr.get("date", "")}<br><span style="color:#94a3b8;font-size:9px;">{_slr.get("time", "")}</span>'
+                _sl_cli = _slr.get("client", "—") or "—"
+                _sl_subj = (_slr.get("subject", "") or "")[:55]
+                _sl_draft = _slr.get("draft_name", "")
+                _sl_label = f'<div style="font-size:10.5px;color:#0B1F3A;font-weight:600;">{_sl_subj}</div>'
+                if _sl_draft and _sl_draft != _sl_subj:
+                    _sl_label += f'<div style="font-size:9px;color:#94a3b8;">{_sl_draft[:40]}</div>'
+                _sl_to = _slr.get("sent_to", [])
+                _sl_to_html = "".join(
+                    f'<span style="display:inline-block;background:#eff6ff;color:#2563EB;'
+                    f'font-size:9px;font-weight:600;padding:1px 6px;border-radius:10px;margin:1px 2px 1px 0;">'
+                    f'{e}</span>' for e in _sl_to
+                )
+                _sl_fail = _slr.get("failed", [])
+                _sl_status = (f'<span style="background:#dcfce7;color:#16a34a;font-size:9px;font-weight:700;'
+                              f'padding:2px 7px;border-radius:10px;">✓ Sent</span>')
+                if _sl_fail:
+                    _sl_status += (f'<br><span style="background:#fee2e2;color:#dc2626;font-size:9px;'
+                                   f'font-weight:700;padding:2px 7px;border-radius:10px;">'
+                                   f'✗ {len(_sl_fail)} failed</span>')
+                _sl_rows_html += (
+                    f'<div style="display:grid;grid-template-columns:110px 130px 1fr 160px 60px;'
+                    f'gap:0;background:{_sl_bg};padding:8px 10px;border-bottom:1px solid #f0f4fa;'
+                    f'align-items:start;">'
+                    f'<div style="font-size:10.5px;color:#374151;">{_sl_ts}</div>'
+                    f'<div style="font-size:10.5px;font-weight:700;color:#0B1F3A;">{_sl_cli}</div>'
+                    f'<div>{_sl_label}</div>'
+                    f'<div>{_sl_to_html}</div>'
+                    f'<div style="text-align:center;">{_sl_status}</div>'
+                    f'</div>'
+                )
+            st.markdown(
+                f'<div style="border:1px solid #e2e8f0;border-radius:0 0 8px 8px;overflow:hidden;">'
+                f'{_sl_rows_html}</div>',
+                unsafe_allow_html=True,
+            )
+
     # ── Audits (Admin) tab ────────────────────────────────────────────────────
     if _is_reg_admin:
-        with _reg_tabs[6]:
+        with _reg_tabs[8]:
             _reg_all_audits = audit_store.load()
             if not _reg_all_audits:
                 st.info("No audits found in the database.")
@@ -13395,7 +13509,7 @@ def _render_registry():
 
     # ── Admin tab (email credentials) ─────────────────────────────────────────
     if _is_reg_admin:
-        with _reg_tabs[7]:
+        with _reg_tabs[8]:
             st.markdown('<div class="section-chip">⚙️ Admin — Email Configuration</div>', unsafe_allow_html=True)
 
             # ── Current status ─────────────────────────────────────────────────
