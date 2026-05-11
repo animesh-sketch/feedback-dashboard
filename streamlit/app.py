@@ -10854,7 +10854,6 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
         # ── Section 11 — Campaign Score Divergence (vs portfolio avg) ────────────
         if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns and _total_d >= 5:
-            st.markdown('<div class="section-chip">↔️ Campaign Score Divergence vs Portfolio Average</div>', unsafe_allow_html=True)
             try:
                 _port_avg = _bs_d.dropna().mean()
                 _div_rows = []
@@ -10866,31 +10865,142 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                                           "Delta": round(_c_avg - _port_avg, 1), "N": len(_c_bs)})
                 _div_rows.sort(key=lambda x: x["Delta"])
                 if len(_div_rows) >= 2:
+                    _above = [r for r in _div_rows if r["Delta"] >= 0]
+                    _below = [r for r in _div_rows if r["Delta"] < 0]
+                    _best  = _div_rows[-1]
+                    _worst = _div_rows[0]
+
+                    # ── Premium header banner ─────────────────────────────────
+                    st.markdown(f"""
+<div style="background:linear-gradient(135deg,#0B1F3A 0%,#1e3a8a 55%,#0B1F3A 100%);
+  border-radius:16px;padding:22px 26px;margin-bottom:16px;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;
+    background:rgba(255,255,255,0.04);border-radius:50%;"></div>
+  <div style="position:absolute;bottom:-50px;left:25%;width:200px;height:200px;
+    background:rgba(37,99,235,0.07);border-radius:50%;"></div>
+  <div style="position:relative;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+    <div>
+      <div style="font-size:0.62rem;font-weight:700;color:rgba(147,197,253,0.9);
+        letter-spacing:0.12em;text-transform:uppercase;margin-bottom:5px;">↔️ Campaign Score Divergence</div>
+      <div style="font-size:1.05rem;font-weight:900;color:#fff;letter-spacing:-0.01em;">vs Portfolio Average</div>
+      <div style="font-size:0.72rem;color:rgba(255,255,255,0.55);margin-top:4px;">
+        How each campaign scores relative to the overall portfolio</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <div style="background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);
+        border-radius:12px;padding:12px 20px;text-align:center;min-width:80px;">
+        <div style="font-size:1.7rem;font-weight:900;color:#fff;line-height:1;">{_port_avg:.1f}%</div>
+        <div style="font-size:0.56rem;color:rgba(147,197,253,0.85);font-weight:700;
+          letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;">Portfolio Avg</div>
+      </div>
+      <div style="background:rgba(5,150,105,0.20);border:1px solid rgba(52,211,153,0.35);
+        border-radius:12px;padding:12px 20px;text-align:center;min-width:80px;">
+        <div style="font-size:1.7rem;font-weight:900;color:#34d399;line-height:1;">{len(_above)}</div>
+        <div style="font-size:0.56rem;color:rgba(52,211,153,0.85);font-weight:700;
+          letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;">Above Avg</div>
+      </div>
+      <div style="background:rgba(220,38,38,0.20);border:1px solid rgba(248,113,113,0.35);
+        border-radius:12px;padding:12px 20px;text-align:center;min-width:80px;">
+        <div style="font-size:1.7rem;font-weight:900;color:#f87171;line-height:1;">{len(_below)}</div>
+        <div style="font-size:0.56rem;color:rgba(248,113,113,0.85);font-weight:700;
+          letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;">Below Avg</div>
+      </div>
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
+
+                    # ── Bar colours — 3-shade scale per side ─────────────────
+                    def _div_color(delta):
+                        if delta >= 10:   return "#059669"
+                        elif delta >= 3:  return "#10b981"
+                        elif delta >= 0:  return "#34d399"
+                        elif delta >= -3: return "#f87171"
+                        elif delta >= -10:return "#ef4444"
+                        else:             return "#dc2626"
+
+                    _bar_cols = [_div_color(r["Delta"]) for r in _div_rows]
+
                     _dv_fig = go.Figure()
                     _dv_fig.add_trace(go.Bar(
                         y=[r["Campaign"] for r in _div_rows],
                         x=[r["Delta"] for r in _div_rows],
                         orientation="h",
-                        marker_color=["#059669" if r["Delta"] >= 0 else "#dc2626" for r in _div_rows],
-                        # Label: "Campaign Name  Avg 83.2%  (+3.2 vs avg)"
-                        text=[f'{r["Campaign"]}  ·  {r["Avg"]}%  ({r["Delta"]:+.1f})  [{r["N"]} calls]' for r in _div_rows],
+                        marker_color=_bar_cols,
+                        marker_line=dict(width=0),
+                        customdata=[[r["Avg"], r["N"], r["Delta"]] for r in _div_rows],
+                        hovertemplate=(
+                            "<b>%{y}</b><br>"
+                            "Avg Score: <b>%{customdata[0]}%</b><br>"
+                            "Delta: <b>%{customdata[2]:+.1f} pts</b><br>"
+                            "Audits: %{customdata[1]}<extra></extra>"
+                        ),
+                        text=[f'  {r["Delta"]:+.1f} pts  ·  {r["Avg"]}%  [{r["N"]} audits]'
+                              for r in _div_rows],
                         textposition="outside",
                         cliponaxis=False,
-                        textfont=dict(size=10),
+                        textfont=dict(size=11, color="#0B1F3A", family="Inter,sans-serif"),
                     ))
-                    _dv_fig.add_vline(x=0, line_color="#64748b", line_width=1.5,
-                        annotation_text=f"Portfolio Avg: {_port_avg:.1f}%",
-                        annotation_position="top",
-                        annotation_font=dict(size=10, color="#64748b"))
-                    _dv_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        font=dict(family="Inter,sans-serif", size=11),
-                        margin=dict(l=10, r=220, t=30, b=10),
-                        height=max(200, len(_div_rows) * 44 + 70),
-                        xaxis_title=f"Score deviation vs Portfolio Average ({_port_avg:.1f}%)",
-                        xaxis=dict(ticksuffix="%"),
-                        yaxis=dict(tickfont=dict(size=11)),
-                        showlegend=False)
+                    _dv_fig.add_vline(
+                        x=0, line_color="#0B1F3A", line_width=2,
+                        annotation_text=f"  Avg {_port_avg:.1f}%",
+                        annotation_position="top right",
+                        annotation_font=dict(size=11, color="#fff", family="Inter,sans-serif"),
+                        annotation_bgcolor="#0B1F3A",
+                        annotation_borderpad=5,
+                    )
+                    _dv_fig.update_layout(
+                        plot_bgcolor="#f8faff",
+                        paper_bgcolor="#fff",
+                        font=dict(family="Inter,sans-serif", size=12),
+                        margin=dict(l=10, r=200, t=50, b=20),
+                        height=max(260, len(_div_rows) * 56 + 90),
+                        xaxis=dict(
+                            title=dict(text="Deviation from portfolio average (pts)",
+                                       font=dict(size=11, color="#64748b")),
+                            ticksuffix=" pts",
+                            gridcolor="#e2e8f0",
+                            zeroline=False,
+                            tickfont=dict(size=11, color="#64748b"),
+                        ),
+                        yaxis=dict(tickfont=dict(size=12, color="#0B1F3A")),
+                        showlegend=False,
+                        bargap=0.38,
+                    )
                     st.plotly_chart(_dv_fig, use_container_width=True, config={"displayModeBar": False})
+
+                    # ── Spotlight: best / worst campaign cards ────────────────
+                    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+                    _sc1, _sc2 = st.columns(2)
+                    with _sc1:
+                        st.markdown(f"""
+<div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #6ee7b7;
+  border-left:4px solid #059669;border-radius:14px;padding:16px 18px;
+  box-shadow:0 4px 16px rgba(5,150,105,0.12);">
+  <div style="font-size:0.58rem;font-weight:700;color:#059669;letter-spacing:0.12em;
+    text-transform:uppercase;margin-bottom:8px;">🏆 Top Performer</div>
+  <div style="font-size:1.0rem;font-weight:900;color:#0B1F3A;line-height:1.2;">{_best["Campaign"]}</div>
+  <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+    <div style="font-size:1.5rem;font-weight:900;color:#059669;">{_best["Delta"]:+.1f}</div>
+    <div style="font-size:0.68rem;color:#374151;line-height:1.4;">pts above avg<br>
+      <span style="font-weight:700;color:#0B1F3A;">{_best["Avg"]}%</span> avg score &nbsp;·&nbsp;
+      <span style="color:#64748b;">{_best["N"]} audits</span></div>
+  </div>
+</div>""", unsafe_allow_html=True)
+                    with _sc2:
+                        st.markdown(f"""
+<div style="background:linear-gradient(135deg,#fff5f5,#fee2e2);border:1px solid #fca5a5;
+  border-left:4px solid #dc2626;border-radius:14px;padding:16px 18px;
+  box-shadow:0 4px 16px rgba(220,38,38,0.10);">
+  <div style="font-size:0.58rem;font-weight:700;color:#dc2626;letter-spacing:0.12em;
+    text-transform:uppercase;margin-bottom:8px;">⚠️ Needs Attention</div>
+  <div style="font-size:1.0rem;font-weight:900;color:#0B1F3A;line-height:1.2;">{_worst["Campaign"]}</div>
+  <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+    <div style="font-size:1.5rem;font-weight:900;color:#dc2626;">{_worst["Delta"]:+.1f}</div>
+    <div style="font-size:0.68rem;color:#374151;line-height:1.4;">pts vs avg<br>
+      <span style="font-weight:700;color:#0B1F3A;">{_worst["Avg"]}%</span> avg score &nbsp;·&nbsp;
+      <span style="color:#64748b;">{_worst["N"]} audits</span></div>
+  </div>
+</div>""", unsafe_allow_html=True)
             except Exception:
                 pass
 
