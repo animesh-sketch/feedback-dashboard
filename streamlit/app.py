@@ -10184,7 +10184,24 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         return
 
     # ── Section 0 — Refresh + filters ────────────────────────────────────────
-    st.markdown('<div class="section-chip">📈 Audit Dashboard</div>', unsafe_allow_html=True)
+    st.markdown("""
+<div style="background:linear-gradient(135deg,#0B1F3A 0%,#1e3a8a 50%,#0B1F3A 100%);
+  border-radius:18px;padding:24px 28px 20px;margin-bottom:20px;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;
+    background:rgba(255,255,255,0.04);border-radius:50%;"></div>
+  <div style="position:absolute;bottom:-60px;left:30%;width:240px;height:240px;
+    background:rgba(37,99,235,0.08);border-radius:50%;"></div>
+  <div style="position:relative;display:flex;align-items:center;gap:14px;">
+    <div style="font-size:2rem;background:linear-gradient(135deg,#2563EB,#06b6d4);
+      border-radius:12px;padding:10px 14px;box-shadow:0 4px 16px rgba(37,99,235,0.35);">📊</div>
+    <div>
+      <div style="font-size:1.3rem;font-weight:900;color:#fff;letter-spacing:-0.02em;line-height:1.1;">
+        QA Intelligence Dashboard</div>
+      <div style="font-size:0.72rem;color:rgba(147,197,253,0.9);margin-top:3px;font-weight:500;">
+        Real-time audit insights · Convin.ai Standard Sheet</div>
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
     _f1, _f2, _f3, _f4, _f5 = st.columns([2, 2, 2, 2, 1])
 
     _clients = ["All"] + sorted(_audit_df["Client"].dropna().unique().tolist()) if "Client" in _audit_df.columns else ["All"]
@@ -10238,12 +10255,17 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
     # ── Shared helpers ────────────────────────────────────────────────────────
     def _kpi_card_d(val, label, grad):
-        return (f'<div style="background:#fff;border-radius:14px;padding:0;'
-                f'box-shadow:0 2px 10px rgba(11,31,58,0.08);overflow:hidden;border:1px solid #E2EAF6;">'
-                f'<div style="height:4px;background:{grad};"></div>'
-                f'<div style="padding:16px 14px 14px;text-align:center;">'
-                f'<div style="font-size:1.9rem;font-weight:900;color:#0B1F3A;line-height:1.05;letter-spacing:-0.03em;">{val}</div>'
-                f'<div style="font-size:0.59rem;font-weight:700;color:#64748b;letter-spacing:0.10em;text-transform:uppercase;margin-top:5px;">{label}</div>'
+        return (f'<div style="background:{grad};border-radius:16px;padding:18px 14px 16px;'
+                f'box-shadow:0 8px 28px rgba(11,31,58,0.22);overflow:hidden;position:relative;min-height:86px;">'
+                f'<div style="position:absolute;top:-18px;right:-18px;width:72px;height:72px;'
+                f'background:rgba(255,255,255,0.10);border-radius:50%;"></div>'
+                f'<div style="position:absolute;bottom:-24px;left:-10px;width:90px;height:90px;'
+                f'background:rgba(255,255,255,0.06);border-radius:50%;"></div>'
+                f'<div style="text-align:center;position:relative;">'
+                f'<div style="font-size:2.1rem;font-weight:900;color:#fff;line-height:1.05;'
+                f'letter-spacing:-0.03em;text-shadow:0 2px 8px rgba(0,0,0,0.18);">{val}</div>'
+                f'<div style="font-size:0.56rem;font-weight:700;color:rgba(255,255,255,0.78);'
+                f'letter-spacing:0.12em;text-transform:uppercase;margin-top:6px;">{label}</div>'
                 f'</div></div>')
 
     _total_d = len(_dash_df)
@@ -10294,11 +10316,18 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
     _kc5.markdown(_kpi_card_d(f"🟡 {_rev_d}", "Needs Review", "linear-gradient(135deg,#d97706,#f59e0b)"), unsafe_allow_html=True)
     _kc6.markdown(_kpi_card_d(f"🚨 {_fatal_d}", "Auto-Fails", "linear-gradient(135deg,#dc2626,#f43f5e)" if _fatal_d else "linear-gradient(135deg,#6b7280,#9ca3af)"), unsafe_allow_html=True)
     _kc7.markdown(
-        f'<div style="background:#fff;border-radius:14px;padding:0;box-shadow:0 2px 10px rgba(11,31,58,0.08);overflow:hidden;border:1px solid #E2EAF6;">'
-        f'<div style="height:4px;background:linear-gradient(135deg,{_momentum_color},{_momentum_color}88);"></div>'
-        f'<div style="padding:16px 14px 14px;text-align:center;">'
-        f'<div style="font-size:1.9rem;font-weight:900;color:{_momentum_color};line-height:1.05;">{_momentum_arrow} {_momentum_txt}</div>'
-        f'<div style="font-size:0.59rem;font-weight:700;color:#64748b;letter-spacing:0.10em;text-transform:uppercase;margin-top:5px;">Score Momentum</div>'
+        f'<div style="background:linear-gradient(135deg,{_momentum_color},{_momentum_color}bb);'
+        f'border-radius:16px;padding:18px 14px 16px;box-shadow:0 8px 28px rgba(11,31,58,0.22);'
+        f'overflow:hidden;position:relative;min-height:86px;">'
+        f'<div style="position:absolute;top:-18px;right:-18px;width:72px;height:72px;'
+        f'background:rgba(255,255,255,0.10);border-radius:50%;"></div>'
+        f'<div style="position:absolute;bottom:-24px;left:-10px;width:90px;height:90px;'
+        f'background:rgba(255,255,255,0.06);border-radius:50%;"></div>'
+        f'<div style="text-align:center;position:relative;">'
+        f'<div style="font-size:2.1rem;font-weight:900;color:#fff;line-height:1.05;'
+        f'text-shadow:0 2px 8px rgba(0,0,0,0.18);">{_momentum_arrow} {_momentum_txt}</div>'
+        f'<div style="font-size:0.56rem;font-weight:700;color:rgba(255,255,255,0.78);'
+        f'letter-spacing:0.12em;text-transform:uppercase;margin-top:6px;">Score Momentum</div>'
         f'</div></div>',
         unsafe_allow_html=True
     )
@@ -10314,17 +10343,28 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             _sd_cfg = [("✅ Pass", "#0ebc6e", _pass_d), ("🟡 Needs Review", "#f59e0b", _rev_d),
                        ("❌ Fail", "#ef4444", _fail_d), ("🚨 Auto-Fail", "#dc2626", _fatal_d)]
             _sd_html = ""
+            _sd_grads = {
+                "#0ebc6e": "linear-gradient(90deg,#059669,#34d399)",
+                "#f59e0b": "linear-gradient(90deg,#d97706,#fbbf24)",
+                "#ef4444": "linear-gradient(90deg,#dc2626,#f87171)",
+                "#dc2626": "linear-gradient(90deg,#991b1b,#dc2626)",
+            }
             for _sn, _sc, _sv in _sd_cfg:
                 _sp = round(_sv / _total_d * 100, 1) if _total_d else 0
+                _sg = _sd_grads.get(_sc, f"linear-gradient(90deg,{_sc},{_sc})")
                 _sd_html += (
-                    f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;">'
-                    f'<div style="width:110px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;">{_sn}</div>'
-                    f'<div style="flex:1;height:14px;background:#f0f2f5;border-radius:7px;overflow:hidden;">'
-                    f'<div style="width:{_sp}%;height:100%;background:{_sc};border-radius:7px;transition:width 0.5s;"></div></div>'
-                    f'<div style="width:50px;font-size:0.71rem;font-weight:800;color:{_sc};flex-shrink:0;text-align:right;">{_sv} ({_sp}%)</div>'
+                    f'<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">'
+                    f'<div style="width:120px;font-size:0.72rem;font-weight:700;color:#0B1F3A;flex-shrink:0;">{_sn}</div>'
+                    f'<div style="flex:1;height:18px;background:#EEF2FF;border-radius:9px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.06);">'
+                    f'<div style="width:{_sp}%;height:100%;background:{_sg};border-radius:9px;"></div></div>'
+                    f'<div style="width:64px;font-size:0.73rem;font-weight:900;color:{_sc};flex-shrink:0;text-align:right;">'
+                    f'{_sv} <span style="font-weight:600;color:#64748b;font-size:0.65rem;">({_sp}%)</span></div>'
                     f'</div>'
                 )
-            st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:16px;">{_sd_html}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:14px;padding:20px 18px;'
+                f'box-shadow:0 4px 18px rgba(11,31,58,0.07);">{_sd_html}</div>',
+                unsafe_allow_html=True)
 
         with _s2r:
             st.markdown('<div class="section-chip">📈 Score Distribution</div>', unsafe_allow_html=True)
@@ -10423,13 +10463,22 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                         "Auto-Fails": int((_qa_st == "Auto-Fail").sum()),
                     })
                 _lb_rows.sort(key=lambda x: -x["Avg Score"])
-                _lb_html = '<table style="width:100%;border-collapse:collapse;font-size:0.71rem;">'
-                _lb_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["QA", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"]) + "</tr>"
+                _lb_html = '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">'
+                _lb_html += ('<tr style="background:linear-gradient(135deg,#0B1F3A,#1e3a8a);">'
+                             + "".join(f'<th style="padding:9px 10px;text-align:left;color:rgba(255,255,255,0.85);font-weight:700;font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;">{h}</th>' for h in ["QA", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"])
+                             + "</tr>")
                 for _ri, _r in enumerate(_lb_rows):
                     _medal = ["🥇", "🥈", "🥉"][_ri] if _ri < 3 else ""
-                    _lb_html += f'<tr style="border-bottom:1px solid #f0f4fa;"><td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_medal} {_r["QA"]}</td><td style="padding:5px 8px;font-weight:800;color:#1e40af;">{_r["Audits"]}</td><td style="padding:5px 8px;font-weight:800;color:#059669;">{_r["Avg Score"]}</td><td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td><td style="padding:5px 8px;font-weight:800;color:#dc2626;">{_r["Auto-Fails"]}</td></tr>'
+                    _rb = "#f8faff" if _ri % 2 == 0 else "#fff"
+                    _lb_html += (f'<tr style="background:{_rb};">'
+                                 f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_medal} {_r["QA"]}</td>'
+                                 f'<td style="padding:8px 10px;font-weight:900;color:#1e40af;font-size:0.82rem;">{_r["Audits"]}</td>'
+                                 f'<td style="padding:8px 10px;font-weight:900;color:#059669;font-size:0.82rem;">{_r["Avg Score"]}</td>'
+                                 f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td>'
+                                 f'<td style="padding:8px 10px;font-weight:900;color:#dc2626;font-size:0.82rem;">{_r["Auto-Fails"]}</td>'
+                                 f'</tr>')
                 _lb_html += "</table>"
-                st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_lb_html}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(11,31,58,0.07);">{_lb_html}</div>', unsafe_allow_html=True)
             else:
                 st.info("No QA/Bot Score columns available.")
 
@@ -10448,12 +10497,21 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                         "Auto-Fails": int((_c_st == "Auto-Fail").sum()),
                     })
                 _cr_rows.sort(key=lambda x: -x["Avg Score"])
-                _cr_html = '<table style="width:100%;border-collapse:collapse;font-size:0.71rem;">'
-                _cr_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["Campaign", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"]) + "</tr>"
-                for _r in _cr_rows:
-                    _cr_html += f'<tr style="border-bottom:1px solid #f0f4fa;"><td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_r["Campaign"]}</td><td style="padding:5px 8px;font-weight:800;color:#1e40af;">{_r["Audits"]}</td><td style="padding:5px 8px;font-weight:800;color:#059669;">{_r["Avg Score"]}</td><td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td><td style="padding:5px 8px;font-weight:800;color:#dc2626;">{_r["Auto-Fails"]}</td></tr>'
+                _cr_html = '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">'
+                _cr_html += ('<tr style="background:linear-gradient(135deg,#0B1F3A,#1e3a8a);">'
+                             + "".join(f'<th style="padding:9px 10px;text-align:left;color:rgba(255,255,255,0.85);font-weight:700;font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;">{h}</th>' for h in ["Campaign", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"])
+                             + "</tr>")
+                for _cri, _r in enumerate(_cr_rows):
+                    _rb = "#f8faff" if _cri % 2 == 0 else "#fff"
+                    _cr_html += (f'<tr style="background:{_rb};">'
+                                 f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Campaign"]}</td>'
+                                 f'<td style="padding:8px 10px;font-weight:900;color:#1e40af;font-size:0.82rem;">{_r["Audits"]}</td>'
+                                 f'<td style="padding:8px 10px;font-weight:900;color:#059669;font-size:0.82rem;">{_r["Avg Score"]}</td>'
+                                 f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td>'
+                                 f'<td style="padding:8px 10px;font-weight:900;color:#dc2626;font-size:0.82rem;">{_r["Auto-Fails"]}</td>'
+                                 f'</tr>')
                 _cr_html += "</table>"
-                st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_cr_html}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(11,31,58,0.07);">{_cr_html}</div>', unsafe_allow_html=True)
             else:
                 st.info("No Campaign Name/Bot Score columns available.")
 
@@ -10628,21 +10686,23 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                                       "Avg Score": _c_avg, "Pass Rate": f"{_c_pr}%",
                                       "Auto-Fails": _c_fatal, "Health": _c_health})
                 _ch_rows.sort(key=lambda x: -x["Avg Score"])
-                _chm_html = '<table style="width:100%;border-collapse:collapse;font-size:0.71rem;">'
-                _chm_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["Client", "Audits", "Campaigns", "Avg Score", "Pass Rate", "Auto-Fails", "Health"]) + "</tr>"
+                _chm_html = '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">'
+                _chm_html += ('<tr style="background:linear-gradient(135deg,#0B1F3A,#1e3a8a);">'
+                              + "".join(f'<th style="padding:9px 10px;text-align:left;color:rgba(255,255,255,0.85);font-weight:700;font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;">{h}</th>' for h in ["Client", "Audits", "Campaigns", "Avg Score", "Pass Rate", "Auto-Fails", "Health"])
+                              + "</tr>")
                 for _r in _ch_rows:
                     _row_bg = "#f0fdf4" if "Healthy" in _r["Health"] else "#fffbeb" if "Monitor" in _r["Health"] else "#fef2f2"
-                    _chm_html += (f'<tr style="border-bottom:1px solid #f0f4fa;background:{_row_bg};">'
-                                  f'<td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_r["Client"]}</td>'
-                                  f'<td style="padding:5px 8px;font-weight:800;color:#1e40af;">{_r["Audits"]}</td>'
-                                  f'<td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_r["Campaigns"]}</td>'
-                                  f'<td style="padding:5px 8px;font-weight:800;color:#059669;">{_r["Avg Score"]}</td>'
-                                  f'<td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td>'
-                                  f'<td style="padding:5px 8px;font-weight:800;color:#dc2626;">{_r["Auto-Fails"]}</td>'
-                                  f'<td style="padding:5px 8px;font-weight:700;">{_r["Health"]}</td>'
+                    _chm_html += (f'<tr style="background:{_row_bg};">'
+                                  f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Client"]}</td>'
+                                  f'<td style="padding:8px 10px;font-weight:900;color:#1e40af;font-size:0.82rem;">{_r["Audits"]}</td>'
+                                  f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Campaigns"]}</td>'
+                                  f'<td style="padding:8px 10px;font-weight:900;color:#059669;font-size:0.82rem;">{_r["Avg Score"]}</td>'
+                                  f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td>'
+                                  f'<td style="padding:8px 10px;font-weight:900;color:#dc2626;font-size:0.82rem;">{_r["Auto-Fails"]}</td>'
+                                  f'<td style="padding:8px 10px;font-weight:700;">{_r["Health"]}</td>'
                                   f'</tr>')
                 _chm_html += "</table>"
-                st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_chm_html}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(11,31,58,0.07);">{_chm_html}</div>', unsafe_allow_html=True)
             except Exception:
                 pass
 
@@ -10718,18 +10778,22 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     _cf_html = ""
                     for _cf in _cofail_pairs[:8]:
                         _cfcolor = "#dc2626" if _cf["rate"] >= 35 else "#d97706" if _cf["rate"] >= 20 else "#2563EB"
+                        _cfbg = "linear-gradient(135deg,#fff5f5,#fef2f2)" if _cf["rate"] >= 35 else "linear-gradient(135deg,#fffbeb,#fef3c7)" if _cf["rate"] >= 20 else "linear-gradient(135deg,#eff6ff,#dbeafe)"
+                        _cfborder = "#fca5a5" if _cf["rate"] >= 35 else "#fde68a" if _cf["rate"] >= 20 else "#bfdbfe"
                         _cf_html += (
-                            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:6px 10px;'
-                            f'background:#fff;border:1px solid #E2EAF6;border-radius:8px;">'
-                            f'<div style="flex:1;font-size:0.70rem;font-weight:600;color:#0B1F3A;">'
-                            f'<span style="color:#dc2626;">✗</span> {_cf["p1"]}'
-                            f' <span style="color:#64748b;font-weight:400;"> + </span>'
-                            f'<span style="color:#dc2626;">✗</span> {_cf["p2"]}</div>'
-                            f'<div style="flex-shrink:0;background:{_cfcolor};color:#fff;font-size:0.65rem;'
-                            f'font-weight:800;padding:2px 8px;border-radius:4px;">{_cf["rate"]}% co-fail</div>'
+                            f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:10px 14px;'
+                            f'background:{_cfbg};border:1px solid {_cfborder};border-left:3px solid {_cfcolor};border-radius:10px;'
+                            f'box-shadow:0 2px 8px rgba(11,31,58,0.05);">'
+                            f'<div style="flex:1;font-size:0.72rem;font-weight:700;color:#0B1F3A;">'
+                            f'<span style="color:#dc2626;font-size:0.8rem;">✗</span> {_cf["p1"]}'
+                            f' <span style="color:#94a3b8;font-weight:500;font-size:0.68rem;"> + </span>'
+                            f'<span style="color:#dc2626;font-size:0.8rem;">✗</span> {_cf["p2"]}</div>'
+                            f'<div style="flex-shrink:0;background:{_cfcolor};color:#fff;font-size:0.68rem;'
+                            f'font-weight:900;padding:4px 10px;border-radius:6px;white-space:nowrap;'
+                            f'box-shadow:0 2px 6px rgba(0,0,0,0.15);">{_cf["rate"]}% co-fail</div>'
                             f'</div>'
                         )
-                    st.markdown(f'<div style="max-height:300px;overflow-y:auto;">{_cf_html}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="max-height:320px;overflow-y:auto;">{_cf_html}</div>', unsafe_allow_html=True)
                 else:
                     st.markdown('<div style="font-size:0.73rem;color:#059669;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">No significant co-failures detected (threshold: 10%)</div>', unsafe_allow_html=True)
         except Exception:
@@ -10854,13 +10918,17 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             if _strong_d:
                 _wr_d = ""
                 for _wp in _strong_d:
-                    _wr_d += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-                              f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp["col"]}</div>'
-                              f'<div style="flex:1;height:10px;background:#D1FAE5;border-radius:5px;overflow:hidden;">'
-                              f'<div style="width:{_wp["pct"]}%;height:100%;background:linear-gradient(90deg,#059669,#34D399);border-radius:5px;"></div></div>'
-                              f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:#059669;flex-shrink:0;text-align:right;">{_wp["pct"]}%</div>'
+                    _wr_d += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">'
+                              f'<div style="width:155px;font-size:0.71rem;font-weight:700;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp["col"]}</div>'
+                              f'<div style="flex:1;height:14px;background:#D1FAE5;border-radius:7px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">'
+                              f'<div style="width:{_wp["pct"]}%;height:100%;background:linear-gradient(90deg,#059669,#34D399);border-radius:7px;"></div></div>'
+                              f'<div style="width:44px;font-size:0.78rem;font-weight:900;color:#059669;flex-shrink:0;text-align:right;">{_wp["pct"]}%</div>'
                               f'</div>')
-                st.markdown(f'<div style="background:#fff;border:1px solid #D1FAE5;border-left:3px solid #059669;border-radius:10px;padding:14px 16px;">{_wr_d}</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #6ee7b7;'
+                    f'border-left:4px solid #059669;border-radius:14px;padding:16px 18px;'
+                    f'box-shadow:0 4px 16px rgba(5,150,105,0.10);">{_wr_d}</div>',
+                    unsafe_allow_html=True)
             else:
                 st.markdown('<div style="background:#F8FAFF;border:1px solid #DBEAFE;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#64748b;text-align:center;">No parameters ≥75% yet</div>', unsafe_allow_html=True)
 
@@ -10870,14 +10938,20 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 _ww_d = ""
                 for _wp2 in _weak_d:
                     _urg = "#dc2626" if _wp2["pct"] < 50 else "#d97706"
-                    _bg2 = "#FEE2E2" if _wp2["pct"] < 50 else "#FEF3C7"
-                    _ww_d += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-                              f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp2["col"]}</div>'
-                              f'<div style="flex:1;height:10px;background:{_bg2};border-radius:5px;overflow:hidden;">'
-                              f'<div style="width:{_wp2["pct"]}%;height:100%;background:{_urg};border-radius:5px;"></div></div>'
-                              f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:{_urg};flex-shrink:0;text-align:right;">{_wp2["pct"]}%</div>'
+                    _ubg = "#FEE2E2" if _wp2["pct"] < 50 else "#FEF3C7"
+                    _ugrd = ("linear-gradient(90deg,#991b1b,#dc2626)" if _wp2["pct"] < 50
+                             else "linear-gradient(90deg,#b45309,#f59e0b)")
+                    _ww_d += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">'
+                              f'<div style="width:155px;font-size:0.71rem;font-weight:700;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp2["col"]}</div>'
+                              f'<div style="flex:1;height:14px;background:{_ubg};border-radius:7px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">'
+                              f'<div style="width:{_wp2["pct"]}%;height:100%;background:{_ugrd};border-radius:7px;"></div></div>'
+                              f'<div style="width:44px;font-size:0.78rem;font-weight:900;color:{_urg};flex-shrink:0;text-align:right;">{_wp2["pct"]}%</div>'
                               f'</div>')
-                st.markdown(f'<div style="background:#fff;border:1px solid #FEE2E2;border-left:3px solid #dc2626;border-radius:10px;padding:14px 16px;">{_ww_d}</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div style="background:linear-gradient(135deg,#fff5f5,#fee2e2);border:1px solid #fca5a5;'
+                    f'border-left:4px solid #dc2626;border-radius:14px;padding:16px 18px;'
+                    f'box-shadow:0 4px 16px rgba(220,38,38,0.10);">{_ww_d}</div>',
+                    unsafe_allow_html=True)
             else:
                 st.markdown('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#059669;text-align:center;">🎉 All parameters performing well!</div>', unsafe_allow_html=True)
 
