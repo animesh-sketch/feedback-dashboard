@@ -10362,7 +10362,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                                 mode="lines+markers+text", line=dict(color="#93c5fd", width=1.5),
                                 marker=dict(size=5), name="Daily Avg Bot Score", opacity=0.8,
                                 text=[f"{v:.0f}%" for v in _daily["Bot Score"]],
-                                textposition="top center", textfont=dict(size=9, color="#6b7280")))
+                                textposition="top center", textfont=dict(size=11, color="#0B1F3A")))
                             _tf.add_trace(go.Scatter(x=_daily["Audit Date"], y=_roll,
                                 mode="lines", line=dict(color="#2563EB", width=2.5),
                                 name="3-Period Moving Average"))
@@ -10427,7 +10427,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 _lb_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["QA", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"]) + "</tr>"
                 for _ri, _r in enumerate(_lb_rows):
                     _medal = ["🥇", "🥈", "🥉"][_ri] if _ri < 3 else ""
-                    _lb_html += f'<tr style="border-bottom:1px solid #f0f4fa;"><td style="padding:5px 8px;font-weight:600;color:#0B1F3A;">{_medal} {_r["QA"]}</td><td style="padding:5px 8px;color:#2563EB;">{_r["Audits"]}</td><td style="padding:5px 8px;font-weight:700;color:#059669;">{_r["Avg Score"]}</td><td style="padding:5px 8px;">{_r["Pass Rate"]}</td><td style="padding:5px 8px;color:#dc2626;">{_r["Auto-Fails"]}</td></tr>'
+                    _lb_html += f'<tr style="border-bottom:1px solid #f0f4fa;"><td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_medal} {_r["QA"]}</td><td style="padding:5px 8px;font-weight:800;color:#1e40af;">{_r["Audits"]}</td><td style="padding:5px 8px;font-weight:800;color:#059669;">{_r["Avg Score"]}</td><td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td><td style="padding:5px 8px;font-weight:800;color:#dc2626;">{_r["Auto-Fails"]}</td></tr>'
                 _lb_html += "</table>"
                 st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_lb_html}</div>', unsafe_allow_html=True)
             else:
@@ -10451,7 +10451,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 _cr_html = '<table style="width:100%;border-collapse:collapse;font-size:0.71rem;">'
                 _cr_html += '<tr style="background:#f8faff;">' + "".join(f'<th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:700;border-bottom:1px solid #E2EAF6;">{h}</th>' for h in ["Campaign", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"]) + "</tr>"
                 for _r in _cr_rows:
-                    _cr_html += f'<tr style="border-bottom:1px solid #f0f4fa;"><td style="padding:5px 8px;font-weight:600;color:#0B1F3A;">{_r["Campaign"]}</td><td style="padding:5px 8px;color:#2563EB;">{_r["Audits"]}</td><td style="padding:5px 8px;font-weight:700;color:#059669;">{_r["Avg Score"]}</td><td style="padding:5px 8px;">{_r["Pass Rate"]}</td><td style="padding:5px 8px;color:#dc2626;">{_r["Auto-Fails"]}</td></tr>'
+                    _cr_html += f'<tr style="border-bottom:1px solid #f0f4fa;"><td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_r["Campaign"]}</td><td style="padding:5px 8px;font-weight:800;color:#1e40af;">{_r["Audits"]}</td><td style="padding:5px 8px;font-weight:800;color:#059669;">{_r["Avg Score"]}</td><td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td><td style="padding:5px 8px;font-weight:800;color:#dc2626;">{_r["Auto-Fails"]}</td></tr>'
                 _cr_html += "</table>"
                 st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:12px;overflow-x:auto;">{_cr_html}</div>', unsafe_allow_html=True)
             else:
@@ -10633,12 +10633,12 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 for _r in _ch_rows:
                     _row_bg = "#f0fdf4" if "Healthy" in _r["Health"] else "#fffbeb" if "Monitor" in _r["Health"] else "#fef2f2"
                     _chm_html += (f'<tr style="border-bottom:1px solid #f0f4fa;background:{_row_bg};">'
-                                  f'<td style="padding:5px 8px;font-weight:600;color:#0B1F3A;">{_r["Client"]}</td>'
-                                  f'<td style="padding:5px 8px;color:#2563EB;">{_r["Audits"]}</td>'
-                                  f'<td style="padding:5px 8px;">{_r["Campaigns"]}</td>'
-                                  f'<td style="padding:5px 8px;font-weight:700;">{_r["Avg Score"]}</td>'
-                                  f'<td style="padding:5px 8px;">{_r["Pass Rate"]}</td>'
-                                  f'<td style="padding:5px 8px;color:#dc2626;">{_r["Auto-Fails"]}</td>'
+                                  f'<td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_r["Client"]}</td>'
+                                  f'<td style="padding:5px 8px;font-weight:800;color:#1e40af;">{_r["Audits"]}</td>'
+                                  f'<td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_r["Campaigns"]}</td>'
+                                  f'<td style="padding:5px 8px;font-weight:800;color:#059669;">{_r["Avg Score"]}</td>'
+                                  f'<td style="padding:5px 8px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td>'
+                                  f'<td style="padding:5px 8px;font-weight:800;color:#dc2626;">{_r["Auto-Fails"]}</td>'
                                   f'<td style="padding:5px 8px;font-weight:700;">{_r["Health"]}</td>'
                                   f'</tr>')
                 _chm_html += "</table>"
@@ -10893,15 +10893,17 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     orientation="h",
                     marker_color=["#059669" if p["pct"] >= 80 else "#f59e0b" if p["pct"] >= 60 else "#dc2626" for p in _allp_sorted],
                     text=[f'{p["pct"]}%' for p in _allp_sorted],
-                    textposition="auto",
+                    textposition="outside",
+                    cliponaxis=False,
+                    textfont=dict(size=12, color="#0B1F3A", family="Inter,sans-serif"),
                 ))
                 _ap_fig.add_vline(x=80, line_dash="dot", line_color="#6b7280", annotation_text="80%")
                 _ap_fig.update_layout(
                     plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font=dict(family="Inter,sans-serif", size=11),
-                    margin=dict(l=10, r=10, t=20, b=10),
-                    height=max(300, len(_allp_sorted) * 28 + 60),
-                    showlegend=False, xaxis_title="Avg Score %", xaxis_range=[0, 108],
+                    font=dict(family="Inter,sans-serif", size=12),
+                    margin=dict(l=10, r=60, t=20, b=10),
+                    height=max(300, len(_allp_sorted) * 30 + 60),
+                    showlegend=False, xaxis_title="Avg Score %", xaxis_range=[0, 115],
                 )
                 st.plotly_chart(_ap_fig, use_container_width=True, config={"displayModeBar": False})
             except Exception:
