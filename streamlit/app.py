@@ -73,7 +73,7 @@ def _blank_draft(idx: int) -> dict:
         "report_link": "",
         "survey_question": "How would you rate this insights report?",
         "show_preview": False,
-        "template": 1,
+        "template": 10,
         "attachment_name": "",
         "attachment_data": "",   # base64-encoded bytes for MIME attachment
         "attachment_mime": "",
@@ -3008,7 +3008,7 @@ def render_email_maker():
                 with _chk_cols[_idx % 5]:
                     _ds_checked[_ds_key] = st.checkbox(
                         _ds_label,
-                        value=d.get(f"_dschk_{_ds_key}", False),
+                        value=d.get(f"_dschk_{_ds_key}", True),
                         key=f"ds_chk_{_ds_key}_{ci}",
                     )
                 d[f"_dschk_{_ds_key}"] = _ds_checked[_ds_key]
