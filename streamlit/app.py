@@ -10254,6 +10254,24 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         return
 
     # ── Shared helpers ────────────────────────────────────────────────────────
+    def _insight_card(points):
+        _li = "".join(
+            f'<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:7px;">'
+            f'<span style="flex-shrink:0;font-size:0.82rem;">{ic}</span>'
+            f'<span style="font-size:0.72rem;color:#1e293b;line-height:1.5;">{txt}</span>'
+            f'</div>'
+            for ic, txt in points
+        )
+        return (
+            f'<div style="background:linear-gradient(135deg,#EFF6FF,#EEF2FF);'
+            f'border:1px solid #c7d2fe;border-left:4px solid #4f46e5;border-radius:12px;'
+            f'padding:14px 16px;">'
+            f'<div style="font-size:0.58rem;font-weight:800;color:#4f46e5;letter-spacing:0.12em;'
+            f'text-transform:uppercase;margin-bottom:10px;">💡 Insights</div>'
+            f'{_li}'
+            f'</div>'
+        )
+
     def _kpi_card_d(val, label, grad):
         return (f'<div style="background:{grad};border-radius:16px;padding:18px 14px 16px;'
                 f'box-shadow:0 8px 28px rgba(11,31,58,0.22);overflow:hidden;position:relative;min-height:86px;">'
@@ -10383,6 +10401,42 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             else:
                 st.info("No Bot Score data available.")
 
+        # ── Insight: Bot health overview ─────────────────────────────────────────
+        try:
+            _ins2 = []
+            _fatal_rt = round(_fatal_d / _total_d * 100, 1) if _total_d else 0
+            if _pr_d >= 80:
+                _ins2.append(("✅", f"Pass rate <b>{_pr_d}%</b> meets the 80% target — bot conversations are performing well."))
+            elif _pr_d >= 60:
+                _ins2.append(("⚠️", f"Pass rate <b>{_pr_d}%</b> is below the 80% target. <b>{_pass_d}</b> of <b>{_total_d}</b> audits passed."))
+            else:
+                _ins2.append(("🚨", f"Pass rate <b>{_pr_d}%</b> is critically low — bot quality needs urgent attention."))
+            if _fatal_rt >= 20:
+                _ins2.append(("🔴", f"Auto-fail rate <b>{_fatal_rt}%</b> is very high — bots frequently trigger fatal errors (flow issues, restarts)."))
+            elif _fatal_rt >= 10:
+                _ins2.append(("🟡", f"Auto-fail rate <b>{_fatal_rt}%</b> is elevated — investigate bot flow and conversation restarts."))
+            elif _fatal_d > 0:
+                _ins2.append(("🟢", f"Auto-fail rate is low at <b>{_fatal_rt}%</b> ({_fatal_d} incidents) — minor risk."))
+            else:
+                _ins2.append(("🟢", "Zero auto-fails detected — no fatal bot errors in this period."))
+            if not _bs_d.dropna().empty:
+                _score_std = round(_bs_d.dropna().std(), 1)
+                if _score_std >= 15:
+                    _ins2.append(("📊", f"High score variance (σ={_score_std}pts) — bot performance is inconsistent across conversations."))
+                elif _score_std >= 8:
+                    _ins2.append(("📊", f"Moderate score spread (σ={_score_std}pts) — some conversations score significantly lower than others."))
+                else:
+                    _ins2.append(("📊", f"Tight score distribution (σ={_score_std}pts) — bot response quality is consistent."))
+            if _rev_d > 0:
+                _ins2.append(("🔍", f"<b>{_rev_d}</b> audits ({round(_rev_d/_total_d*100,1)}%) are in 'Needs Review' — follow up to close these."))
+            _i2l, _i2r = st.columns(2)
+            with _i2l:
+                st.markdown(_insight_card(_ins2[:2]), unsafe_allow_html=True)
+            with _i2r:
+                st.markdown(_insight_card(_ins2[2:]) if len(_ins2) > 2 else "", unsafe_allow_html=True)
+        except Exception:
+            pass
+
         # ── Section 3 — Score Trend + Fatal Rate Trend ───────────────────────────
         if "Audit Date" in _dash_df.columns:
             _s3ta, _s3tb = st.columns(2)
@@ -10445,6 +10499,40 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                         st.plotly_chart(_ff, use_container_width=True, config={"displayModeBar": False})
                     except Exception:
                         pass
+
+        # ── Insight: Score trajectory ─────────────────────────────────────────────
+        try:
+            _ins3 = []
+            if "Bot Score" in _dash_df.columns and "Audit Date" in _dash_df.columns:
+                _tr2 = _dash_df[["Audit Date","Bot Score"]].copy()
+                _tr2["Audit Date"] = pd.to_datetime(_tr2["Audit Date"], errors="coerce")
+                _tr2["Bot Score"] = pd.to_numeric(_tr2["Bot Score"], errors="coerce")
+                _tr2 = _tr2.dropna().sort_values("Audit Date")
+                if len(_tr2) >= 4:
+                    _half = len(_tr2) // 2
+                    _early = round(_tr2.iloc[:_half]["Bot Score"].mean(), 1)
+                    _recent = round(_tr2.iloc[_half:]["Bot Score"].mean(), 1)
+                    _trnd = round(_recent - _early, 1)
+                    if _trnd >= 3:
+                        _ins3.append(("📈", f"Bot scores are <b>improving</b> — recent avg <b>{_recent}%</b> vs earlier <b>{_early}%</b> (<b>+{_trnd}pts</b>)."))
+                    elif _trnd <= -3:
+                        _ins3.append(("📉", f"Bot scores are <b>declining</b> — recent avg <b>{_recent}%</b> vs earlier <b>{_early}%</b> (<b>{_trnd}pts</b>). Investigate recent flows."))
+                    else:
+                        _ins3.append(("➡️", f"Bot scores are <b>stable</b> — recent avg <b>{_recent}%</b> vs earlier <b>{_early}%</b> (change: {_trnd:+.1f}pts)."))
+                    _peak = round(_tr2["Bot Score"].max(), 1)
+                    _low  = round(_tr2["Bot Score"].min(), 1)
+                    _ins3.append(("🎯", f"Score range: peak <b>{_peak}%</b>, low <b>{_low}%</b> — a spread of <b>{round(_peak-_low,1)}pts</b> across audits."))
+            if "Status" in _dash_df.columns and "Audit Date" in _dash_df.columns:
+                _fat2 = _dash_df[_dash_df["Status"].astype(str).str.strip() == "Auto-Fail"]
+                if len(_fat2) > 0 and "Audit Date" in _fat2.columns:
+                    _fat2_d = pd.to_datetime(_fat2["Audit Date"], errors="coerce").dropna()
+                    if not _fat2_d.empty:
+                        _last_fatal = _fat2_d.max().strftime("%d %b %Y")
+                        _ins3.append(("🚨", f"Last auto-fail recorded on <b>{_last_fatal}</b> — verify if recent bot deployments triggered this."))
+            if _ins3:
+                st.markdown(_insight_card(_ins3), unsafe_allow_html=True)
+        except Exception:
+            pass
 
         # ── Section 4 — QA Leaderboard + Campaign Rankings ───────────────────────
         _s4l, _s4r = st.columns(2)
@@ -10514,6 +10602,29 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 st.markdown(f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(11,31,58,0.07);">{_cr_html}</div>', unsafe_allow_html=True)
             else:
                 st.info("No Campaign Name/Bot Score columns available.")
+
+        # ── Insight: Campaign bot performance ────────────────────────────────────
+        try:
+            if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+                _camp_scores = []
+                for _cn2, _cg2 in _dash_df.groupby("Campaign Name"):
+                    _cbs2 = pd.to_numeric(_cg2["Bot Score"], errors="coerce").dropna()
+                    if not _cbs2.empty:
+                        _camp_scores.append({"name": str(_cn2), "avg": round(_cbs2.mean(),1), "n": len(_cbs2)})
+                if _camp_scores:
+                    _camp_scores.sort(key=lambda x: -x["avg"])
+                    _ins4 = []
+                    _best_c = _camp_scores[0]
+                    _worst_c = _camp_scores[-1]
+                    _at_risk_c = [c for c in _camp_scores if c["avg"] < 60]
+                    _passing_c = [c for c in _camp_scores if c["avg"] >= 80]
+                    _ins4.append(("🏆", f"Best bot performance: <b>{_best_c['name']}</b> at <b>{_best_c['avg']}%</b> avg score ({_best_c['n']} audits)."))
+                    if len(_camp_scores) > 1:
+                        _ins4.append(("⚠️", f"Lowest scoring campaign: <b>{_worst_c['name']}</b> at <b>{_worst_c['avg']}%</b> — bot needs attention here."))
+                    _ins4.append(("📋", f"<b>{len(_passing_c)}</b> of <b>{len(_camp_scores)}</b> campaigns meeting the 80% target. " + (f"<b>{len(_at_risk_c)}</b> campaign(s) critically below 60%." if _at_risk_c else "No campaigns critically at risk.")))
+                    st.markdown(_insight_card(_ins4), unsafe_allow_html=True)
+        except Exception:
+            pass
 
         # ── Section 5 — Auditor Calibration (std dev) + Tier Breakdown ──────────
         _s5a, _s5b = st.columns(2)
@@ -10601,6 +10712,40 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     st.plotly_chart(_tb_fig, use_container_width=True, config={"displayModeBar": False})
             except Exception:
                 pass
+
+        # ── Insight: Tier scoring analysis ───────────────────────────────────────
+        try:
+            _tier_scores_ins = []
+            for _t in _QA_SCHEMA.get("tiers", []):
+                _tsc = []
+                for _p in _t.get("params", []):
+                    if _p["col"] not in _dash_df.columns: continue
+                    _pmx2 = [int(o) for o in _p.get("options",[]) if str(o).lstrip("-").isdigit()]
+                    _pmax2 = max(_pmx2) if _pmx2 else 2
+                    _pv2 = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
+                        {"NA":"","nan":"","Fatal":"","Yes":"0","No":str(_pmax2)}), errors="coerce").dropna()
+                    if len(_pv2) > 0:
+                        _tsc.append(_pv2.mean()/_pmax2*100)
+                if _tsc:
+                    _tlbl = _t["label"].split("·")[1].strip() if "·" in _t["label"] else _t["label"]
+                    _tier_scores_ins.append({"label": _tlbl, "pct": round(sum(_tsc)/len(_tsc),1), "weight": _t.get("weight_pct",0)})
+            if _tier_scores_ins:
+                _ts_sorted = sorted(_tier_scores_ins, key=lambda x: x["pct"])
+                _weakest_t = _ts_sorted[0]
+                _strongest_t = _ts_sorted[-1]
+                _ins5 = []
+                _ins5.append(("🔴" if _weakest_t["pct"] < 60 else "🟡" if _weakest_t["pct"] < 80 else "🟢",
+                    f"Weakest tier: <b>{_weakest_t['label']}</b> at <b>{_weakest_t['pct']}%</b> "
+                    f"(carries <b>{_weakest_t['weight']}%</b> of the final score — high impact on overall bot rating)."))
+                _ins5.append(("💪", f"Strongest tier: <b>{_strongest_t['label']}</b> at <b>{_strongest_t['pct']}%</b> — bot excels here."))
+                _gap = round(_strongest_t["pct"] - _weakest_t["pct"], 1)
+                if _gap >= 15:
+                    _ins5.append(("📐", f"Large tier gap of <b>{_gap}pts</b> — bot performance is uneven across quality dimensions."))
+                else:
+                    _ins5.append(("📐", f"Tier gap of <b>{_gap}pts</b> — relatively balanced performance across quality dimensions."))
+                st.markdown(_insight_card(_ins5), unsafe_allow_html=True)
+        except Exception:
+            pass
 
         # ── Section 6 — Disposition Breakdown + Lead Stage Analysis ─────────────
         _s6a, _s6b = st.columns(2)
@@ -10706,6 +10851,35 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             except Exception:
                 pass
 
+        # ── Insight: Client bot risk ──────────────────────────────────────────────
+        try:
+            if "Client" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+                _cl_ins = []
+                _cl_healthy, _cl_monitor, _cl_risk = [], [], []
+                for _cn3, _cg3 in _dash_df.groupby("Client"):
+                    _cbs3 = pd.to_numeric(_cg3["Bot Score"], errors="coerce").dropna()
+                    _cst3 = _cg3["Status"].astype(str).str.strip() if "Status" in _cg3.columns else pd.Series([])
+                    if _cbs3.empty: continue
+                    _cavg3 = _cbs3.mean()
+                    _cpr3  = int((_cst3=="Pass").sum())/len(_cg3)*100 if len(_cg3) else 0
+                    if _cavg3 >= 80 and _cpr3 >= 75: _cl_healthy.append(str(_cn3))
+                    elif _cavg3 >= 65 or _cpr3 >= 55: _cl_monitor.append(str(_cn3))
+                    else: _cl_risk.append(str(_cn3))
+                if _cl_risk:
+                    _cl_ins.append(("🔴", f"<b>{len(_cl_risk)}</b> client(s) at risk — bot performance below threshold: {', '.join(_cl_risk[:3])}."))
+                if _cl_monitor:
+                    _cl_ins.append(("🟡", f"<b>{len(_cl_monitor)}</b> client(s) need monitoring — bot scores in the 65–79% range."))
+                if _cl_healthy:
+                    _cl_ins.append(("🟢", f"<b>{len(_cl_healthy)}</b> client(s) with healthy bot performance (≥80% score, ≥75% pass rate)."))
+                _total_clients = len(_cl_healthy) + len(_cl_monitor) + len(_cl_risk)
+                if _total_clients > 0:
+                    _health_pct = round(len(_cl_healthy)/_total_clients*100)
+                    _cl_ins.append(("📊", f"Overall client portfolio health: <b>{_health_pct}%</b> of clients in good standing."))
+                if _cl_ins:
+                    st.markdown(_insight_card(_cl_ins), unsafe_allow_html=True)
+        except Exception:
+            pass
+
         # ── Section 8 — Lead Score vs Bot Score Correlation ──────────────────────
         _has_lead = "Lead Score" in _dash_df.columns
         _has_ls = "Lead Stage" in _dash_df.columns
@@ -10796,6 +10970,33 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     st.markdown(f'<div style="max-height:320px;overflow-y:auto;">{_cf_html}</div>', unsafe_allow_html=True)
                 else:
                     st.markdown('<div style="font-size:0.73rem;color:#059669;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">No significant co-failures detected (threshold: 10%)</div>', unsafe_allow_html=True)
+        except Exception:
+            pass
+
+        # ── Insight: Failure pattern analysis ────────────────────────────────────
+        try:
+            _all_pc2 = [_p for _t in _QA_SCHEMA.get("tiers",[]) for _p in _t.get("params",[]) if _p["col"] in _dash_df.columns]
+            _fail_rates = {}
+            for _p in _all_pc2:
+                _pmx3 = [int(o) for o in _p.get("options",[]) if str(o).lstrip("-").isdigit()]
+                _pmax3 = max(_pmx3) if _pmx3 else 2
+                _pv3 = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
+                    {"NA":"","nan":"","Yes":"0","No":str(_pmax3),"Fatal":"0"}), errors="coerce")
+                _fail_rates[_p["col"]] = round((_pv3 < _pmax3*0.5).sum() / _total_d * 100, 1) if _total_d else 0
+            if _fail_rates:
+                _fr_sorted = sorted(_fail_rates.items(), key=lambda x: -x[1])
+                _top_fail = _fr_sorted[0]
+                _ins9 = []
+                _ins9.append(("🔴", f"Most frequently failing parameter: <b>{_top_fail[0]}</b> — fails in <b>{_top_fail[1]}%</b> of audits. Highest priority fix."))
+                _systemic = [(k,v) for k,v in _fail_rates.items() if v >= 30]
+                if len(_systemic) >= 3:
+                    _ins9.append(("⚠️", f"<b>{len(_systemic)}</b> parameters failing in 30%+ of audits — indicates systemic bot issues, not isolated incidents."))
+                elif _systemic:
+                    _ins9.append(("⚠️", f"<b>{_systemic[0][0]}</b> fails in <b>{_systemic[0][1]}%</b> of conversations — review bot logic for this parameter."))
+                _low_fail = [k for k,v in _fail_rates.items() if v <= 5]
+                if _low_fail:
+                    _ins9.append(("✅", f"<b>{len(_low_fail)}</b> parameter(s) nearly error-free (≤5% fail rate) — bot handles these well."))
+                st.markdown(_insight_card(_ins9), unsafe_allow_html=True)
         except Exception:
             pass
 
@@ -11064,6 +11265,25 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     unsafe_allow_html=True)
             else:
                 st.markdown('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#059669;text-align:center;">🎉 All parameters performing well!</div>', unsafe_allow_html=True)
+
+        # ── Insight: Parameter health summary ────────────────────────────────────
+        try:
+            if _param_avgs_d:
+                _ins12 = []
+                _p_pass  = [p for p in _param_avgs_d if p["pct"] >= 80]
+                _p_risk  = [p for p in _param_avgs_d if p["pct"] < 60]
+                _p_watch = [p for p in _param_avgs_d if 60 <= p["pct"] < 80]
+                _avg_param_score = round(sum(p["pct"] for p in _param_avgs_d)/len(_param_avgs_d),1)
+                _worst_p = min(_param_avgs_d, key=lambda x: x["pct"])
+                _best_p  = max(_param_avgs_d, key=lambda x: x["pct"])
+                _ins12.append(("📊", f"Average parameter score: <b>{_avg_param_score}%</b>. <b>{len(_p_pass)}</b> passing, <b>{len(_p_watch)}</b> watching, <b>{len(_p_risk)}</b> at risk."))
+                _ins12.append(("🔴", f"Biggest gap from target: <b>{_worst_p['col']}</b> at <b>{_worst_p['pct']}%</b> — <b>{round(80-_worst_p['pct'],1)}pts</b> below target. Prioritise this in bot training."))
+                _ins12.append(("🌟", f"Best scoring parameter: <b>{_best_p['col']}</b> at <b>{_best_p['pct']}%</b> — bot handles this reliably."))
+                if _p_risk:
+                    _ins12.append(("⚠️", f"<b>{len(_p_risk)}</b> parameter(s) critically below 60%: {', '.join(p['col'] for p in sorted(_p_risk, key=lambda x: x['pct'])[:3])}."))
+                st.markdown(_insight_card(_ins12), unsafe_allow_html=True)
+        except Exception:
+            pass
 
         # ── Section 13 — All-param score bars (full overview) ────────────────────
         if _param_avgs_d:
