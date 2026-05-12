@@ -4498,6 +4498,15 @@ _SENSE_BUILTIN_PARAMS = {
         "icon":        "🔊",
         "guide":       "2 = TTS clear, natural & easily understandable  |  1 = Minor mispronunciation or unnatural pause  |  0 = TTS significantly impacted clarity  |  NA = Not applicable / not assessable",
     },
+    "Were all required entities captured correctly?": {
+        "description": "Entity capture accuracy — all required slots (name, amount, reference etc.) captured",
+        "options":     ["No", "Yes"],
+        "inverted":    False,
+        "weight":      0.04,
+        "color":       "#f59e0b",
+        "icon":        "⭐",
+        "guide":       "Yes = All required entities captured correctly  |  No = Entity capture incomplete or inaccurate",
+    },
 }
 _DEFAULT_PARAM_WEIGHT = 1.0   # weight for any legend param not listed above
 
@@ -5373,7 +5382,7 @@ def _gen_call_insights(audit_df):
             "detail": f"{_fatal_c} calls ({round(_fatal_c/total*100,1)}%) were auto-failed. Review these calls to identify whether bot logic, network, or integration issues caused the failure."})
 
     # 3. Disposition accuracy
-    _dac = next((c for c in audit_df.columns if "disposition accuracy" in c.lower()), None)
+    _dac = next((c for c in audit_df.columns if "disposition" in c.lower() and "accurat" in c.lower()), None)
     if _dac:
         _da_v = pd.to_numeric(audit_df[_dac].astype(str).str.strip().replace({"NA": "", "nan": ""}), errors="coerce").dropna()
         if len(_da_v) >= 3:
