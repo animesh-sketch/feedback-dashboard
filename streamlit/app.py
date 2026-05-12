@@ -14600,7 +14600,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             st.session_state["f_conv_link"]       = _qv(_q_rec, "Conversation Link")
             st.session_state["f_lead_link"]       = _qv(_q_rec, "Lead Link")
             st.session_state["f_bot_name"]        = _qv(_q_rec, "Bot Name")
-            st.session_state["f_correct_disp_text"] = _qv(_q_rec, "Correct Disposition Text")
 
             # Client selectbox
             _reg_cl_pre = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
@@ -14623,11 +14622,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                               "Not Interested", "Converted", "DNC", "Wrong Number",
                               "Language Barrier", "Voicemail / No Answer", "Other"]
             st.session_state["f_disposition_sel"] = _disp_pre if _disp_pre in _disp_opts_pre else "— select —"
-
-            # Correct Disposition radio (Yes / No / NA)
-            _cd_pre = _qv(_q_rec, "Correct Disposition?")
-            if _cd_pre in ("Yes", "No", "NA"):
-                st.session_state["f_correct_disp"] = _cd_pre
 
             # Audit Date — parse string to datetime.date
             _ad_pre = _qv(_q_rec, "Audit Date")
@@ -14663,8 +14657,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             st.session_state["f_lead_link"] = _edit_data.get("Lead Link", "")
             st.session_state["f_disposition_sel"] = _edit_data.get("Disposition", "— select —")
             st.session_state["f_bot_name"] = _edit_data.get("Bot Name", "")
-            st.session_state["f_correct_disp"] = _edit_data.get("Correct Disposition?", "NA")
-            st.session_state["f_correct_disp_text"] = _edit_data.get("Correct Disposition (leave blank if correct)", "")
             st.session_state["f_notes"] = _edit_data.get("Notes", "")
             st.session_state["f_suggestion_field"] = _edit_data.get("Improvement Suggestion", "")
             st.session_state["_prefill_from_edit"] = True
@@ -14734,24 +14726,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         with _conv_col1:
             _f_conv_link = st.text_input("Conversation Link *", key="f_conv_link", placeholder="https://...")
 
-        # ── Disposition correction ─────────────────────────────────────────────
-        _ll1, _ll2 = st.columns(2)
-        with _ll1:
-            _f_correct_disp = st.radio(
-                "Correct Disposition? *",
-                ["Yes", "No", "NA"],
-                index=2,
-                horizontal=True,
-                key="f_correct_disp",
-            )
-        with _ll2:
-            st.markdown("")  # Spacer
-
-        _f_correct_disp_text = st.text_input(
-            "Correct Disposition (leave blank if correct)",
-            placeholder="e.g. Not Interested, Warm Follow-up…",
-            key="f_correct_disp_text",
-        )
         _f_call_drop_stage = ""
 
         st.markdown(
@@ -14796,6 +14770,13 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                             key=_key,
                             help=_p.get("guide", ""),
                         )
+                        if "No" in _p["options"]:
+                            _rmk_key = f"af_rmk_{_p['col'][:20].replace(' ','_').replace('/','_').replace('(','').replace(')','')}"
+                            _pv[f"{_p['col']} Remark"] = st.text_input(
+                                "↳ Remark (required if No)",
+                                placeholder="Describe the issue…",
+                                key=_rmk_key,
+                            )
 
             # Intelligence param embedded at bottom of this tier
             if _ip:
@@ -14948,13 +14929,18 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 if _f_conv_link.strip() in _existing_links:
                     _errs.append("Conversation Link already exists — duplicate entries are not allowed")
             for _col, _val in _pv.items():
-                if _col.endswith(" Comment") or _col.endswith(" Not Captured"):
+                if _col.endswith(" Comment") or _col.endswith(" Not Captured") or _col.endswith(" Remark"):
                     continue
                 if _col in _custom_param_names or any(_col.startswith(n + " ") for n in _custom_param_names):
                     continue  # custom params are optional
                 if not _val or str(_val).strip() in ("— select —", "—"):
                     _errs.append(f"'{_col}' must be selected")
                 # NA is accepted as "not applicable" — no error
+            # Require remark when "No" is selected for any parameter
+            for _vp in [p for _t in _QA_SCHEMA["tiers"] for p in _t["params"]]:
+                if "No" in _vp["options"] and str(_pv.get(_vp["col"], "")).strip() == "No":
+                    if not str(_pv.get(f"{_vp['col']} Remark", "")).strip():
+                        _errs.append(f"Remark required — explain why '{_vp['col']}' was marked No")
             if _f_disposition == "— select —":
                 _errs.append("Disposition must be selected")
 
@@ -14964,8 +14950,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             else:
                 # Build full param dict including lead fields
                 _full_pv = dict(_pv)
-                _full_pv["Correct Disposition"]           = _f_correct_disp
-                _full_pv["Correct Disposition (Expected)"] = _f_correct_disp_text
 
                 # Auto-compute all scores
                 _computed = _compute_qa_score(_full_pv)
@@ -15005,10 +14989,8 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
 
                 st.session_state["qa_last_result"] = {
                     **_computed,
-                    "_disposition":        _f_disposition if _f_disposition != "— select —" else "—",
-                    "_correct_disp":       _f_correct_disp,
-                    "_correct_disp_text":  _f_correct_disp_text,
-                    "_call_drop_stage":    _f_call_drop_stage if _f_call_drop_stage != "NA" else "",
+                    "_disposition":     _f_disposition if _f_disposition != "— select —" else "—",
+                    "_call_drop_stage": _f_call_drop_stage if _f_call_drop_stage != "NA" else "",
                 }
 
                 st.session_state.pop("_audit_suggestion_draft", None)
@@ -15042,8 +15024,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             st.session_state.pop("f_lead_no", None)
             st.session_state.pop("f_bot_name", None)
             st.session_state.pop("f_disposition_sel", None)
-            st.session_state.pop("f_correct_disp", None)
-            st.session_state.pop("f_correct_disp_text", None)
             st.session_state.pop("f_call_drop_stage_sel", None)
             st.session_state.pop("f_notes", None)
             st.success("✅ Form cleared")
