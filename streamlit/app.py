@@ -3016,7 +3016,7 @@ def render_email_maker():
             # ── Recompute insights live on every render ────────────────────
             _live_sections = []
 
-            # ALWAYS: Custom Parameter Performance
+            # ALWAYS: Custom Parameter Performance (QA schema tiers)
             try:
                 _cp_rows = []
                 for _tt in _QA_SCHEMA.get("tiers", []):
@@ -3030,6 +3030,45 @@ def render_email_maker():
                                 _cp_rows.append({"label": _tp["col"], "value": f"{_pct}%", "highlight": _pct >= 75})
                 if _cp_rows:
                     _live_sections.append({"icon": "🔧", "title": "Custom Parameter Performance", "rows": _cp_rows})
+            except Exception:
+                pass
+
+            # ALWAYS: User-defined custom params (param_store)
+            try:
+                if "sense_custom_audit_params" not in st.session_state:
+                    st.session_state["sense_custom_audit_params"] = param_store.load()
+                _ucp_rows = []
+                for _ucp in st.session_state["sense_custom_audit_params"]:
+                    _ucp_col  = _ucp["name"]
+                    _ucp_type = _ucp.get("input_type", "dropdown")
+                    _ucp_opts = _ucp.get("options", ["Yes", "No"])
+                    if _ucp_col not in _ec_df.columns:
+                        continue
+                    _ucp_raw = _ec_df[_ucp_col].astype(str).str.strip()
+                    _ucp_raw = _ucp_raw[~_ucp_raw.str.lower().isin(["nan", "na", ""])]
+                    if not len(_ucp_raw):
+                        continue
+                    if _ucp_type == "scoring":
+                        _ucp_num = pd.to_numeric(_ucp_raw, errors="coerce").dropna()
+                        if len(_ucp_num):
+                            _ucp_avg = round(_ucp_num.mean(), 1)
+                            _ucp_pct = round(_ucp_avg / 5 * 100, 1)
+                            _ucp_rows.append({"label": _ucp_col, "value": f"{_ucp_avg}/5  ({_ucp_pct}%)", "highlight": _ucp_pct >= 75})
+                    elif _ucp_type == "number":
+                        _ucp_num = pd.to_numeric(_ucp_raw, errors="coerce").dropna()
+                        if len(_ucp_num):
+                            _ucp_rows.append({"label": _ucp_col, "value": str(round(_ucp_num.mean(), 1))})
+                    elif _ucp_type == "dropdown":
+                        _pos_opt = next((o for o in _ucp_opts if o.lower() == "yes"), _ucp_opts[0] if _ucp_opts else "Yes")
+                        _ucp_pos = int((_ucp_raw == _pos_opt).sum())
+                        _ucp_tot = len(_ucp_raw)
+                        _ucp_pct = round(_ucp_pos / _ucp_tot * 100, 1) if _ucp_tot else 0
+                        _ucp_rows.append({"label": _ucp_col, "value": f"{_ucp_pct}%  ({_ucp_pos}/{_ucp_tot})", "highlight": _ucp_pct >= 75})
+                    else:
+                        _ucp_filled = int((_ucp_raw.str.len() > 0).sum())
+                        _ucp_rows.append({"label": _ucp_col, "value": f"{_ucp_filled}/{len(_ucp_raw)} filled"})
+                if _ucp_rows:
+                    _live_sections.append({"icon": "⭐", "title": "Custom Parameters", "rows": _ucp_rows})
             except Exception:
                 pass
 
@@ -3162,8 +3201,8 @@ def render_email_maker():
             st.markdown(
                 f'<div style="color:#16a34a;font-size:0.72rem;font-weight:600;margin-top:6px;">'
                 f'✓ {len(_live_sections)} card(s) will appear in the email '
-                f'<span style="color:#94a3b8;font-weight:400;">(1 always-on: Custom Parameters'
-                f'{f" + {len(_live_sections)-1} selected" if len(_live_sections) > 1 else ""})</span></div>',
+                f'<span style="color:#94a3b8;font-weight:400;">(always-on: QA params + Custom params'
+                f'{f" + {len(_live_sections)-2} selected" if len(_live_sections) > 2 else ""})</span></div>',
                 unsafe_allow_html=True,
             )
 
@@ -4414,7 +4453,7 @@ _SENSE_BOT_LIST = ["", "Tara", "Mmyra"]
 # Now scored 0–2 like all tier params: 2 = best, 0 = worst.
 # Automatically injected into every audit sheet if not already present.
 _SENSE_BUILTIN_PARAMS = {
-    "Flow Issue": {
+    "Was there any flow issue during the conversation?": {
         "description": "Conversation flow quality — logical gaps / breakdowns",
         "options":     ["Yes", "No"],  # Yes = issue present (bad), No = no issue (good)
         "inverted":    False,
@@ -4423,7 +4462,7 @@ _SENSE_BUILTIN_PARAMS = {
         "icon":        "🔍",
         "guide":       "Yes = Flow issue detected (breaks scoring)  |  No = No flow issue",
     },
-    "Bot Restarted Conversation": {
+    "Did the bot restart or repeat the conversation unnecessarily?": {
         "description": "Bot forced a conversation restart",
         "options":     ["Yes", "No"],  # Yes = restart happened (bad), No = no restart (good)
         "inverted":    False,
@@ -4432,7 +4471,7 @@ _SENSE_BUILTIN_PARAMS = {
         "icon":        "🔁",
         "guide":       "Yes = Bot restarted conversation (breaks scoring)  |  No = No restart",
     },
-    "Bot Repetition": {
+    "Did the bot repeat responses or questions unnecessarily?": {
         "description": "Bot repeated same message / looped responses",
         "options":     ["Yes", "No"],  # Yes = repetition detected (bad), No = no repetition (good)
         "inverted":    False,
@@ -4441,7 +4480,7 @@ _SENSE_BUILTIN_PARAMS = {
         "icon":        "🔄",
         "guide":       "Yes = Repetition detected (breaks scoring)  |  No = No repetition",
     },
-    "Latency": {
+    "Was there any latency issue during the conversation?": {
         "description": "Bot response latency / delay during conversation",
         "options":     ["Yes", "No"],  # Yes = latency issue present (bad), No = no issue (good)
         "inverted":    False,
@@ -4450,7 +4489,7 @@ _SENSE_BUILTIN_PARAMS = {
         "icon":        "⚡",
         "guide":       "No = No latency issue (response ≤2.5s)  |  Yes = Latency issue detected (response >2.5s)",
     },
-    "TTS": {
+    "Was the TTS (Text-to-Speech) quality clear and understandable?": {
         "description": "Text-to-Speech output quality — clarity, naturalness, understandability",
         "options":     ["0", "1", "2", "NA"],
         "inverted":    False,
@@ -7824,9 +7863,17 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                         continue
                     _pmax_v = [int(o) for o in _p["options"] if str(o).lstrip("-").isdigit()]
                     _pmax = max(_pmax_v) if _pmax_v else 2
-                    _pvals = pd.to_numeric(
-                        _audit_df_ins_view[_p["col"]].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":""}),
-                        errors="coerce").dropna()
+                    _raw_str = _audit_df_ins_view[_p["col"]].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":""})
+                    _pvals = pd.to_numeric(_raw_str, errors="coerce").dropna()
+                    if len(_pvals) == 0 and len(_p.get("options", [])) > 1:
+                        _opts_l = [str(o).lower() for o in _p["options"]]
+                        _n_opts = len(_opts_l)
+                        def _map_pos(v, _ol=_opts_l, _nl=_n_opts):
+                            v = str(v).lower().strip()
+                            if v in ("", "na", "nan"): return float("nan")
+                            try: return _ol.index(v) / (_nl - 1) * 2
+                            except: return float("nan")
+                        _pvals = _raw_str.apply(_map_pos).dropna()
                     if len(_pvals) == 0:
                         continue
                     _pavg = round(_pvals.mean() / _pmax * 100, 1)
@@ -8299,7 +8346,17 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                 for _etier in _QA_SCHEMA["tiers"]:
                     for _ep in _etier["params"]:
                         if _ep["col"] not in _audit_df_ins_view.columns: continue
-                        _epv = pd.to_numeric(_audit_df_ins_view[_ep["col"]].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":""}),errors="coerce").dropna()
+                        _ep_raw = _audit_df_ins_view[_ep["col"]].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":""})
+                        _epv = pd.to_numeric(_ep_raw, errors="coerce").dropna()
+                        if len(_epv) == 0 and len(_ep.get("options", [])) > 1:
+                            _ep_opts = [str(o).lower() for o in _ep["options"]]
+                            _ep_n = len(_ep_opts)
+                            def _ep_pos(v, _ol=_ep_opts, _nl=_ep_n):
+                                v = str(v).lower().strip()
+                                if v in ("", "na", "nan"): return float("nan")
+                                try: return _ol.index(v) / (_nl - 1) * 2
+                                except: return float("nan")
+                            _epv = _ep_raw.apply(_ep_pos).dropna()
                         if len(_epv) == 0: continue
                         _epmx = max([int(o) for o in _ep["options"] if str(o).lstrip("-").isdigit()], default=2)
                         _em_param_rows.append({"col":_ep["col"],"pct":round(_epv.mean()/_epmx*100,1),"tier":_etier["label"],"color":_etier["color"]})
@@ -9303,7 +9360,7 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
             for _p in _tier["params"]:
                 _pmax_vals = [int(o) for o in _p["options"] if o not in ("NA",) and str(o).lstrip("-").isdigit()]
                 _pmax = max(_pmax_vals) if _pmax_vals else 2
-                _all_params.append({"col": _p["col"], "max": _pmax, "weight": _p["weight"], "tier": _tier["label"], "color": _tier["color"]})
+                _all_params.append({"col": _p["col"], "max": _pmax, "weight": _p["weight"], "tier": _tier["label"], "color": _tier["color"], "options": _p.get("options", [])})
                 _seen_cols.add(_p["col"].lower())
         # Add any Legend params not already in QA schema
         for _lp, _lopts in legend_map.items():
@@ -9314,14 +9371,23 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                 continue
             _lmax_vals = [int(o) for o in _lopts if str(o).lstrip("-").isdigit()]
             _lmax = max(_lmax_vals) if _lmax_vals else 1
-            _all_params.append({"col": _lp, "max": _lmax, "weight": 1.0, "tier": "Legend", "color": "#2563EB"})
+            _all_params.append({"col": _lp, "max": _lmax, "weight": 1.0, "tier": "Legend", "color": "#2563EB", "options": list(_lopts)})
         _param_rows = []
         for _pp in _all_params:
             if _pp["col"] not in df.columns:
                 continue
             _vals = df[_pp["col"]].astype(str).str.strip()
-            _vals = _vals[~_vals.str.upper().isin(["NA", ""])]
-            _nums = pd.to_numeric(_vals, errors="coerce").dropna()
+            _vals_f = _vals[~_vals.str.upper().isin(["NA", ""])]
+            _nums = pd.to_numeric(_vals_f, errors="coerce").dropna()
+            if len(_nums) == 0 and len(_pp.get("options", [])) > 1:
+                _pw_opts = [str(o).lower() for o in _pp["options"]]
+                _pw_n = len(_pw_opts)
+                def _pw_pos(v, _ol=_pw_opts, _nl=_pw_n):
+                    v = str(v).lower().strip()
+                    if v in ("", "na", "nan"): return float("nan")
+                    try: return _ol.index(v) / (_nl - 1) * 2
+                    except: return float("nan")
+                _nums = _vals_f.apply(_pw_pos).dropna()
             if len(_nums) == 0:
                 continue
             _avg_pct = round(_nums.mean() / _pp["max"] * 100, 1)
@@ -9387,6 +9453,15 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     _vals = df[_p["col"]].astype(str).str.strip()
                     _vals = _vals[~_vals.str.upper().isin(["NA",""])]
                     _nums = pd.to_numeric(_vals, errors="coerce").dropna()
+                    if len(_nums) == 0 and len(_p.get("options", [])) > 1:
+                        _ei_opts = [str(o).lower() for o in _p["options"]]
+                        _ei_n = len(_ei_opts)
+                        def _ei_pos(v, _ol=_ei_opts, _nl=_ei_n):
+                            v = str(v).lower().strip()
+                            if v in ("", "na", "nan"): return float("nan")
+                            try: return _ol.index(v) / (_nl - 1) * 2
+                            except: return float("nan")
+                        _nums = _vals.apply(_ei_pos).dropna()
                     if len(_nums):
                         _all_params.append({"col":_p["col"],"pct":round(_nums.mean()/_pmax*100,1)})
         if _all_params:
