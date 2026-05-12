@@ -4443,12 +4443,12 @@ _SENSE_BUILTIN_PARAMS = {
     },
     "Latency": {
         "description": "Bot response latency / delay during conversation",
-        "options":     ["0", "1", "2"],
+        "options":     ["Yes", "No"],  # Yes = latency issue present (bad), No = no issue (good)
         "inverted":    False,
-        "weight":      0.04,
+        "weight":      0.05,
         "color":       "#0891b2",
         "icon":        "⚡",
-        "guide":       "2 = Response within acceptable latency (<500ms)  |  1 = Slight delay (500ms–1s)  |  0 = High latency (>1s) impacted conversation quality",
+        "guide":       "No = No latency issue (response ≤2.5s)  |  Yes = Latency issue detected (response >2.5s)",
     },
     "TTS": {
         "description": "Text-to-Speech output quality — clarity, naturalness, understandability",
@@ -4467,15 +4467,22 @@ _QA_SCHEMA = {
     "tiers": [
         {
             "label": "TIER 1 · CRITICAL",
-            "weight_pct": 63,
+            "weight_pct": 68,
             "color": "#dc2626",
             "params": [
                 {
                     "col": "Disposition Accuracy",
-                    "weight": 0.18,
-                    "options": ["0", "1", "2"],
+                    "weight": 0.14,
+                    "options": ["No", "Yes"],  # No = incorrect (bad), Yes = correct (good)
                     "fatal": False,
-                    "guide": "2 = Correctly reflects outcome, lead status & entities  |  1 = Minor mismatch  |  0 = Does not align with conversation outcome",
+                    "guide": "Yes = Correct disposition selected based on conversation outcome  |  No = Incorrect or mismatched disposition",
+                },
+                {
+                    "col": "Entity Capture",
+                    "weight": 0.04,
+                    "options": ["No", "Yes"],  # No = incomplete (bad), Yes = all captured (good)
+                    "fatal": False,
+                    "guide": "Yes = All required entities captured correctly  |  No = Entity capture incomplete or inaccurate",
                 },
                 {
                     "col": "Context Passing",
@@ -4512,11 +4519,18 @@ _QA_SCHEMA = {
                     "fatal": False,
                     "guide": "2 = Follow-up within SLA  |  1 = Completed but exceeded SLA timeline  |  0 = No follow-up attempt made",
                 },
+                {
+                    "col": "Latency",
+                    "weight": 0.05,
+                    "options": ["Yes", "No"],  # Yes = issue present (bad), No = no issue (good)
+                    "fatal": False,
+                    "guide": "No = No latency issue (response ≤2.5s)  |  Yes = Latency issue detected (response >2.5s)",
+                },
             ],
         },
         {
             "label": "TIER 2 · IMPORTANT",
-            "weight_pct": 29,
+            "weight_pct": 32,
             "color": "#f59e0b",
             "params": [
                 {
@@ -4562,13 +4576,6 @@ _QA_SCHEMA = {
                     "guide": "2 = Transcription accurate and complete  |  0 = Inaccuracies impacted audit reliability",
                 },
                 {
-                    "col": "Latency",
-                    "weight": 0.04,
-                    "options": ["0", "1", "2"],
-                    "fatal": False,
-                    "guide": "2 = Response within acceptable latency (<500ms)  |  1 = Slight delay (500ms–1s)  |  0 = High latency (>1s) impacted conversation quality",
-                },
-                {
                     "col": "TTS",
                     "weight": 0.03,
                     "options": ["0", "1", "2", "NA"],
@@ -4579,7 +4586,7 @@ _QA_SCHEMA = {
         },
         {
             "label": "TIER 3 · QUALITY",
-            "weight_pct": 8,
+            "weight_pct": 6,
             "color": "#2563EB",
             "params": [
                 {
@@ -4618,11 +4625,11 @@ _QA_SCHEMA = {
                     "guide": "0 = Call ended smoothly as per designed flow  |  Fatal = Call ended abruptly before logical closure (Auto-Fail)",
                 },
                 {
-                    "col": "NBA Not Executed",
+                    "col": "NBA Executed",
                     "weight": 0.00,
-                    "options": ["0", "2"],
+                    "options": ["No", "Yes"],  # No = not executed (bad), Yes = executed correctly (good)
                     "fatal": False,
-                    "guide": "2 = NBA executed correctly or not applicable  |  0 = NBA was generated but not executed by bot",
+                    "guide": "Yes = Required Next Best Action executed correctly  |  No = NBA was generated but not executed by bot",
                 },
             ],
         },
