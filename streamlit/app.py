@@ -7877,7 +7877,8 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     if len(_pvals) == 0:
                         continue
                     _pavg = round(_pvals.mean() / _pmax * 100, 1)
-                    _param_avgs.append({"col": _p["col"], "pct": _pavg, "tier": _tier["label"], "color": _tier["color"], "n": len(_pvals)})
+                    _is_bin = len(_pmax_v) == 0 and len(_p.get("options", [])) > 0
+                    _param_avgs.append({"col": _p["col"], "pct": _pavg, "tier": _tier["label"], "color": _tier["color"], "n": len(_pvals), "is_binary": _is_bin})
 
             _went_right = [p for p in _param_avgs if p["pct"] >= 80]
             _went_wrong = [p for p in _param_avgs if p["pct"] < 70]
@@ -7897,16 +7898,25 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                 if _went_right:
                     _wr_html = ""
                     for _wrp in _went_right[:8]:
-                        _t_short = _wrp["tier"].split("·")[-1].strip()
-                        _wr_html += (
-                            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-                            f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;'
-                            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wrp["col"]}</div>'
-                            f'<div style="flex:1;height:10px;background:#D1FAE5;border-radius:5px;overflow:hidden;">'
-                            f'<div style="width:{_wrp["pct"]}%;height:100%;background:linear-gradient(90deg,#059669,#34D399);border-radius:5px;"></div></div>'
-                            f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:#059669;flex-shrink:0;text-align:right;">{_wrp["pct"]}%</div>'
-                            f'</div>'
-                        )
+                        if _wrp.get("is_binary"):
+                            _wr_html += (
+                                f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                                f'<div style="width:20px;height:20px;border-radius:50%;background:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+                                f'<span style="color:#fff;font-size:0.75rem;font-weight:900;line-height:1;">✓</span></div>'
+                                f'<div style="flex:1;font-size:0.71rem;font-weight:600;color:#0B1F3A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wrp["col"]}</div>'
+                                f'<div style="font-size:0.71rem;font-weight:800;color:#059669;flex-shrink:0;">{_wrp["pct"]}% Yes</div>'
+                                f'</div>'
+                            )
+                        else:
+                            _wr_html += (
+                                f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                                f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;'
+                                f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wrp["col"]}</div>'
+                                f'<div style="flex:1;height:10px;background:#D1FAE5;border-radius:5px;overflow:hidden;">'
+                                f'<div style="width:{_wrp["pct"]}%;height:100%;background:linear-gradient(90deg,#059669,#34D399);border-radius:5px;"></div></div>'
+                                f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:#059669;flex-shrink:0;text-align:right;">{_wrp["pct"]}%</div>'
+                                f'</div>'
+                            )
                     st.markdown(f'<div style="background:#fff;border:1px solid #D1FAE5;border-left:3px solid #059669;border-radius:10px;padding:14px 16px;">{_wr_html}</div>', unsafe_allow_html=True)
                 else:
                     st.markdown('<div style="background:#F8FAFF;border:1px solid #DBEAFE;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#64748b;text-align:center;">No parameters above 80% yet</div>', unsafe_allow_html=True)
@@ -7925,15 +7935,25 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     for _wwp in _went_wrong[:8]:
                         _urgency = "#dc2626" if _wwp["pct"] < 50 else "#d97706"
                         _bg_bar  = "#FEE2E2" if _wwp["pct"] < 50 else "#FEF3C7"
-                        _ww_html += (
-                            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-                            f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;'
-                            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wwp["col"]}</div>'
-                            f'<div style="flex:1;height:10px;background:{_bg_bar};border-radius:5px;overflow:hidden;">'
-                            f'<div style="width:{_wwp["pct"]}%;height:100%;background:{_urgency};border-radius:5px;"></div></div>'
-                            f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:{_urgency};flex-shrink:0;text-align:right;">{_wwp["pct"]}%</div>'
-                            f'</div>'
-                        )
+                        if _wwp.get("is_binary"):
+                            _ww_html += (
+                                f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                                f'<div style="width:20px;height:20px;border-radius:50%;background:{_urgency};display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+                                f'<span style="color:#fff;font-size:0.75rem;font-weight:900;line-height:1;">✗</span></div>'
+                                f'<div style="flex:1;font-size:0.71rem;font-weight:600;color:#0B1F3A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wwp["col"]}</div>'
+                                f'<div style="font-size:0.71rem;font-weight:800;color:{_urgency};flex-shrink:0;">{_wwp["pct"]}% Yes</div>'
+                                f'</div>'
+                            )
+                        else:
+                            _ww_html += (
+                                f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                                f'<div style="width:160px;font-size:0.71rem;font-weight:600;color:#0B1F3A;flex-shrink:0;'
+                                f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wwp["col"]}</div>'
+                                f'<div style="flex:1;height:10px;background:{_bg_bar};border-radius:5px;overflow:hidden;">'
+                                f'<div style="width:{_wwp["pct"]}%;height:100%;background:{_urgency};border-radius:5px;"></div></div>'
+                                f'<div style="width:38px;font-size:0.71rem;font-weight:800;color:{_urgency};flex-shrink:0;text-align:right;">{_wwp["pct"]}%</div>'
+                                f'</div>'
+                            )
                     st.markdown(f'<div style="background:#fff;border:1px solid #FEE2E2;border-left:3px solid #dc2626;border-radius:10px;padding:14px 16px;">{_ww_html}</div>', unsafe_allow_html=True)
                 else:
                     st.markdown('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#059669;text-align:center;">🎉 All parameters performing well!</div>', unsafe_allow_html=True)
