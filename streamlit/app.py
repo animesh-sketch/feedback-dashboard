@@ -10500,7 +10500,7 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     try:
                         import streamlit.components.v1 as _cmp_sr
                         _preview_html = _build_sr_html()
-                        _cmp_sr.html(_preview_html, height=700, scrolling=True)
+                        _cmp_sr.html(_preview_html, height=1200, scrolling=True)
                     except Exception as _sr_exc:
                         st.error(f"Preview error: {_sr_exc}")
 
@@ -12800,6 +12800,265 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                          f'{_chart17}</div>')
             return _s17_data, _em_insight_callout(_ins17, _ins17_col)
         _add_section("param_chart", "Parameter Performance Chart", "📊", True, _s17_prev, _s17_eml)
+
+        # ── S18: Bot Behaviour Checks (binary Yes/No params) ──────────────────
+        def _s18_data():
+            _rows18 = []
+            for _t18 in _QA_SCHEMA.get("tiers", []):
+                for _p18 in _t18.get("params", []):
+                    _opts18 = _p18.get("options", [])
+                    if len([o for o in _opts18 if str(o).lstrip("-").isdigit()]) > 0:
+                        continue  # numeric param — skip
+                    if _p18["col"] not in _dash_df.columns or _total_d == 0:
+                        continue
+                    _bv18 = _dash_df[_p18["col"]].astype(str).str.strip()
+                    _bv18 = _bv18[~_bv18.str.upper().isin(["NA", "", "NAN", "NONE"])]
+                    if len(_bv18) == 0:
+                        continue
+                    _vc18    = _bv18.str.lower().value_counts()
+                    _ol18    = [str(o).lower() for o in _opts18]
+                    _good18  = _ol18[-1] if _ol18 else ""
+                    _bad18   = _ol18[0]  if _ol18 else ""
+                    _gn18    = int(_vc18.get(_good18, 0))
+                    _bn18    = int(_vc18.get(_bad18, 0))
+                    _tot18   = len(_bv18)
+                    _gpct18  = round(_gn18 / _tot18 * 100, 1) if _tot18 else 0
+                    _rows18.append({
+                        "col":        _p18["col"],
+                        "good_n":     _gn18,
+                        "bad_n":      _bn18,
+                        "tot":        _tot18,
+                        "good_pct":   _gpct18,
+                        "good_label": str(_opts18[-1]) if _opts18 else "Yes",
+                        "bad_label":  str(_opts18[0])  if _opts18 else "No",
+                    })
+            return _rows18
+
+        def _s18_tile_html(rows, inline=False):
+            if not rows:
+                return ""
+            _cols_css = "display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"
+            if inline:
+                _cols_css = "display:table;width:100%;"
+            _h18 = f'<div style="{_cols_css}">' if not inline else '<table style="width:100%;border-collapse:collapse;" cellpadding="0" cellspacing="0"><tr>'
+            for _ri18, _er in enumerate(rows):
+                _pass18 = _er["good_pct"] >= 80
+                _warn18 = 50 <= _er["good_pct"] < 80
+                _bg18   = "#ECFDF5" if _pass18 else "#FFFBEB" if _warn18 else "#FFF1F2"
+                _bc18   = "#BBF7D0" if _pass18 else "#FDE68A" if _warn18 else "#FECDD3"
+                _ic18   = "#059669" if _pass18 else "#D97706" if _warn18 else "#DC2626"
+                _sym18  = "✓" if _er["good_pct"] >= 50 else "✗"
+                _cell18 = (
+                    f'<div style="background:{_bg18};border:1px solid {_bc18};border-radius:10px;padding:11px 12px;">'
+                    f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+                    f'<div style="width:22px;height:22px;border-radius:50%;background:{_ic18};'
+                    f'display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+                    f'<span style="color:#fff;font-size:0.8rem;font-weight:900;line-height:1;">{_sym18}</span></div>'
+                    f'<div style="font-size:11px;font-weight:700;color:#0B1F3A;line-height:1.3;'
+                    f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_er["col"][:28]}</div></div>'
+                    f'<div style="font-size:22px;font-weight:900;color:{_ic18};line-height:1;margin-bottom:3px;">{_er["good_pct"]}%</div>'
+                    f'<div style="font-size:10px;color:#64748b;">'
+                    f'{_er["good_n"]} {_er["good_label"]} &nbsp;·&nbsp; {_er["bad_n"]} {_er["bad_label"]}'
+                    f'<span style="color:#94a3b8;"> / {_er["tot"]} total</span></div>'
+                    f'</div>'
+                )
+                if inline:
+                    if _ri18 > 0 and _ri18 % 3 == 0:
+                        _h18 += '</tr><tr>'
+                    _h18 += f'<td style="padding:4px;width:33%;vertical-align:top;">{_cell18}</td>'
+                else:
+                    _h18 += _cell18
+            if inline:
+                _rem18 = 3 - (len(rows) % 3)
+                if _rem18 < 3:
+                    for _ in range(_rem18):
+                        _h18 += '<td style="padding:4px;width:33%;"></td>'
+                _h18 += '</tr></table>'
+            else:
+                _h18 += '</div>'
+            return _h18
+
+        def _s18_prev():
+            _rows18 = _s18_data()
+            if not _rows18:
+                return '<div style="font-size:0.70rem;color:#64748b;">No binary behaviour checks found in this dataset.</div>'
+            _tiles = _s18_tile_html(_rows18, inline=False)
+            return (f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;">'
+                    f'<div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;'
+                    f'color:#0B1F3A;margin-bottom:8px;">🎯 Bot Behaviour Checks</div>'
+                    f'{_tiles}</div>')
+
+        def _s18_eml():
+            _rows18 = _s18_data()
+            if not _rows18:
+                return "", ""
+            _tiles18 = _s18_tile_html(_rows18, inline=True)
+            _hdr18 = (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                      f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">🎯 Bot Behaviour Checks</div>'
+                      f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;'
+                      f'padding:14px 10px 6px;margin-bottom:8px;background:#fff;">{_tiles18}</div>')
+            _crit18  = [r for r in _rows18 if r["good_pct"] < 50]
+            _strong18 = [r for r in _rows18 if r["good_pct"] >= 80]
+            if _crit18:
+                _ins18 = (f"<b>{len(_crit18)} behaviour check{'s' if len(_crit18) != 1 else ''}</b> below 50%: "
+                          f"<b>{', '.join(r['col'] for r in _crit18[:3])}</b>. "
+                          f"These represent critical gaps in bot adherence requiring immediate coaching.")
+                _ins18_col = "#dc2626"
+            elif len(_strong18) == len(_rows18):
+                _ins18 = (f"All {len(_rows18)} bot behaviour checks above 80% — excellent adherence. "
+                          f"Top performer: <b>{_rows18[0]['col']}</b> at {_rows18[0]['good_pct']}%.")
+                _ins18_col = "#059669"
+            else:
+                _warn18 = [r for r in _rows18 if 50 <= r["good_pct"] < 80]
+                _ins18 = (f"<b>{len(_warn18)} check{'s' if len(_warn18) != 1 else ''}</b> in the moderate range (50–80%). "
+                          f"Focused coaching on <b>{', '.join(r['col'] for r in _warn18[:2])}</b> could lift overall adherence.")
+                _ins18_col = "#d97706"
+            return _hdr18, _em_insight_callout(_ins18, _ins18_col)
+
+        _add_section("bot_checks", "Bot Behaviour Checks", "🎯", True, _s18_prev, _s18_eml)
+
+        # ── S19: Custom Parameters (user-defined Yes/No/NA params) ─────────────
+        def _s19_data():
+            _rows19 = []
+            for _cp19 in st.session_state.get("sense_custom_audit_params", []):
+                if _cp19["name"] not in _dash_df.columns or _total_d == 0:
+                    continue
+                _cv19 = _dash_df[_cp19["name"]].replace("", None).dropna().astype(str).str.strip()
+                _cv19 = _cv19[_cv19.str.lower() != "nan"]
+                _ct19 = len(_cv19)
+                if _ct19 == 0:
+                    continue
+                _yes19 = int((_cv19.str.lower() == "yes").sum())
+                _no19  = int((_cv19.str.lower() == "no").sum())
+                _na19  = int((_cv19.str.lower() == "na").sum())
+                _cmt_col19 = f"{_cp19['name']} Comment"
+                _cmts19 = (int(_dash_df[_cmt_col19].replace("", None).dropna().astype(str)
+                               .str.strip().str.len().gt(0).sum())
+                           if _cmt_col19 in _dash_df.columns else 0)
+                _rows19.append({
+                    "name":    _cp19["name"],
+                    "yes":     _yes19,
+                    "no":      _no19,
+                    "na":      _na19,
+                    "tot":     _ct19,
+                    "yes_pct": round(_yes19 / _ct19 * 100, 1),
+                    "no_pct":  round(_no19  / _ct19 * 100, 1),
+                    "cmts":    _cmts19,
+                })
+            return _rows19
+
+        def _s19_prev():
+            _rows19 = _s19_data()
+            if not _rows19:
+                return '<div style="font-size:0.70rem;color:#64748b;">No custom parameters found in this dataset.</div>'
+            _h19 = ('<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;">'
+                    '<div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;'
+                    'color:#059669;margin-bottom:8px;">⭐ Custom Parameters</div>'
+                    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">')
+            for _scp19 in _rows19:
+                _yp19 = _scp19["yes_pct"]
+                _np19 = _scp19["no_pct"]
+                _nap19 = max(0, 100 - _yp19 - _np19)
+                _hc19 = "#059669" if _yp19 >= 70 else "#d97706" if _yp19 >= 50 else "#dc2626"
+                _h19 += (
+                    f'<div style="background:#f8fffe;border:1px solid #a7f3d0;border-radius:10px;padding:12px 10px;">'
+                    f'<div style="font-size:10px;font-weight:800;color:#065f46;letter-spacing:0.05em;'
+                    f'text-transform:uppercase;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+                    f'{_scp19["name"][:28]}</div>'
+                    f'<div style="display:flex;gap:4px;margin-bottom:8px;">'
+                    f'<div style="flex:1;background:#ecfdf5;border-radius:6px;padding:6px 4px;text-align:center;">'
+                    f'<div style="font-size:18px;font-weight:900;color:#059669;line-height:1;">{_scp19["yes"]}</div>'
+                    f'<div style="font-size:9px;font-weight:700;color:#059669;margin-top:2px;">YES</div>'
+                    f'<div style="font-size:9px;color:#64748b;">{_yp19}%</div></div>'
+                    f'<div style="flex:1;background:#fef2f2;border-radius:6px;padding:6px 4px;text-align:center;">'
+                    f'<div style="font-size:18px;font-weight:900;color:#dc2626;line-height:1;">{_scp19["no"]}</div>'
+                    f'<div style="font-size:9px;font-weight:700;color:#dc2626;margin-top:2px;">NO</div>'
+                    f'<div style="font-size:9px;color:#64748b;">{_np19}%</div></div>'
+                    f'<div style="flex:1;background:#f8fafc;border-radius:6px;padding:6px 4px;text-align:center;">'
+                    f'<div style="font-size:18px;font-weight:900;color:#94a3b8;line-height:1;">{_scp19["na"]}</div>'
+                    f'<div style="font-size:9px;font-weight:700;color:#94a3b8;margin-top:2px;">NA</div></div>'
+                    f'</div>'
+                    f'<div style="height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;display:flex;">'
+                    f'<div style="width:{_yp19}%;background:#059669;"></div>'
+                    f'<div style="width:{_np19}%;background:#dc2626;"></div>'
+                    f'<div style="width:{_nap19}%;background:#cbd5e1;"></div></div>'
+                    f'<div style="font-size:9px;color:#64748b;margin-top:5px;text-align:right;">'
+                    f'{_scp19["tot"]} responses</div></div>'
+                )
+            _h19 += '</div></div>'
+            return _h19
+
+        def _s19_eml():
+            _rows19 = _s19_data()
+            if not _rows19:
+                return "", ""
+            _tbl19 = ('<table style="width:100%;border-collapse:collapse;" cellpadding="0" cellspacing="0"><tr>')
+            for _sci19, _scp19 in enumerate(_rows19):
+                if _sci19 > 0 and _sci19 % 3 == 0:
+                    _tbl19 += '</tr><tr>'
+                _yp19 = _scp19["yes_pct"]
+                _np19 = _scp19["no_pct"]
+                _nap19 = max(0, 100 - _yp19 - _np19)
+                _cmts_str19 = f" · {_scp19['cmts']} comments" if _scp19.get("cmts") else ""
+                _tbl19 += (
+                    f'<td style="padding:4px;width:33%;vertical-align:top;">'
+                    f'<div style="background:#f8fffe;border:1px solid #a7f3d0;border-radius:10px;padding:12px 10px;">'
+                    f'<div style="font-size:10px;font-weight:800;color:#065f46;letter-spacing:0.05em;'
+                    f'text-transform:uppercase;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+                    f'{_scp19["name"][:28]}</div>'
+                    f'<div style="display:flex;gap:4px;margin-bottom:8px;">'
+                    f'<div style="flex:1;background:#ecfdf5;border-radius:6px;padding:6px 4px;text-align:center;">'
+                    f'<div style="font-size:18px;font-weight:900;color:#059669;line-height:1;">{_scp19["yes"]}</div>'
+                    f'<div style="font-size:9px;font-weight:700;color:#059669;margin-top:2px;">YES</div>'
+                    f'<div style="font-size:9px;color:#64748b;">{_yp19}%</div></div>'
+                    f'<div style="flex:1;background:#fef2f2;border-radius:6px;padding:6px 4px;text-align:center;">'
+                    f'<div style="font-size:18px;font-weight:900;color:#dc2626;line-height:1;">{_scp19["no"]}</div>'
+                    f'<div style="font-size:9px;font-weight:700;color:#dc2626;margin-top:2px;">NO</div>'
+                    f'<div style="font-size:9px;color:#64748b;">{_np19}%</div></div>'
+                    f'<div style="flex:1;background:#f8fafc;border-radius:6px;padding:6px 4px;text-align:center;">'
+                    f'<div style="font-size:18px;font-weight:900;color:#94a3b8;line-height:1;">{_scp19["na"]}</div>'
+                    f'<div style="font-size:9px;font-weight:700;color:#94a3b8;margin-top:2px;">NA</div></div>'
+                    f'</div>'
+                    f'<div style="height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;display:flex;">'
+                    f'<div style="width:{_yp19}%;background:#059669;"></div>'
+                    f'<div style="width:{_np19}%;background:#dc2626;"></div>'
+                    f'<div style="width:{_nap19}%;background:#cbd5e1;"></div></div>'
+                    f'<div style="font-size:9px;color:#64748b;margin-top:5px;text-align:right;">'
+                    f'{_scp19["tot"]} responses{_cmts_str19}</div>'
+                    f'</div></td>'
+                )
+            _rem19 = 3 - (len(_rows19) % 3)
+            if _rem19 < 3:
+                for _ in range(_rem19):
+                    _tbl19 += '<td style="padding:4px;width:33%;"></td>'
+            _tbl19 += '</tr></table>'
+            _overall19 = round(sum(r["yes"] for r in _rows19) / max(sum(r["tot"] for r in _rows19), 1) * 100, 1)
+            _ohc19 = "#059669" if _overall19 >= 70 else "#d97706" if _overall19 >= 50 else "#dc2626"
+            _ohl19 = "High Adherence" if _overall19 >= 70 else "Partial Adherence" if _overall19 >= 50 else "Low Adherence — Action Required"
+            _worst19 = sorted(_rows19, key=lambda x: x["yes_pct"])
+            _adh19 = (
+                f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;'
+                f'padding:12px 16px;margin-top:8px;">'
+                f'<div style="font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;'
+                f'color:#059669;margin-bottom:8px;">📌 Adherence Summary</div>'
+                f'<div style="font-size:12px;color:#0B1F3A;line-height:1.6;margin-bottom:8px;">'
+                f'Overall completion rate: <strong style="color:{_ohc19};">{_overall19}%</strong> — '
+                f'<span style="color:{_ohc19};font-weight:700;">{_ohl19}</span></div>'
+            )
+            for _cw19 in [r for r in _worst19 if r["yes_pct"] < 70][:3]:
+                _adh19 += (f'<div style="font-size:11px;color:#374151;margin-bottom:4px;">'
+                           f'⚠️ <b>{_cw19["name"]}</b>: only {_cw19["yes_pct"]}% YES ({_cw19["yes"]}/{_cw19["tot"]})</div>')
+            _adh19 += '</div>'
+            _eml19 = (f'<div style="font-family:Arial,sans-serif;background:{_CONVIN_GRAD};padding:10px 14px;'
+                      f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">⭐ Custom Parameters</div>'
+                      f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;'
+                      f'padding:14px 10px 6px;margin-bottom:8px;background:#fff;">{_tbl19}{_adh19}</div>')
+            _ins19 = (f"Custom parameter overall adherence: <b>{_overall19}%</b> — {_ohl19}. "
+                      + (f"Lowest: <b>{_worst19[0]['name']}</b> at {_worst19[0]['yes_pct']}%."
+                         if _worst19 and _worst19[0]['yes_pct'] < 100 else "All custom checks at 100%."))
+            return _eml19, _em_insight_callout(_ins19, _ohc19)
+
+        _add_section("custom_params", "Custom Parameters", "⭐", True, _s19_prev, _s19_eml)
 
         # ── Render sections + tabs (Compose | Preview | Gallery) ────────────────
         st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
