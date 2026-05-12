@@ -10027,21 +10027,61 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
             _sr_fatal   = int((_sr_st == "Auto-Fail").sum())
             _sr_pr      = round(_sr_pass / _sr_total * 100, 1) if _sr_total else 0
 
-            # Param averages for strengths / weaknesses
+            # Param averages for strengths / weaknesses (includes Yes/No binary params)
             _sr_pavgs = []
             for _sr_tier in _QA_SCHEMA["tiers"]:
                 for _sr_p in _sr_tier["params"]:
                     if _sr_p["col"] not in _sr_df.columns or _sr_total == 0:
                         continue
                     _sr_pmax = max([int(o) for o in _sr_p["options"] if str(o).lstrip("-").isdigit()], default=2)
-                    _sr_pvals = pd.to_numeric(
-                        _sr_df[_sr_p["col"]].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":""}),
-                        errors="coerce").dropna()
+                    _sr_is_bin = len([o for o in _sr_p["options"] if str(o).lstrip("-").isdigit()]) == 0
+                    _sr_raw = _sr_df[_sr_p["col"]].astype(str).str.strip().replace({"NA":"","nan":"","Fatal":""})
+                    _sr_pvals = pd.to_numeric(_sr_raw, errors="coerce").dropna()
+                    if len(_sr_pvals) == 0 and _sr_is_bin and len(_sr_p.get("options", [])) > 1:
+                        _sr_ol = [str(o).lower() for o in _sr_p["options"]]
+                        _sr_nl = len(_sr_ol)
+                        def _sr_pos(v, _ol=_sr_ol, _nl=_sr_nl):
+                            v = str(v).lower().strip()
+                            if v in ("", "na", "nan"): return float("nan")
+                            try: return _ol.index(v) / (_nl - 1) * 2
+                            except: return float("nan")
+                        _sr_pvals = _sr_raw.apply(_sr_pos).dropna()
                     if len(_sr_pvals) == 0:
                         continue
-                    _sr_pavgs.append({"col": _sr_p["col"], "pct": round(_sr_pvals.mean() / _sr_pmax * 100, 1)})
+                    _sr_pavgs.append({"col": _sr_p["col"], "pct": round(_sr_pvals.mean() / _sr_pmax * 100, 1), "is_binary": _sr_is_bin})
             _sr_strengths = sorted([p for p in _sr_pavgs if p["pct"] >= 75], key=lambda x: -x["pct"])[:4]
             _sr_weaknesses = sorted([p for p in _sr_pavgs if p["pct"] < 70], key=lambda x: x["pct"])[:4]
+
+            # Entity behaviour rows: raw Yes/No breakdown for every binary param
+            _sr_entity_rows = []
+            for _sr_tier in _QA_SCHEMA["tiers"]:
+                for _sr_p in _sr_tier["params"]:
+                    _sr_p_opts = _sr_p.get("options", [])
+                    if len([o for o in _sr_p_opts if str(o).lstrip("-").isdigit()]) > 0:
+                        continue  # skip numeric-option params
+                    if _sr_p["col"] not in _sr_df.columns or _sr_total == 0:
+                        continue
+                    _sr_bvals = _sr_df[_sr_p["col"]].astype(str).str.strip()
+                    _sr_bvals = _sr_bvals[~_sr_bvals.str.upper().isin(["NA", "", "NAN", "NONE"])]
+                    if len(_sr_bvals) == 0:
+                        continue
+                    _sr_vc     = _sr_bvals.str.lower().value_counts()
+                    _sr_ol2    = [str(o).lower() for o in _sr_p_opts]
+                    _good_opt  = _sr_ol2[-1] if _sr_ol2 else ""   # last = highest position = good
+                    _bad_opt   = _sr_ol2[0]  if _sr_ol2 else ""
+                    _good_n    = int(_sr_vc.get(_good_opt, 0))
+                    _bad_n     = int(_sr_vc.get(_bad_opt, 0))
+                    _tot_n     = len(_sr_bvals)
+                    _good_pct  = round(_good_n / _tot_n * 100, 1) if _tot_n else 0
+                    _sr_entity_rows.append({
+                        "col":        _sr_p["col"],
+                        "good_n":     _good_n,
+                        "bad_n":      _bad_n,
+                        "tot":        _tot_n,
+                        "good_pct":   _good_pct,
+                        "good_label": str(_sr_p_opts[-1]) if _sr_p_opts else "Yes",
+                        "bad_label":  str(_sr_p_opts[0])  if _sr_p_opts else "No",
+                    })
 
             # Key insights from rule engine
             _sr_qi = _gen_qa_insights(_sr_df) if _sr_total > 0 else {"insights": [], "actions": []}
@@ -10129,6 +10169,39 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                           f'<div style="width:80px;text-align:right;font-size:12px;font-weight:700;color:{_sc2};flex-shrink:0;">{_sv2} ({_sp2}%)</div>'
                           f'</div>')
                 H += '</div>'
+
+                # Entity / bot behaviour checks (binary Yes/No params)
+                if _sr_entity_rows:
+                    H += (
+                        '<div style="margin-bottom:22px;">'
+                        '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;'
+                        'color:#0B1F3A;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #EFF6FF;">'
+                        '🎯 Bot Behaviour Checks</div>'
+                        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'
+                    )
+                    for _er in _sr_entity_rows:
+                        _er_pass  = _er["good_pct"] >= 80
+                        _er_warn  = 50 <= _er["good_pct"] < 80
+                        _er_fail  = _er["good_pct"] < 50
+                        _er_bg    = "#ECFDF5" if _er_pass else "#FFFBEB" if _er_warn else "#FFF1F2"
+                        _er_bc    = "#BBF7D0" if _er_pass else "#FDE68A" if _er_warn else "#FECDD3"
+                        _er_ic    = "#059669" if _er_pass else "#D97706" if _er_warn else "#DC2626"
+                        _er_sym   = "✓" if _er["good_pct"] >= 50 else "✗"
+                        H += (
+                            f'<div style="background:{_er_bg};border:1px solid {_er_bc};border-radius:10px;padding:11px 12px;">'
+                            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+                            f'<div style="width:22px;height:22px;border-radius:50%;background:{_er_ic};'
+                            f'display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+                            f'<span style="color:#fff;font-size:0.8rem;font-weight:900;line-height:1;">{_er_sym}</span></div>'
+                            f'<div style="font-size:11px;font-weight:700;color:#0B1F3A;line-height:1.3;'
+                            f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_er["col"]}</div></div>'
+                            f'<div style="font-size:22px;font-weight:900;color:{_er_ic};line-height:1;margin-bottom:3px;">{_er["good_pct"]}%</div>'
+                            f'<div style="font-size:10px;color:#64748b;">'
+                            f'{_er["good_n"]} {_er["good_label"]} &nbsp;·&nbsp; {_er["bad_n"]} {_er["bad_label"]}'
+                            f'<span style="color:#94a3b8;"> / {_er["tot"]} total</span></div>'
+                            f'</div>'
+                        )
+                    H += '</div></div>'
 
                 # Strengths / weaknesses two-column
                 H += ('<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;">')
