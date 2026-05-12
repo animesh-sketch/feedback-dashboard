@@ -7636,6 +7636,7 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                 "Intelligence Score": round(_sc*0.9,1),
                 "Status": _st,  "Fatal?": "Yes" if _st=="Auto-Fail" else "No",
                 "Was the disposition accurately selected?":                  "2" if _sc>=80 else ("1" if _sc>=65 else "0"),
+                "Were all required entities captured correctly?":            "Yes" if _sc>=65 else "No",
                 "Was context passed correctly across conversation turns?":   "2" if _sc>=75 else ("1" if _sc>=60 else "0"),
                 "Was there any flow issue during the conversation?":         "No" if _sc>=70 else "Yes",
                 "Did the bot restart the conversation unnecessarily?":       "No" if _sc>=65 else "Yes",
