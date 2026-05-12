@@ -4521,56 +4521,56 @@ _QA_SCHEMA = {
                 {
                     "col": "Was the disposition accurately selected?",
                     "weight": 0.14,
-                    "options": ["No", "Yes"],  # No = incorrect (bad), Yes = correct (good)
+                    "options": ["No", "Yes"],
                     "fatal": False,
                     "guide": "Yes = Correct disposition selected based on conversation outcome  |  No = Incorrect or mismatched disposition",
                 },
                 {
                     "col": "Were all required entities captured correctly?",
                     "weight": 0.04,
-                    "options": ["No", "Yes"],  # No = incomplete (bad), Yes = all captured (good)
+                    "options": ["No", "Yes"],
                     "fatal": False,
                     "guide": "Yes = All required entities captured correctly  |  No = Entity capture incomplete or inaccurate",
                 },
                 {
                     "col": "Was context passed correctly across conversation turns?",
                     "weight": 0.13,
-                    "options": ["0", "1", "2"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "2 = Context maintained across all turns / channels  |  1 = Context passed but some info lost  |  0 = Context not maintained; repetitive/irrelevant questions",
+                    "guide": "Yes = Context maintained across all turns / channels  |  No = Context not maintained; customer had to repeat information",
                 },
                 {
                     "col": "Was there any flow issue during the conversation?",
                     "weight": 0.11,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "Yes = Flow issue detected  |  No = No flow issue",
+                    "guide": "No = No flow issue  |  Yes = Flow issue detected (bot exited intended script path)",
                 },
                 {
                     "col": "Did the bot restart the conversation unnecessarily?",
                     "weight": 0.09,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "Yes = Bot restarted conversation  |  No = No restart",
+                    "guide": "No = No restart  |  Yes = Bot restarted conversation (customer had to repeat themselves)",
                 },
                 {
                     "col": "Was the message content appropriate and well understood?",
                     "weight": 0.07,
-                    "options": ["0", "1", "2"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "2 = Bot fully understood intent and responded appropriately  |  1 = Partially understood  |  0 = Bot misunderstood or ignored customer intent",
+                    "guide": "Yes = Bot fully understood intent and responded appropriately  |  No = Bot misunderstood or ignored customer intent",
                 },
                 {
                     "col": "Was the follow-up completed within the specified time?",
                     "weight": 0.05,
-                    "options": ["0", "1", "2"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "2 = Follow-up within SLA  |  1 = Completed but exceeded SLA timeline  |  0 = No follow-up attempt made",
+                    "guide": "Yes = Follow-up completed within SLA  |  No = Follow-up missed or exceeded SLA timeline",
                 },
                 {
                     "col": "Was there any latency issue during the conversation?",
                     "weight": 0.05,
-                    "options": ["Yes", "No"],  # Yes = issue present (bad), No = no issue (good)
+                    "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = No latency issue (response ≤2.5s)  |  Yes = Latency issue detected (response >2.5s)",
                 },
@@ -4586,49 +4586,49 @@ _QA_SCHEMA = {
                     "weight": 0.07,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "Yes = Repetition detected  |  No = No repetition",
+                    "guide": "No = No repetition  |  Yes = Bot repeated same message or question (duplicate script loops)",
                 },
                 {
                     "col": "Was there any dead air or blank space in the conversation?",
                     "weight": 0.06,
-                    "options": ["0", "1", "2"],
+                    "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "2 = No silence/awkward pauses  |  1 = Short acceptable silence 4–5s  |  0 = Long silence >5s; call appeared stuck",
+                    "guide": "No = No dead air  |  Yes = Silence/blank space detected (>3s pause that impacted call quality)",
                 },
                 {
                     "col": "Were there any unnecessary repeated calls to the customer?",
                     "weight": 0.05,
-                    "options": ["0", "2"],
+                    "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "2 = No unnecessary repeat calls  |  0 = Multiple calls placed to customer within short duration",
+                    "guide": "No = No repeated calls  |  Yes = Multiple calls placed to customer within short duration",
                 },
                 {
                     "col": "Did the bot provide a proper introduction?",
                     "weight": 0.05,
-                    "options": ["0", "1", "2"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "2 = Bot introduced itself, company name & purpose  |  1 = Present but key details missing  |  0 = No introduction provided",
+                    "guide": "Yes = Bot introduced itself, company name & purpose correctly  |  No = Introduction missing or key details absent",
                 },
                 {
                     "col": "Was there any background noise affecting audio clarity?",
                     "weight": 0.03,
-                    "options": ["0", "2"],
+                    "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "2 = Audio clear, no background noise  |  0 = Background noise affected clarity",
+                    "guide": "No = Audio clear, no background noise  |  Yes = Background noise affected call clarity",
                 },
                 {
                     "col": "Were there any transcription issues affecting audit reliability?",
                     "weight": 0.03,
-                    "options": ["0", "2"],
+                    "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "2 = Transcription accurate and complete  |  0 = Inaccuracies impacted audit reliability",
+                    "guide": "No = Transcription accurate and complete  |  Yes = Inaccuracies impacted audit reliability",
                 },
                 {
                     "col": "Was the TTS (Text-to-Speech) quality clear and understandable?",
                     "weight": 0.03,
-                    "options": ["0", "1", "2", "NA"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "2 = TTS clear, natural & easily understandable  |  1 = Minor mispronunciation or unnatural pause  |  0 = TTS significantly impacted clarity  |  NA = Not applicable / not assessable",
+                    "guide": "Yes = TTS clear, natural & easily understandable  |  No = TTS issues impacted clarity or naturalness  |  NA = Not applicable (non-voice channel)",
                 },
             ],
         },
@@ -4640,42 +4640,42 @@ _QA_SCHEMA = {
                 {
                     "col": "Did the bot switch language correctly per customer preference?",
                     "weight": 0.02,
-                    "options": ["0", "1", "2"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "2 = Switched language correctly per customer preference  |  1 = No switch required  |  0 = Failed to switch despite customer indication",
+                    "guide": "Yes = Switched language correctly per customer preference  |  No = Failed to switch despite customer indication  |  NA = No language switch required",
                 },
                 {
                     "col": "Were there any script issues in the transcript?",
                     "weight": 0.02,
-                    "options": ["0", "2"],
+                    "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "2 = Approved script followed correctly  |  0 = Bot deviated from script / used incorrect phrasing",
+                    "guide": "No = Approved script followed correctly  |  Yes = Bot deviated from script or used incorrect phrasing",
                 },
                 {
                     "col": "Were there any template issues in the conversation?",
                     "weight": 0.01,
-                    "options": ["0", "2"],
+                    "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "2 = Correct template followed  |  0 = Incorrect or outdated template used",
+                    "guide": "No = Correct template followed  |  Yes = Incorrect or outdated template used",
                 },
                 {
                     "col": "Were there any pronunciation issues affecting clarity?",
                     "weight": 0.01,
-                    "options": ["0", "2"],
+                    "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "2 = Pronunciation clear and understandable  |  0 = Issues impacted customer understanding",
+                    "guide": "No = Pronunciation clear and understandable  |  Yes = Pronunciation issues impacted customer understanding",
                 },
                 {
                     "col": "Was there an abrupt disconnection before logical closure?",
                     "weight": 0.00,
-                    "options": ["0", "Fatal"],
+                    "options": ["No", "Fatal"],
                     "fatal": True,
-                    "guide": "0 = Call ended smoothly as per designed flow  |  Fatal = Call ended abruptly before logical closure (Auto-Fail)",
+                    "guide": "No = Call ended smoothly as per designed flow  |  Fatal = Call ended abruptly before logical closure (Auto-Fail)",
                 },
                 {
                     "col": "Was the Next Best Action (NBA) executed correctly?",
                     "weight": 0.00,
-                    "options": ["No", "Yes"],  # No = not executed (bad), Yes = executed correctly (good)
+                    "options": ["No", "Yes"],
                     "fatal": False,
                     "guide": "Yes = Required Next Best Action executed correctly  |  No = NBA was generated but not executed by bot",
                 },
@@ -7595,72 +7595,8 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
     elif not _all_sheets:
         _all_sheets = {"Data": df} if df is not None and not (hasattr(df, "empty") and df.empty) else {}
 
-    # ── Sample data fallback when no real records exist ───────────────────────
     _real_record_count  = len(_audit_df_ins) if _audit_df_ins is not None else 0
     _using_sample_data  = False
-
-    if _real_record_count == 0:
-        _using_sample_data = True
-        _td   = pd.Timestamp.now().date()
-        _SSCORES = [88,75,62,91,12,79,84,66,93,71,58,86,74,12,82,69,95,61,77,88,52,73,90,64,85,71]
-        _SDAGO   = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 5, 7, 7, 7,10,10,14,14,14,21,21,21,28,28]
-        _SCLIENTS= ["HDFC Bank","HDFC Bank","Bajaj Finance","Airtel","Bajaj Finance",
-                    "Airtel","HDFC Bank","Bajaj Finance","Airtel","HDFC Bank",
-                    "Bajaj Finance","Airtel","HDFC Bank","Bajaj Finance","Airtel",
-                    "HDFC Bank","Bajaj Finance","Airtel","HDFC Bank","Bajaj Finance",
-                    "Airtel","HDFC Bank","Bajaj Finance","Airtel","HDFC Bank","Bajaj Finance"]
-        _SQA    = ["Priya K.","Rahul M.","Sneha D.","Priya K.","Rahul M.",
-                   "Sneha D.","Priya K.","Rahul M.","Sneha D.","Priya K.",
-                   "Rahul M.","Sneha D.","Priya K.","Rahul M.","Sneha D.",
-                   "Priya K.","Rahul M.","Sneha D.","Priya K.","Rahul M.",
-                   "Sneha D.","Priya K.","Rahul M.","Sneha D.","Priya K.","Rahul M."]
-        _SDISP  = ["Interested","Converted","Not Interested","Warm Follow-up","DNC",
-                   "Voicemail / No Answer","Interested","Interested","Converted",
-                   "Not Interested","Warm Follow-up","DNC","Interested","Not Interested",
-                   "Converted","Interested","Warm Follow-up","Not Interested","Converted",
-                   "Interested","DNC","Interested","Converted","Not Interested","Warm Follow-up","Interested"]
-        _SCAM   = {"HDFC Bank":"Home Loan Follow-up","Bajaj Finance":"Credit Card Renewal","Airtel":"Postpaid Upgrade"}
-        _SBOT   = {"HDFC Bank":"BotHDFC_v2","Bajaj Finance":"BotBajaj_v1","Airtel":"BotAirtel_v3"}
-        _SPM    = {"HDFC Bank":"Ananya R.","Bajaj Finance":"Vikram S.","Airtel":"Preethi T."}
-        _srows  = []
-        for _si in range(len(_SSCORES)):
-            _sc = _SSCORES[_si]; _cl = _SCLIENTS[_si]
-            _st = ("Auto-Fail" if _sc < 20 else "Pass" if _sc >= 80 else "Needs Review" if _sc >= 65 else "Fail")
-            _srows.append({
-                "Audit Date":   str(_td - pd.Timedelta(days=_SDAGO[_si])),
-                "QA":           _SQA[_si],   "Client":        _cl,
-                "Campaign Name":_SCAM[_cl],  "PM / CSM":      _SPM[_cl],
-                "Bot Name":     _SBOT[_cl],  "Lead Number":   f"LN-{1100+_si}",
-                "Disposition":  _SDISP[_si % len(_SDISP)],
-                "Bot Score": _sc, "Lead Score": round(_sc*0.85,1),
-                "Intelligence Score": round(_sc*0.9,1),
-                "Status": _st,  "Fatal?": "Yes" if _st=="Auto-Fail" else "No",
-                "Was the disposition accurately selected?":                  "2" if _sc>=80 else ("1" if _sc>=65 else "0"),
-                "Were all required entities captured correctly?":            "Yes" if _sc>=65 else "No",
-                "Was context passed correctly across conversation turns?":   "2" if _sc>=75 else ("1" if _sc>=60 else "0"),
-                "Was there any flow issue during the conversation?":         "No" if _sc>=70 else "Yes",
-                "Did the bot restart the conversation unnecessarily?":       "No" if _sc>=65 else "Yes",
-                "Was the message content appropriate and well understood?":  "2" if _sc>=80 else ("1" if _sc>=60 else "0"),
-                "Was the follow-up completed within the specified time?":    "2" if _sc>=75 else "1",
-                "Did the bot repeat responses or questions unnecessarily?":  "No" if _sc>=70 else "Yes",
-                "Was there any dead air or blank space in the conversation?":"2" if _sc>=80 else ("1" if _sc>=65 else "0"),
-                "Were there any unnecessary repeated calls to the customer?":"2",
-                "Did the bot provide a proper introduction?":                "2" if _sc>=70 else "1",
-                "Was there any background noise affecting audio clarity?":   "2" if _sc>=60 else "0",
-                "Were there any transcription issues affecting audit reliability?": "2" if _sc>=60 else "0",
-                "Was there any latency issue during the conversation?":      "2" if _sc>=75 else ("1" if _sc>=60 else "0"),
-                "Did the bot switch language correctly per customer preference?": "2",
-                "Were there any script issues in the transcript?":           "2" if _sc>=65 else "0",
-                "Were there any template issues in the conversation?":       "2",
-                "Were there any pronunciation issues affecting clarity?":    "2" if _sc>=65 else "0",
-                "Was there an abrupt disconnection before logical closure?": "Fatal" if _st=="Auto-Fail" else "0",
-                "Was the Next Best Action (NBA) executed correctly?":        "2",
-                "Notes": "", "Improvement Suggestion": "", "Call Drop Stage": "",
-            })
-        _audit_df_ins = pd.DataFrame(_srows)
-        # Update _all_sheets so downstream tabs (AI, reports) also see the data
-        if not _all_sheets:
-            _all_sheets = {"Audit": _audit_df_ins}
 
     _has_qa_ins = (_audit_df_ins is not None and
                    "Bot Score" in (_audit_df_ins.columns if _audit_df_ins is not None else []) and
