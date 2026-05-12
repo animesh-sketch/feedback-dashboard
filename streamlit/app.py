@@ -10083,6 +10083,32 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                         "bad_label":  str(_sr_p_opts[0])  if _sr_p_opts else "No",
                     })
 
+            # Custom parameter rows for email (Yes / No / NA breakdown)
+            _sr_custom_rows = []
+            for _srcp in st.session_state.get("sense_custom_audit_params", []):
+                if _srcp["name"] not in _sr_df.columns or _sr_total == 0:
+                    continue
+                _srcp_v = _sr_df[_srcp["name"]].replace("", None).dropna().astype(str).str.strip()
+                _srcp_v = _srcp_v[_srcp_v.str.lower() != "nan"]
+                _srcp_tot = len(_srcp_v)
+                if _srcp_tot == 0:
+                    continue
+                _srcp_yes = int((_srcp_v.str.lower() == "yes").sum())
+                _srcp_no  = int((_srcp_v.str.lower() == "no").sum())
+                _srcp_na  = int((_srcp_v.str.lower() == "na").sum())
+                _srcp_cmt_col = f"{_srcp['name']} Comment"
+                _srcp_cmts = int(_sr_df[_srcp_cmt_col].replace("", None).dropna().astype(str).str.strip().str.len().gt(0).sum()) if _srcp_cmt_col in _sr_df.columns else 0
+                _sr_custom_rows.append({
+                    "name":    _srcp["name"],
+                    "yes":     _srcp_yes,
+                    "no":      _srcp_no,
+                    "na":      _srcp_na,
+                    "tot":     _srcp_tot,
+                    "yes_pct": round(_srcp_yes / _srcp_tot * 100, 1),
+                    "no_pct":  round(_srcp_no  / _srcp_tot * 100, 1),
+                    "cmts":    _srcp_cmts,
+                })
+
             # Key insights from rule engine
             _sr_qi = _gen_qa_insights(_sr_df) if _sr_total > 0 else {"insights": [], "actions": []}
             _sr_insights = _sr_qi.get("insights", [])[:5]
@@ -10199,6 +10225,86 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                             f'<div style="font-size:10px;color:#64748b;">'
                             f'{_er["good_n"]} {_er["good_label"]} &nbsp;·&nbsp; {_er["bad_n"]} {_er["bad_label"]}'
                             f'<span style="color:#94a3b8;"> / {_er["tot"]} total</span></div>'
+                            f'</div>'
+                        )
+                    H += '</div></div>'
+
+                # Custom parameters (⭐ user-defined Yes/No/NA checks)
+                if _sr_custom_rows:
+                    H += (
+                        '<div style="margin-bottom:22px;">'
+                        '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;'
+                        'color:#059669;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #D1FAE5;">'
+                        '⭐ Custom Parameters</div>'
+                        '<table style="width:100%;border-collapse:collapse;" cellpadding="0" cellspacing="0"><tr>'
+                    )
+                    _cols_per_row = 3
+                    for _sci, _scp in enumerate(_sr_custom_rows):
+                        if _sci > 0 and _sci % _cols_per_row == 0:
+                            H += '</tr><tr>'
+                        _yes_w     = _scp["yes_pct"]
+                        _no_w      = _scp["no_pct"]
+                        _na_w      = max(0, 100 - _yes_w - _no_w)
+                        _hlth_c    = "#059669" if _yes_w >= 70 else "#d97706" if _yes_w >= 50 else "#dc2626"
+                        _cmts_str  = f" · {_scp['cmts']} comments" if _scp.get("cmts") else ""
+                        H += (
+                            f'<td style="padding:4px;width:33%;vertical-align:top;">'
+                            f'<div style="background:#f8fffe;border:1px solid #a7f3d0;border-radius:10px;padding:12px 10px;">'
+                            f'<div style="font-size:10px;font-weight:800;color:#065f46;letter-spacing:0.05em;text-transform:uppercase;'
+                            f'margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_scp["name"]}</div>'
+                            f'<div style="display:flex;gap:4px;margin-bottom:8px;">'
+                            f'<div style="flex:1;background:#ecfdf5;border-radius:6px;padding:6px 4px;text-align:center;">'
+                            f'<div style="font-size:18px;font-weight:900;color:#059669;line-height:1;">{_scp["yes"]}</div>'
+                            f'<div style="font-size:9px;font-weight:700;color:#059669;margin-top:2px;">YES</div>'
+                            f'<div style="font-size:9px;color:#64748b;">{_yes_w}%</div>'
+                            f'</div>'
+                            f'<div style="flex:1;background:#fef2f2;border-radius:6px;padding:6px 4px;text-align:center;">'
+                            f'<div style="font-size:18px;font-weight:900;color:#dc2626;line-height:1;">{_scp["no"]}</div>'
+                            f'<div style="font-size:9px;font-weight:700;color:#dc2626;margin-top:2px;">NO</div>'
+                            f'<div style="font-size:9px;color:#64748b;">{_no_w}%</div>'
+                            f'</div>'
+                            f'<div style="flex:1;background:#f8fafc;border-radius:6px;padding:6px 4px;text-align:center;">'
+                            f'<div style="font-size:18px;font-weight:900;color:#94a3b8;line-height:1;">{_scp["na"]}</div>'
+                            f'<div style="font-size:9px;font-weight:700;color:#94a3b8;margin-top:2px;">NA</div>'
+                            f'</div>'
+                            f'</div>'
+                            f'<div style="height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;display:flex;">'
+                            f'<div style="width:{_yes_w}%;background:#059669;"></div>'
+                            f'<div style="width:{_no_w}%;background:#dc2626;"></div>'
+                            f'<div style="width:{_na_w}%;background:#cbd5e1;"></div>'
+                            f'</div>'
+                            f'<div style="font-size:9px;color:#64748b;margin-top:5px;text-align:right;">'
+                            f'{_scp["tot"]} responses{_cmts_str}'
+                            f'</div>'
+                            f'</div></td>'
+                        )
+                    _rem = _cols_per_row - (len(_sr_custom_rows) % _cols_per_row)
+                    if _rem < _cols_per_row:
+                        for _ in range(_rem):
+                            H += '<td style="padding:4px;width:33%;"></td>'
+                    H += '</tr></table>'
+                    # Key insight line for custom params
+                    _cp_overall = round(sum(r["yes"] for r in _sr_custom_rows) / max(sum(r["tot"] for r in _sr_custom_rows), 1) * 100, 1)
+                    _cp_hc = "#059669" if _cp_overall >= 70 else "#d97706" if _cp_overall >= 50 else "#dc2626"
+                    _cp_hl = "High Adherence" if _cp_overall >= 70 else "Partial Adherence" if _cp_overall >= 50 else "Low Adherence — Action Required"
+                    _cp_worst = sorted(_sr_custom_rows, key=lambda x: x["yes_pct"])
+                    H += (
+                        f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-top:8px;">'
+                        f'<div style="font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#059669;margin-bottom:8px;">📌 Adherence Summary</div>'
+                        f'<div style="font-size:12px;color:#0B1F3A;line-height:1.6;margin-bottom:8px;">'
+                        f'Overall call-action completion rate: <strong style="color:{_cp_hc};">{_cp_overall}%</strong> — '
+                        f'<span style="color:{_cp_hc};font-weight:700;">{_cp_hl}</span></div>'
+                    )
+                    for _cw in [r for r in _cp_worst if r["yes_pct"] < 70][:3]:
+                        _cw_c = "#dc2626" if _cw["yes_pct"] < 50 else "#d97706"
+                        H += (
+                            f'<div style="background:#fff;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;margin-bottom:6px;">'
+                            f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'
+                            f'<div style="font-size:12px;font-weight:700;color:#0B1F3A;">{_cw["name"]}</div>'
+                            f'<span style="font-size:10px;font-weight:800;color:#fff;background:{_cw_c};padding:2px 8px;border-radius:10px;">{_cw["yes_pct"]}% Done</span>'
+                            f'</div>'
+                            f'<div style="background:#fee2e2;border-radius:3px;height:6px;overflow:hidden;">'
+                            f'<div style="width:{_cw["yes_pct"]}%;height:100%;background:{_cw_c};"></div></div>'
                             f'</div>'
                         )
                     H += '</div></div>'
