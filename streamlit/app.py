@@ -14778,10 +14778,14 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                             key=_key,
                             help=_p.get("guide", ""),
                         )
-                        if "No" in _p["options"]:
+                        _REMARK_PARAMS = {
+                            "Was the disposition accurately selected?",
+                            "Entity captured correctly?",
+                        }
+                        if _p["col"] in _REMARK_PARAMS:
                             _rmk_key = f"af_rmk_{_p['col'][:20].replace(' ','_').replace('/','_').replace('(','').replace(')','')}"
                             _pv[f"{_p['col']} Remark"] = st.text_input(
-                                "↳ Remark (required if No)",
+                                "↳ Remark (mandatory if No)",
                                 placeholder="Describe the issue…",
                                 key=_rmk_key,
                             )
