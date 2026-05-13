@@ -3135,6 +3135,26 @@ def render_email_maker():
                         _ucp_rows.append({"label": _ucp_col, "value": f"{_ucp_filled}/{len(_ucp_raw)} filled"})
                 if _ucp_rows:
                     _live_sections.append({"icon": "⭐", "title": "Custom Parameters", "rows": _ucp_rows})
+
+                # ALWAYS: Custom param remarks
+                _ucp_rmk_rows = []
+                for _ucp in st.session_state["sense_custom_audit_params"]:
+                    _ucp_cmt_col = f"{_ucp['name']} Comment"
+                    if _ucp_cmt_col not in _ec_df.columns:
+                        continue
+                    _ucp_rmks = _ec_df[_ucp_cmt_col].replace("", None).dropna().astype(str).str.strip()
+                    _ucp_rmks = _ucp_rmks[_ucp_rmks.str.len() > 0]
+                    _ucp_rmks = _ucp_rmks[~_ucp_rmks.str.lower().isin(["nan", "none"])]
+                    if _ucp_rmks.empty:
+                        continue
+                    _ucp_sample = _ucp_rmks.iloc[0]
+                    _ucp_sample = (_ucp_sample[:100] + "…") if len(_ucp_sample) > 100 else _ucp_sample
+                    _ucp_rmk_rows.append({
+                        "label": f"{_ucp['name']}  ({len(_ucp_rmks)} remark{'s' if len(_ucp_rmks) != 1 else ''})",
+                        "value": _ucp_sample,
+                    })
+                if _ucp_rmk_rows:
+                    _live_sections.append({"icon": "💬", "title": "Custom Param Remarks", "rows": _ucp_rmk_rows})
             except Exception:
                 pass
 
@@ -4573,15 +4593,6 @@ _SENSE_BUILTIN_PARAMS = {
         "icon":        "⭐",
         "guide":       "Yes = All required entities captured correctly  |  No = Entity capture incomplete or inaccurate",
     },
-    "Entity captured correctly?": {
-        "description": "Entity capture check — specific entity correctly extracted and recorded by the bot",
-        "options":     ["No", "Yes"],
-        "inverted":    False,
-        "weight":      0.04,
-        "color":       "#f59e0b",
-        "icon":        "🎯",
-        "guide":       "Yes = Entity captured correctly by the bot  |  No = Entity missing or captured incorrectly",
-    },
 }
 _DEFAULT_PARAM_WEIGHT = 1.0   # weight for any legend param not listed above
 
@@ -4704,13 +4715,6 @@ _QA_SCHEMA = {
                     "options": ["No", "Yes"],
                     "fatal": False,
                     "guide": "Yes = TTS clear, natural & easily understandable  |  No = TTS issues impacted clarity or naturalness  |  NA = Not applicable (non-voice channel)",
-                },
-                {
-                    "col": "Entity captured correctly?",
-                    "weight": 0.04,
-                    "options": ["No", "Yes"],
-                    "fatal": False,
-                    "guide": "Yes = Entity captured correctly by the bot  |  No = Entity missing or captured incorrectly",
                 },
             ],
         },
@@ -5421,6 +5425,23 @@ def _gen_custom_param_insights(audit_df, custom_params):
         actions.append({"priority": "low", "category": "Process",
             "action": f"Clarify NA criteria for '{s['name']}' with the audit team to reduce ambiguity",
             "impact": "Reducing NA usage gives a cleaner compliance signal."})
+
+    # Remarks from Comment columns
+    for cp in custom_params:
+        col = cp["name"]
+        cmt_col = f"{col} Comment"
+        if cmt_col not in audit_df.columns:
+            continue
+        rmks = audit_df[cmt_col].replace("", None).dropna().astype(str).str.strip()
+        rmks = rmks[rmks.str.len() > 0]
+        rmks = rmks[~rmks.str.lower().isin(["nan", "none"])]
+        if rmks.empty:
+            continue
+        sample = rmks.iloc[0]
+        sample_txt = (sample[:120] + "…") if len(sample) > 120 else sample
+        insights.append({"type": "info",
+            "title": f"💬 '{col}' — {len(rmks)} Remark{'s' if len(rmks) != 1 else ''} Recorded",
+            "detail": f"Auditors left {len(rmks)} remark{'s' if len(rmks) != 1 else ''} for this parameter. Sample: \"{sample_txt}\""})
 
     return {"insights": insights, "actions": actions}
 
@@ -14729,7 +14750,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                         )
                         _REMARK_PARAMS = {
                             "Was the disposition accurately selected?",
-                            "Entity captured correctly?",
                         }
                         _rmk_key = f"af_rmk_{_p['col'][:20].replace(' ','_').replace('/','_').replace('(','').replace(')','')}"
                         if _p["col"] in _REMARK_PARAMS:
@@ -14906,7 +14926,6 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             # Require remark only for Disposition and Entity params when marked No
             _MANDATORY_REMARK_PARAMS = {
                 "Was the disposition accurately selected?",
-                "Entity captured correctly?",
             }
             for _vp in [p for _t in _QA_SCHEMA["tiers"] for p in _t["params"]]:
                 if _vp["col"] in _MANDATORY_REMARK_PARAMS and str(_pv.get(_vp["col"], "")).strip() == "No":
