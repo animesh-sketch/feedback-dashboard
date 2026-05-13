@@ -14782,11 +14782,17 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                             "Was the disposition accurately selected?",
                             "Entity captured correctly?",
                         }
+                        _rmk_key = f"af_rmk_{_p['col'][:20].replace(' ','_').replace('/','_').replace('(','').replace(')','')}"
                         if _p["col"] in _REMARK_PARAMS:
-                            _rmk_key = f"af_rmk_{_p['col'][:20].replace(' ','_').replace('/','_').replace('(','').replace(')','')}"
                             _pv[f"{_p['col']} Remark"] = st.text_input(
                                 "↳ Remark (mandatory if No)",
                                 placeholder="Describe the issue…",
+                                key=_rmk_key,
+                            )
+                        elif _pv[_p["col"]] in ("Yes", "No"):
+                            _pv[f"{_p['col']} Remark"] = st.text_input(
+                                "↳ Remark",
+                                placeholder="Optional remark…",
                                 key=_rmk_key,
                             )
 
