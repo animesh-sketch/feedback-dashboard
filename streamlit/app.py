@@ -7161,6 +7161,29 @@ def _render_sense_scorecard(sheets, legend_map):
                 )
 
 
+    # ── Email Section Selector (Dashboard) ───────────────────────────────────
+    if _has_qa_schema:
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        with st.expander("📧 Select Sections for Email Report", expanded=False):
+            st.markdown('<div style="font-size:0.72rem;color:#475569;margin-bottom:10px;">Tick what you want to include when you generate the email in the Insights tab.</div>', unsafe_allow_html=True)
+            _de_c1, _de_c2, _de_c3 = st.columns(3)
+            with _de_c1:
+                st.checkbox("📊 KPI Summary", value=True, key="em_kpis")
+                st.checkbox("🟢 Status Mix", value=True, key="em_status")
+                st.checkbox("🎯 Disposition Mix", value=True, key="em_disp")
+            with _de_c2:
+                st.checkbox("✅ What Went Right", value=True, key="em_wr")
+                st.checkbox("⚠️ What Went Wrong", value=True, key="em_ww")
+                st.checkbox("🏅 Top 5 Best Calls", value=True, key="em_best5")
+                st.checkbox("🚨 Top 5 Worst Calls", value=True, key="em_worst5")
+            with _de_c3:
+                st.checkbox("🎯 Campaign Breakdown", value=True, key="em_camp")
+                st.checkbox("👤 QA Team Performance", value=True, key="em_qa_tbl")
+                st.checkbox("🔬 Parameter Details", value=True, key="em_params")
+                st.checkbox("⭐ Custom Parameters", value=True, key="em_custom_ps")
+                st.checkbox("💬 Remarks Summary", value=False, key="em_remarks")
+        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+
     # ── All Parameter Performance ─────────────────────────────────────────────
     st.markdown('<div class="section-chip">📊 All Parameter Performance</div>', unsafe_allow_html=True)
 
@@ -7926,6 +7949,65 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                                     f'</div>')
                         st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:12px 16px;margin-bottom:1rem;">{_dh}</div>', unsafe_allow_html=True)
 
+            # ── Campaign vs Benchmark ─────────────────────────────────────────
+            if "Campaign Name" in _audit_df_ins_view.columns and "Bot Score" in _audit_df_ins_view.columns:
+                _cvb_rows = []
+                for _cvb_name, _cvb_grp in _audit_df_ins_view.groupby("Campaign Name"):
+                    _cvb_bs = pd.to_numeric(_cvb_grp["Bot Score"], errors="coerce").dropna()
+                    if len(_cvb_bs) == 0:
+                        continue
+                    _cvb_avg = round(float(_cvb_bs.mean()), 1)
+                    _cvb_st  = _cvb_grp["Status"].astype(str).str.strip() if "Status" in _cvb_grp.columns else pd.Series(dtype=str)
+                    _cvb_pass = round(int((_cvb_st == "Pass").sum()) / len(_cvb_grp) * 100, 1) if len(_cvb_grp) else 0
+                    _cvb_fail = round(int(_cvb_st.isin(["Fail", "Auto-Fail"]).sum()) / len(_cvb_grp) * 100, 1) if len(_cvb_grp) else 0
+                    _cvb_rows.append({"name": str(_cvb_name), "avg": _cvb_avg, "n": len(_cvb_grp), "pass": _cvb_pass, "fail": _cvb_fail})
+                if len(_cvb_rows) >= 2:
+                    _cvb_rows.sort(key=lambda x: -x["avg"])
+                    _overall_avg = round(pd.to_numeric(_audit_df_ins_view["Bot Score"], errors="coerce").dropna().mean(), 1)
+                    st.markdown('<div class="section-chip">📊 Campaign vs Benchmark</div>', unsafe_allow_html=True)
+                    _cvb_html = (
+                        '<div style="display:grid;grid-template-columns:1fr 120px 80px 70px 70px 70px;align-items:center;gap:8px;'
+                        'padding:6px 0;border-bottom:2px solid #E2EAF6;margin-bottom:4px;">'
+                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;">Campaign</div>'
+                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;">Score vs 80% target</div>'
+                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;text-align:center;">Avg</div>'
+                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;text-align:center;">Pass%</div>'
+                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;text-align:center;">Fail%</div>'
+                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;text-align:center;">Audits</div>'
+                        '</div>'
+                    )
+                    for _cvb in _cvb_rows:
+                        _cvb_clr  = "#059669" if _cvb["avg"] >= 80 else "#d97706" if _cvb["avg"] >= 65 else "#dc2626"
+                        _cvb_bg   = "#ecfdf5" if _cvb["avg"] >= 80 else "#fffbeb" if _cvb["avg"] >= 65 else "#fff1f2"
+                        _cvb_brd  = "#a7f3d0" if _cvb["avg"] >= 80 else "#fde68a" if _cvb["avg"] >= 65 else "#fecdd3"
+                        _cvb_lbl  = "✅" if _cvb["avg"] >= 80 else "⚠️" if _cvb["avg"] >= 65 else "🔴"
+                        _cvb_gap  = round(_cvb["avg"] - 80, 1)
+                        _cvb_gap_str = (f'+{_cvb_gap}%' if _cvb_gap >= 0 else f'{_cvb_gap}%')
+                        _cvb_gap_clr = "#059669" if _cvb_gap >= 0 else "#dc2626"
+                        _bar_w = min(100, round(_cvb["avg"] / 100 * 100))
+                        _cvb_html += (
+                            f'<div style="display:grid;grid-template-columns:1fr 120px 80px 70px 70px 70px;align-items:center;gap:8px;'
+                            f'padding:8px 10px;margin-bottom:4px;background:{_cvb_bg};border:1px solid {_cvb_brd};'
+                            f'border-left:3px solid {_cvb_clr};border-radius:8px;">'
+                            f'<div style="font-size:0.72rem;font-weight:700;color:#0B1F3A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_cvb_lbl} {_cvb["name"]}</div>'
+                            f'<div style="position:relative;height:14px;background:#f0f2f5;border-radius:4px;overflow:hidden;">'
+                            f'<div style="position:absolute;left:0;top:0;height:100%;width:{_bar_w}%;background:{_cvb_clr};border-radius:4px;opacity:0.7;"></div>'
+                            f'<div style="position:absolute;left:60%;top:0;height:100%;width:2px;background:#1e3a5f;opacity:0.4;"></div>'
+                            f'</div>'
+                            f'<div style="text-align:center;font-size:0.75rem;font-weight:900;color:{_cvb_clr};">{_cvb["avg"]}% <span style="font-size:0.62rem;color:{_cvb_gap_clr};font-weight:700;">({_cvb_gap_str})</span></div>'
+                            f'<div style="text-align:center;font-size:0.72rem;font-weight:700;color:#059669;">{_cvb["pass"]}%</div>'
+                            f'<div style="text-align:center;font-size:0.72rem;font-weight:700;color:#dc2626;">{_cvb["fail"]}%</div>'
+                            f'<div style="text-align:center;font-size:0.72rem;color:#64748b;">{_cvb["n"]}</div>'
+                            f'</div>'
+                        )
+                    _cvb_below = [c for c in _cvb_rows if c["avg"] < 80]
+                    _cvb_note = f'<div style="font-size:0.67rem;color:#475569;margin-top:8px;">Overall avg: <strong>{_overall_avg}%</strong> · {len(_cvb_below)} of {len(_cvb_rows)} campaign{"s" if len(_cvb_rows)!=1 else ""} below 80% target. Vertical marker = 80% target.</div>'
+                    st.markdown(
+                        f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:12px;padding:16px 18px;margin-bottom:12px;">'
+                        f'{_cvb_html}{_cvb_note}</div>',
+                        unsafe_allow_html=True
+                    )
+
             # ── What Went Right / What Went Wrong ────────────────────────────
             # Compute per-parameter averages across ALL tier params
             _param_avgs = []
@@ -8029,6 +8111,37 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     st.markdown(f'<div style="background:#fff;border:1px solid #FEE2E2;border-left:3px solid #dc2626;border-radius:10px;padding:14px 16px;">{_ww_html}</div>', unsafe_allow_html=True)
                 else:
                     st.markdown('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#059669;text-align:center;">🎉 All parameters performing well!</div>', unsafe_allow_html=True)
+
+            # ── Bottom 3 Parameters — Coaching Focus ──────────────────────────
+            _bottom3 = sorted([p for p in _param_avgs if p["pct"] < 80], key=lambda x: x["pct"])[:3]
+            if _bottom3:
+                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+                st.markdown('<div class="section-chip">🎯 Bottom Parameters — Coaching Priority</div>', unsafe_allow_html=True)
+                _b3_cols = st.columns(len(_bottom3))
+                for _b3i, _b3p in enumerate(_bottom3):
+                    _b3c = "#dc2626" if _b3p["pct"] < 50 else "#d97706"
+                    _b3bg = "linear-gradient(135deg,#fff1f2,#fef2f2)" if _b3p["pct"] < 50 else "linear-gradient(135deg,#fffbeb,#fef3c7)"
+                    _b3brd = "#fecdd3" if _b3p["pct"] < 50 else "#fde68a"
+                    _b3gap = round(80 - _b3p["pct"], 1)
+                    _b3tier_short = _b3p["tier"].split("·")[0].strip() if "·" in _b3p["tier"] else _b3p["tier"]
+                    with _b3_cols[_b3i]:
+                        st.markdown(
+                            f'<div style="background:{_b3bg};border:1px solid {_b3brd};border-top:4px solid {_b3c};'
+                            f'border-radius:12px;padding:14px 16px;height:100%;">'
+                            f'<div style="font-size:0.6rem;font-weight:800;color:{_b3c};letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">#{_b3i+1} Priority · {_b3tier_short}</div>'
+                            f'<div style="font-size:0.71rem;font-weight:700;color:#0B1F3A;line-height:1.4;margin-bottom:10px;">{_b3p["col"]}</div>'
+                            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+                            f'<div style="font-size:1.6rem;font-weight:900;color:{_b3c};">{_b3p["pct"]}%</div>'
+                            f'<div style="text-align:right;"><div style="font-size:0.6rem;color:#64748b;">Gap to 80%</div>'
+                            f'<div style="font-size:0.85rem;font-weight:800;color:{_b3c};">−{_b3gap}%</div></div>'
+                            f'</div>'
+                            f'<div style="height:6px;background:rgba(0,0,0,0.07);border-radius:3px;overflow:hidden;margin-bottom:8px;">'
+                            f'<div style="width:{_b3p["pct"]}%;height:100%;background:{_b3c};border-radius:3px;"></div></div>'
+                            f'<div style="font-size:0.63rem;color:#475569;line-height:1.45;border-top:1px solid rgba(0,0,0,0.07);padding-top:7px;">'
+                            f'<strong>Coach:</strong> Pull conversations where this failed. Identify the common script trigger and apply a targeted fix.</div>'
+                            f'</div>',
+                            unsafe_allow_html=True
+                        )
 
             st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
@@ -8408,9 +8521,9 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
             st.markdown('<div class="section-chip">📧 Build One-Pager Email</div>', unsafe_allow_html=True)
             st.markdown(
                 '<div style="font-size:0.72rem;color:#475569;margin-bottom:12px;">'
-                'Tick the sections and individual insights / actions you want in the email, then generate a beautiful one-pager report.</div>',
+                'Tick the sections you want in the email report, then generate and send.</div>',
                 unsafe_allow_html=True)
-            with st.expander("📧 Select Sections & Generate Email Draft", expanded=True):
+            if True:  # always visible — no expander
                 _now_str   = pd.Timestamp.now().strftime("%d %b %Y")
                 _cli_label  = _ins_cli  if _ins_cli  != "All Clients"   else "All Clients"
                 _camp_label = _ins_camp if _ins_camp != "All Campaigns" else "All Campaigns"
@@ -8489,25 +8602,29 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                             if _rv2 and _rv2.lower() not in ("", "nan", "none"):
                                 _remark_lines.append(_rv2)
 
-                # ── SECTION SELECTION ─────────────────────────────────────────
-                st.markdown('<div style="font-size:0.75rem;font-weight:800;color:#0B1F3A;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;border-bottom:2px solid #E2EAF6;padding-bottom:6px;">✅ Choose Sections to Include</div>', unsafe_allow_html=True)
-                _eml_c1, _eml_c2, _eml_c3 = st.columns(3)
-                with _eml_c1:
-                    em_kpis   = st.checkbox(f"📊 KPI Summary  ({total_i:,} audits · {_avg_str} avg · {pass_rate_i}% pass)", value=True, key="em_kpis")
-                    em_status = st.checkbox(f"🟢 Status Mix  ({pass_i} Pass · {review_i} Review · {fail_i} Fail · {fatal_i} Auto-Fail)", value=True, key="em_status")
-                    _disp_count_em = int(_audit_df_ins_view["Disposition"].replace("",None).dropna().count()) if "Disposition" in _audit_df_ins_view.columns else 0
-                    em_disp   = st.checkbox(f"🎯 Disposition Mix  ({_disp_count_em} with disposition)", value=bool(_disp_count_em), key="em_disp")
-                with _eml_c2:
-                    em_wr     = st.checkbox(f"✅ What Went Right  ({len(_went_right)} param{'s' if len(_went_right)!=1 else ''})", value=bool(_went_right), key="em_wr")
-                    em_ww     = st.checkbox(f"⚠️ What Went Wrong  ({len(_went_wrong)} param{'s' if len(_went_wrong)!=1 else ''})", value=bool(_went_wrong), key="em_ww")
-                    em_best5  = st.checkbox("🏅 Top 5 Best Calls", value=True, key="em_best5")
-                    em_worst5 = st.checkbox("🚨 Top 5 Worst Calls", value=True, key="em_worst5")
-                with _eml_c3:
-                    em_camp      = st.checkbox(f"🎯 Campaign Breakdown  ({len(_em_camp_rows)} campaigns)", value=bool(_em_camp_rows), key="em_camp")
-                    em_qa_tbl    = st.checkbox(f"👤 QA Team Performance  ({len(_em_qa_rows)} auditors)", value=bool(_em_qa_rows), key="em_qa_tbl")
-                    em_params    = st.checkbox(f"🔬 Parameter Details  ({len(_em_param_rows)} params)", value=bool(_em_param_rows), key="em_params")
-                    em_custom_ps = st.checkbox(f"⭐ Custom Parameters  ({len(_em_custom_rows)} params)", value=bool(_em_custom_rows), key="em_custom_ps")
-                    em_remarks   = st.checkbox(f"💬 Remarks Summary  ({len(_remark_lines)} remarks)", value=bool(_remark_lines), key="em_remarks")
+                # ── SECTION SELECTION (read from dashboard checkboxes) ────────
+                # Checkboxes are declared in the "Email Section Selector" above the tabs.
+                # Read current values from session state.
+                em_kpis      = st.session_state.get("em_kpis", True)
+                em_status    = st.session_state.get("em_status", True)
+                em_disp      = st.session_state.get("em_disp", True)
+                em_wr        = st.session_state.get("em_wr", True)
+                em_ww        = st.session_state.get("em_ww", True)
+                em_best5     = st.session_state.get("em_best5", True)
+                em_worst5    = st.session_state.get("em_worst5", True)
+                em_camp      = st.session_state.get("em_camp", True)
+                em_qa_tbl    = st.session_state.get("em_qa_tbl", True)
+                em_params    = st.session_state.get("em_params", True)
+                em_custom_ps = st.session_state.get("em_custom_ps", True)
+                em_remarks   = st.session_state.get("em_remarks", False)
+                # Show current selection as badges
+                _sel_names = [n for n, v in [("KPIs",em_kpis),("Status",em_status),("Disposition",em_disp),
+                    ("What Went Right",em_wr),("What Went Wrong",em_ww),("Best 5",em_best5),("Worst 5",em_worst5),
+                    ("Campaigns",em_camp),("QA Team",em_qa_tbl),("Parameters",em_params),
+                    ("Custom Params",em_custom_ps),("Remarks",em_remarks)] if v]
+                if _sel_names:
+                    _badges = "".join(f'<span style="background:#EBF5FF;border:1px solid #BFDBFE;border-radius:12px;padding:2px 10px;font-size:0.62rem;font-weight:700;color:#1e40af;margin-right:4px;margin-bottom:4px;display:inline-block;">{n}</span>' for n in _sel_names)
+                    st.markdown(f'<div style="margin-bottom:12px;"><div style="font-size:0.65rem;color:#64748b;margin-bottom:4px;">Selected sections ({len(_sel_names)}) — change in the <strong>📧 Select Sections for Email Report</strong> panel above:</div>{_badges}</div>', unsafe_allow_html=True)
 
                 # ── AI Remarks Summary generator ──────────────────────────────
                 _remarks_key = "ins_em_remarks_summary"
