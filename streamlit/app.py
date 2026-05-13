@@ -4507,6 +4507,15 @@ _SENSE_BUILTIN_PARAMS = {
         "icon":        "⭐",
         "guide":       "Yes = All required entities captured correctly  |  No = Entity capture incomplete or inaccurate",
     },
+    "Entity captured correctly?": {
+        "description": "Entity capture check — specific entity correctly extracted and recorded by the bot",
+        "options":     ["No", "Yes"],
+        "inverted":    False,
+        "weight":      0.04,
+        "color":       "#f59e0b",
+        "icon":        "🎯",
+        "guide":       "Yes = Entity captured correctly by the bot  |  No = Entity missing or captured incorrectly",
+    },
 }
 _DEFAULT_PARAM_WEIGHT = 1.0   # weight for any legend param not listed above
 
@@ -4629,6 +4638,13 @@ _QA_SCHEMA = {
                     "options": ["No", "Yes"],
                     "fatal": False,
                     "guide": "Yes = TTS clear, natural & easily understandable  |  No = TTS issues impacted clarity or naturalness  |  NA = Not applicable (non-voice channel)",
+                },
+                {
+                    "col": "Entity captured correctly?",
+                    "weight": 0.04,
+                    "options": ["No", "Yes"],
+                    "fatal": False,
+                    "guide": "Yes = Entity captured correctly by the bot  |  No = Entity missing or captured incorrectly",
                 },
             ],
         },
