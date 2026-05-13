@@ -2621,6 +2621,16 @@ def _attachment_slot(d: dict, key_suffix: str):
                 import io as _io
                 _dump_df = pd.DataFrame(_filtered)
                 _dump_df = _dump_df.drop(columns=[c for c in ["_row_id"] if c in _dump_df.columns], errors="ignore")
+                # Logical column order: metadata → params/remarks → scores
+                _d_meta  = [c for c in ["Audit Date", "QA", "Client", "Campaign Name",
+                                        "PM / CSM", "Bot Name", "Disposition",
+                                        "Lead Number", "Conversation Link", "Lead Link"]
+                            if c in _dump_df.columns]
+                _d_score = [c for c in ["Bot Score", "Lead Score", "Lead Composite",
+                                        "Intelligence Score", "Status", "Fatal?"]
+                            if c in _dump_df.columns]
+                _d_other = [c for c in _dump_df.columns if c not in _d_meta and c not in _d_score]
+                _dump_df = _dump_df[_d_meta + _d_other + _d_score]
                 _csv_buf = _io.BytesIO()
                 _dump_df.to_csv(_csv_buf, index=False)
                 _csv_bytes = _csv_buf.getvalue()
@@ -14487,6 +14497,88 @@ def _render_audit_form(legend_map, fname):
             st.info("No audits created yet.")
 
         st.markdown("##### Add New Audit")
+
+    # ── Admin Editable Audit Sheet ────────────────────────────────────────────
+    if _sense_role == "admin":
+        st.markdown('<div class="section-chip">📋 Audit Sheet (Admin Edit)</div>', unsafe_allow_html=True)
+        _sheet_all = audit_store.load()
+        if _sheet_all:
+            _sheet_df_raw = pd.DataFrame(_sheet_all)
+            _sheet_row_ids = _sheet_df_raw["_row_id"].tolist() if "_row_id" in _sheet_df_raw.columns else []
+            _sheet_edit_df = _sheet_df_raw.drop(
+                columns=[c for c in ["_row_id"] if c in _sheet_df_raw.columns], errors="ignore"
+            )
+
+            # ── Column ordering: metadata → params → scores ───────────────────
+            _meta_cols   = [c for c in ["Audit Date", "QA", "Client", "Campaign Name",
+                                        "PM / CSM", "Bot Name", "Disposition",
+                                        "Lead Number", "Conversation Link", "Lead Link"]
+                            if c in _sheet_edit_df.columns]
+            _score_cols  = [c for c in ["Bot Score", "Lead Score", "Lead Composite",
+                                        "Intelligence Score", "Status", "Fatal?"]
+                            if c in _sheet_edit_df.columns]
+            _other_cols  = [c for c in _sheet_edit_df.columns
+                            if c not in _meta_cols and c not in _score_cols]
+            _sheet_edit_df = _sheet_edit_df[_meta_cols + _other_cols + _score_cols]
+
+            # ── Filter row ────────────────────────────────────────────────────
+            _sf1, _sf2, _sf3 = st.columns(3)
+            with _sf1:
+                _sf_clients = ["All"] + sorted(_sheet_edit_df["Client"].dropna().unique().tolist()) if "Client" in _sheet_edit_df.columns else ["All"]
+                _sf_client  = st.selectbox("Filter Client", _sf_clients, key="as_filter_client")
+            with _sf2:
+                _sf_qas = ["All"] + sorted(_sheet_edit_df["QA"].dropna().unique().tolist()) if "QA" in _sheet_edit_df.columns else ["All"]
+                _sf_qa  = st.selectbox("Filter QA", _sf_qas, key="as_filter_qa")
+            with _sf3:
+                _sf_limit = st.number_input("Show last N rows", min_value=10, max_value=500, value=50, step=10, key="as_limit")
+
+            _mask = pd.Series([True] * len(_sheet_edit_df))
+            if _sf_client != "All" and "Client" in _sheet_edit_df.columns:
+                _mask &= _sheet_edit_df["Client"] == _sf_client
+            if _sf_qa != "All" and "QA" in _sheet_edit_df.columns:
+                _mask &= _sheet_edit_df["QA"] == _sf_qa
+            _sheet_view = _sheet_edit_df[_mask].head(int(_sf_limit)).copy()
+            _sheet_view_ids = [_sheet_row_ids[i] for i in _sheet_edit_df[_mask].head(int(_sf_limit)).index]
+
+            _edited_sheet = st.data_editor(
+                _sheet_view,
+                use_container_width=True,
+                num_rows="fixed",
+                key="admin_sheet_editor",
+                height=420,
+            )
+
+            _save_col, _dl_col = st.columns([1, 1])
+            with _save_col:
+                if st.button("💾 Save Changes to Supabase", key="admin_sheet_save", type="primary", use_container_width=True):
+                    _save_errs = []
+                    for _si, (_rid, (_, _row)) in enumerate(zip(_sheet_view_ids, _edited_sheet.iterrows())):
+                        if _rid:
+                            _err = audit_store.update(_rid, _row.to_dict())
+                            if _err:
+                                _save_errs.append(f"Row {_si+1}: {_err}")
+                    if _save_errs:
+                        st.error("\n".join(_save_errs))
+                    else:
+                        _audit_log_load.clear()
+                        st.session_state["sense_audit_log"] = _audit_log_load()
+                        st.success(f"✅ {len(_sheet_view_ids)} record(s) updated.")
+                        st.rerun()
+            with _dl_col:
+                import io as _sio
+                _dl_buf = _sio.BytesIO()
+                _sheet_edit_df.to_csv(_dl_buf, index=False)
+                st.download_button(
+                    "⬇️ Download Full Dump (CSV)",
+                    data=_dl_buf.getvalue(),
+                    file_name=f"audit_full_dump_{pd.Timestamp.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key="admin_full_dump_dl",
+                )
+        else:
+            st.info("No audit records found.")
+        st.markdown('<hr style="border:none;border-top:1px solid #e4e7ec;margin:16px 0 8px;">', unsafe_allow_html=True)
 
     # ── Audit form ────────────────────────────────────────────────────────────
     st.markdown("""
