@@ -14759,6 +14759,19 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             st.session_state["f_bot_name"] = _edit_data.get("Bot Name", "")
             st.session_state["f_notes"] = _edit_data.get("Notes", "")
             st.session_state["f_suggestion_field"] = _edit_data.get("Improvement Suggestion", "")
+            # ── Pre-fill parameter marks and remarks ──────────────────────────
+            for _et in _QA_SCHEMA["tiers"]:
+                for _ep in _et["params"]:
+                    _ekey = f"af_t_{_ep['col'][:22].replace(' ','_').replace('/','_').replace('(','').replace(')','')}"
+                    _ermk = f"af_rmk_{_ep['col'][:20].replace(' ','_').replace('/','_').replace('(','').replace(')','')}"
+                    _tick_opts_e = _ep["options"] + ["NA"]
+                    _saved_val = _edit_data.get(_ep["col"], "NA")
+                    if _saved_val in _tick_opts_e:
+                        st.session_state[_ekey] = _saved_val
+                    else:
+                        st.session_state[_ekey] = "NA"
+                    _saved_rmk = _edit_data.get(f"{_ep['col']} Remark", "")
+                    st.session_state[_ermk] = _saved_rmk if _saved_rmk else ""
             st.session_state["_prefill_from_edit"] = True
 
     with st.form("qa_audit_form_v2", clear_on_submit=False):
@@ -14793,8 +14806,11 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
             st.markdown('<div style="background:#eff6ff;border-left:4px solid #2563EB;padding:8px;border-radius:4px;"><strong style="color:#1e40af;font-size:0.8rem;">📅 ' + pd.Timestamp.now().strftime("%d %b %Y") + '</strong></div>', unsafe_allow_html=True)
             _f_audit_date = st.date_input("Audit Date *", key="f_audit_date", value=pd.Timestamp.now().date(), disabled=True, label_visibility="collapsed")
         with _ad2:
-            st.markdown(f'<div style="background:#dcfce7;border-left:4px solid #22c55e;padding:8px;border-radius:4px;"><strong style="color:#166534;font-size:0.8rem;">👤 {_logged_in_name}</strong></div>', unsafe_allow_html=True)
-            _f_auditor = st.text_input("QA Name *", key="f_auditor_sel", value=_logged_in_name, disabled=True, label_visibility="collapsed")
+            if _edit_mode and _sense_role == "admin":
+                _f_auditor = st.text_input("QA Name *", key="f_auditor_sel", placeholder="Auditor name")
+            else:
+                st.markdown(f'<div style="background:#dcfce7;border-left:4px solid #22c55e;padding:8px;border-radius:4px;"><strong style="color:#166534;font-size:0.8rem;">👤 {_logged_in_name}</strong></div>', unsafe_allow_html=True)
+                _f_auditor = st.text_input("QA Name *", key="f_auditor_sel", value=_logged_in_name, disabled=True, label_visibility="collapsed")
         with _ad3:
             _registry_init()
             _reg_clients_form = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
