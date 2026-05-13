@@ -11650,18 +11650,36 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
         # ── Section 12 — What Went Right / Needs Attention (all params) ──────────
         _param_avgs_d = []
+        _param_avgs_seen = set()
+
+        def _score_col_d(col, opts):
+            _pmx = [int(o) for o in opts if str(o).lstrip("-").isdigit()]
+            if not _pmx:
+                return None
+            _pmax = max(_pmx)
+            _pv = pd.to_numeric(
+                _dash_df[col].astype(str).str.strip().replace({"NA": "", "nan": "", "Fatal": ""}),
+                errors="coerce").dropna()
+            return round(_pv.mean() / _pmax * 100, 1) if len(_pv) else None
+
         for _tier_d in _QA_SCHEMA.get("tiers", []):
             for _p_d in _tier_d.get("params", []):
                 if _p_d["col"] not in _dash_df.columns:
                     continue
-                _pmx = [int(o) for o in _p_d.get("options", []) if str(o).lstrip("-").isdigit()]
-                _pmax_d = max(_pmx) if _pmx else 2
-                _pv_d = pd.to_numeric(
-                    _dash_df[_p_d["col"]].astype(str).str.strip().replace({"NA": "", "nan": "", "Fatal": ""}),
-                    errors="coerce").dropna()
-                if len(_pv_d) == 0:
+                _sc = _score_col_d(_p_d["col"], _p_d.get("options", []))
+                if _sc is not None:
+                    _param_avgs_d.append({"col": _p_d["col"], "pct": _sc})
+                    _param_avgs_seen.add(_p_d["col"])
+
+        # Fallback: score any legend_map columns not already captured
+        if not _param_avgs_d and legend_map:
+            for _lm_col, _lm_opts in legend_map.items():
+                if _lm_col in _param_avgs_seen or _lm_col not in _dash_df.columns:
                     continue
-                _param_avgs_d.append({"col": _p_d["col"], "pct": round(_pv_d.mean() / _pmax_d * 100, 1)})
+                _sc = _score_col_d(_lm_col, _lm_opts)
+                if _sc is not None:
+                    _param_avgs_d.append({"col": _lm_col, "pct": _sc})
+                    _param_avgs_seen.add(_lm_col)
 
         _strong_d = sorted([p for p in _param_avgs_d if p["pct"] >= 75], key=lambda x: -x["pct"])[:8]
         _weak_d = sorted([p for p in _param_avgs_d if p["pct"] < 70], key=lambda x: x["pct"])[:8]
@@ -12544,16 +12562,36 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         # ── S11: Parameter Performance (Top + Bottom) ─────────────────────────────
         def _s11_data():
             _pa11 = []
+            _pa11_seen = set()
+
+            def _sc11(col, opts):
+                _pmx = [int(o) for o in opts if str(o).lstrip("-").isdigit()]
+                if not _pmx:
+                    return None
+                _pv = pd.to_numeric(_dash_df[col].astype(str).str.strip().replace(
+                    {"NA": "", "nan": "", "Fatal": ""}), errors="coerce").dropna()
+                return round(_pv.mean() / max(_pmx) * 100, 1) if len(_pv) else None
+
             for _t11 in _QA_SCHEMA.get("tiers", []):
                 for _p11 in _t11.get("params", []):
                     if _p11["col"] not in _dash_df.columns:
                         continue
-                    _pmx11 = max([int(o) for o in _p11.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
-                    _pv11 = pd.to_numeric(_dash_df[_p11["col"]].astype(str).str.strip().replace(
-                        {"NA": "", "nan": "", "Fatal": ""}), errors="coerce").dropna()
-                    if len(_pv11):
-                        _pa11.append((_p11["col"], round(_pv11.mean() / _pmx11 * 100, 1),
-                                      _t11["label"].split("·")[0].strip() if "·" in _t11["label"] else "TIER"))
+                    _sc = _sc11(_p11["col"], _p11.get("options", []))
+                    if _sc is not None:
+                        _tier_lbl = _t11["label"].split("·")[0].strip() if "·" in _t11["label"] else "TIER"
+                        _pa11.append((_p11["col"], _sc, _tier_lbl))
+                        _pa11_seen.add(_p11["col"])
+
+            # Fallback: legend_map columns not in schema
+            if not _pa11 and legend_map:
+                for _lm_col, _lm_opts in legend_map.items():
+                    if _lm_col in _pa11_seen or _lm_col not in _dash_df.columns:
+                        continue
+                    _sc = _sc11(_lm_col, _lm_opts)
+                    if _sc is not None:
+                        _pa11.append((_lm_col, _sc, "CUSTOM"))
+                        _pa11_seen.add(_lm_col)
+
             return sorted(_pa11, key=lambda x: -x[1])
 
         def _s11_prev():
