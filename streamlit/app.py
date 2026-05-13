@@ -15046,9 +15046,13 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 if not _val or str(_val).strip() in ("— select —", "—"):
                     _errs.append(f"'{_col}' must be selected")
                 # NA is accepted as "not applicable" — no error
-            # Require remark when "No" is selected for any parameter
+            # Require remark only for Disposition and Entity params when marked No
+            _MANDATORY_REMARK_PARAMS = {
+                "Was the disposition accurately selected?",
+                "Entity captured correctly?",
+            }
             for _vp in [p for _t in _QA_SCHEMA["tiers"] for p in _t["params"]]:
-                if "No" in _vp["options"] and str(_pv.get(_vp["col"], "")).strip() == "No":
+                if _vp["col"] in _MANDATORY_REMARK_PARAMS and str(_pv.get(_vp["col"], "")).strip() == "No":
                     if not str(_pv.get(f"{_vp['col']} Remark", "")).strip():
                         _errs.append(f"Remark required — explain why '{_vp['col']}' was marked No")
             if _f_disposition == "— select —":
