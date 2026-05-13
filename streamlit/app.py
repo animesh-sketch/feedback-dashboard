@@ -14789,7 +14789,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                                 placeholder="Describe the issue…",
                                 key=_rmk_key,
                             )
-                        elif _pv[_p["col"]] in ("Yes", "No"):
+                        else:
                             _pv[f"{_p['col']} Remark"] = st.text_input(
                                 "↳ Remark",
                                 placeholder="Optional remark…",
