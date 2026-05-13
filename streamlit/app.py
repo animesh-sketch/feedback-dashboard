@@ -7178,7 +7178,6 @@ def _render_sense_scorecard(sheets, legend_map):
                 st.checkbox("🚨 Top 5 Worst Calls", value=True, key="em_worst5")
             with _de_c3:
                 st.checkbox("🎯 Campaign Breakdown", value=True, key="em_camp")
-                st.checkbox("👤 QA Team Performance", value=True, key="em_qa_tbl")
                 st.checkbox("🔬 Parameter Details", value=True, key="em_params")
                 st.checkbox("⭐ Custom Parameters", value=True, key="em_custom_ps")
                 st.checkbox("💬 Remarks Summary", value=False, key="em_remarks")
@@ -7818,8 +7817,14 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
     )
 
     # ── TABS ──────────────────────────────────────────────────────────────────
-    _itab_labels = ["📊 Overview", "🏆 Performance", "📈 Trends", "🔬 Parameters", "📋 Reports", "🧠 Intelligence", "📤 Send Report"]
-    _i1, _i2, _i3, _i4, _i5, _i6, _i7 = st.tabs(_itab_labels)
+    # Single-page dashboard — no tabs
+    _i1 = st.container()
+    _i2 = st.container()
+    _i3 = st.container()
+    _i4 = st.container()
+    _i5 = st.container()
+    _i6 = st.container()
+    _i7 = st.container()
 
     # ══════════════════════════════════════════════════════════════════════════
     # Tab 1 — Overview
@@ -8471,51 +8476,6 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                         unsafe_allow_html=True
                     )
 
-            # ── Auditor Consistency Analysis ───────────────────────────────────
-            if "QA" in _audit_df_ins_view.columns:
-                st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-                st.markdown('<div class="section-chip">🎯 Auditor Consistency</div>', unsafe_allow_html=True)
-                _cons_rows_ov = []
-                for _qa_c_ov, _qa_grp_ov in _audit_df_ins_view.groupby("QA"):
-                    _qa_bs_ov = pd.to_numeric(_qa_grp_ov["Bot Score"], errors="coerce").dropna()
-                    if len(_qa_bs_ov) >= 3:
-                        _qa_avg_ov = round(float(_qa_bs_ov.mean()), 1)
-                        _qa_std_ov = round(float(_qa_bs_ov.std()), 1)
-                        _qa_n_ov   = len(_qa_bs_ov)
-                        _cons_level_ov = "Consistent" if _qa_std_ov < 8 else ("Moderate" if _qa_std_ov < 15 else "Volatile")
-                        _cons_clr_ov   = "#059669" if _qa_std_ov < 8 else "#d97706" if _qa_std_ov < 15 else "#dc2626"
-                        _cons_rows_ov.append({"auditor": str(_qa_c_ov), "avg": _qa_avg_ov, "std": _qa_std_ov, "n": _qa_n_ov, "level": _cons_level_ov, "color": _cons_clr_ov})
-                if _cons_rows_ov:
-                    _cons_rows_ov.sort(key=lambda x: x["std"])
-                    _cons_html_ov = (
-                        '<div style="display:grid;grid-template-columns:140px 1fr 58px 90px;align-items:center;gap:12px;'
-                        'padding:6px 0;border-bottom:2px solid #E2EAF6;margin-bottom:4px;">'
-                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;">Auditor</div>'
-                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;">Consistency (σ = std dev)</div>'
-                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;text-align:right;">Avg</div>'
-                        '<div style="font-size:0.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;text-align:right;">Rating</div>'
-                        '</div>'
-                    )
-                    for _cr_ov in _cons_rows_ov:
-                        _bar_pct_ov = min(100, int(_cr_ov["std"] * 4))
-                        _cons_html_ov += (
-                            f'<div style="display:grid;grid-template-columns:140px 1fr 58px 90px;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #F1F5F9;">'
-                            f'<div style="font-size:0.72rem;font-weight:700;color:#0B1F3A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">👤 {_cr_ov["auditor"][:18]}</div>'
-                            f'<div><div style="font-size:0.59rem;color:#94a3b8;margin-bottom:3px;">σ = {_cr_ov["std"]} (n={_cr_ov["n"]})</div>'
-                            f'<div style="height:8px;background:#F1F5F9;border-radius:4px;overflow:hidden;">'
-                            f'<div style="width:{_bar_pct_ov}%;height:100%;background:{_cr_ov["color"]};border-radius:4px;"></div></div></div>'
-                            f'<div style="font-size:0.71rem;font-weight:800;color:#0B1F3A;text-align:right;">{_cr_ov["avg"]}%</div>'
-                            f'<div style="text-align:right;"><span style="font-size:0.6rem;font-weight:700;color:#fff;background:{_cr_ov["color"]};border-radius:10px;padding:2px 8px;">{_cr_ov["level"]}</span></div>'
-                            f'</div>'
-                        )
-                    st.markdown(
-                        f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:12px;padding:14px 18px;margin-bottom:1rem;">'
-                        f'<div style="font-size:0.68rem;color:#475569;margin-bottom:10px;line-height:1.5;">'
-                        f'Low σ = calibrated scoring. High σ = auditor interpretation varies — flag for calibration sessions.</div>'
-                        f'{_cons_html_ov}</div>',
-                        unsafe_allow_html=True
-                    )
-
             # ── Build & Send One-Pager Email ──────────────────────────────────
             st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
             st.markdown('<div class="section-chip">📧 Build One-Pager Email</div>', unsafe_allow_html=True)
@@ -8613,14 +8573,14 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                 em_best5     = st.session_state.get("em_best5", True)
                 em_worst5    = st.session_state.get("em_worst5", True)
                 em_camp      = st.session_state.get("em_camp", True)
-                em_qa_tbl    = st.session_state.get("em_qa_tbl", True)
+                em_qa_tbl    = False  # QA team metrics removed
                 em_params    = st.session_state.get("em_params", True)
                 em_custom_ps = st.session_state.get("em_custom_ps", True)
                 em_remarks   = st.session_state.get("em_remarks", False)
                 # Show current selection as badges
                 _sel_names = [n for n, v in [("KPIs",em_kpis),("Status",em_status),("Disposition",em_disp),
                     ("What Went Right",em_wr),("What Went Wrong",em_ww),("Best 5",em_best5),("Worst 5",em_worst5),
-                    ("Campaigns",em_camp),("QA Team",em_qa_tbl),("Parameters",em_params),
+                    ("Campaigns",em_camp),("Parameters",em_params),
                     ("Custom Params",em_custom_ps),("Remarks",em_remarks)] if v]
                 if _sel_names:
                     _badges = "".join(f'<span style="background:#EBF5FF;border:1px solid #BFDBFE;border-radius:12px;padding:2px 10px;font-size:0.62rem;font-weight:700;color:#1e40af;margin-right:4px;margin-bottom:4px;display:inline-block;">{n}</span>' for n in _sel_names)
@@ -9284,32 +9244,15 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                                 st.error(f"✗ {_f['email']}: {_f['error']}")
 
     # ══════════════════════════════════════════════════════════════════════════
-    # Tab 2 — Performance Rankings
+    # Section: Client & Campaign Rankings
     # ══════════════════════════════════════════════════════════════════════════
     with _i2:
         if not _has_qa_ins:
-            st.info("No QA schema data found.")
+            pass
         else:
+            st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
+            st.markdown('<div style="border-top:2px solid #E2EAF6;margin:8px 0 16px;"></div>', unsafe_allow_html=True)
             def _health(avg): return ("🟢 Good", "#0ebc6e") if (avg or 0) >= 80 else ("🟡 Review", "#f59e0b") if (avg or 0) >= 65 else ("🔴 Critical", "#dc2626")
-
-            # ── QA Rankings ───────────────────────────────────────────────────
-            if "QA" in _audit_df_ins.columns:
-                st.markdown('<div class="section-chip">👤 QA Leaderboard</div>', unsafe_allow_html=True)
-                _qa_rows = []
-                for _aud, _ag in _audit_df_ins.groupby("QA"):
-                    _ag_bs = pd.to_numeric(_ag["Bot Score"], errors="coerce").dropna()
-                    _ag_st = _ag["Status"].astype(str).str.strip()
-                    _ag_avg = round(_ag_bs.mean(), 1) if len(_ag_bs) else None
-                    _ag_pr  = round(int((_ag_st=="Pass").sum()) / len(_ag) * 100, 1) if len(_ag) else 0
-                    _ag_rev = int((_ag_st=="Needs Review").sum())
-                    _ag_fat = int((_ag_st=="Auto-Fail").sum())
-                    _hb, _ = _health(_ag_avg)
-                    _qa_rows.append({"QA": str(_aud), "Audits": len(_ag),
-                                     "Avg Score": f"{_ag_avg}%" if _ag_avg else "—",
-                                     "Pass Rate": f"{_ag_pr}%", "Review": _ag_rev,
-                                     "Auto-Fails": _ag_fat, "Health": _hb})
-                _qa_rows.sort(key=lambda x: float(x["Avg Score"].rstrip("%")) if x["Avg Score"] != "—" else 0, reverse=True)
-                st.dataframe(pd.DataFrame(_qa_rows), use_container_width=True, hide_index=True)
 
             # ── Client Rankings ───────────────────────────────────────────────
             if "Client" in _audit_df_ins.columns:
@@ -9352,9 +9295,13 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                 st.dataframe(pd.DataFrame(_cp_rows), use_container_width=True, hide_index=True)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # Tab 3 — Trends
+    # Section: Score Trends
     # ══════════════════════════════════════════════════════════════════════════
     with _i3:
+        if not _has_qa_ins or _audit_df_ins is None:
+            pass
+        else:
+            st.markdown('<div style="border-top:2px solid #E2EAF6;margin:8px 0 16px;"></div>', unsafe_allow_html=True)
         if not _has_qa_ins or _audit_df_ins is None:
             st.info("No QA data available.")
         else:
@@ -9761,9 +9708,11 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     st.markdown(f'<div style="background:{_pcfg[2]};border:1px solid {_pcfg[3]};border-left:4px solid {_pcfg[0]};border-radius:10px;padding:12px 15px;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;"><span>{_pcfg[1]}</span><span style="font-size:0.63rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:{_pcfg[0]};">{_act["priority"].upper()} · {_act["category"]}</span></div><div style="font-size:0.73rem;font-weight:600;color:#0d1d3a;margin-bottom:5px;line-height:1.4;">{_act["action"]}</div><div style="font-size:0.65rem;color:#5588bb;line-height:1.4;border-top:1px solid {_pcfg[0]}22;padding-top:5px;">Impact: {_act["impact"]}</div></div>', unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # Tab 4 — Parameter Analysis
+    # Section: Parameter Analysis
     # ══════════════════════════════════════════════════════════════════════════
     with _i4:
+        if _has_qa_ins:
+            st.markdown('<div style="border-top:2px solid #E2EAF6;margin:8px 0 16px;"></div>', unsafe_allow_html=True)
         if not _has_qa_ins:
             st.info("No QA schema data found.")
         else:
@@ -9821,9 +9770,11 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                 st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:14px 18px;">{_bk4_html}</div>', unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # Tab 5 — Reports (Client · Campaign · Full Log · AI)
+    # Section: Reports
     # ══════════════════════════════════════════════════════════════════════════
     with _i5:
+        if _has_qa_ins:
+            st.markdown('<div style="border-top:2px solid #E2EAF6;margin:8px 0 16px;"></div>', unsafe_allow_html=True)
         if not _has_qa_ins:
             st.info("No QA schema data found.")
         else:
@@ -10021,9 +9972,11 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                             st.rerun()
 
     # ══════════════════════════════════════════════════════════════════════════
-    # Tab 6 — Intelligence (Co-failure · Momentum · Calibration · Score Gap)
+    # Section: Score Intelligence
     # ══════════════════════════════════════════════════════════════════════════
     with _i6:
+        if _has_qa_ins and _audit_df_ins is not None:
+            st.markdown('<div style="border-top:2px solid #E2EAF6;margin:8px 0 16px;"></div>', unsafe_allow_html=True)
         if not _has_qa_ins or _audit_df_ins is None:
             st.info("No QA schema data found. Submit audits via ✍️ New Audit first.")
         else:
@@ -10129,9 +10082,11 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
 
 
     # ══════════════════════════════════════════════════════════════════════════
-    # Tab 7 — Send Report (Client selector · Preview · Email)
+    # Section: Send Report
     # ══════════════════════════════════════════════════════════════════════════
     with _i7:
+        if _has_qa_ins:
+            st.markdown('<div style="border-top:2px solid #E2EAF6;margin:8px 0 16px;"></div>', unsafe_allow_html=True)
         if not _has_qa_ins:
             st.info("No QA data found. Submit audits first.")
         else:
