@@ -10891,6 +10891,8 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         ("disposition",      "📂 Disposition"),
         ("lead_stage",       "🔥 Lead Stage"),
         ("client_health",    "🏢 Client Health"),
+        ("correlation",      "🔗 Correlation"),
+        ("heatmap",          "🌡️ Param Heatmap"),
         ("params",           "📊 Parameter Scores"),
         ("camp_div",         "↔️ Camp. Divergence"),
         ("call_insights",    "📞 Call Insights"),
@@ -10924,598 +10926,607 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
         # ── Section 2 — Status Distribution + Score Histogram ────────────────────
-        _s2l, _s2r = st.columns([55, 45])
-        with _s2l:
-            st.markdown('<div class="section-chip">📊 Status Distribution</div>', unsafe_allow_html=True)
-            _sd_cfg = [("✅ Pass", "#0ebc6e", _pass_d), ("🟡 Needs Review", "#f59e0b", _rev_d),
-                       ("❌ Fail", "#ef4444", _fail_d), ("🚨 Auto-Fail", "#dc2626", _fatal_d)]
-            _sd_html = ""
-            _sd_grads = {
-                "#0ebc6e": "linear-gradient(90deg,#059669,#34d399)",
-                "#f59e0b": "linear-gradient(90deg,#d97706,#fbbf24)",
-                "#ef4444": "linear-gradient(90deg,#dc2626,#f87171)",
-                "#dc2626": "linear-gradient(90deg,#991b1b,#dc2626)",
-            }
-            for _sn, _sc, _sv in _sd_cfg:
-                _sp = round(_sv / _total_d * 100, 1) if _total_d else 0
-                _sg = _sd_grads.get(_sc, f"linear-gradient(90deg,{_sc},{_sc})")
-                _sd_html += (
-                    f'<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">'
-                    f'<div style="width:120px;font-size:0.72rem;font-weight:700;color:#0B1F3A;flex-shrink:0;">{_sn}</div>'
-                    f'<div style="flex:1;height:18px;background:#EEF2FF;border-radius:9px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.06);">'
-                    f'<div style="width:{_sp}%;height:100%;background:{_sg};border-radius:9px;"></div></div>'
-                    f'<div style="width:64px;font-size:0.73rem;font-weight:900;color:{_sc};flex-shrink:0;text-align:right;">'
-                    f'{_sv} <span style="font-weight:600;color:#64748b;font-size:0.65rem;">({_sp}%)</span></div>'
-                    f'</div>'
-                )
-            st.markdown(
-                f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:14px;padding:20px 18px;'
-                f'box-shadow:0 4px 18px rgba(11,31,58,0.07);">{_sd_html}</div>',
-                unsafe_allow_html=True)
+        if st.session_state.get("dbsec_status_dist", True):
+            _s2l, _s2r = st.columns([55, 45])
+            with _s2l:
+                st.markdown('<div class="section-chip">📊 Status Distribution</div>', unsafe_allow_html=True)
+                _sd_cfg = [("✅ Pass", "#0ebc6e", _pass_d), ("🟡 Needs Review", "#f59e0b", _rev_d),
+                           ("❌ Fail", "#ef4444", _fail_d), ("🚨 Auto-Fail", "#dc2626", _fatal_d)]
+                _sd_html = ""
+                _sd_grads = {
+                    "#0ebc6e": "linear-gradient(90deg,#059669,#34d399)",
+                    "#f59e0b": "linear-gradient(90deg,#d97706,#fbbf24)",
+                    "#ef4444": "linear-gradient(90deg,#dc2626,#f87171)",
+                    "#dc2626": "linear-gradient(90deg,#991b1b,#dc2626)",
+                }
+                for _sn, _sc, _sv in _sd_cfg:
+                    _sp = round(_sv / _total_d * 100, 1) if _total_d else 0
+                    _sg = _sd_grads.get(_sc, f"linear-gradient(90deg,{_sc},{_sc})")
+                    _sd_html += (
+                        f'<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">'
+                        f'<div style="width:120px;font-size:0.72rem;font-weight:700;color:#0B1F3A;flex-shrink:0;">{_sn}</div>'
+                        f'<div style="flex:1;height:18px;background:#EEF2FF;border-radius:9px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.06);">'
+                        f'<div style="width:{_sp}%;height:100%;background:{_sg};border-radius:9px;"></div></div>'
+                        f'<div style="width:64px;font-size:0.73rem;font-weight:900;color:{_sc};flex-shrink:0;text-align:right;">'
+                        f'{_sv} <span style="font-weight:600;color:#64748b;font-size:0.65rem;">({_sp}%)</span></div>'
+                        f'</div>'
+                    )
+                st.markdown(
+                    f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:14px;padding:20px 18px;'
+                    f'box-shadow:0 4px 18px rgba(11,31,58,0.07);">{_sd_html}</div>',
+                    unsafe_allow_html=True)
 
-        with _s2r:
-            st.markdown('<div class="section-chip">📈 Score Distribution</div>', unsafe_allow_html=True)
-            if not _bs_d.dropna().empty:
-                try:
-                    _hist_fig = go.Figure()
-                    _hist_fig.add_trace(go.Histogram(x=_bs_d.dropna(), nbinsx=20, marker_color="#2563EB", opacity=0.8, name="Score"))
-                    _hist_fig.add_vline(x=80, line_dash="dot", line_color="#dc2626", annotation_text="80%")
-                    _hist_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        font=dict(family="Inter,sans-serif", size=11),
-                        margin=dict(l=10, r=10, t=20, b=10), height=240,
-                        showlegend=False, xaxis_title="Bot Score", yaxis_title="Count")
-                    st.plotly_chart(_hist_fig, use_container_width=True, config={"displayModeBar": False})
-                except Exception:
-                    pass
-            else:
-                st.info("No Bot Score data available.")
-
-        # ── Insight: Bot health overview ─────────────────────────────────────────
-        try:
-            _ins2 = []
-            _fatal_rt = round(_fatal_d / _total_d * 100, 1) if _total_d else 0
-            if _pr_d >= 80:
-                _ins2.append(("✅", f"Pass rate <b>{_pr_d}%</b> meets the 80% target — bot conversations are performing well."))
-            elif _pr_d >= 60:
-                _ins2.append(("⚠️", f"Pass rate <b>{_pr_d}%</b> is below the 80% target. <b>{_pass_d}</b> of <b>{_total_d}</b> audits passed."))
-            else:
-                _ins2.append(("🚨", f"Pass rate <b>{_pr_d}%</b> is critically low — bot quality needs urgent attention."))
-            if _fatal_rt >= 20:
-                _ins2.append(("🔴", f"Auto-fail rate <b>{_fatal_rt}%</b> is very high — bots frequently trigger fatal errors (flow issues, restarts)."))
-            elif _fatal_rt >= 10:
-                _ins2.append(("🟡", f"Auto-fail rate <b>{_fatal_rt}%</b> is elevated — investigate bot flow and conversation restarts."))
-            elif _fatal_d > 0:
-                _ins2.append(("🟢", f"Auto-fail rate is low at <b>{_fatal_rt}%</b> ({_fatal_d} incidents) — minor risk."))
-            else:
-                _ins2.append(("🟢", "Zero auto-fails detected — no fatal bot errors in this period."))
-            if not _bs_d.dropna().empty:
-                _score_std = round(_bs_d.dropna().std(), 1)
-                if _score_std >= 15:
-                    _ins2.append(("📊", f"High score variance (σ={_score_std}pts) — bot performance is inconsistent across conversations."))
-                elif _score_std >= 8:
-                    _ins2.append(("📊", f"Moderate score spread (σ={_score_std}pts) — some conversations score significantly lower than others."))
+            with _s2r:
+                st.markdown('<div class="section-chip">📈 Score Distribution</div>', unsafe_allow_html=True)
+                if not _bs_d.dropna().empty:
+                    try:
+                        _hist_fig = go.Figure()
+                        _hist_fig.add_trace(go.Histogram(x=_bs_d.dropna(), nbinsx=20, marker_color="#2563EB", opacity=0.8, name="Score"))
+                        _hist_fig.add_vline(x=80, line_dash="dot", line_color="#dc2626", annotation_text="80%")
+                        _hist_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                            font=dict(family="Inter,sans-serif", size=11),
+                            margin=dict(l=10, r=10, t=20, b=10), height=240,
+                            showlegend=False, xaxis_title="Bot Score", yaxis_title="Count")
+                        st.plotly_chart(_hist_fig, use_container_width=True, config={"displayModeBar": False})
+                    except Exception:
+                        pass
                 else:
-                    _ins2.append(("📊", f"Tight score distribution (σ={_score_std}pts) — bot response quality is consistent."))
-            if _rev_d > 0:
-                _ins2.append(("🔍", f"<b>{_rev_d}</b> audits ({round(_rev_d/_total_d*100,1)}%) are in 'Needs Review' — follow up to close these."))
-            _i2l, _i2r = st.columns(2)
-            with _i2l:
-                st.markdown(_insight_card(_ins2[:2]), unsafe_allow_html=True)
-            with _i2r:
-                st.markdown(_insight_card(_ins2[2:]) if len(_ins2) > 2 else "", unsafe_allow_html=True)
-        except Exception:
-            pass
+                    st.info("No Bot Score data available.")
+
+            # ── Insight: Bot health overview ─────────────────────────────────────────
+            try:
+                _ins2 = []
+                _fatal_rt = round(_fatal_d / _total_d * 100, 1) if _total_d else 0
+                if _pr_d >= 80:
+                    _ins2.append(("✅", f"Pass rate <b>{_pr_d}%</b> meets the 80% target — bot conversations are performing well."))
+                elif _pr_d >= 60:
+                    _ins2.append(("⚠️", f"Pass rate <b>{_pr_d}%</b> is below the 80% target. <b>{_pass_d}</b> of <b>{_total_d}</b> audits passed."))
+                else:
+                    _ins2.append(("🚨", f"Pass rate <b>{_pr_d}%</b> is critically low — bot quality needs urgent attention."))
+                if _fatal_rt >= 20:
+                    _ins2.append(("🔴", f"Auto-fail rate <b>{_fatal_rt}%</b> is very high — bots frequently trigger fatal errors (flow issues, restarts)."))
+                elif _fatal_rt >= 10:
+                    _ins2.append(("🟡", f"Auto-fail rate <b>{_fatal_rt}%</b> is elevated — investigate bot flow and conversation restarts."))
+                elif _fatal_d > 0:
+                    _ins2.append(("🟢", f"Auto-fail rate is low at <b>{_fatal_rt}%</b> ({_fatal_d} incidents) — minor risk."))
+                else:
+                    _ins2.append(("🟢", "Zero auto-fails detected — no fatal bot errors in this period."))
+                if not _bs_d.dropna().empty:
+                    _score_std = round(_bs_d.dropna().std(), 1)
+                    if _score_std >= 15:
+                        _ins2.append(("📊", f"High score variance (σ={_score_std}pts) — bot performance is inconsistent across conversations."))
+                    elif _score_std >= 8:
+                        _ins2.append(("📊", f"Moderate score spread (σ={_score_std}pts) — some conversations score significantly lower than others."))
+                    else:
+                        _ins2.append(("📊", f"Tight score distribution (σ={_score_std}pts) — bot response quality is consistent."))
+                if _rev_d > 0:
+                    _ins2.append(("🔍", f"<b>{_rev_d}</b> audits ({round(_rev_d/_total_d*100,1)}%) are in 'Needs Review' — follow up to close these."))
+                _i2l, _i2r = st.columns(2)
+                with _i2l:
+                    st.markdown(_insight_card(_ins2[:2]), unsafe_allow_html=True)
+                with _i2r:
+                    st.markdown(_insight_card(_ins2[2:]) if len(_ins2) > 2 else "", unsafe_allow_html=True)
+            except Exception:
+                pass
 
         # ── Section 3 — Score Trend + Fatal Rate Trend ───────────────────────────
-        if "Audit Date" in _dash_df.columns:
-            _s3ta, _s3tb = st.columns(2)
-            with _s3ta:
-                st.markdown('<div class="section-chip">📅 Score Trend Over Time</div>', unsafe_allow_html=True)
-                if "Bot Score" in _dash_df.columns:
-                    try:
-                        _tr_df = _dash_df[["Audit Date", "Bot Score"]].copy()
-                        _tr_df["Audit Date"] = pd.to_datetime(_tr_df["Audit Date"], errors="coerce")
-                        _tr_df["Bot Score"] = pd.to_numeric(_tr_df["Bot Score"], errors="coerce")
-                        _tr_df = _tr_df.dropna().sort_values("Audit Date")
-                        if not _tr_df.empty:
-                            _daily = _tr_df.groupby("Audit Date")["Bot Score"].mean().reset_index()
-                            _roll = _daily["Bot Score"].rolling(3, min_periods=1).mean()
-                            _tf = go.Figure()
-                            _tf.add_trace(go.Scatter(x=_daily["Audit Date"], y=_daily["Bot Score"],
-                                mode="lines+markers+text", line=dict(color="#93c5fd", width=1.5),
-                                marker=dict(size=5), name="Daily Avg Bot Score", opacity=0.8,
-                                text=[f"{v:.0f}%" for v in _daily["Bot Score"]],
-                                textposition="top center", textfont=dict(size=11, color="#0B1F3A")))
-                            _tf.add_trace(go.Scatter(x=_daily["Audit Date"], y=_roll,
-                                mode="lines", line=dict(color="#2563EB", width=2.5),
-                                name="3-Period Moving Average"))
-                            _tf.add_hline(y=80, line_dash="dot", line_color="#dc2626",
-                                annotation_text="Target: 80%", annotation_position="bottom right",
-                                annotation_font=dict(size=10, color="#dc2626"))
-                            _tf.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+        if st.session_state.get("dbsec_score_trend", True):
+            if "Audit Date" in _dash_df.columns:
+                _s3ta, _s3tb = st.columns(2)
+                with _s3ta:
+                    st.markdown('<div class="section-chip">📅 Score Trend Over Time</div>', unsafe_allow_html=True)
+                    if "Bot Score" in _dash_df.columns:
+                        try:
+                            _tr_df = _dash_df[["Audit Date", "Bot Score"]].copy()
+                            _tr_df["Audit Date"] = pd.to_datetime(_tr_df["Audit Date"], errors="coerce")
+                            _tr_df["Bot Score"] = pd.to_numeric(_tr_df["Bot Score"], errors="coerce")
+                            _tr_df = _tr_df.dropna().sort_values("Audit Date")
+                            if not _tr_df.empty:
+                                _daily = _tr_df.groupby("Audit Date")["Bot Score"].mean().reset_index()
+                                _roll = _daily["Bot Score"].rolling(3, min_periods=1).mean()
+                                _tf = go.Figure()
+                                _tf.add_trace(go.Scatter(x=_daily["Audit Date"], y=_daily["Bot Score"],
+                                    mode="lines+markers+text", line=dict(color="#93c5fd", width=1.5),
+                                    marker=dict(size=5), name="Daily Avg Bot Score", opacity=0.8,
+                                    text=[f"{v:.0f}%" for v in _daily["Bot Score"]],
+                                    textposition="top center", textfont=dict(size=11, color="#0B1F3A")))
+                                _tf.add_trace(go.Scatter(x=_daily["Audit Date"], y=_roll,
+                                    mode="lines", line=dict(color="#2563EB", width=2.5),
+                                    name="3-Period Moving Average"))
+                                _tf.add_hline(y=80, line_dash="dot", line_color="#dc2626",
+                                    annotation_text="Target: 80%", annotation_position="bottom right",
+                                    annotation_font=dict(size=10, color="#dc2626"))
+                                _tf.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                                    font=dict(family="Inter,sans-serif", size=11),
+                                    margin=dict(l=10, r=10, t=30, b=10), height=280,
+                                    legend=dict(orientation="h", y=1.12, x=0, font=dict(size=10)),
+                                    xaxis_title="Audit Date", yaxis_title="Avg Bot Score (%)",
+                                    yaxis=dict(ticksuffix="%"))
+                                st.plotly_chart(_tf, use_container_width=True, config={"displayModeBar": False})
+                        except Exception:
+                            pass
+                with _s3tb:
+                    st.markdown('<div class="section-chip">🚨 Fatal Rate Over Time</div>', unsafe_allow_html=True)
+                    if "Status" in _dash_df.columns:
+                        try:
+                            _fat_df = _dash_df[["Audit Date", "Status"]].copy()
+                            _fat_df["Audit Date"] = pd.to_datetime(_fat_df["Audit Date"], errors="coerce")
+                            _fat_df = _fat_df.dropna(subset=["Audit Date"])
+                            _fat_df["is_fatal"] = (_fat_df["Status"].astype(str).str.strip() == "Auto-Fail").astype(int)
+                            _fat_daily = _fat_df.groupby("Audit Date").agg(
+                                total=("is_fatal", "count"), fatals=("is_fatal", "sum")
+                            ).reset_index()
+                            _fat_daily["fatal_rate"] = round(_fat_daily["fatals"] / _fat_daily["total"] * 100, 1)
+                            _ff = go.Figure()
+                            _ff.add_trace(go.Bar(x=_fat_daily["Audit Date"], y=_fat_daily["fatals"],
+                                marker_color="#dc2626", name="Auto-Fails", opacity=0.7))
+                            _ff.add_trace(go.Scatter(x=_fat_daily["Audit Date"], y=_fat_daily["fatal_rate"],
+                                mode="lines+markers", line=dict(color="#7c3aed", width=2),
+                                marker=dict(size=5), name="Fatal Rate %", yaxis="y2"))
+                            _ff.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
                                 font=dict(family="Inter,sans-serif", size=11),
-                                margin=dict(l=10, r=10, t=30, b=10), height=280,
+                                margin=dict(l=10, r=10, t=20, b=10), height=260,
                                 legend=dict(orientation="h", y=1.12, x=0, font=dict(size=10)),
-                                xaxis_title="Audit Date", yaxis_title="Avg Bot Score (%)",
-                                yaxis=dict(ticksuffix="%"))
-                            st.plotly_chart(_tf, use_container_width=True, config={"displayModeBar": False})
-                    except Exception:
-                        pass
-            with _s3tb:
-                st.markdown('<div class="section-chip">🚨 Fatal Rate Over Time</div>', unsafe_allow_html=True)
-                if "Status" in _dash_df.columns:
-                    try:
-                        _fat_df = _dash_df[["Audit Date", "Status"]].copy()
-                        _fat_df["Audit Date"] = pd.to_datetime(_fat_df["Audit Date"], errors="coerce")
-                        _fat_df = _fat_df.dropna(subset=["Audit Date"])
-                        _fat_df["is_fatal"] = (_fat_df["Status"].astype(str).str.strip() == "Auto-Fail").astype(int)
-                        _fat_daily = _fat_df.groupby("Audit Date").agg(
-                            total=("is_fatal", "count"), fatals=("is_fatal", "sum")
-                        ).reset_index()
-                        _fat_daily["fatal_rate"] = round(_fat_daily["fatals"] / _fat_daily["total"] * 100, 1)
-                        _ff = go.Figure()
-                        _ff.add_trace(go.Bar(x=_fat_daily["Audit Date"], y=_fat_daily["fatals"],
-                            marker_color="#dc2626", name="Auto-Fails", opacity=0.7))
-                        _ff.add_trace(go.Scatter(x=_fat_daily["Audit Date"], y=_fat_daily["fatal_rate"],
-                            mode="lines+markers", line=dict(color="#7c3aed", width=2),
-                            marker=dict(size=5), name="Fatal Rate %", yaxis="y2"))
-                        _ff.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                            font=dict(family="Inter,sans-serif", size=11),
-                            margin=dict(l=10, r=10, t=20, b=10), height=260,
-                            legend=dict(orientation="h", y=1.12, x=0, font=dict(size=10)),
-                            yaxis=dict(title="Auto-Fail Count"),
-                            yaxis2=dict(title="Fatal Rate %", overlaying="y", side="right"))
-                        st.plotly_chart(_ff, use_container_width=True, config={"displayModeBar": False})
-                    except Exception:
-                        pass
+                                yaxis=dict(title="Auto-Fail Count"),
+                                yaxis2=dict(title="Fatal Rate %", overlaying="y", side="right"))
+                            st.plotly_chart(_ff, use_container_width=True, config={"displayModeBar": False})
+                        except Exception:
+                            pass
 
-        # ── Insight: Score trajectory ─────────────────────────────────────────────
-        try:
-            _ins3 = []
-            if "Bot Score" in _dash_df.columns and "Audit Date" in _dash_df.columns:
-                _tr2 = _dash_df[["Audit Date","Bot Score"]].copy()
-                _tr2["Audit Date"] = pd.to_datetime(_tr2["Audit Date"], errors="coerce")
-                _tr2["Bot Score"] = pd.to_numeric(_tr2["Bot Score"], errors="coerce")
-                _tr2 = _tr2.dropna().sort_values("Audit Date")
-                if len(_tr2) >= 4:
-                    _half = len(_tr2) // 2
-                    _early = round(_tr2.iloc[:_half]["Bot Score"].mean(), 1)
-                    _recent = round(_tr2.iloc[_half:]["Bot Score"].mean(), 1)
-                    _trnd = round(_recent - _early, 1)
-                    if _trnd >= 3:
-                        _ins3.append(("📈", f"Bot scores are <b>improving</b> — recent avg <b>{_recent}%</b> vs earlier <b>{_early}%</b> (<b>+{_trnd}pts</b>)."))
-                    elif _trnd <= -3:
-                        _ins3.append(("📉", f"Bot scores are <b>declining</b> — recent avg <b>{_recent}%</b> vs earlier <b>{_early}%</b> (<b>{_trnd}pts</b>). Investigate recent flows."))
-                    else:
-                        _ins3.append(("➡️", f"Bot scores are <b>stable</b> — recent avg <b>{_recent}%</b> vs earlier <b>{_early}%</b> (change: {_trnd:+.1f}pts)."))
-                    _peak = round(_tr2["Bot Score"].max(), 1)
-                    _low  = round(_tr2["Bot Score"].min(), 1)
-                    _ins3.append(("🎯", f"Score range: peak <b>{_peak}%</b>, low <b>{_low}%</b> — a spread of <b>{round(_peak-_low,1)}pts</b> across audits."))
-            if "Status" in _dash_df.columns and "Audit Date" in _dash_df.columns:
-                _fat2 = _dash_df[_dash_df["Status"].astype(str).str.strip() == "Auto-Fail"]
-                if len(_fat2) > 0 and "Audit Date" in _fat2.columns:
-                    _fat2_d = pd.to_datetime(_fat2["Audit Date"], errors="coerce").dropna()
-                    if not _fat2_d.empty:
-                        _last_fatal = _fat2_d.max().strftime("%d %b %Y")
-                        _ins3.append(("🚨", f"Last auto-fail recorded on <b>{_last_fatal}</b> — verify if recent bot deployments triggered this."))
-            if _ins3:
-                st.markdown(_insight_card(_ins3), unsafe_allow_html=True)
-        except Exception:
-            pass
+            # ── Insight: Score trajectory ─────────────────────────────────────────────
+            try:
+                _ins3 = []
+                if "Bot Score" in _dash_df.columns and "Audit Date" in _dash_df.columns:
+                    _tr2 = _dash_df[["Audit Date","Bot Score"]].copy()
+                    _tr2["Audit Date"] = pd.to_datetime(_tr2["Audit Date"], errors="coerce")
+                    _tr2["Bot Score"] = pd.to_numeric(_tr2["Bot Score"], errors="coerce")
+                    _tr2 = _tr2.dropna().sort_values("Audit Date")
+                    if len(_tr2) >= 4:
+                        _half = len(_tr2) // 2
+                        _early = round(_tr2.iloc[:_half]["Bot Score"].mean(), 1)
+                        _recent = round(_tr2.iloc[_half:]["Bot Score"].mean(), 1)
+                        _trnd = round(_recent - _early, 1)
+                        if _trnd >= 3:
+                            _ins3.append(("📈", f"Bot scores are <b>improving</b> — recent avg <b>{_recent}%</b> vs earlier <b>{_early}%</b> (<b>+{_trnd}pts</b>)."))
+                        elif _trnd <= -3:
+                            _ins3.append(("📉", f"Bot scores are <b>declining</b> — recent avg <b>{_recent}%</b> vs earlier <b>{_early}%</b> (<b>{_trnd}pts</b>). Investigate recent flows."))
+                        else:
+                            _ins3.append(("➡️", f"Bot scores are <b>stable</b> — recent avg <b>{_recent}%</b> vs earlier <b>{_early}%</b> (change: {_trnd:+.1f}pts)."))
+                        _peak = round(_tr2["Bot Score"].max(), 1)
+                        _low  = round(_tr2["Bot Score"].min(), 1)
+                        _ins3.append(("🎯", f"Score range: peak <b>{_peak}%</b>, low <b>{_low}%</b> — a spread of <b>{round(_peak-_low,1)}pts</b> across audits."))
+                if "Status" in _dash_df.columns and "Audit Date" in _dash_df.columns:
+                    _fat2 = _dash_df[_dash_df["Status"].astype(str).str.strip() == "Auto-Fail"]
+                    if len(_fat2) > 0 and "Audit Date" in _fat2.columns:
+                        _fat2_d = pd.to_datetime(_fat2["Audit Date"], errors="coerce").dropna()
+                        if not _fat2_d.empty:
+                            _last_fatal = _fat2_d.max().strftime("%d %b %Y")
+                            _ins3.append(("🚨", f"Last auto-fail recorded on <b>{_last_fatal}</b> — verify if recent bot deployments triggered this."))
+                if _ins3:
+                    st.markdown(_insight_card(_ins3), unsafe_allow_html=True)
+            except Exception:
+                pass
 
         # ── Section 4 — Campaign Rankings ────────────────────────────────────────
-        with st.container():
-            st.markdown('<div class="section-chip">🎯 Campaign Rankings</div>', unsafe_allow_html=True)
-            if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-                _cr_rows = []
-                for _cn, _cg in _dash_df.groupby("Campaign Name"):
-                    _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
-                    _c_st = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
-                    _cr_rows.append({
-                        "Campaign": str(_cn),
-                        "Audits": len(_cg),
-                        "Avg Score": round(_c_bs.mean(), 1) if not _c_bs.empty else 0,
-                        "Pass Rate": f"{round(int((_c_st=='Pass').sum())/len(_cg)*100,1) if len(_cg) else 0}%",
-                        "Auto-Fails": int((_c_st == "Auto-Fail").sum()),
-                    })
-                _cr_rows.sort(key=lambda x: -x["Avg Score"])
-                _cr_html = '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">'
-                _cr_html += ('<tr style="background:linear-gradient(135deg,#0B1F3A,#1e3a8a);">'
-                             + "".join(f'<th style="padding:9px 10px;text-align:left;color:rgba(255,255,255,0.85);font-weight:700;font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;">{h}</th>' for h in ["Campaign", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"])
-                             + "</tr>")
-                for _cri, _r in enumerate(_cr_rows):
-                    _rb = "#f8faff" if _cri % 2 == 0 else "#fff"
-                    _cr_html += (f'<tr style="background:{_rb};">'
-                                 f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Campaign"]}</td>'
-                                 f'<td style="padding:8px 10px;font-weight:900;color:#1e40af;font-size:0.82rem;">{_r["Audits"]}</td>'
-                                 f'<td style="padding:8px 10px;font-weight:900;color:#059669;font-size:0.82rem;">{_r["Avg Score"]}</td>'
-                                 f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td>'
-                                 f'<td style="padding:8px 10px;font-weight:900;color:#dc2626;font-size:0.82rem;">{_r["Auto-Fails"]}</td>'
-                                 f'</tr>')
-                _cr_html += "</table>"
-                st.markdown(f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(11,31,58,0.07);">{_cr_html}</div>', unsafe_allow_html=True)
-            else:
-                st.info("No Campaign Name/Bot Score columns available.")
+        if st.session_state.get("dbsec_campaign_lb", True):
+            with st.container():
+                st.markdown('<div class="section-chip">🎯 Campaign Rankings</div>', unsafe_allow_html=True)
+                if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+                    _cr_rows = []
+                    for _cn, _cg in _dash_df.groupby("Campaign Name"):
+                        _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                        _c_st = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
+                        _cr_rows.append({
+                            "Campaign": str(_cn),
+                            "Audits": len(_cg),
+                            "Avg Score": round(_c_bs.mean(), 1) if not _c_bs.empty else 0,
+                            "Pass Rate": f"{round(int((_c_st=='Pass').sum())/len(_cg)*100,1) if len(_cg) else 0}%",
+                            "Auto-Fails": int((_c_st == "Auto-Fail").sum()),
+                        })
+                    _cr_rows.sort(key=lambda x: -x["Avg Score"])
+                    _cr_html = '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">'
+                    _cr_html += ('<tr style="background:linear-gradient(135deg,#0B1F3A,#1e3a8a);">'
+                                 + "".join(f'<th style="padding:9px 10px;text-align:left;color:rgba(255,255,255,0.85);font-weight:700;font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;">{h}</th>' for h in ["Campaign", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"])
+                                 + "</tr>")
+                    for _cri, _r in enumerate(_cr_rows):
+                        _rb = "#f8faff" if _cri % 2 == 0 else "#fff"
+                        _cr_html += (f'<tr style="background:{_rb};">'
+                                     f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Campaign"]}</td>'
+                                     f'<td style="padding:8px 10px;font-weight:900;color:#1e40af;font-size:0.82rem;">{_r["Audits"]}</td>'
+                                     f'<td style="padding:8px 10px;font-weight:900;color:#059669;font-size:0.82rem;">{_r["Avg Score"]}</td>'
+                                     f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td>'
+                                     f'<td style="padding:8px 10px;font-weight:900;color:#dc2626;font-size:0.82rem;">{_r["Auto-Fails"]}</td>'
+                                     f'</tr>')
+                    _cr_html += "</table>"
+                    st.markdown(f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(11,31,58,0.07);">{_cr_html}</div>', unsafe_allow_html=True)
+                else:
+                    st.info("No Campaign Name/Bot Score columns available.")
 
-        # ── Insight: Campaign bot performance ────────────────────────────────────
-        try:
-            if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-                _camp_scores = []
-                for _cn2, _cg2 in _dash_df.groupby("Campaign Name"):
-                    _cbs2 = pd.to_numeric(_cg2["Bot Score"], errors="coerce").dropna()
-                    if not _cbs2.empty:
-                        _camp_scores.append({"name": str(_cn2), "avg": round(_cbs2.mean(),1), "n": len(_cbs2)})
-                if _camp_scores:
-                    _camp_scores.sort(key=lambda x: -x["avg"])
-                    _ins4 = []
-                    _best_c = _camp_scores[0]
-                    _worst_c = _camp_scores[-1]
-                    _at_risk_c = [c for c in _camp_scores if c["avg"] < 60]
-                    _passing_c = [c for c in _camp_scores if c["avg"] >= 80]
-                    _ins4.append(("🏆", f"Best bot performance: <b>{_best_c['name']}</b> at <b>{_best_c['avg']}%</b> avg score ({_best_c['n']} audits)."))
-                    if len(_camp_scores) > 1:
-                        _ins4.append(("⚠️", f"Lowest scoring campaign: <b>{_worst_c['name']}</b> at <b>{_worst_c['avg']}%</b> — bot needs attention here."))
-                    _ins4.append(("📋", f"<b>{len(_passing_c)}</b> of <b>{len(_camp_scores)}</b> campaigns meeting the 80% target. " + (f"<b>{len(_at_risk_c)}</b> campaign(s) critically below 60%." if _at_risk_c else "No campaigns critically at risk.")))
-                    st.markdown(_insight_card(_ins4), unsafe_allow_html=True)
-        except Exception:
-            pass
+            # ── Insight: Campaign bot performance ────────────────────────────────────
+            try:
+                if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+                    _camp_scores = []
+                    for _cn2, _cg2 in _dash_df.groupby("Campaign Name"):
+                        _cbs2 = pd.to_numeric(_cg2["Bot Score"], errors="coerce").dropna()
+                        if not _cbs2.empty:
+                            _camp_scores.append({"name": str(_cn2), "avg": round(_cbs2.mean(),1), "n": len(_cbs2)})
+                    if _camp_scores:
+                        _camp_scores.sort(key=lambda x: -x["avg"])
+                        _ins4 = []
+                        _best_c = _camp_scores[0]
+                        _worst_c = _camp_scores[-1]
+                        _at_risk_c = [c for c in _camp_scores if c["avg"] < 60]
+                        _passing_c = [c for c in _camp_scores if c["avg"] >= 80]
+                        _ins4.append(("🏆", f"Best bot performance: <b>{_best_c['name']}</b> at <b>{_best_c['avg']}%</b> avg score ({_best_c['n']} audits)."))
+                        if len(_camp_scores) > 1:
+                            _ins4.append(("⚠️", f"Lowest scoring campaign: <b>{_worst_c['name']}</b> at <b>{_worst_c['avg']}%</b> — bot needs attention here."))
+                        _ins4.append(("📋", f"<b>{len(_passing_c)}</b> of <b>{len(_camp_scores)}</b> campaigns meeting the 80% target. " + (f"<b>{len(_at_risk_c)}</b> campaign(s) critically below 60%." if _at_risk_c else "No campaigns critically at risk.")))
+                        st.markdown(_insight_card(_ins4), unsafe_allow_html=True)
+            except Exception:
+                pass
 
         # ── Section 5 — Tier Breakdown ────────────────────────────────────────────
-        with st.container():
-            st.markdown('<div class="section-chip">🏗️ Tier Breakdown (Avg %)</div>', unsafe_allow_html=True)
-            try:
-                _tier_rows = []
-                for _t in _QA_SCHEMA.get("tiers", []):
-                    _tscores = []
-                    for _p in _t.get("params", []):
-                        if _p["col"] not in _dash_df.columns:
-                            continue
-                        _pmx = [int(o) for o in _p.get("options", []) if str(o).lstrip("-").isdigit()]
-                        _pmax = max(_pmx) if _pmx else 2
-                        _pv = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
-                            {"NA": "", "nan": "", "Fatal": "", "Yes": "0", "No": "2"}), errors="coerce").dropna()
-                        if len(_pv) > 0:
-                            _tscores.append(_pv.mean() / _pmax * 100)
-                    if _tscores:
-                        _tier_rows.append({
-                            "label": _t["label"].split("·")[1].strip() if "·" in _t["label"] else _t["label"],
-                            "pct": round(sum(_tscores) / len(_tscores), 1),
-                            "weight": _t.get("weight_pct", 0),
-                            "color": _t.get("color", "#2563EB"),
-                        })
-                if _tier_rows:
-                    _tb_fig = go.Figure()
-                    _tb_fig.add_trace(go.Bar(
-                        y=[r["label"] for r in _tier_rows],
-                        x=[r["pct"] for r in _tier_rows],
-                        orientation="h",
-                        marker_color=[r["color"] for r in _tier_rows],
-                        # Full label on bar: "CRITICAL  83.5%  (63% weight)"
-                        text=[f'{r["label"]}  ·  {r["pct"]}%  (weight: {r["weight"]}%)' for r in _tier_rows],
-                        textposition="inside",
-                        insidetextanchor="start",
-                        textfont=dict(color="#fff", size=11),
-                    ))
-                    _tb_fig.add_vline(x=80, line_dash="dot", line_color="#6b7280",
-                        annotation_text="Target 80%", annotation_position="top right",
-                        annotation_font=dict(size=10, color="#6b7280"))
-                    _tb_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        font=dict(family="Inter,sans-serif", size=12),
-                        margin=dict(l=10, r=10, t=30, b=10), height=200,
-                        showlegend=False, xaxis_title="Avg Score %", xaxis_range=[0, 110],
-                        yaxis=dict(tickfont=dict(size=12)))
-                    st.plotly_chart(_tb_fig, use_container_width=True, config={"displayModeBar": False})
-            except Exception:
-                pass
-
-        # ── Insight: Tier scoring analysis ───────────────────────────────────────
-        try:
-            _tier_scores_ins = []
-            for _t in _QA_SCHEMA.get("tiers", []):
-                _tsc = []
-                for _p in _t.get("params", []):
-                    if _p["col"] not in _dash_df.columns: continue
-                    _pmx2 = [int(o) for o in _p.get("options",[]) if str(o).lstrip("-").isdigit()]
-                    _pmax2 = max(_pmx2) if _pmx2 else 2
-                    _pv2 = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
-                        {"NA":"","nan":"","Fatal":"","Yes":"0","No":str(_pmax2)}), errors="coerce").dropna()
-                    if len(_pv2) > 0:
-                        _tsc.append(_pv2.mean()/_pmax2*100)
-                if _tsc:
-                    _tlbl = _t["label"].split("·")[1].strip() if "·" in _t["label"] else _t["label"]
-                    _tier_scores_ins.append({"label": _tlbl, "pct": round(sum(_tsc)/len(_tsc),1), "weight": _t.get("weight_pct",0)})
-            if _tier_scores_ins:
-                _ts_sorted = sorted(_tier_scores_ins, key=lambda x: x["pct"])
-                _weakest_t = _ts_sorted[0]
-                _strongest_t = _ts_sorted[-1]
-                _ins5 = []
-                _ins5.append(("🔴" if _weakest_t["pct"] < 60 else "🟡" if _weakest_t["pct"] < 80 else "🟢",
-                    f"Weakest tier: <b>{_weakest_t['label']}</b> at <b>{_weakest_t['pct']}%</b> "
-                    f"(carries <b>{_weakest_t['weight']}%</b> of the final score — high impact on overall bot rating)."))
-                _ins5.append(("💪", f"Strongest tier: <b>{_strongest_t['label']}</b> at <b>{_strongest_t['pct']}%</b> — bot excels here."))
-                _gap = round(_strongest_t["pct"] - _weakest_t["pct"], 1)
-                if _gap >= 15:
-                    _ins5.append(("📐", f"Large tier gap of <b>{_gap}pts</b> — bot performance is uneven across quality dimensions."))
-                else:
-                    _ins5.append(("📐", f"Tier gap of <b>{_gap}pts</b> — relatively balanced performance across quality dimensions."))
-                st.markdown(_insight_card(_ins5), unsafe_allow_html=True)
-        except Exception:
-            pass
-
-        # ── Section 6 — Disposition Breakdown + Lead Stage Analysis ─────────────
-        _s6a, _s6b = st.columns(2)
-        with _s6a:
-            st.markdown('<div class="section-chip">📂 Disposition Breakdown</div>', unsafe_allow_html=True)
-            _disp_col = next((c for c in ["Disposition", "Correct Disposition", "Correct Disposition (Expected)"] if c in _dash_df.columns), None)
-            if _disp_col:
+        if st.session_state.get("dbsec_tier_breakdown", True):
+            with st.container():
+                st.markdown('<div class="section-chip">🏗️ Tier Breakdown (Avg %)</div>', unsafe_allow_html=True)
                 try:
-                    _disp_counts = _dash_df[_disp_col].astype(str).str.strip().value_counts()
-                    _disp_counts = _disp_counts[_disp_counts.index != "nan"][:10]
-                    _disp_pct = (_disp_counts / _disp_counts.sum() * 100).round(1)
-                    _disp_colors = ["#2563EB", "#0891b2", "#059669", "#d97706", "#dc2626",
-                                    "#7c3aed", "#db2777", "#0d9488", "#b45309", "#374151"]
-                    _dsp_fig = go.Figure()
-                    _dsp_fig.add_trace(go.Bar(
-                        x=list(_disp_counts.values),
-                        y=list(_disp_counts.index),
-                        orientation="h",
-                        marker_color=_disp_colors[:len(_disp_counts)],
-                        # Label: "Disposition Name: N calls (X%)"
-                        text=[f"{n}  ({p}%)" for n, p in zip(_disp_counts.values, _disp_pct.values)],
-                        textposition="outside",
-                        cliponaxis=False,
-                    ))
-                    _dsp_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        font=dict(family="Inter,sans-serif", size=11),
-                        margin=dict(l=10, r=90, t=20, b=10), height=max(200, len(_disp_counts)*32+60),
-                        showlegend=False, xaxis_title="Number of Calls",
-                        yaxis=dict(tickfont=dict(size=11, color="#0B1F3A")))
-                    st.plotly_chart(_dsp_fig, use_container_width=True, config={"displayModeBar": False})
-                except Exception:
-                    pass
-            else:
-                st.info("No Disposition column found.")
-
-        with _s6b:
-            st.markdown('<div class="section-chip">🔥 Lead Stage Breakdown</div>', unsafe_allow_html=True)
-            if "Lead Stage" in _dash_df.columns:
-                try:
-                    _ls_counts = _dash_df["Lead Stage"].astype(str).str.strip().value_counts()
-                    _ls_counts = _ls_counts[_ls_counts.index != "nan"]
-                    _LS_COLORS = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB",
-                                  "Not Interested": "#6b7280", "RNR": "#7c3aed"}
-                    _ls_colors = [_LS_COLORS.get(k, "#94a3b8") for k in _ls_counts.index]
-                    # Show as horizontal bar so labels are always readable in email screenshots
-                    _ls_pct = (_ls_counts / _ls_counts.sum() * 100).round(1)
-                    _ls_fig = go.Figure()
-                    _ls_fig.add_trace(go.Bar(
-                        y=list(_ls_counts.index),
-                        x=list(_ls_counts.values),
-                        orientation="h",
-                        marker_color=_ls_colors,
-                        # Full annotation: "Hot: 12 calls (45%)"
-                        text=[f"{k}: {v} calls ({p}%)" for k, v, p in zip(_ls_counts.index, _ls_counts.values, _ls_pct.values)],
-                        textposition="outside",
-                        cliponaxis=False,
-                    ))
-                    _ls_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        font=dict(family="Inter,sans-serif", size=11),
-                        margin=dict(l=10, r=140, t=20, b=10), height=max(200, len(_ls_counts)*38+60),
-                        showlegend=False, xaxis_title="Number of Calls",
-                        yaxis=dict(tickfont=dict(size=12, color="#0B1F3A", family="Inter,sans-serif")))
-                    st.plotly_chart(_ls_fig, use_container_width=True, config={"displayModeBar": False})
-                except Exception:
-                    pass
-            else:
-                st.info("No Lead Stage column found.")
-
-        # ── Section 7 — Client Health Matrix ─────────────────────────────────────
-        if "Client" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-            st.markdown('<div class="section-chip">🏢 Client Health Matrix</div>', unsafe_allow_html=True)
-            try:
-                _ch_rows = []
-                for _cn, _cg in _dash_df.groupby("Client"):
-                    _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
-                    _c_st = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
-                    _c_camps = _cg["Campaign Name"].nunique() if "Campaign Name" in _cg.columns else 0
-                    _c_avg = round(_c_bs.mean(), 1) if not _c_bs.empty else 0
-                    _c_pr = round(int((_c_st == "Pass").sum()) / len(_cg) * 100, 1) if len(_cg) else 0
-                    _c_fatal = int((_c_st == "Auto-Fail").sum())
-                    _c_health = "🟢 Healthy" if _c_avg >= 80 and _c_pr >= 75 else "🟡 Monitor" if _c_avg >= 65 or _c_pr >= 55 else "🔴 At Risk"
-                    _ch_rows.append({"Client": str(_cn), "Audits": len(_cg), "Campaigns": _c_camps,
-                                      "Avg Score": _c_avg, "Pass Rate": f"{_c_pr}%",
-                                      "Auto-Fails": _c_fatal, "Health": _c_health})
-                _ch_rows.sort(key=lambda x: -x["Avg Score"])
-                _chm_html = '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">'
-                _chm_html += ('<tr style="background:linear-gradient(135deg,#0B1F3A,#1e3a8a);">'
-                              + "".join(f'<th style="padding:9px 10px;text-align:left;color:rgba(255,255,255,0.85);font-weight:700;font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;">{h}</th>' for h in ["Client", "Audits", "Campaigns", "Avg Score", "Pass Rate", "Auto-Fails", "Health"])
-                              + "</tr>")
-                for _r in _ch_rows:
-                    _row_bg = "#f0fdf4" if "Healthy" in _r["Health"] else "#fffbeb" if "Monitor" in _r["Health"] else "#fef2f2"
-                    _chm_html += (f'<tr style="background:{_row_bg};">'
-                                  f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Client"]}</td>'
-                                  f'<td style="padding:8px 10px;font-weight:900;color:#1e40af;font-size:0.82rem;">{_r["Audits"]}</td>'
-                                  f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Campaigns"]}</td>'
-                                  f'<td style="padding:8px 10px;font-weight:900;color:#059669;font-size:0.82rem;">{_r["Avg Score"]}</td>'
-                                  f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td>'
-                                  f'<td style="padding:8px 10px;font-weight:900;color:#dc2626;font-size:0.82rem;">{_r["Auto-Fails"]}</td>'
-                                  f'<td style="padding:8px 10px;font-weight:700;">{_r["Health"]}</td>'
-                                  f'</tr>')
-                _chm_html += "</table>"
-                st.markdown(f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(11,31,58,0.07);">{_chm_html}</div>', unsafe_allow_html=True)
-            except Exception:
-                pass
-
-        # ── Insight: Client bot risk ──────────────────────────────────────────────
-        try:
-            if "Client" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-                _cl_ins = []
-                _cl_healthy, _cl_monitor, _cl_risk = [], [], []
-                for _cn3, _cg3 in _dash_df.groupby("Client"):
-                    _cbs3 = pd.to_numeric(_cg3["Bot Score"], errors="coerce").dropna()
-                    _cst3 = _cg3["Status"].astype(str).str.strip() if "Status" in _cg3.columns else pd.Series([])
-                    if _cbs3.empty: continue
-                    _cavg3 = _cbs3.mean()
-                    _cpr3  = int((_cst3=="Pass").sum())/len(_cg3)*100 if len(_cg3) else 0
-                    if _cavg3 >= 80 and _cpr3 >= 75: _cl_healthy.append(str(_cn3))
-                    elif _cavg3 >= 65 or _cpr3 >= 55: _cl_monitor.append(str(_cn3))
-                    else: _cl_risk.append(str(_cn3))
-                if _cl_risk:
-                    _cl_ins.append(("🔴", f"<b>{len(_cl_risk)}</b> client(s) at risk — bot performance below threshold: {', '.join(_cl_risk[:3])}."))
-                if _cl_monitor:
-                    _cl_ins.append(("🟡", f"<b>{len(_cl_monitor)}</b> client(s) need monitoring — bot scores in the 65–79% range."))
-                if _cl_healthy:
-                    _cl_ins.append(("🟢", f"<b>{len(_cl_healthy)}</b> client(s) with healthy bot performance (≥80% score, ≥75% pass rate)."))
-                _total_clients = len(_cl_healthy) + len(_cl_monitor) + len(_cl_risk)
-                if _total_clients > 0:
-                    _health_pct = round(len(_cl_healthy)/_total_clients*100)
-                    _cl_ins.append(("📊", f"Overall client portfolio health: <b>{_health_pct}%</b> of clients in good standing."))
-                if _cl_ins:
-                    st.markdown(_insight_card(_cl_ins), unsafe_allow_html=True)
-        except Exception:
-            pass
-
-        # ── Section 8 — Lead Score vs Bot Score Correlation ──────────────────────
-        _has_lead = "Lead Score" in _dash_df.columns
-        _has_ls = "Lead Stage" in _dash_df.columns
-        if _has_lead and "Bot Score" in _dash_df.columns:
-            st.markdown('<div class="section-chip">🔗 Lead Score vs Bot Score Correlation</div>', unsafe_allow_html=True)
-            try:
-                _corr_df = _dash_df[["Lead Score", "Bot Score"]].copy()
-                if _has_ls:
-                    _corr_df["Lead Stage"] = _dash_df["Lead Stage"].astype(str).str.strip()
-                _corr_df["Lead Score"] = pd.to_numeric(_corr_df["Lead Score"], errors="coerce")
-                _corr_df["Bot Score"] = pd.to_numeric(_corr_df["Bot Score"], errors="coerce")
-                _corr_df = _corr_df.dropna(subset=["Lead Score", "Bot Score"])
-                if len(_corr_df) >= 3:
-                    _LS_COLORS2 = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB",
-                                   "Not Interested": "#6b7280", "RNR": "#7c3aed"}
-                    _sc_fig = go.Figure()
-                    if _has_ls:
-                        for _ls_v in _corr_df["Lead Stage"].unique():
-                            _sub = _corr_df[_corr_df["Lead Stage"] == _ls_v]
-                            _sc_fig.add_trace(go.Scatter(
-                                x=_sub["Bot Score"], y=_sub["Lead Score"],
-                                mode="markers", name=str(_ls_v),
-                                marker=dict(size=8, color=_LS_COLORS2.get(_ls_v, "#94a3b8"), opacity=0.75)))
-                    else:
-                        _sc_fig.add_trace(go.Scatter(
-                            x=_corr_df["Bot Score"], y=_corr_df["Lead Score"],
-                            mode="markers", marker=dict(size=8, color="#2563EB", opacity=0.7), name="Audit"))
-                    _sc_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        font=dict(family="Inter,sans-serif", size=11),
-                        margin=dict(l=10, r=10, t=20, b=10), height=300,
-                        xaxis_title="Bot Score", yaxis_title="Lead Score",
-                        legend=dict(orientation="h", y=1.1, x=0))
-                    st.plotly_chart(_sc_fig, use_container_width=True, config={"displayModeBar": False})
-                    _corr_val = round(_corr_df["Bot Score"].corr(_corr_df["Lead Score"]), 3)
-                    _corr_interp = "strong positive" if _corr_val > 0.5 else "moderate positive" if _corr_val > 0.2 else "weak/none" if abs(_corr_val) <= 0.2 else "moderate negative" if _corr_val > -0.5 else "strong negative"
-                    st.markdown(f'<div style="font-size:0.70rem;color:#374151;margin-top:-8px;">Pearson r = <b>{_corr_val}</b> ({_corr_interp} correlation)</div>', unsafe_allow_html=True)
-            except Exception:
-                pass
-
-        # ── Insight: Failure pattern analysis ────────────────────────────────────
-        try:
-            _all_pc2 = [_p for _t in _QA_SCHEMA.get("tiers",[]) for _p in _t.get("params",[]) if _p["col"] in _dash_df.columns]
-            _fail_rates = {}
-            for _p in _all_pc2:
-                _pmx3 = [int(o) for o in _p.get("options",[]) if str(o).lstrip("-").isdigit()]
-                _pmax3 = max(_pmx3) if _pmx3 else 2
-                _pv3 = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
-                    {"NA":"","nan":"","Yes":"0","No":str(_pmax3),"Fatal":"0"}), errors="coerce")
-                _fail_rates[_p["col"]] = round((_pv3 < _pmax3*0.5).sum() / _total_d * 100, 1) if _total_d else 0
-            if _fail_rates:
-                _fr_sorted = sorted(_fail_rates.items(), key=lambda x: -x[1])
-                _top_fail = _fr_sorted[0]
-                _ins9 = []
-                _ins9.append(("🔴", f"Most frequently failing parameter: <b>{_top_fail[0]}</b> — fails in <b>{_top_fail[1]}%</b> of audits. Highest priority fix."))
-                _systemic = [(k,v) for k,v in _fail_rates.items() if v >= 30]
-                if len(_systemic) >= 3:
-                    _ins9.append(("⚠️", f"<b>{len(_systemic)}</b> parameters failing in 30%+ of audits — indicates systemic bot issues, not isolated incidents."))
-                elif _systemic:
-                    _ins9.append(("⚠️", f"<b>{_systemic[0][0]}</b> fails in <b>{_systemic[0][1]}%</b> of conversations — review bot logic for this parameter."))
-                _low_fail = [k for k,v in _fail_rates.items() if v <= 5]
-                if _low_fail:
-                    _ins9.append(("✅", f"<b>{len(_low_fail)}</b> parameter(s) nearly error-free (≤5% fail rate) — bot handles these well."))
-                st.markdown(_insight_card(_ins9), unsafe_allow_html=True)
-        except Exception:
-            pass
-
-        # ── Section 10 — Parameter Heatmap (QA × Param) ──────────────────────────
-        if "QA" in _dash_df.columns:
-            st.markdown('<div class="section-chip">🌡️ Parameter × QA Heatmap</div>', unsafe_allow_html=True)
-            try:
-                _hm_params = []
-                for _t in _QA_SCHEMA.get("tiers", []):
-                    for _p in _t.get("params", []):
-                        if _p["col"] in _dash_df.columns:
+                    _tier_rows = []
+                    for _t in _QA_SCHEMA.get("tiers", []):
+                        _tscores = []
+                        for _p in _t.get("params", []):
+                            if _p["col"] not in _dash_df.columns:
+                                continue
                             _pmx = [int(o) for o in _p.get("options", []) if str(o).lstrip("-").isdigit()]
                             _pmax = max(_pmx) if _pmx else 2
-                            _hm_params.append((_p["col"], _pmax))
-                _hm_qas = sorted(_dash_df["QA"].dropna().unique().tolist())
-                if len(_hm_params) >= 2 and len(_hm_qas) >= 1:
-                    _hm_z = []
-                    _hm_text = []
-                    for _qn in _hm_qas:
-                        _row_z = []
-                        _row_t = []
-                        _qg = _dash_df[_dash_df["QA"] == _qn]
-                        for _pcol, _pmax in _hm_params:
-                            _pv = pd.to_numeric(_qg[_pcol].astype(str).str.strip().replace(
-                                {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmax)}), errors="coerce").dropna()
+                            _pv = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
+                                {"NA": "", "nan": "", "Fatal": "", "Yes": "0", "No": "2"}), errors="coerce").dropna()
                             if len(_pv) > 0:
-                                _pct = round(_pv.mean() / _pmax * 100, 0)
-                                _row_z.append(_pct)
-                                _row_t.append(f"{int(_pct)}%")
-                            else:
-                                _row_z.append(None)
-                                _row_t.append("—")
-                        _hm_z.append(_row_z)
-                        _hm_text.append(_row_t)
-                    _hm_fig = go.Figure(go.Heatmap(
-                        z=_hm_z,
-                        x=[p[0] for p in _hm_params],
-                        y=_hm_qas,
-                        text=_hm_text,
-                        texttemplate="%{text}",
-                        colorscale=[[0, "#dc2626"], [0.5, "#f59e0b"], [0.7, "#34d399"], [1, "#059669"]],
-                        zmin=0, zmax=100,
-                        showscale=True,
-                        colorbar=dict(title="Score %", thickness=12, len=0.9),
-                    ))
-                    _hm_max_label = max((len(p[0]) for p in _hm_params), default=10)
-                    _hm_bottom = max(120, _hm_max_label * 5)
-                    _hm_fig.update_layout(
-                        plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        font=dict(family="Inter,sans-serif", size=10),
-                        margin=dict(l=10, r=10, t=20, b=_hm_bottom),
-                        height=max(200, len(_hm_qas) * 50 + _hm_bottom),
-                        xaxis=dict(tickangle=-45, side="bottom", automargin=True),
-                    )
-                    st.plotly_chart(_hm_fig, use_container_width=True, config={"displayModeBar": False})
+                                _tscores.append(_pv.mean() / _pmax * 100)
+                        if _tscores:
+                            _tier_rows.append({
+                                "label": _t["label"].split("·")[1].strip() if "·" in _t["label"] else _t["label"],
+                                "pct": round(sum(_tscores) / len(_tscores), 1),
+                                "weight": _t.get("weight_pct", 0),
+                                "color": _t.get("color", "#2563EB"),
+                            })
+                    if _tier_rows:
+                        _tb_fig = go.Figure()
+                        _tb_fig.add_trace(go.Bar(
+                            y=[r["label"] for r in _tier_rows],
+                            x=[r["pct"] for r in _tier_rows],
+                            orientation="h",
+                            marker_color=[r["color"] for r in _tier_rows],
+                            # Full label on bar: "CRITICAL  83.5%  (63% weight)"
+                            text=[f'{r["label"]}  ·  {r["pct"]}%  (weight: {r["weight"]}%)' for r in _tier_rows],
+                            textposition="inside",
+                            insidetextanchor="start",
+                            textfont=dict(color="#fff", size=11),
+                        ))
+                        _tb_fig.add_vline(x=80, line_dash="dot", line_color="#6b7280",
+                            annotation_text="Target 80%", annotation_position="top right",
+                            annotation_font=dict(size=10, color="#6b7280"))
+                        _tb_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                            font=dict(family="Inter,sans-serif", size=12),
+                            margin=dict(l=10, r=10, t=30, b=10), height=200,
+                            showlegend=False, xaxis_title="Avg Score %", xaxis_range=[0, 110],
+                            yaxis=dict(tickfont=dict(size=12)))
+                        st.plotly_chart(_tb_fig, use_container_width=True, config={"displayModeBar": False})
+                except Exception:
+                    pass
+
+            # ── Insight: Tier scoring analysis ───────────────────────────────────────
+            try:
+                _tier_scores_ins = []
+                for _t in _QA_SCHEMA.get("tiers", []):
+                    _tsc = []
+                    for _p in _t.get("params", []):
+                        if _p["col"] not in _dash_df.columns: continue
+                        _pmx2 = [int(o) for o in _p.get("options",[]) if str(o).lstrip("-").isdigit()]
+                        _pmax2 = max(_pmx2) if _pmx2 else 2
+                        _pv2 = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
+                            {"NA":"","nan":"","Fatal":"","Yes":"0","No":str(_pmax2)}), errors="coerce").dropna()
+                        if len(_pv2) > 0:
+                            _tsc.append(_pv2.mean()/_pmax2*100)
+                    if _tsc:
+                        _tlbl = _t["label"].split("·")[1].strip() if "·" in _t["label"] else _t["label"]
+                        _tier_scores_ins.append({"label": _tlbl, "pct": round(sum(_tsc)/len(_tsc),1), "weight": _t.get("weight_pct",0)})
+                if _tier_scores_ins:
+                    _ts_sorted = sorted(_tier_scores_ins, key=lambda x: x["pct"])
+                    _weakest_t = _ts_sorted[0]
+                    _strongest_t = _ts_sorted[-1]
+                    _ins5 = []
+                    _ins5.append(("🔴" if _weakest_t["pct"] < 60 else "🟡" if _weakest_t["pct"] < 80 else "🟢",
+                        f"Weakest tier: <b>{_weakest_t['label']}</b> at <b>{_weakest_t['pct']}%</b> "
+                        f"(carries <b>{_weakest_t['weight']}%</b> of the final score — high impact on overall bot rating)."))
+                    _ins5.append(("💪", f"Strongest tier: <b>{_strongest_t['label']}</b> at <b>{_strongest_t['pct']}%</b> — bot excels here."))
+                    _gap = round(_strongest_t["pct"] - _weakest_t["pct"], 1)
+                    if _gap >= 15:
+                        _ins5.append(("📐", f"Large tier gap of <b>{_gap}pts</b> — bot performance is uneven across quality dimensions."))
+                    else:
+                        _ins5.append(("📐", f"Tier gap of <b>{_gap}pts</b> — relatively balanced performance across quality dimensions."))
+                    st.markdown(_insight_card(_ins5), unsafe_allow_html=True)
             except Exception:
                 pass
 
-        # ── Section 11 — Campaign Score Divergence (vs portfolio avg) ────────────
-        if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns and _total_d >= 5:
-            try:
-                _port_avg = _bs_d.dropna().mean()
-                _div_rows = []
-                for _cn, _cg in _dash_df.groupby("Campaign Name"):
-                    _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
-                    if len(_c_bs) >= 2:
-                        _c_avg = _c_bs.mean()
-                        _div_rows.append({"Campaign": str(_cn), "Avg": round(_c_avg, 1),
-                                          "Delta": round(_c_avg - _port_avg, 1), "N": len(_c_bs)})
-                _div_rows.sort(key=lambda x: x["Delta"])
-                if len(_div_rows) >= 2:
-                    _above = [r for r in _div_rows if r["Delta"] >= 0]
-                    _below = [r for r in _div_rows if r["Delta"] < 0]
-                    _best  = _div_rows[-1]
-                    _worst = _div_rows[0]
+        # ── Section 6 — Disposition Breakdown + Lead Stage Analysis ─────────────
+        if st.session_state.get("dbsec_disposition", True):
+            _s6a, _s6b = st.columns(2)
+            with _s6a:
+                st.markdown('<div class="section-chip">📂 Disposition Breakdown</div>', unsafe_allow_html=True)
+                _disp_col = next((c for c in ["Disposition", "Correct Disposition", "Correct Disposition (Expected)"] if c in _dash_df.columns), None)
+                if _disp_col:
+                    try:
+                        _disp_counts = _dash_df[_disp_col].astype(str).str.strip().value_counts()
+                        _disp_counts = _disp_counts[_disp_counts.index != "nan"][:10]
+                        _disp_pct = (_disp_counts / _disp_counts.sum() * 100).round(1)
+                        _disp_colors = ["#2563EB", "#0891b2", "#059669", "#d97706", "#dc2626",
+                                        "#7c3aed", "#db2777", "#0d9488", "#b45309", "#374151"]
+                        _dsp_fig = go.Figure()
+                        _dsp_fig.add_trace(go.Bar(
+                            x=list(_disp_counts.values),
+                            y=list(_disp_counts.index),
+                            orientation="h",
+                            marker_color=_disp_colors[:len(_disp_counts)],
+                            # Label: "Disposition Name: N calls (X%)"
+                            text=[f"{n}  ({p}%)" for n, p in zip(_disp_counts.values, _disp_pct.values)],
+                            textposition="outside",
+                            cliponaxis=False,
+                        ))
+                        _dsp_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                            font=dict(family="Inter,sans-serif", size=11),
+                            margin=dict(l=10, r=90, t=20, b=10), height=max(200, len(_disp_counts)*32+60),
+                            showlegend=False, xaxis_title="Number of Calls",
+                            yaxis=dict(tickfont=dict(size=11, color="#0B1F3A")))
+                        st.plotly_chart(_dsp_fig, use_container_width=True, config={"displayModeBar": False})
+                    except Exception:
+                        pass
+                else:
+                    st.info("No Disposition column found.")
 
-                    # ── Premium header banner ─────────────────────────────────
-                    st.markdown(f"""
+            with _s6b:
+                st.markdown('<div class="section-chip">🔥 Lead Stage Breakdown</div>', unsafe_allow_html=True)
+                if "Lead Stage" in _dash_df.columns:
+                    try:
+                        _ls_counts = _dash_df["Lead Stage"].astype(str).str.strip().value_counts()
+                        _ls_counts = _ls_counts[_ls_counts.index != "nan"]
+                        _LS_COLORS = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB",
+                                      "Not Interested": "#6b7280", "RNR": "#7c3aed"}
+                        _ls_colors = [_LS_COLORS.get(k, "#94a3b8") for k in _ls_counts.index]
+                        # Show as horizontal bar so labels are always readable in email screenshots
+                        _ls_pct = (_ls_counts / _ls_counts.sum() * 100).round(1)
+                        _ls_fig = go.Figure()
+                        _ls_fig.add_trace(go.Bar(
+                            y=list(_ls_counts.index),
+                            x=list(_ls_counts.values),
+                            orientation="h",
+                            marker_color=_ls_colors,
+                            # Full annotation: "Hot: 12 calls (45%)"
+                            text=[f"{k}: {v} calls ({p}%)" for k, v, p in zip(_ls_counts.index, _ls_counts.values, _ls_pct.values)],
+                            textposition="outside",
+                            cliponaxis=False,
+                        ))
+                        _ls_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                            font=dict(family="Inter,sans-serif", size=11),
+                            margin=dict(l=10, r=140, t=20, b=10), height=max(200, len(_ls_counts)*38+60),
+                            showlegend=False, xaxis_title="Number of Calls",
+                            yaxis=dict(tickfont=dict(size=12, color="#0B1F3A", family="Inter,sans-serif")))
+                        st.plotly_chart(_ls_fig, use_container_width=True, config={"displayModeBar": False})
+                    except Exception:
+                        pass
+                else:
+                    st.info("No Lead Stage column found.")
+
+        # ── Section 7 — Client Health Matrix ─────────────────────────────────────
+        if st.session_state.get("dbsec_client_health", True):
+            if "Client" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+                st.markdown('<div class="section-chip">🏢 Client Health Matrix</div>', unsafe_allow_html=True)
+                try:
+                    _ch_rows = []
+                    for _cn, _cg in _dash_df.groupby("Client"):
+                        _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                        _c_st = _cg["Status"].astype(str).str.strip() if "Status" in _cg.columns else pd.Series([])
+                        _c_camps = _cg["Campaign Name"].nunique() if "Campaign Name" in _cg.columns else 0
+                        _c_avg = round(_c_bs.mean(), 1) if not _c_bs.empty else 0
+                        _c_pr = round(int((_c_st == "Pass").sum()) / len(_cg) * 100, 1) if len(_cg) else 0
+                        _c_fatal = int((_c_st == "Auto-Fail").sum())
+                        _c_health = "🟢 Healthy" if _c_avg >= 80 and _c_pr >= 75 else "🟡 Monitor" if _c_avg >= 65 or _c_pr >= 55 else "🔴 At Risk"
+                        _ch_rows.append({"Client": str(_cn), "Audits": len(_cg), "Campaigns": _c_camps,
+                                          "Avg Score": _c_avg, "Pass Rate": f"{_c_pr}%",
+                                          "Auto-Fails": _c_fatal, "Health": _c_health})
+                    _ch_rows.sort(key=lambda x: -x["Avg Score"])
+                    _chm_html = '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">'
+                    _chm_html += ('<tr style="background:linear-gradient(135deg,#0B1F3A,#1e3a8a);">'
+                                  + "".join(f'<th style="padding:9px 10px;text-align:left;color:rgba(255,255,255,0.85);font-weight:700;font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;">{h}</th>' for h in ["Client", "Audits", "Campaigns", "Avg Score", "Pass Rate", "Auto-Fails", "Health"])
+                                  + "</tr>")
+                    for _r in _ch_rows:
+                        _row_bg = "#f0fdf4" if "Healthy" in _r["Health"] else "#fffbeb" if "Monitor" in _r["Health"] else "#fef2f2"
+                        _chm_html += (f'<tr style="background:{_row_bg};">'
+                                      f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Client"]}</td>'
+                                      f'<td style="padding:8px 10px;font-weight:900;color:#1e40af;font-size:0.82rem;">{_r["Audits"]}</td>'
+                                      f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Campaigns"]}</td>'
+                                      f'<td style="padding:8px 10px;font-weight:900;color:#059669;font-size:0.82rem;">{_r["Avg Score"]}</td>'
+                                      f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td>'
+                                      f'<td style="padding:8px 10px;font-weight:900;color:#dc2626;font-size:0.82rem;">{_r["Auto-Fails"]}</td>'
+                                      f'<td style="padding:8px 10px;font-weight:700;">{_r["Health"]}</td>'
+                                      f'</tr>')
+                    _chm_html += "</table>"
+                    st.markdown(f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(11,31,58,0.07);">{_chm_html}</div>', unsafe_allow_html=True)
+                except Exception:
+                    pass
+
+            # ── Insight: Client bot risk ──────────────────────────────────────────────
+            try:
+                if "Client" in _dash_df.columns and "Bot Score" in _dash_df.columns:
+                    _cl_ins = []
+                    _cl_healthy, _cl_monitor, _cl_risk = [], [], []
+                    for _cn3, _cg3 in _dash_df.groupby("Client"):
+                        _cbs3 = pd.to_numeric(_cg3["Bot Score"], errors="coerce").dropna()
+                        _cst3 = _cg3["Status"].astype(str).str.strip() if "Status" in _cg3.columns else pd.Series([])
+                        if _cbs3.empty: continue
+                        _cavg3 = _cbs3.mean()
+                        _cpr3  = int((_cst3=="Pass").sum())/len(_cg3)*100 if len(_cg3) else 0
+                        if _cavg3 >= 80 and _cpr3 >= 75: _cl_healthy.append(str(_cn3))
+                        elif _cavg3 >= 65 or _cpr3 >= 55: _cl_monitor.append(str(_cn3))
+                        else: _cl_risk.append(str(_cn3))
+                    if _cl_risk:
+                        _cl_ins.append(("🔴", f"<b>{len(_cl_risk)}</b> client(s) at risk — bot performance below threshold: {', '.join(_cl_risk[:3])}."))
+                    if _cl_monitor:
+                        _cl_ins.append(("🟡", f"<b>{len(_cl_monitor)}</b> client(s) need monitoring — bot scores in the 65–79% range."))
+                    if _cl_healthy:
+                        _cl_ins.append(("🟢", f"<b>{len(_cl_healthy)}</b> client(s) with healthy bot performance (≥80% score, ≥75% pass rate)."))
+                    _total_clients = len(_cl_healthy) + len(_cl_monitor) + len(_cl_risk)
+                    if _total_clients > 0:
+                        _health_pct = round(len(_cl_healthy)/_total_clients*100)
+                        _cl_ins.append(("📊", f"Overall client portfolio health: <b>{_health_pct}%</b> of clients in good standing."))
+                    if _cl_ins:
+                        st.markdown(_insight_card(_cl_ins), unsafe_allow_html=True)
+            except Exception:
+                pass
+
+        # ── Section 8 — Lead Score vs Bot Score Correlation ──────────────────────
+        if st.session_state.get("dbsec_correlation", True):
+            _has_lead = "Lead Score" in _dash_df.columns
+            _has_ls = "Lead Stage" in _dash_df.columns
+            if _has_lead and "Bot Score" in _dash_df.columns:
+                st.markdown('<div class="section-chip">🔗 Lead Score vs Bot Score Correlation</div>', unsafe_allow_html=True)
+                try:
+                    _corr_df = _dash_df[["Lead Score", "Bot Score"]].copy()
+                    if _has_ls:
+                        _corr_df["Lead Stage"] = _dash_df["Lead Stage"].astype(str).str.strip()
+                    _corr_df["Lead Score"] = pd.to_numeric(_corr_df["Lead Score"], errors="coerce")
+                    _corr_df["Bot Score"] = pd.to_numeric(_corr_df["Bot Score"], errors="coerce")
+                    _corr_df = _corr_df.dropna(subset=["Lead Score", "Bot Score"])
+                    if len(_corr_df) >= 3:
+                        _LS_COLORS2 = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB",
+                                       "Not Interested": "#6b7280", "RNR": "#7c3aed"}
+                        _sc_fig = go.Figure()
+                        if _has_ls:
+                            for _ls_v in _corr_df["Lead Stage"].unique():
+                                _sub = _corr_df[_corr_df["Lead Stage"] == _ls_v]
+                                _sc_fig.add_trace(go.Scatter(
+                                    x=_sub["Bot Score"], y=_sub["Lead Score"],
+                                    mode="markers", name=str(_ls_v),
+                                    marker=dict(size=8, color=_LS_COLORS2.get(_ls_v, "#94a3b8"), opacity=0.75)))
+                        else:
+                            _sc_fig.add_trace(go.Scatter(
+                                x=_corr_df["Bot Score"], y=_corr_df["Lead Score"],
+                                mode="markers", marker=dict(size=8, color="#2563EB", opacity=0.7), name="Audit"))
+                        _sc_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                            font=dict(family="Inter,sans-serif", size=11),
+                            margin=dict(l=10, r=10, t=20, b=10), height=300,
+                            xaxis_title="Bot Score", yaxis_title="Lead Score",
+                            legend=dict(orientation="h", y=1.1, x=0))
+                        st.plotly_chart(_sc_fig, use_container_width=True, config={"displayModeBar": False})
+                        _corr_val = round(_corr_df["Bot Score"].corr(_corr_df["Lead Score"]), 3)
+                        _corr_interp = "strong positive" if _corr_val > 0.5 else "moderate positive" if _corr_val > 0.2 else "weak/none" if abs(_corr_val) <= 0.2 else "moderate negative" if _corr_val > -0.5 else "strong negative"
+                        st.markdown(f'<div style="font-size:0.70rem;color:#374151;margin-top:-8px;">Pearson r = <b>{_corr_val}</b> ({_corr_interp} correlation)</div>', unsafe_allow_html=True)
+                except Exception:
+                    pass
+
+            # ── Insight: Failure pattern analysis ────────────────────────────────────
+            try:
+                _all_pc2 = [_p for _t in _QA_SCHEMA.get("tiers",[]) for _p in _t.get("params",[]) if _p["col"] in _dash_df.columns]
+                _fail_rates = {}
+                for _p in _all_pc2:
+                    _pmx3 = [int(o) for o in _p.get("options",[]) if str(o).lstrip("-").isdigit()]
+                    _pmax3 = max(_pmx3) if _pmx3 else 2
+                    _pv3 = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
+                        {"NA":"","nan":"","Yes":"0","No":str(_pmax3),"Fatal":"0"}), errors="coerce")
+                    _fail_rates[_p["col"]] = round((_pv3 < _pmax3*0.5).sum() / _total_d * 100, 1) if _total_d else 0
+                if _fail_rates:
+                    _fr_sorted = sorted(_fail_rates.items(), key=lambda x: -x[1])
+                    _top_fail = _fr_sorted[0]
+                    _ins9 = []
+                    _ins9.append(("🔴", f"Most frequently failing parameter: <b>{_top_fail[0]}</b> — fails in <b>{_top_fail[1]}%</b> of audits. Highest priority fix."))
+                    _systemic = [(k,v) for k,v in _fail_rates.items() if v >= 30]
+                    if len(_systemic) >= 3:
+                        _ins9.append(("⚠️", f"<b>{len(_systemic)}</b> parameters failing in 30%+ of audits — indicates systemic bot issues, not isolated incidents."))
+                    elif _systemic:
+                        _ins9.append(("⚠️", f"<b>{_systemic[0][0]}</b> fails in <b>{_systemic[0][1]}%</b> of conversations — review bot logic for this parameter."))
+                    _low_fail = [k for k,v in _fail_rates.items() if v <= 5]
+                    if _low_fail:
+                        _ins9.append(("✅", f"<b>{len(_low_fail)}</b> parameter(s) nearly error-free (≤5% fail rate) — bot handles these well."))
+                    st.markdown(_insight_card(_ins9), unsafe_allow_html=True)
+            except Exception:
+                pass
+
+        # ── Section 10 — Parameter Heatmap (QA × Param) ──────────────────────────
+        if st.session_state.get("dbsec_heatmap", True):
+            if "QA" in _dash_df.columns:
+                st.markdown('<div class="section-chip">🌡️ Parameter × QA Heatmap</div>', unsafe_allow_html=True)
+                try:
+                    _hm_params = []
+                    for _t in _QA_SCHEMA.get("tiers", []):
+                        for _p in _t.get("params", []):
+                            if _p["col"] in _dash_df.columns:
+                                _pmx = [int(o) for o in _p.get("options", []) if str(o).lstrip("-").isdigit()]
+                                _pmax = max(_pmx) if _pmx else 2
+                                _hm_params.append((_p["col"], _pmax))
+                    _hm_qas = sorted(_dash_df["QA"].dropna().unique().tolist())
+                    if len(_hm_params) >= 2 and len(_hm_qas) >= 1:
+                        _hm_z = []
+                        _hm_text = []
+                        for _qn in _hm_qas:
+                            _row_z = []
+                            _row_t = []
+                            _qg = _dash_df[_dash_df["QA"] == _qn]
+                            for _pcol, _pmax in _hm_params:
+                                _pv = pd.to_numeric(_qg[_pcol].astype(str).str.strip().replace(
+                                    {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmax)}), errors="coerce").dropna()
+                                if len(_pv) > 0:
+                                    _pct = round(_pv.mean() / _pmax * 100, 0)
+                                    _row_z.append(_pct)
+                                    _row_t.append(f"{int(_pct)}%")
+                                else:
+                                    _row_z.append(None)
+                                    _row_t.append("—")
+                            _hm_z.append(_row_z)
+                            _hm_text.append(_row_t)
+                        _hm_fig = go.Figure(go.Heatmap(
+                            z=_hm_z,
+                            x=[p[0] for p in _hm_params],
+                            y=_hm_qas,
+                            text=_hm_text,
+                            texttemplate="%{text}",
+                            colorscale=[[0, "#dc2626"], [0.5, "#f59e0b"], [0.7, "#34d399"], [1, "#059669"]],
+                            zmin=0, zmax=100,
+                            showscale=True,
+                            colorbar=dict(title="Score %", thickness=12, len=0.9),
+                        ))
+                        _hm_max_label = max((len(p[0]) for p in _hm_params), default=10)
+                        _hm_bottom = max(120, _hm_max_label * 5)
+                        _hm_fig.update_layout(
+                            plot_bgcolor="#fff", paper_bgcolor="#fff",
+                            font=dict(family="Inter,sans-serif", size=10),
+                            margin=dict(l=10, r=10, t=20, b=_hm_bottom),
+                            height=max(200, len(_hm_qas) * 50 + _hm_bottom),
+                            xaxis=dict(tickangle=-45, side="bottom", automargin=True),
+                        )
+                        st.plotly_chart(_hm_fig, use_container_width=True, config={"displayModeBar": False})
+                except Exception:
+                    pass
+
+        # ── Section 11 — Campaign Score Divergence (vs portfolio avg) ────────────
+        if st.session_state.get("dbsec_camp_div", True):
+            if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns and _total_d >= 5:
+                try:
+                    _port_avg = _bs_d.dropna().mean()
+                    _div_rows = []
+                    for _cn, _cg in _dash_df.groupby("Campaign Name"):
+                        _c_bs = pd.to_numeric(_cg["Bot Score"], errors="coerce").dropna()
+                        if len(_c_bs) >= 2:
+                            _c_avg = _c_bs.mean()
+                            _div_rows.append({"Campaign": str(_cn), "Avg": round(_c_avg, 1),
+                                              "Delta": round(_c_avg - _port_avg, 1), "N": len(_c_bs)})
+                    _div_rows.sort(key=lambda x: x["Delta"])
+                    if len(_div_rows) >= 2:
+                        _above = [r for r in _div_rows if r["Delta"] >= 0]
+                        _below = [r for r in _div_rows if r["Delta"] < 0]
+                        _best  = _div_rows[-1]
+                        _worst = _div_rows[0]
+
+                        # ── Premium header banner ─────────────────────────────────
+                        st.markdown(f"""
 <div style="background:linear-gradient(135deg,#0B1F3A 0%,#1e3a8a 55%,#0B1F3A 100%);
   border-radius:16px;padding:22px 26px;margin-bottom:16px;position:relative;overflow:hidden;">
   <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;
@@ -11553,70 +11564,70 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
   </div>
 </div>""", unsafe_allow_html=True)
 
-                    # ── Bar colours — 3-shade scale per side ─────────────────
-                    def _div_color(delta):
-                        if delta >= 10:   return "#059669"
-                        elif delta >= 3:  return "#10b981"
-                        elif delta >= 0:  return "#34d399"
-                        elif delta >= -3: return "#f87171"
-                        elif delta >= -10:return "#ef4444"
-                        else:             return "#dc2626"
+                        # ── Bar colours — 3-shade scale per side ─────────────────
+                        def _div_color(delta):
+                            if delta >= 10:   return "#059669"
+                            elif delta >= 3:  return "#10b981"
+                            elif delta >= 0:  return "#34d399"
+                            elif delta >= -3: return "#f87171"
+                            elif delta >= -10:return "#ef4444"
+                            else:             return "#dc2626"
 
-                    _bar_cols = [_div_color(r["Delta"]) for r in _div_rows]
+                        _bar_cols = [_div_color(r["Delta"]) for r in _div_rows]
 
-                    _dv_fig = go.Figure()
-                    _dv_fig.add_trace(go.Bar(
-                        y=[r["Campaign"] for r in _div_rows],
-                        x=[r["Delta"] for r in _div_rows],
-                        orientation="h",
-                        marker_color=_bar_cols,
-                        marker_line=dict(width=0),
-                        customdata=[[r["Avg"], r["N"], r["Delta"]] for r in _div_rows],
-                        hovertemplate=(
-                            "<b>%{y}</b><br>"
-                            "Avg Score: <b>%{customdata[0]}%</b><br>"
-                            "Delta: <b>%{customdata[2]:+.1f} pts</b><br>"
-                            "Audits: %{customdata[1]}<extra></extra>"
-                        ),
-                        text=[f'  {r["Delta"]:+.1f} pts  ·  {r["Avg"]}%  [{r["N"]} audits]'
-                              for r in _div_rows],
-                        textposition="outside",
-                        cliponaxis=False,
-                        textfont=dict(size=11, color="#0B1F3A", family="Inter,sans-serif"),
-                    ))
-                    _dv_fig.add_vline(
-                        x=0, line_color="#0B1F3A", line_width=2,
-                        annotation_text=f"  Avg {_port_avg:.1f}%",
-                        annotation_position="top right",
-                        annotation_font=dict(size=11, color="#fff", family="Inter,sans-serif"),
-                        annotation_bgcolor="#0B1F3A",
-                        annotation_borderpad=5,
-                    )
-                    _dv_fig.update_layout(
-                        plot_bgcolor="#f8faff",
-                        paper_bgcolor="#fff",
-                        font=dict(family="Inter,sans-serif", size=12),
-                        margin=dict(l=10, r=200, t=50, b=20),
-                        height=max(260, len(_div_rows) * 56 + 90),
-                        xaxis=dict(
-                            title=dict(text="Deviation from portfolio average (pts)",
-                                       font=dict(size=11, color="#64748b")),
-                            ticksuffix=" pts",
-                            gridcolor="#e2e8f0",
-                            zeroline=False,
-                            tickfont=dict(size=11, color="#64748b"),
-                        ),
-                        yaxis=dict(tickfont=dict(size=12, color="#0B1F3A")),
-                        showlegend=False,
-                        bargap=0.38,
-                    )
-                    st.plotly_chart(_dv_fig, use_container_width=True, config={"displayModeBar": False})
+                        _dv_fig = go.Figure()
+                        _dv_fig.add_trace(go.Bar(
+                            y=[r["Campaign"] for r in _div_rows],
+                            x=[r["Delta"] for r in _div_rows],
+                            orientation="h",
+                            marker_color=_bar_cols,
+                            marker_line=dict(width=0),
+                            customdata=[[r["Avg"], r["N"], r["Delta"]] for r in _div_rows],
+                            hovertemplate=(
+                                "<b>%{y}</b><br>"
+                                "Avg Score: <b>%{customdata[0]}%</b><br>"
+                                "Delta: <b>%{customdata[2]:+.1f} pts</b><br>"
+                                "Audits: %{customdata[1]}<extra></extra>"
+                            ),
+                            text=[f'  {r["Delta"]:+.1f} pts  ·  {r["Avg"]}%  [{r["N"]} audits]'
+                                  for r in _div_rows],
+                            textposition="outside",
+                            cliponaxis=False,
+                            textfont=dict(size=11, color="#0B1F3A", family="Inter,sans-serif"),
+                        ))
+                        _dv_fig.add_vline(
+                            x=0, line_color="#0B1F3A", line_width=2,
+                            annotation_text=f"  Avg {_port_avg:.1f}%",
+                            annotation_position="top right",
+                            annotation_font=dict(size=11, color="#fff", family="Inter,sans-serif"),
+                            annotation_bgcolor="#0B1F3A",
+                            annotation_borderpad=5,
+                        )
+                        _dv_fig.update_layout(
+                            plot_bgcolor="#f8faff",
+                            paper_bgcolor="#fff",
+                            font=dict(family="Inter,sans-serif", size=12),
+                            margin=dict(l=10, r=200, t=50, b=20),
+                            height=max(260, len(_div_rows) * 56 + 90),
+                            xaxis=dict(
+                                title=dict(text="Deviation from portfolio average (pts)",
+                                           font=dict(size=11, color="#64748b")),
+                                ticksuffix=" pts",
+                                gridcolor="#e2e8f0",
+                                zeroline=False,
+                                tickfont=dict(size=11, color="#64748b"),
+                            ),
+                            yaxis=dict(tickfont=dict(size=12, color="#0B1F3A")),
+                            showlegend=False,
+                            bargap=0.38,
+                        )
+                        st.plotly_chart(_dv_fig, use_container_width=True, config={"displayModeBar": False})
 
-                    # ── Spotlight: best / worst campaign cards ────────────────
-                    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-                    _sc1, _sc2 = st.columns(2)
-                    with _sc1:
-                        st.markdown(f"""
+                        # ── Spotlight: best / worst campaign cards ────────────────
+                        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+                        _sc1, _sc2 = st.columns(2)
+                        with _sc1:
+                            st.markdown(f"""
 <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #6ee7b7;
   border-left:4px solid #059669;border-radius:14px;padding:16px 18px;
   box-shadow:0 4px 16px rgba(5,150,105,0.12);">
@@ -11630,8 +11641,8 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
       <span style="color:#64748b;">{_best["N"]} audits</span></div>
   </div>
 </div>""", unsafe_allow_html=True)
-                    with _sc2:
-                        st.markdown(f"""
+                        with _sc2:
+                            st.markdown(f"""
 <div style="background:linear-gradient(135deg,#fff5f5,#fee2e2);border:1px solid #fca5a5;
   border-left:4px solid #dc2626;border-radius:14px;padding:16px 18px;
   box-shadow:0 4px 16px rgba(220,38,38,0.10);">
@@ -11645,127 +11656,128 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
       <span style="color:#64748b;">{_worst["N"]} audits</span></div>
   </div>
 </div>""", unsafe_allow_html=True)
+                except Exception:
+                    pass
+
+        # ── Section 12 — What Went Right / Needs Attention (all params) ──────────
+        if st.session_state.get("dbsec_params", True):
+            _param_avgs_d = []
+            _param_avgs_seen = set()
+
+            def _score_col_d(col, opts):
+                _pmx = [int(o) for o in opts if str(o).lstrip("-").isdigit()]
+                if not _pmx:
+                    return None
+                _pmax = max(_pmx)
+                _pv = pd.to_numeric(
+                    _dash_df[col].astype(str).str.strip().replace({"NA": "", "nan": "", "Fatal": ""}),
+                    errors="coerce").dropna()
+                return round(_pv.mean() / _pmax * 100, 1) if len(_pv) else None
+
+            for _tier_d in _QA_SCHEMA.get("tiers", []):
+                for _p_d in _tier_d.get("params", []):
+                    if _p_d["col"] not in _dash_df.columns:
+                        continue
+                    _sc = _score_col_d(_p_d["col"], _p_d.get("options", []))
+                    if _sc is not None:
+                        _param_avgs_d.append({"col": _p_d["col"], "pct": _sc})
+                        _param_avgs_seen.add(_p_d["col"])
+
+            # Fallback: score any legend_map columns not already captured
+            if not _param_avgs_d and legend_map:
+                for _lm_col, _lm_opts in legend_map.items():
+                    if _lm_col in _param_avgs_seen or _lm_col not in _dash_df.columns:
+                        continue
+                    _sc = _score_col_d(_lm_col, _lm_opts)
+                    if _sc is not None:
+                        _param_avgs_d.append({"col": _lm_col, "pct": _sc})
+                        _param_avgs_seen.add(_lm_col)
+
+            _strong_d = sorted([p for p in _param_avgs_d if p["pct"] >= 75], key=lambda x: -x["pct"])[:8]
+            _weak_d = sorted([p for p in _param_avgs_d if p["pct"] < 70], key=lambda x: x["pct"])[:8]
+
+            _s12l, _s12r = st.columns(2)
+            with _s12l:
+                st.markdown('<div class="section-chip">✅ What Went Right</div>', unsafe_allow_html=True)
+                if _strong_d:
+                    _wr_d = ""
+                    for _wp in _strong_d:
+                        _wr_d += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">'
+                                  f'<div style="width:155px;font-size:0.71rem;font-weight:700;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp["col"]}</div>'
+                                  f'<div style="flex:1;height:14px;background:#D1FAE5;border-radius:7px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">'
+                                  f'<div style="width:{_wp["pct"]}%;height:100%;background:linear-gradient(90deg,#059669,#34D399);border-radius:7px;"></div></div>'
+                                  f'<div style="width:44px;font-size:0.78rem;font-weight:900;color:#059669;flex-shrink:0;text-align:right;">{_wp["pct"]}%</div>'
+                                  f'</div>')
+                    st.markdown(
+                        f'<div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #6ee7b7;'
+                        f'border-left:4px solid #059669;border-radius:14px;padding:16px 18px;'
+                        f'box-shadow:0 4px 16px rgba(5,150,105,0.10);">{_wr_d}</div>',
+                        unsafe_allow_html=True)
+                else:
+                    st.markdown('<div style="background:#F8FAFF;border:1px solid #DBEAFE;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#64748b;text-align:center;">No parameters ≥75% yet</div>', unsafe_allow_html=True)
+
+            with _s12r:
+                st.markdown('<div class="section-chip">⚠️ Needs Attention</div>', unsafe_allow_html=True)
+                if _weak_d:
+                    _ww_d = ""
+                    for _wp2 in _weak_d:
+                        _urg = "#dc2626" if _wp2["pct"] < 50 else "#d97706"
+                        _ubg = "#FEE2E2" if _wp2["pct"] < 50 else "#FEF3C7"
+                        _ugrd = ("linear-gradient(90deg,#991b1b,#dc2626)" if _wp2["pct"] < 50
+                                 else "linear-gradient(90deg,#b45309,#f59e0b)")
+                        _ww_d += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">'
+                                  f'<div style="width:155px;font-size:0.71rem;font-weight:700;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp2["col"]}</div>'
+                                  f'<div style="flex:1;height:14px;background:{_ubg};border-radius:7px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">'
+                                  f'<div style="width:{_wp2["pct"]}%;height:100%;background:{_ugrd};border-radius:7px;"></div></div>'
+                                  f'<div style="width:44px;font-size:0.78rem;font-weight:900;color:{_urg};flex-shrink:0;text-align:right;">{_wp2["pct"]}%</div>'
+                                  f'</div>')
+                    st.markdown(
+                        f'<div style="background:linear-gradient(135deg,#fff5f5,#fee2e2);border:1px solid #fca5a5;'
+                        f'border-left:4px solid #dc2626;border-radius:14px;padding:16px 18px;'
+                        f'box-shadow:0 4px 16px rgba(220,38,38,0.10);">{_ww_d}</div>',
+                        unsafe_allow_html=True)
+                else:
+                    st.markdown('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#059669;text-align:center;">🎉 All parameters performing well!</div>', unsafe_allow_html=True)
+
+            # ── Insight: Parameter health summary ────────────────────────────────────
+            try:
+                if _param_avgs_d:
+                    _ins12 = []
+                    _p_pass  = [p for p in _param_avgs_d if p["pct"] >= 80]
+                    _p_risk  = [p for p in _param_avgs_d if p["pct"] < 60]
+                    _p_watch = [p for p in _param_avgs_d if 60 <= p["pct"] < 80]
+                    _avg_param_score = round(sum(p["pct"] for p in _param_avgs_d)/len(_param_avgs_d),1)
+                    _worst_p = min(_param_avgs_d, key=lambda x: x["pct"])
+                    _best_p  = max(_param_avgs_d, key=lambda x: x["pct"])
+                    _ins12.append(("📊", f"Average parameter score: <b>{_avg_param_score}%</b>. <b>{len(_p_pass)}</b> passing, <b>{len(_p_watch)}</b> watching, <b>{len(_p_risk)}</b> at risk."))
+                    _ins12.append(("🔴", f"Biggest gap from target: <b>{_worst_p['col']}</b> at <b>{_worst_p['pct']}%</b> — <b>{round(80-_worst_p['pct'],1)}pts</b> below target. Prioritise this in bot training."))
+                    _ins12.append(("🌟", f"Best scoring parameter: <b>{_best_p['col']}</b> at <b>{_best_p['pct']}%</b> — bot handles this reliably."))
+                    if _p_risk:
+                        _ins12.append(("⚠️", f"<b>{len(_p_risk)}</b> parameter(s) critically below 60%: {', '.join(p['col'] for p in sorted(_p_risk, key=lambda x: x['pct'])[:3])}."))
+                    st.markdown(_insight_card(_ins12), unsafe_allow_html=True)
             except Exception:
                 pass
 
-        # ── Section 12 — What Went Right / Needs Attention (all params) ──────────
-        _param_avgs_d = []
-        _param_avgs_seen = set()
-
-        def _score_col_d(col, opts):
-            _pmx = [int(o) for o in opts if str(o).lstrip("-").isdigit()]
-            if not _pmx:
-                return None
-            _pmax = max(_pmx)
-            _pv = pd.to_numeric(
-                _dash_df[col].astype(str).str.strip().replace({"NA": "", "nan": "", "Fatal": ""}),
-                errors="coerce").dropna()
-            return round(_pv.mean() / _pmax * 100, 1) if len(_pv) else None
-
-        for _tier_d in _QA_SCHEMA.get("tiers", []):
-            for _p_d in _tier_d.get("params", []):
-                if _p_d["col"] not in _dash_df.columns:
-                    continue
-                _sc = _score_col_d(_p_d["col"], _p_d.get("options", []))
-                if _sc is not None:
-                    _param_avgs_d.append({"col": _p_d["col"], "pct": _sc})
-                    _param_avgs_seen.add(_p_d["col"])
-
-        # Fallback: score any legend_map columns not already captured
-        if not _param_avgs_d and legend_map:
-            for _lm_col, _lm_opts in legend_map.items():
-                if _lm_col in _param_avgs_seen or _lm_col not in _dash_df.columns:
-                    continue
-                _sc = _score_col_d(_lm_col, _lm_opts)
-                if _sc is not None:
-                    _param_avgs_d.append({"col": _lm_col, "pct": _sc})
-                    _param_avgs_seen.add(_lm_col)
-
-        _strong_d = sorted([p for p in _param_avgs_d if p["pct"] >= 75], key=lambda x: -x["pct"])[:8]
-        _weak_d = sorted([p for p in _param_avgs_d if p["pct"] < 70], key=lambda x: x["pct"])[:8]
-
-        _s12l, _s12r = st.columns(2)
-        with _s12l:
-            st.markdown('<div class="section-chip">✅ What Went Right</div>', unsafe_allow_html=True)
-            if _strong_d:
-                _wr_d = ""
-                for _wp in _strong_d:
-                    _wr_d += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">'
-                              f'<div style="width:155px;font-size:0.71rem;font-weight:700;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp["col"]}</div>'
-                              f'<div style="flex:1;height:14px;background:#D1FAE5;border-radius:7px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">'
-                              f'<div style="width:{_wp["pct"]}%;height:100%;background:linear-gradient(90deg,#059669,#34D399);border-radius:7px;"></div></div>'
-                              f'<div style="width:44px;font-size:0.78rem;font-weight:900;color:#059669;flex-shrink:0;text-align:right;">{_wp["pct"]}%</div>'
-                              f'</div>')
-                st.markdown(
-                    f'<div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #6ee7b7;'
-                    f'border-left:4px solid #059669;border-radius:14px;padding:16px 18px;'
-                    f'box-shadow:0 4px 16px rgba(5,150,105,0.10);">{_wr_d}</div>',
-                    unsafe_allow_html=True)
-            else:
-                st.markdown('<div style="background:#F8FAFF;border:1px solid #DBEAFE;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#64748b;text-align:center;">No parameters ≥75% yet</div>', unsafe_allow_html=True)
-
-        with _s12r:
-            st.markdown('<div class="section-chip">⚠️ Needs Attention</div>', unsafe_allow_html=True)
-            if _weak_d:
-                _ww_d = ""
-                for _wp2 in _weak_d:
-                    _urg = "#dc2626" if _wp2["pct"] < 50 else "#d97706"
-                    _ubg = "#FEE2E2" if _wp2["pct"] < 50 else "#FEF3C7"
-                    _ugrd = ("linear-gradient(90deg,#991b1b,#dc2626)" if _wp2["pct"] < 50
-                             else "linear-gradient(90deg,#b45309,#f59e0b)")
-                    _ww_d += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">'
-                              f'<div style="width:155px;font-size:0.71rem;font-weight:700;color:#0B1F3A;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_wp2["col"]}</div>'
-                              f'<div style="flex:1;height:14px;background:{_ubg};border-radius:7px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">'
-                              f'<div style="width:{_wp2["pct"]}%;height:100%;background:{_ugrd};border-radius:7px;"></div></div>'
-                              f'<div style="width:44px;font-size:0.78rem;font-weight:900;color:{_urg};flex-shrink:0;text-align:right;">{_wp2["pct"]}%</div>'
-                              f'</div>')
-                st.markdown(
-                    f'<div style="background:linear-gradient(135deg,#fff5f5,#fee2e2);border:1px solid #fca5a5;'
-                    f'border-left:4px solid #dc2626;border-radius:14px;padding:16px 18px;'
-                    f'box-shadow:0 4px 16px rgba(220,38,38,0.10);">{_ww_d}</div>',
-                    unsafe_allow_html=True)
-            else:
-                st.markdown('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;font-size:0.73rem;color:#059669;text-align:center;">🎉 All parameters performing well!</div>', unsafe_allow_html=True)
-
-        # ── Insight: Parameter health summary ────────────────────────────────────
-        try:
+            # ── Section 13 — All-param score bars (full overview) ────────────────────
             if _param_avgs_d:
-                _ins12 = []
-                _p_pass  = [p for p in _param_avgs_d if p["pct"] >= 80]
-                _p_risk  = [p for p in _param_avgs_d if p["pct"] < 60]
-                _p_watch = [p for p in _param_avgs_d if 60 <= p["pct"] < 80]
-                _avg_param_score = round(sum(p["pct"] for p in _param_avgs_d)/len(_param_avgs_d),1)
-                _worst_p = min(_param_avgs_d, key=lambda x: x["pct"])
-                _best_p  = max(_param_avgs_d, key=lambda x: x["pct"])
-                _ins12.append(("📊", f"Average parameter score: <b>{_avg_param_score}%</b>. <b>{len(_p_pass)}</b> passing, <b>{len(_p_watch)}</b> watching, <b>{len(_p_risk)}</b> at risk."))
-                _ins12.append(("🔴", f"Biggest gap from target: <b>{_worst_p['col']}</b> at <b>{_worst_p['pct']}%</b> — <b>{round(80-_worst_p['pct'],1)}pts</b> below target. Prioritise this in bot training."))
-                _ins12.append(("🌟", f"Best scoring parameter: <b>{_best_p['col']}</b> at <b>{_best_p['pct']}%</b> — bot handles this reliably."))
-                if _p_risk:
-                    _ins12.append(("⚠️", f"<b>{len(_p_risk)}</b> parameter(s) critically below 60%: {', '.join(p['col'] for p in sorted(_p_risk, key=lambda x: x['pct'])[:3])}."))
-                st.markdown(_insight_card(_ins12), unsafe_allow_html=True)
-        except Exception:
-            pass
+                try:
+                    _allp_sorted = sorted(_param_avgs_d, key=lambda x: x["pct"])
+                    _n_pass  = sum(1 for p in _allp_sorted if p["pct"] >= 80)
+                    _n_rev   = sum(1 for p in _allp_sorted if 60 <= p["pct"] < 80)
+                    _n_fail  = sum(1 for p in _allp_sorted if p["pct"] < 60)
+                    _avg_all = round(sum(p["pct"] for p in _allp_sorted) / len(_allp_sorted), 1)
 
-        # ── Section 13 — All-param score bars (full overview) ────────────────────
-        if _param_avgs_d:
-            try:
-                _allp_sorted = sorted(_param_avgs_d, key=lambda x: x["pct"])
-                _n_pass  = sum(1 for p in _allp_sorted if p["pct"] >= 80)
-                _n_rev   = sum(1 for p in _allp_sorted if 60 <= p["pct"] < 80)
-                _n_fail  = sum(1 for p in _allp_sorted if p["pct"] < 60)
-                _avg_all = round(sum(p["pct"] for p in _allp_sorted) / len(_allp_sorted), 1)
+                    # Build tier lookup for each param col
+                    _tier_of = {}
+                    for _td in _QA_SCHEMA.get("tiers", []):
+                        _tlabel = _td["label"].split("·")[1].strip() if "·" in _td["label"] else _td["label"]
+                        for _pp in _td.get("params", []):
+                            _tier_of[_pp["col"]] = _tlabel
+                    for _ip2 in _QA_SCHEMA.get("intelligence", []):
+                        _tier_of[_ip2["col"]] = "Intelligence"
 
-                # Build tier lookup for each param col
-                _tier_of = {}
-                for _td in _QA_SCHEMA.get("tiers", []):
-                    _tlabel = _td["label"].split("·")[1].strip() if "·" in _td["label"] else _td["label"]
-                    for _pp in _td.get("params", []):
-                        _tier_of[_pp["col"]] = _tlabel
-                for _ip2 in _QA_SCHEMA.get("intelligence", []):
-                    _tier_of[_ip2["col"]] = "Intelligence"
-
-                # ── Premium header ────────────────────────────────────────────
-                st.markdown(f"""
+                    # ── Premium header ────────────────────────────────────────────
+                    st.markdown(f"""
 <div style="background:linear-gradient(135deg,#0B1F3A 0%,#1e3a8a 55%,#0B1F3A 100%);
   border-radius:16px;padding:22px 26px;margin-bottom:16px;position:relative;overflow:hidden;">
   <div style="position:absolute;top:-30px;right:-30px;width:140px;height:140px;
@@ -11801,77 +11813,77 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
   </div>
 </div>""", unsafe_allow_html=True)
 
-                # 5-shade colour scale
-                def _param_color(pct):
-                    if pct >= 90:   return "#059669"
-                    elif pct >= 80: return "#10b981"
-                    elif pct >= 70: return "#f59e0b"
-                    elif pct >= 60: return "#fb923c"
-                    else:           return "#dc2626"
+                    # 5-shade colour scale
+                    def _param_color(pct):
+                        if pct >= 90:   return "#059669"
+                        elif pct >= 80: return "#10b981"
+                        elif pct >= 70: return "#f59e0b"
+                        elif pct >= 60: return "#fb923c"
+                        else:           return "#dc2626"
 
-                _bar_clrs = [_param_color(p["pct"]) for p in _allp_sorted]
+                    _bar_clrs = [_param_color(p["pct"]) for p in _allp_sorted]
 
-                # Y-axis labels include tier badge
-                _ylabels = [
-                    f'{p["col"]}  [{_tier_of.get(p["col"], "")}]'
-                    for p in _allp_sorted
-                ]
+                    # Y-axis labels include tier badge
+                    _ylabels = [
+                        f'{p["col"]}  [{_tier_of.get(p["col"], "")}]'
+                        for p in _allp_sorted
+                    ]
 
-                _ap_fig = go.Figure()
-                _ap_fig.add_trace(go.Bar(
-                    y=_ylabels,
-                    x=[p["pct"] for p in _allp_sorted],
-                    orientation="h",
-                    marker_color=_bar_clrs,
-                    marker_line=dict(width=0),
-                    customdata=[[p["col"], _tier_of.get(p["col"], "—"), p["pct"]] for p in _allp_sorted],
-                    hovertemplate=(
-                        "<b>%{customdata[0]}</b><br>"
-                        "Tier: %{customdata[1]}<br>"
-                        "Avg Score: <b>%{customdata[2]}%</b><extra></extra>"
-                    ),
-                    text=[f'  {p["pct"]}%' for p in _allp_sorted],
-                    textposition="outside",
-                    cliponaxis=False,
-                    textfont=dict(size=12, color="#0B1F3A", family="Inter,sans-serif"),
-                ))
-                # Target line 80%
-                _ap_fig.add_vline(
-                    x=80, line_dash="solid", line_color="#059669", line_width=2,
-                    annotation_text="  Target 80%",
-                    annotation_position="top right",
-                    annotation_font=dict(size=11, color="#fff", family="Inter,sans-serif"),
-                    annotation_bgcolor="#059669",
-                    annotation_borderpad=4,
-                )
-                # Review threshold 60%
-                _ap_fig.add_vline(
-                    x=60, line_dash="dot", line_color="#d97706", line_width=1.5,
-                    annotation_text="  Review 60%",
-                    annotation_position="bottom right",
-                    annotation_font=dict(size=10, color="#d97706", family="Inter,sans-serif"),
-                )
-                _ap_fig.update_layout(
-                    plot_bgcolor="#f8faff",
-                    paper_bgcolor="#fff",
-                    font=dict(family="Inter,sans-serif", size=12),
-                    margin=dict(l=10, r=70, t=50, b=20),
-                    height=max(320, len(_allp_sorted) * 34 + 80),
-                    showlegend=False,
-                    xaxis=dict(
-                        title=dict(text="Avg Score %", font=dict(size=11, color="#64748b")),
-                        range=[0, 118],
-                        gridcolor="#e2e8f0",
-                        ticksuffix="%",
-                        tickfont=dict(size=11, color="#64748b"),
-                    ),
-                    yaxis=dict(tickfont=dict(size=11, color="#0B1F3A")),
-                    bargap=0.30,
-                )
-                st.plotly_chart(_ap_fig, use_container_width=True, config={"displayModeBar": False})
+                    _ap_fig = go.Figure()
+                    _ap_fig.add_trace(go.Bar(
+                        y=_ylabels,
+                        x=[p["pct"] for p in _allp_sorted],
+                        orientation="h",
+                        marker_color=_bar_clrs,
+                        marker_line=dict(width=0),
+                        customdata=[[p["col"], _tier_of.get(p["col"], "—"), p["pct"]] for p in _allp_sorted],
+                        hovertemplate=(
+                            "<b>%{customdata[0]}</b><br>"
+                            "Tier: %{customdata[1]}<br>"
+                            "Avg Score: <b>%{customdata[2]}%</b><extra></extra>"
+                        ),
+                        text=[f'  {p["pct"]}%' for p in _allp_sorted],
+                        textposition="outside",
+                        cliponaxis=False,
+                        textfont=dict(size=12, color="#0B1F3A", family="Inter,sans-serif"),
+                    ))
+                    # Target line 80%
+                    _ap_fig.add_vline(
+                        x=80, line_dash="solid", line_color="#059669", line_width=2,
+                        annotation_text="  Target 80%",
+                        annotation_position="top right",
+                        annotation_font=dict(size=11, color="#fff", family="Inter,sans-serif"),
+                        annotation_bgcolor="#059669",
+                        annotation_borderpad=4,
+                    )
+                    # Review threshold 60%
+                    _ap_fig.add_vline(
+                        x=60, line_dash="dot", line_color="#d97706", line_width=1.5,
+                        annotation_text="  Review 60%",
+                        annotation_position="bottom right",
+                        annotation_font=dict(size=10, color="#d97706", family="Inter,sans-serif"),
+                    )
+                    _ap_fig.update_layout(
+                        plot_bgcolor="#f8faff",
+                        paper_bgcolor="#fff",
+                        font=dict(family="Inter,sans-serif", size=12),
+                        margin=dict(l=10, r=70, t=50, b=20),
+                        height=max(320, len(_allp_sorted) * 34 + 80),
+                        showlegend=False,
+                        xaxis=dict(
+                            title=dict(text="Avg Score %", font=dict(size=11, color="#64748b")),
+                            range=[0, 118],
+                            gridcolor="#e2e8f0",
+                            ticksuffix="%",
+                            tickfont=dict(size=11, color="#64748b"),
+                        ),
+                        yaxis=dict(tickfont=dict(size=11, color="#0B1F3A")),
+                        bargap=0.30,
+                    )
+                    st.plotly_chart(_ap_fig, use_container_width=True, config={"displayModeBar": False})
 
-                # Colour legend strip
-                st.markdown("""
+                    # Colour legend strip
+                    st.markdown("""
 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:-8px;margin-bottom:8px;">
   <span style="font-size:0.62rem;color:#64748b;font-weight:600;align-self:center;">Score legend:</span>
   <span style="background:#059669;color:#fff;font-size:0.6rem;font-weight:700;
@@ -11885,110 +11897,111 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
   <span style="background:#dc2626;color:#fff;font-size:0.6rem;font-weight:700;
     padding:2px 10px;border-radius:20px;">&lt;60% At Risk</span>
 </div>""", unsafe_allow_html=True)
-            except Exception:
-                pass
+                except Exception:
+                    pass
 
         # ── Section 14a — Custom Parameters Analysis ──────────────────────────────
-        if "sense_custom_audit_params" not in st.session_state:
-            st.session_state["sense_custom_audit_params"] = param_store.load()
-        _dash_cps = [
-            cp for cp in st.session_state["sense_custom_audit_params"]
-            if cp["name"] in _dash_df.columns
-        ]
-        if _dash_cps:
-            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-            st.markdown('<div class="section-chip">⭐ Custom Parameters</div>', unsafe_allow_html=True)
-            try:
-                _dcp_cols = st.columns(min(len(_dash_cps), 3))
-                for _dcpi, _dcp in enumerate(_dash_cps):
-                    with _dcp_cols[_dcpi % len(_dcp_cols)]:
-                        _dcpv = _dash_df[_dcp["name"]].replace("", None).dropna().astype(str).str.strip()
-                        _dcpv = _dcpv[_dcpv.str.lower() != "nan"]
-                        _dyes = int((_dcpv.str.lower() == "yes").sum())
-                        _dno  = int((_dcpv.str.lower() == "no").sum())
-                        _dna  = int((_dcpv.str.lower() == "na").sum())
-                        _dtot = len(_dcpv)
-                        _dyes_pct = round(_dyes / _dtot * 100, 1) if _dtot else 0
-                        _dno_pct  = round(_dno  / _dtot * 100, 1) if _dtot else 0
-                        st.markdown(
-                            f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:14px 16px;margin-bottom:8px;">'
-                            f'<div style="font-size:0.68rem;font-weight:700;color:#0ebc6e;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">⭐ {_dcp["name"]}</div>'
-                            f'<div style="display:flex;gap:8px;margin-bottom:10px;">'
-                            f'<div style="flex:1;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:8px;text-align:center;">'
-                            f'<div style="font-size:1.4rem;font-weight:900;color:#0ebc6e;">{_dyes}</div>'
-                            f'<div style="font-size:0.62rem;color:#059669;font-weight:700;">Yes</div>'
-                            f'<div style="font-size:0.62rem;color:#5588bb;">{_dyes_pct}%</div>'
-                            f'</div>'
-                            f'<div style="flex:1;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px;text-align:center;">'
-                            f'<div style="font-size:1.4rem;font-weight:900;color:#dc2626;">{_dno}</div>'
-                            f'<div style="font-size:0.62rem;color:#dc2626;font-weight:700;">No</div>'
-                            f'<div style="font-size:0.62rem;color:#5588bb;">{_dno_pct}%</div>'
-                            f'</div>'
-                            f'<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;text-align:center;">'
-                            f'<div style="font-size:1.4rem;font-weight:900;color:#94a3b8;">{_dna}</div>'
-                            f'<div style="font-size:0.62rem;color:#94a3b8;font-weight:700;">NA</div>'
-                            f'</div>'
-                            f'</div>'
-                            f'<div style="height:6px;background:#f0f2f5;border-radius:3px;overflow:hidden;display:flex;">'
-                            f'<div style="width:{_dyes_pct}%;background:#0ebc6e;"></div>'
-                            f'<div style="width:{_dno_pct}%;background:#dc2626;"></div>'
-                            f'</div>'
-                            f'<div style="font-size:0.62rem;color:#5588bb;margin-top:6px;">{_dtot} responses</div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
-            except Exception:
-                pass
+        if st.session_state.get("dbsec_custom_params", True):
+            if "sense_custom_audit_params" not in st.session_state:
+                st.session_state["sense_custom_audit_params"] = param_store.load()
+            _dash_cps = [
+                cp for cp in st.session_state["sense_custom_audit_params"]
+                if cp["name"] in _dash_df.columns
+            ]
+            if _dash_cps:
+                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+                st.markdown('<div class="section-chip">⭐ Custom Parameters</div>', unsafe_allow_html=True)
+                try:
+                    _dcp_cols = st.columns(min(len(_dash_cps), 3))
+                    for _dcpi, _dcp in enumerate(_dash_cps):
+                        with _dcp_cols[_dcpi % len(_dcp_cols)]:
+                            _dcpv = _dash_df[_dcp["name"]].replace("", None).dropna().astype(str).str.strip()
+                            _dcpv = _dcpv[_dcpv.str.lower() != "nan"]
+                            _dyes = int((_dcpv.str.lower() == "yes").sum())
+                            _dno  = int((_dcpv.str.lower() == "no").sum())
+                            _dna  = int((_dcpv.str.lower() == "na").sum())
+                            _dtot = len(_dcpv)
+                            _dyes_pct = round(_dyes / _dtot * 100, 1) if _dtot else 0
+                            _dno_pct  = round(_dno  / _dtot * 100, 1) if _dtot else 0
+                            st.markdown(
+                                f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:14px 16px;margin-bottom:8px;">'
+                                f'<div style="font-size:0.68rem;font-weight:700;color:#0ebc6e;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">⭐ {_dcp["name"]}</div>'
+                                f'<div style="display:flex;gap:8px;margin-bottom:10px;">'
+                                f'<div style="flex:1;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:8px;text-align:center;">'
+                                f'<div style="font-size:1.4rem;font-weight:900;color:#0ebc6e;">{_dyes}</div>'
+                                f'<div style="font-size:0.62rem;color:#059669;font-weight:700;">Yes</div>'
+                                f'<div style="font-size:0.62rem;color:#5588bb;">{_dyes_pct}%</div>'
+                                f'</div>'
+                                f'<div style="flex:1;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px;text-align:center;">'
+                                f'<div style="font-size:1.4rem;font-weight:900;color:#dc2626;">{_dno}</div>'
+                                f'<div style="font-size:0.62rem;color:#dc2626;font-weight:700;">No</div>'
+                                f'<div style="font-size:0.62rem;color:#5588bb;">{_dno_pct}%</div>'
+                                f'</div>'
+                                f'<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;text-align:center;">'
+                                f'<div style="font-size:1.4rem;font-weight:900;color:#94a3b8;">{_dna}</div>'
+                                f'<div style="font-size:0.62rem;color:#94a3b8;font-weight:700;">NA</div>'
+                                f'</div>'
+                                f'</div>'
+                                f'<div style="height:6px;background:#f0f2f5;border-radius:3px;overflow:hidden;display:flex;">'
+                                f'<div style="width:{_dyes_pct}%;background:#0ebc6e;"></div>'
+                                f'<div style="width:{_dno_pct}%;background:#dc2626;"></div>'
+                                f'</div>'
+                                f'<div style="font-size:0.62rem;color:#5588bb;margin-top:6px;">{_dtot} responses</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                except Exception:
+                    pass
 
-            # ── Insights + Action Items ────────────────────────────────────────
-            _dcp_qi = _gen_custom_param_insights(_dash_df, _dash_cps)
-            _dcp_ins  = _dcp_qi.get("insights", [])
-            _dcp_acts = _dcp_qi.get("actions", [])
-            if _dcp_ins or _dcp_acts:
-                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-                _dcp_ic, _dcp_ac = st.columns([3, 2])
-                _TCFG = {
-                    "critical": ("#fff1f2", "#e11d48", "#9f1239", "#fecdd3"),
-                    "warning":  ("#fffbf0", "#d97706", "#92400e", "#fde68a"),
-                    "success":  ("#ecfdf5", "#059669", "#064e3b", "#a7f3d0"),
-                    "info":     ("#eef2ff", "#4f46e5", "#312e81", "#c7d2fe"),
-                }
-                with _dcp_ic:
-                    st.markdown('<div class="section-chip">💡 Key Insights</div>', unsafe_allow_html=True)
-                    for _di in _dcp_ins:
-                        _dtc = _TCFG.get(_di["type"], _TCFG["info"])
-                        st.markdown(
-                            f'<div style="background:{_dtc[0]};border:1px solid {_dtc[3]};'
-                            f'border-left:4px solid {_dtc[1]};border-radius:10px;'
-                            f'padding:12px 16px;margin-bottom:8px;">'
-                            f'<div style="font-size:0.78rem;font-weight:700;color:{_dtc[2]};margin-bottom:4px;">{_di["title"]}</div>'
-                            f'<div style="font-size:0.72rem;color:{_dtc[2]};opacity:0.85;line-height:1.5;">{_di["detail"]}</div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
-                with _dcp_ac:
-                    st.markdown('<div class="section-chip">🎯 Action Items</div>', unsafe_allow_html=True)
-                    _PCFG = {
-                        "high":   ("#dc2626", "🔴", "#fef2f2"),
-                        "medium": ("#f59e0b", "🟡", "#fffbeb"),
-                        "low":    ("#16a34a", "🟢", "#f0fdf4"),
+                # ── Insights + Action Items ────────────────────────────────────────
+                _dcp_qi = _gen_custom_param_insights(_dash_df, _dash_cps)
+                _dcp_ins  = _dcp_qi.get("insights", [])
+                _dcp_acts = _dcp_qi.get("actions", [])
+                if _dcp_ins or _dcp_acts:
+                    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+                    _dcp_ic, _dcp_ac = st.columns([3, 2])
+                    _TCFG = {
+                        "critical": ("#fff1f2", "#e11d48", "#9f1239", "#fecdd3"),
+                        "warning":  ("#fffbf0", "#d97706", "#92400e", "#fde68a"),
+                        "success":  ("#ecfdf5", "#059669", "#064e3b", "#a7f3d0"),
+                        "info":     ("#eef2ff", "#4f46e5", "#312e81", "#c7d2fe"),
                     }
-                    for _da in _dcp_acts:
-                        _dpc = _PCFG.get(_da["priority"], _PCFG["low"])
-                        st.markdown(
-                            f'<div style="background:{_dpc[2]};border:1px solid {_dpc[0]}33;'
-                            f'border-radius:10px;padding:12px 15px;margin-bottom:8px;">'
-                            f'<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">'
-                            f'<span style="font-size:0.75rem;">{_dpc[1]}</span>'
-                            f'<span style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;'
-                            f'text-transform:uppercase;color:{_dpc[0]};">{_da["priority"].upper()} · {_da["category"]}</span>'
-                            f'</div>'
-                            f'<div style="font-size:0.73rem;font-weight:600;color:#0d1d3a;margin-bottom:5px;line-height:1.4;">{_da["action"]}</div>'
-                            f'<div style="font-size:0.65rem;color:#5588bb;line-height:1.4;border-top:1px solid {_dpc[0]}22;padding-top:5px;">'
-                            f'Impact: {_da["impact"]}</div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
+                    with _dcp_ic:
+                        st.markdown('<div class="section-chip">💡 Key Insights</div>', unsafe_allow_html=True)
+                        for _di in _dcp_ins:
+                            _dtc = _TCFG.get(_di["type"], _TCFG["info"])
+                            st.markdown(
+                                f'<div style="background:{_dtc[0]};border:1px solid {_dtc[3]};'
+                                f'border-left:4px solid {_dtc[1]};border-radius:10px;'
+                                f'padding:12px 16px;margin-bottom:8px;">'
+                                f'<div style="font-size:0.78rem;font-weight:700;color:{_dtc[2]};margin-bottom:4px;">{_di["title"]}</div>'
+                                f'<div style="font-size:0.72rem;color:{_dtc[2]};opacity:0.85;line-height:1.5;">{_di["detail"]}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                    with _dcp_ac:
+                        st.markdown('<div class="section-chip">🎯 Action Items</div>', unsafe_allow_html=True)
+                        _PCFG = {
+                            "high":   ("#dc2626", "🔴", "#fef2f2"),
+                            "medium": ("#f59e0b", "🟡", "#fffbeb"),
+                            "low":    ("#16a34a", "🟢", "#f0fdf4"),
+                        }
+                        for _da in _dcp_acts:
+                            _dpc = _PCFG.get(_da["priority"], _PCFG["low"])
+                            st.markdown(
+                                f'<div style="background:{_dpc[2]};border:1px solid {_dpc[0]}33;'
+                                f'border-radius:10px;padding:12px 15px;margin-bottom:8px;">'
+                                f'<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">'
+                                f'<span style="font-size:0.75rem;">{_dpc[1]}</span>'
+                                f'<span style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;'
+                                f'text-transform:uppercase;color:{_dpc[0]};">{_da["priority"].upper()} · {_da["category"]}</span>'
+                                f'</div>'
+                                f'<div style="font-size:0.73rem;font-weight:600;color:#0d1d3a;margin-bottom:5px;line-height:1.4;">{_da["action"]}</div>'
+                                f'<div style="font-size:0.65rem;color:#5588bb;line-height:1.4;border-top:1px solid {_dpc[0]}22;padding-top:5px;">'
+                                f'Impact: {_da["impact"]}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
 
 
     with _tab_email:
