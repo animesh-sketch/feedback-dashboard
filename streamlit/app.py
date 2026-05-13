@@ -10881,7 +10881,8 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         f'</div></div>',
         unsafe_allow_html=True
     )
-    _tab_email, _tab_analytics = st.tabs(["📧 Email Report — Select & Send", "📊 Analytics & Charts"])
+    _tab_analytics = st.container()
+    _tab_email = st.container()
 
     with _tab_analytics:
         st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
@@ -12011,6 +12012,8 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
 
     with _tab_email:
+        st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
+        st.divider()
         # ── Section 14 — Full Dashboard Email Builder (all panels tick/untick) ────
         st.markdown('<div class="section-chip">📧 Select Dashboard Sections & Send as Email</div>', unsafe_allow_html=True)
         st.markdown('<div style="font-size:0.72rem;color:#64748b;margin-bottom:14px;">Tick the sections you want to include — each is converted to email-safe HTML and assembled into a professional report. Use <b>Select All</b> to include every section.</div>', unsafe_allow_html=True)
