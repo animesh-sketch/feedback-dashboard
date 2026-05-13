@@ -2587,6 +2587,62 @@ def _attachment_slot(d: dict, key_suffix: str):
         unsafe_allow_html=True,
     )
 
+    # ── Audit Dump Generator ──────────────────────────────────────────────────
+    with st.expander("📊 Generate & Attach Audit Dump", expanded=False):
+        _audit_recs = st.session_state.get("sense_audit_log") or []
+        if not _audit_recs:
+            try:
+                _audit_recs = audit_store.load()
+            except Exception:
+                _audit_recs = []
+
+        _dump_clients = ["All"] + sorted(set(r.get("Client", "") for r in _audit_recs if r.get("Client")))
+        _dump_qas     = ["All"] + sorted(set(r.get("QA", "")     for r in _audit_recs if r.get("QA")))
+
+        _dc1, _dc2, _dc3 = st.columns(3)
+        with _dc1:
+            _dump_client = st.selectbox("Client", _dump_clients, key=f"dump_client_{key_suffix}")
+        with _dc2:
+            _dump_date = st.date_input("Audit Date (optional)", value=None, key=f"dump_date_{key_suffix}")
+        with _dc3:
+            _dump_qa = st.selectbox("QA / Auditor", _dump_qas, key=f"dump_qa_{key_suffix}")
+
+        if st.button("📥 Attach Audit Dump", key=f"gen_dump_{key_suffix}", use_container_width=True, type="primary"):
+            _filtered = list(_audit_recs)
+            if _dump_client != "All":
+                _filtered = [r for r in _filtered if r.get("Client") == _dump_client]
+            if _dump_date:
+                _ds = str(_dump_date)
+                _filtered = [r for r in _filtered if str(r.get("Audit Date", ""))[:10] == _ds]
+            if _dump_qa != "All":
+                _filtered = [r for r in _filtered if r.get("QA") == _dump_qa]
+
+            if _filtered:
+                import io as _io
+                _dump_df = pd.DataFrame(_filtered)
+                _dump_df = _dump_df.drop(columns=[c for c in ["_row_id"] if c in _dump_df.columns], errors="ignore")
+                _csv_buf = _io.BytesIO()
+                _dump_df.to_csv(_csv_buf, index=False)
+                _csv_bytes = _csv_buf.getvalue()
+
+                _fn_parts = ["audit_dump"]
+                if _dump_client != "All":
+                    _fn_parts.append(_dump_client.replace(" ", "_").lower())
+                if _dump_date:
+                    _fn_parts.append(str(_dump_date))
+                if _dump_qa != "All":
+                    _fn_parts.append(_dump_qa.replace(" ", "_").lower())
+                _dump_fname = "_".join(_fn_parts) + ".csv"
+
+                d["attachment_data"] = base64.b64encode(_csv_bytes).decode()
+                d["attachment_name"] = _dump_fname
+                d["attachment_mime"] = "text/csv"
+                d["attachment_url"]  = ""
+                st.success(f"✓ {len(_filtered)} record(s) → {_dump_fname} attached")
+                st.rerun()
+            else:
+                st.warning("No audit records match the selected filters.")
+
     has_file = bool(d.get("attachment_data"))
     has_url  = bool(d.get("attachment_url"))
 
