@@ -13654,7 +13654,7 @@ def _render_registry():
                              f'border-bottom:1px solid #edf2fb;">'
                              f'<span style="font-size:0.75rem;font-weight:600;color:#0d1d3a;flex:1;">🤖 {_cm}</span></div>')
             st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:8px;margin-bottom:10px;">{_cm_html}</div>', unsafe_allow_html=True)
-        with st.expander("➕ Add / Remove Bot", expanded=False):
+        with st.expander("➕ Add Bot", expanded=False):
             _cc1, _cc2 = st.columns([3,1])
             with _cc1:
                 _new_cm = st.text_input("Bot name", placeholder="e.g. Tara", key="reg_new_cm")
@@ -13668,13 +13668,6 @@ def _render_registry():
                         st.session_state["sense_registry_cms"] = _cms
                         _registry_persist()
                         st.rerun()
-            if _cms:
-                _del_cm = st.selectbox("Remove Bot", ["— select —"] + _cms, key="reg_del_cm")
-                if st.button("🗑️ Delete Bot", key="reg_del_cm_btn", type="secondary"):
-                    if _del_cm != "— select —":
-                        st.session_state["sense_registry_cms"] = [c for c in _cms if c != _del_cm]
-                        _registry_persist()
-                        st.rerun()
 
     # ── QA Registry ────────────────────────────────────────────────────────────
     with _reg_tabs[2]:
@@ -13686,7 +13679,7 @@ def _render_registry():
                 _qa_html += (f'<div style="padding:5px 10px;border-bottom:1px solid #edf2fb;">'
                              f'<span style="font-size:0.75rem;font-weight:600;color:#0d1d3a;">{_qa}</span></div>')
             st.markdown(f'<div style="background:#fff;border:1px solid #e4e7ec;border-radius:8px;margin-bottom:10px;">{_qa_html}</div>', unsafe_allow_html=True)
-        with st.expander("➕ Add / Remove QA", expanded=False):
+        with st.expander("➕ Add QA", expanded=False):
             _qc1, _qc2 = st.columns([3,1])
             with _qc1:
                 _new_qa = st.text_input("New QA name", placeholder="e.g. Rohit", key="reg_new_qa")
@@ -13697,13 +13690,6 @@ def _render_registry():
                     if _n and _n not in _qas:
                         _qas.append(_n)
                         st.session_state["sense_registry_qas"] = _qas
-                        _registry_persist()
-                        st.rerun()
-            if _qas:
-                _del_qa = st.selectbox("Remove QA", ["— select —"] + _qas, key="reg_del_qa")
-                if st.button("🗑️ Delete QA", key="reg_del_qa_btn", type="secondary"):
-                    if _del_qa != "— select —":
-                        st.session_state["sense_registry_qas"] = [q for q in _qas if q != _del_qa]
                         _registry_persist()
                         st.rerun()
 
@@ -13797,13 +13783,6 @@ def _render_registry():
                         st.session_state["sense_registry_clients"] = _clients_reg
                         _registry_persist()
                         st.rerun()
-        with st.expander("🗑️ Delete Client", expanded=False):
-            _del_cli_sel = st.selectbox("Select client to delete", ["— select —"] + [c["client"] for c in _clients_reg], key="reg_del_cli_sel")
-            if st.button("🗑️ Delete Client", key="reg_del_cli_btn", type="secondary"):
-                if _del_cli_sel != "— select —":
-                    st.session_state["sense_registry_clients"] = [c for c in _clients_reg if c["client"] != _del_cli_sel]
-                    _registry_persist()
-                    st.rerun()
 
     # ── Email Contacts Registry ────────────────────────────────────────────────
     with _reg_tabs[4]:
@@ -13852,7 +13831,7 @@ def _render_registry():
                         st.warning("Enter a valid email address.")
 
         if _contacts:
-            with st.expander("✏️ Edit / 🗑️ Delete Contact", expanded=False):
+            with st.expander("✏️ Edit Contact", expanded=False):
                 _ct_opts = [f'{c["name"]} <{c["email"]}>' for c in _contacts]
                 _ct_sel = st.selectbox("Select contact", ["— select —"] + _ct_opts, key="reg_sel_ct")
                 if _ct_sel != "— select —":
@@ -13863,19 +13842,11 @@ def _render_registry():
                         _edit_ct_name = st.text_input("Name", value=_ct_entry["name"], key="reg_edit_ct_name")
                     with _ctec2:
                         _edit_ct_email = st.text_input("Email", value=_ct_entry["email"], key="reg_edit_ct_email")
-                    _cte_s, _cte_d = st.columns(2)
-                    with _cte_s:
-                        if st.button("💾 Save", key="reg_edit_ct_save", use_container_width=True, type="primary"):
-                            _ne = _edit_ct_email.strip().lower()
-                            if _ne and "@" in _ne:
-                                _contacts[_ct_idx] = {"name": _edit_ct_name.strip() or _ne.split("@")[0].title(), "email": _ne}
-                                _contacts.sort(key=lambda x: x["name"].lower())
-                                st.session_state["sense_registry_contacts"] = _contacts
-                                _registry_persist()
-                                st.rerun()
-                    with _cte_d:
-                        if st.button("🗑️ Delete", key="reg_del_ct_btn", use_container_width=True, type="secondary"):
-                            _contacts.pop(_ct_idx)
+                    if st.button("💾 Save", key="reg_edit_ct_save", use_container_width=True, type="primary"):
+                        _ne = _edit_ct_email.strip().lower()
+                        if _ne and "@" in _ne:
+                            _contacts[_ct_idx] = {"name": _edit_ct_name.strip() or _ne.split("@")[0].title(), "email": _ne}
+                            _contacts.sort(key=lambda x: x["name"].lower())
                             st.session_state["sense_registry_contacts"] = _contacts
                             _registry_persist()
                             st.rerun()
