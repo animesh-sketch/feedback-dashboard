@@ -7163,6 +7163,29 @@ def _render_sense_scorecard(sheets, legend_map):
 
     # ── All Parameter Performance ─────────────────────────────────────────────
     st.markdown('<div class="section-chip">📊 All Parameter Performance</div>', unsafe_allow_html=True)
+
+    # Overall score summary card
+    if _has_qa_schema and "Bot Score" in audit_df.columns:
+        _ov_bs = pd.to_numeric(audit_df["Bot Score"], errors="coerce").dropna()
+        if len(_ov_bs):
+            _ov_avg = round(_ov_bs.mean(), 1)
+            _ov_clr = "#059669" if _ov_avg >= 80 else "#d97706" if _ov_avg >= 60 else "#dc2626"
+            _ov_bg  = "#ecfdf5" if _ov_avg >= 80 else "#fffbeb" if _ov_avg >= 60 else "#fff1f2"
+            _ov_brd = "#a7f3d0" if _ov_avg >= 80 else "#fde68a" if _ov_avg >= 60 else "#fecdd3"
+            _ov_lbl = "Good" if _ov_avg >= 80 else "Needs Review" if _ov_avg >= 60 else "Critical"
+            st.markdown(
+                f'<div style="background:{_ov_bg};border:1px solid {_ov_brd};border-radius:12px;'
+                f'padding:14px 20px;margin-bottom:14px;display:flex;align-items:center;gap:20px;">'
+                f'<div><div style="font-size:0.65rem;font-weight:700;color:#64748b;letter-spacing:0.1em;'
+                f'text-transform:uppercase;margin-bottom:2px;">Overall Score</div>'
+                f'<div style="font-size:2rem;font-weight:900;color:{_ov_clr};line-height:1;">{_ov_avg}%</div></div>'
+                f'<div style="background:{_ov_clr};color:#fff;font-size:0.65rem;font-weight:800;'
+                f'padding:4px 12px;border-radius:20px;letter-spacing:0.08em;">{_ov_lbl}</div>'
+                f'<div style="margin-left:auto;font-size:0.68rem;color:#64748b;">{len(_ov_bs)} audits</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
     _app_tiers = _QA_SCHEMA.get("tiers", []) if _has_qa_schema else []
     _app_tier_cols_done = set()
     _app_tier_cols_list = st.columns(max(len(_app_tiers), 1)) if _app_tiers else [st]
@@ -9845,69 +9868,6 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
         else:
             st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-            # ── 1. Parameter Co-failure Analysis ──────────────────────────────
-            st.markdown('<div class="section-chip">🔗 Parameter Co-failure Analysis</div>', unsafe_allow_html=True)
-            st.markdown(
-                '<div style="font-size:0.71rem;color:#475569;margin-bottom:12px;line-height:1.55;">'
-                'When one parameter fails, which others fail at the same time? Co-failure patterns reveal systemic bot logic issues '
-                'that single-parameter coaching cannot fix — they need script-level changes.</div>',
-                unsafe_allow_html=True
-            )
-            _cf_tier_params = [_p for _t in _QA_SCHEMA["tiers"] for _p in _t["params"]]
-            _cf_cols = [p["col"] for p in _cf_tier_params if p["col"] in _audit_df_ins.columns]
-            if len(_cf_cols) >= 4 and len(_audit_df_ins) >= 5:
-                _cofail_pairs_i6 = []
-                for _i_cf in range(len(_cf_cols)):
-                    for _j_cf in range(_i_cf + 1, len(_cf_cols)):
-                        _ca, _cb = _cf_cols[_i_cf], _cf_cols[_j_cf]
-                        _va = _audit_df_ins[_ca].astype(str).str.strip()
-                        _vb = _audit_df_ins[_cb].astype(str).str.strip()
-                        _fa = (_va == "0") | (_va.str.lower() == "fatal")
-                        _fb = (_vb == "0") | (_vb.str.lower() == "fatal")
-                        _both = int((_fa & _fb).sum())
-                        _a_tot = int(_fa.sum())
-                        if _a_tot >= 2 and _both >= 2:
-                            _pct_cf = round(_both / _a_tot * 100)
-                            if _pct_cf >= 35:
-                                _cofail_pairs_i6.append({"a": _ca, "b": _cb, "pct": _pct_cf, "both": _both, "a_total": _a_tot})
-                _cofail_pairs_i6.sort(key=lambda x: -x["pct"])
-                if _cofail_pairs_i6:
-                    _cf_cols_split = st.columns(2)
-                    for _cfi, _cfp in enumerate(_cofail_pairs_i6[:8]):
-                        _cf_clr = "#dc2626" if _cfp["pct"] >= 70 else "#d97706" if _cfp["pct"] >= 50 else "#64748b"
-                        _cf_bg  = "#FFF1F2" if _cfp["pct"] >= 70 else "#FFFBEB" if _cfp["pct"] >= 50 else "#F8FAFC"
-                        _cf_brd = "#FECDD3" if _cfp["pct"] >= 70 else "#FDE68A" if _cfp["pct"] >= 50 else "#E2E8F0"
-                        with _cf_cols_split[_cfi % 2]:
-                            st.markdown(
-                                f'<div style="background:{_cf_bg};border:1px solid {_cf_brd};border-left:4px solid {_cf_clr};'
-                                f'border-radius:10px;padding:12px 16px;margin-bottom:8px;">'
-                                f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
-                                f'<div style="font-size:1.3rem;font-weight:900;color:{_cf_clr};">{_cfp["pct"]}%</div>'
-                                f'<div style="font-size:0.6rem;font-weight:700;color:#fff;background:{_cf_clr};border-radius:10px;padding:2px 9px;">{_cfp["both"]} co-fails</div>'
-                                f'</div>'
-                                f'<div style="font-size:0.7rem;font-weight:700;color:#0B1F3A;margin-bottom:3px;">'
-                                f'<span style="background:#FEE2E2;border-radius:4px;padding:2px 6px;margin-right:4px;">{_cfp["a"][:22]}</span>'
-                                f'<span style="color:#94a3b8;font-weight:400;">+ </span>'
-                                f'<span style="background:#FEE2E2;border-radius:4px;padding:2px 6px;">{_cfp["b"][:22]}</span>'
-                                f'</div>'
-                                f'<div style="font-size:0.63rem;color:#64748b;margin-top:5px;">'
-                                f'When <strong>{_cfp["a"]}</strong> fails → <strong>{_cfp["b"]}</strong> also fails {_cfp["pct"]}% of the time '
-                                f'({_cfp["both"]} of {_cfp["a_total"]} cases)</div>'
-                                f'</div>',
-                                unsafe_allow_html=True
-                            )
-                else:
-                    st.markdown(
-                        '<div style="background:#F0FDF4;border:1px solid #A7F3D0;border-radius:10px;padding:14px 18px;'
-                        'font-size:0.73rem;color:#059669;">✅ No strong co-failure patterns found — parameters are failing independently. '
-                        'This is a healthy sign; single-parameter coaching should be effective.</div>',
-                        unsafe_allow_html=True
-                    )
-            else:
-                st.info("Need at least 4 parameter columns and 5 audit records to compute co-failure patterns.")
-
-            st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-
             # ── 2. Score Distribution Histogram ───────────────────────────────
             st.markdown('<div class="section-chip">📊 Score Distribution Histogram</div>', unsafe_allow_html=True)
             _hist_bs = pd.to_numeric(_audit_df_ins["Bot Score"], errors="coerce").dropna()
@@ -11326,60 +11286,6 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             except Exception:
                 pass
 
-        # ── Section 9 — Co-failure Analysis ──────────────────────────────────────
-        st.markdown('<div class="section-chip">🔴 Co-failure Analysis (Parameters That Fail Together)</div>', unsafe_allow_html=True)
-        try:
-            _all_param_cols = []
-            for _t in _QA_SCHEMA.get("tiers", []):
-                for _p in _t.get("params", []):
-                    if _p["col"] in _dash_df.columns:
-                        _all_param_cols.append(_p)
-            # Build binary fail matrix (1 = failed / below 50% of max, 0 = ok)
-            _fail_mat = {}
-            for _p in _all_param_cols:
-                _pmx = [int(o) for o in _p.get("options", []) if str(o).lstrip("-").isdigit()]
-                _pmax = max(_pmx) if _pmx else 2
-                _pv = pd.to_numeric(_dash_df[_p["col"]].astype(str).str.strip().replace(
-                    {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmax)}), errors="coerce")
-                _fail_mat[_p["col"]] = (_pv < _pmax * 0.5).astype(int)
-            if len(_fail_mat) >= 2 and _total_d >= 5:
-                _fail_df = pd.DataFrame(_fail_mat)
-                _cofail_pairs = []
-                _cols_list = list(_fail_df.columns)
-                for _i in range(len(_cols_list)):
-                    for _j in range(_i + 1, len(_cols_list)):
-                        _both_fail = ((_fail_df[_cols_list[_i]] == 1) & (_fail_df[_cols_list[_j]] == 1)).sum()
-                        _either = ((_fail_df[_cols_list[_i]] == 1) | (_fail_df[_cols_list[_j]] == 1)).sum()
-                        _rate = round(_both_fail / _total_d * 100, 1)
-                        if _rate >= 10:
-                            _cofail_pairs.append({"p1": _cols_list[_i], "p2": _cols_list[_j],
-                                                  "both_fail": int(_both_fail), "rate": _rate})
-                _cofail_pairs.sort(key=lambda x: -x["rate"])
-                if _cofail_pairs[:8]:
-                    _cf_html = ""
-                    for _cf in _cofail_pairs[:8]:
-                        _cfcolor = "#dc2626" if _cf["rate"] >= 35 else "#d97706" if _cf["rate"] >= 20 else "#2563EB"
-                        _cfbg = "linear-gradient(135deg,#fff5f5,#fef2f2)" if _cf["rate"] >= 35 else "linear-gradient(135deg,#fffbeb,#fef3c7)" if _cf["rate"] >= 20 else "linear-gradient(135deg,#eff6ff,#dbeafe)"
-                        _cfborder = "#fca5a5" if _cf["rate"] >= 35 else "#fde68a" if _cf["rate"] >= 20 else "#bfdbfe"
-                        _cf_html += (
-                            f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:10px 14px;'
-                            f'background:{_cfbg};border:1px solid {_cfborder};border-left:3px solid {_cfcolor};border-radius:10px;'
-                            f'box-shadow:0 2px 8px rgba(11,31,58,0.05);">'
-                            f'<div style="flex:1;font-size:0.72rem;font-weight:700;color:#0B1F3A;">'
-                            f'<span style="color:#dc2626;font-size:0.8rem;">✗</span> {_cf["p1"]}'
-                            f' <span style="color:#94a3b8;font-weight:500;font-size:0.68rem;"> + </span>'
-                            f'<span style="color:#dc2626;font-size:0.8rem;">✗</span> {_cf["p2"]}</div>'
-                            f'<div style="flex-shrink:0;background:{_cfcolor};color:#fff;font-size:0.68rem;'
-                            f'font-weight:900;padding:4px 10px;border-radius:6px;white-space:nowrap;'
-                            f'box-shadow:0 2px 6px rgba(0,0,0,0.15);">{_cf["rate"]}% co-fail</div>'
-                            f'</div>'
-                        )
-                    st.markdown(f'<div style="max-height:320px;overflow-y:auto;">{_cf_html}</div>', unsafe_allow_html=True)
-                else:
-                    st.markdown('<div style="font-size:0.73rem;color:#059669;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">No significant co-failures detected (threshold: 10%)</div>', unsafe_allow_html=True)
-        except Exception:
-            pass
-
         # ── Insight: Failure pattern analysis ────────────────────────────────────
         try:
             _all_pc2 = [_p for _t in _QA_SCHEMA.get("tiers",[]) for _p in _t.get("params",[]) if _p["col"] in _dash_df.columns]
@@ -12628,52 +12534,6 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             return _tbl11, ""
         _add_section("params", "Parameter Scores", "📊", True, _s11_prev, _s11_eml)
 
-        # ── S12: Co-failure Analysis ──────────────────────────────────────────────
-        def _s12_data():
-            if _total_d < 5:
-                return []
-            _all_pc = [_p for _t in _QA_SCHEMA.get("tiers", []) for _p in _t.get("params", []) if _p["col"] in _dash_df.columns]
-            _fm12 = {}
-            for _p12 in _all_pc:
-                _pmx12 = max([int(o) for o in _p12.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
-                _pv12 = pd.to_numeric(_dash_df[_p12["col"]].astype(str).str.strip().replace(
-                    {"NA": "", "nan": "", "Fatal": "0", "Yes": "0", "No": str(_pmx12)}), errors="coerce")
-                _fm12[_p12["col"]] = (_pv12 < _pmx12 * 0.5).astype(int)
-            _fm12_df = pd.DataFrame(_fm12)
-            _cl12 = list(_fm12_df.columns)
-            _pairs12 = []
-            for _i12 in range(len(_cl12)):
-                for _j12 in range(_i12 + 1, len(_cl12)):
-                    _both = ((_fm12_df[_cl12[_i12]] == 1) & (_fm12_df[_cl12[_j12]] == 1)).sum()
-                    _r12 = round(_both / _total_d * 100, 1)
-                    if _r12 >= 10:
-                        _pairs12.append((_cl12[_i12], _cl12[_j12], _r12, int(_both)))
-            return sorted(_pairs12, key=lambda x: -x[2])[:10]
-
-        def _s12_prev():
-            _pairs12 = _s12_data()
-            if not _pairs12:
-                return '<div style="font-size:0.70rem;color:#059669;padding:8px;">No significant co-failures detected.</div>'
-            _h12 = ""
-            for _p1, _p2, _r12, _c12 in _pairs12:
-                _cc12 = "#dc2626" if _r12 >= 35 else "#d97706" if _r12 >= 20 else "#2563EB"
-                _h12 += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;padding:5px 8px;'
-                         f'background:#fff;border:1px solid #E2EAF6;border-radius:6px;">'
-                         f'<div style="flex:1;font-size:0.65rem;font-weight:600;color:#0B1F3A;">✗ {_p1} + ✗ {_p2}</div>'
-                         f'<div style="background:{_cc12};color:#fff;font-size:0.60rem;font-weight:800;'
-                         f'padding:2px 7px;border-radius:4px;white-space:nowrap;">{_r12}%</div></div>')
-            return _h12
-
-        def _s12_eml():
-            _pairs12 = _s12_data()
-            if not _pairs12:
-                return ""
-            _erows12 = [(_p1, _p2, f"{_r12}%", str(_c12),
-                         "🔴 Critical" if _r12 >= 35 else "🟡 Warning" if _r12 >= 20 else "ℹ️ Noted")
-                        for _p1, _p2, _r12, _c12 in _pairs12]
-            return _em_tbl("Co-failure Analysis", "🔴", ["Parameter 1", "Parameter 2", "Co-fail Rate", "Count", "Risk"], _erows12, "#dc2626")
-        _add_section("cofail", "Co-failure Analysis", "🔴", True, _s12_prev, _s12_eml)
-
         # ── S13: Campaign Score Divergence ────────────────────────────────────────
         def _s13_data():
             if "Campaign Name" not in _dash_df.columns or "Bot Score" not in _dash_df.columns or _total_d < 5:
@@ -13440,12 +13300,12 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 },
                 {
                     "title": "Red Alert — Critical Issues",
-                    "desc": "Co-failure analysis, bottom parameters & priority actions. Use for urgent escalations.",
+                    "desc": "Bottom parameters & priority actions. Use for urgent escalations.",
                     "tag": "Alert · Urgent",
                     "hdr_bg": "linear-gradient(135deg,#991b1b 0%,#ef4444 100%)",
                     "hdr_color": "#ffffff",
                     "accent": "#dc2626",
-                    "sec_ids": ["kpi", "cofail", "params", "actions"],
+                    "sec_ids": ["kpi", "params", "actions"],
                 },
                 {
                     "title": "Campaign Deep Dive",
@@ -13467,12 +13327,12 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 },
                 {
                     "title": "Bot Quality Scorecard",
-                    "desc": "Full parameter scores, tier breakdown & co-failure pairs. For technical QA reviews.",
+                    "desc": "Full parameter scores & tier breakdown. For technical QA reviews.",
                     "tag": "Technical · QA",
                     "hdr_bg": "linear-gradient(135deg,#4c1d95 0%,#8b5cf6 100%)",
                     "hdr_color": "#ffffff",
                     "accent": "#7c3aed",
-                    "sec_ids": ["kpi", "tier_breakdown", "params", "cofail"],
+                    "sec_ids": ["kpi", "tier_breakdown", "params"],
                 },
                 {
                     "title": "Lead Performance Brief",
