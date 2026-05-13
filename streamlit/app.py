@@ -13979,26 +13979,33 @@ def _render_registry():
 
     # ── Audits (Admin) tab ────────────────────────────────────────────────────
     if _is_reg_admin:
-        with _reg_tabs[8]:
+        with _reg_tabs[7]:
+            st.markdown('<div class="section-chip">✏️ Audit Management — Edit &amp; Delete</div>', unsafe_allow_html=True)
             _reg_all_audits = audit_store.load()
             if not _reg_all_audits:
                 st.info("No audits found in the database.")
             else:
-                _ra_s, _ra_l = st.columns([3, 1])
-                with _ra_s:
+                # ── Filters ───────────────────────────────────────────────────
+                _raf1, _raf2, _raf3 = st.columns([2, 2, 1])
+                with _raf1:
                     _ra_search = st.text_input("🔍 Search (Client, Campaign, QA, Bot)", key="reg_audit_search", placeholder="type to filter…")
-                with _ra_l:
+                with _raf2:
+                    _ra_clients = ["All"] + sorted(set(a.get("Client","") for a in _reg_all_audits if a.get("Client","")))
+                    _ra_cli_fil = st.selectbox("Client", _ra_clients, key="reg_audit_client_filter")
+                with _raf3:
                     _ra_limit = st.number_input("Show last N", min_value=5, max_value=500, value=30, step=10, key="reg_audit_limit")
 
-                _ra_filtered = _reg_all_audits[:_ra_limit]
+                _ra_filtered = _reg_all_audits[:int(_ra_limit)]
                 if _ra_search.strip():
                     _q = _ra_search.lower()
                     _ra_filtered = [a for a in _ra_filtered if any(_q in str(a.get(f, "")).lower()
                                     for f in ["Client", "Campaign Name", "QA", "Bot Name"])]
+                if _ra_cli_fil != "All":
+                    _ra_filtered = [a for a in _ra_filtered if a.get("Client","") == _ra_cli_fil]
 
                 st.markdown(f'<div style="font-size:0.72rem;color:#5588bb;margin-bottom:8px;">{len(_ra_filtered)} of {len(_reg_all_audits)} audits shown</div>', unsafe_allow_html=True)
 
-                # Bulk controls
+                # ── Bulk controls ─────────────────────────────────────────────
                 _rb1, _rb2, _rb3 = st.columns([2, 2, 2])
                 with _rb1:
                     if st.button("☑️ Select All", key="reg_audit_sel_all", use_container_width=True):
@@ -14039,8 +14046,17 @@ def _render_registry():
                 st.session_state.setdefault("reg_selected_audits", set())
 
                 for _ra in _ra_filtered:
-                    _ra_id = _ra.get("_row_id")
-                    _rc0, _rc1, _rc2 = st.columns([0.5, 5, 1])
+                    _ra_id     = _ra.get("_row_id")
+                    _ra_client = _ra.get("Client", "—")
+                    _ra_camp   = _ra.get("Campaign Name", "—")
+                    _ra_qa     = _ra.get("QA", "—")
+                    _ra_bot    = _ra.get("Bot Name", "—")
+                    _ra_date   = _ra.get("Audit Date", "—")
+                    _ra_disp   = _ra.get("Disposition", "—")
+                    _ra_score  = _ra.get("Bot Score", "")
+                    _ra_status = _ra.get("Status", "")
+
+                    _rc0, _rc1, _rc2 = st.columns([0.5, 4.5, 1])
                     with _rc0:
                         _checked = _ra_id in st.session_state["reg_selected_audits"]
                         if st.checkbox("", value=_checked, key=f"reg_ach_{_ra_id}"):
@@ -14048,32 +14064,115 @@ def _render_registry():
                         else:
                             st.session_state["reg_selected_audits"].discard(_ra_id)
                     with _rc1:
-                        _ra_lead = _ra.get("Lead Number") or _ra.get("Phone Number") or "—"
                         st.markdown(
                             f'<div style="font-size:0.78rem;padding:6px 0;color:#0d1d3a;">'
-                            f'<strong>{_ra.get("Client","—")}</strong> · {_ra.get("Campaign Name","—")}'
-                            f' · <span style="color:#2563EB;font-weight:700;">#{_ra_lead}</span><br/>'
-                            f'<span style="font-size:0.70rem;color:#667085;">QA: {_ra.get("QA","—")} | Bot: {_ra.get("Bot Name","—")} | {_ra.get("Audit Date","—")}</span>'
-                            f'</div>', unsafe_allow_html=True)
+                            f'<strong>{_ra_client}</strong> · {_ra_camp}<br/>'
+                            f'<span style="font-size:0.70rem;color:#667085;">'
+                            f'QA: {_ra_qa} | Bot: {_ra_bot} | {_ra_date} | {_ra_disp}'
+                            f'{(" | Score: " + str(_ra_score)) if _ra_score != "" else ""}'
+                            f'{(" | " + str(_ra_status)) if _ra_status else ""}'
+                            f'</span></div>', unsafe_allow_html=True)
                     with _rc2:
-                        if st.button("🗑️", key=f"reg_adel_{_ra_id}", use_container_width=True, help="Delete this audit"):
+                        if st.button("🗑️", key=f"reg_adel_{_ra_id}", use_container_width=True, help="Delete"):
                             st.session_state["reg_audit_del_confirm"] = _ra_id
-                        if st.session_state.get("reg_audit_del_confirm") == _ra_id:
-                            _rdy, _rdn = st.columns(2)
-                            with _rdy:
-                                if st.button("Yes", key=f"reg_adel_yes_{_ra_id}", use_container_width=True):
-                                    _e = audit_store.delete(_ra_id)
-                                    if _e:
-                                        st.error(f"Error: {_e}")
-                                    else:
-                                        _audit_log_load.clear()
-                                        st.session_state["reg_selected_audits"].discard(_ra_id)
-                                        st.session_state.pop("reg_audit_del_confirm", None)
-                                        st.rerun()
-                            with _rdn:
-                                if st.button("No", key=f"reg_adel_no_{_ra_id}", use_container_width=True):
+                    if st.session_state.get("reg_audit_del_confirm") == _ra_id:
+                        _rdy, _rdn = st.columns(2)
+                        with _rdy:
+                            if st.button("✅ Confirm Delete", key=f"reg_adel_yes_{_ra_id}", use_container_width=True, type="primary"):
+                                _e = audit_store.delete(_ra_id)
+                                if _e:
+                                    st.error(f"Error: {_e}")
+                                else:
+                                    _audit_log_load.clear()
+                                    st.session_state["reg_selected_audits"].discard(_ra_id)
                                     st.session_state.pop("reg_audit_del_confirm", None)
                                     st.rerun()
+                        with _rdn:
+                            if st.button("❌ Cancel", key=f"reg_adel_no_{_ra_id}", use_container_width=True):
+                                st.session_state.pop("reg_audit_del_confirm", None)
+                                st.rerun()
+
+                    # ── Inline edit expander ──────────────────────────────────
+                    with st.expander(f"✏️ Edit — {_ra_client} · {_ra_camp} · {_ra_date}", expanded=False):
+                        with st.form(key=f"reg_ie_form_{_ra_id}"):
+                            st.markdown('<div style="font-size:0.68rem;font-weight:700;color:#2a5080;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">📋 Audit Details</div>', unsafe_allow_html=True)
+                            _rie1, _rie2, _rie3, _rie4 = st.columns(4)
+                            with _rie1:
+                                _reg_cl_r = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
+                                _rie_client = st.selectbox("Client *", _reg_cl_r,
+                                    index=_reg_cl_r.index(_ra.get("Client","")) if _ra.get("Client","") in _reg_cl_r else 0,
+                                    key=f"rie_client_{_ra_id}")
+                            with _rie2:
+                                _rie_campaign = st.text_input("Campaign *", value=_ra.get("Campaign Name",""), key=f"rie_camp_{_ra_id}")
+                            with _rie3:
+                                _rie_qa = st.text_input("QA / Auditor *", value=_ra.get("QA",""), key=f"rie_qa_{_ra_id}")
+                            with _rie4:
+                                _pm_list_r = st.session_state.get("sense_registry_pms", _SENSE_PM_LIST)
+                                _rie_pm = st.selectbox("PM / CSM", _pm_list_r,
+                                    index=_pm_list_r.index(_ra.get("PM / CSM","")) if _ra.get("PM / CSM","") in _pm_list_r else 0,
+                                    key=f"rie_pm_{_ra_id}")
+                            _rie5, _rie6, _rie7, _rie8 = st.columns(4)
+                            with _rie5:
+                                _bot_list_r = st.session_state.get("sense_registry_cms", [])
+                                _bot_opts_r = ([""] + _bot_list_r) if _bot_list_r else _SENSE_BOT_LIST
+                                _rie_bot = st.selectbox("Bot Name *", _bot_opts_r,
+                                    index=_bot_opts_r.index(_ra.get("Bot Name","")) if _ra.get("Bot Name","") in _bot_opts_r else 0,
+                                    key=f"rie_bot_{_ra_id}")
+                            with _rie6:
+                                _disp_opts_r = ["— select —","Hot","Warm","Cold","Interested","Warm Follow-up","Not Interested","Converted","DNC","Wrong Number","Language Barrier","Voicemail / No Answer","Other"]
+                                _saved_disp_r = _ra.get("Disposition","— select —")
+                                _rie_disp = st.selectbox("Disposition *", _disp_opts_r,
+                                    index=_disp_opts_r.index(_saved_disp_r) if _saved_disp_r in _disp_opts_r else 0,
+                                    key=f"rie_disp_{_ra_id}")
+                            with _rie7:
+                                _rie_lead = st.text_input("Lead Number", value=_ra.get("Lead Number",""), key=f"rie_lead_{_ra_id}")
+                            with _rie8:
+                                _rie_conv = st.text_input("Conversation Link", value=_ra.get("Conversation Link",""), key=f"rie_conv_{_ra_id}")
+
+                            st.markdown('<div style="font-size:0.68rem;font-weight:700;color:#2a5080;letter-spacing:0.08em;text-transform:uppercase;margin:12px 0 6px;">⚖️ Parameters &amp; Remarks</div>', unsafe_allow_html=True)
+                            _rie_pv = {}
+                            for _riet in _QA_SCHEMA["tiers"]:
+                                st.markdown(f'<div style="font-size:0.62rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:{_riet["color"]};margin:8px 0 4px;">{_riet["label"]}</div>', unsafe_allow_html=True)
+                                for _riep in _riet["params"]:
+                                    _opts_r   = _riep["options"] + ["NA"]
+                                    _saved_vr = _ra.get(_riep["col"], "NA")
+                                    _def_r    = _opts_r.index(_saved_vr) if _saved_vr in _opts_r else len(_opts_r) - 1
+                                    _wt_r     = f" ({int(_riep['weight']*100)}%)" if _riep["weight"] > 0 else (" ⚠️ FATAL" if _riep.get("fatal") else "")
+                                    _rpc1, _rpc2 = st.columns([2, 3])
+                                    with _rpc1:
+                                        _rie_pv[_riep["col"]] = st.selectbox(
+                                            f"{_riep['col']}{_wt_r}",
+                                            _opts_r, index=_def_r,
+                                            key=f"rie_p_{_ra_id}_{_riep['col'][:18].replace(' ','_')}",
+                                        )
+                                    with _rpc2:
+                                        _rie_pv[f"{_riep['col']} Remark"] = st.text_input(
+                                            "Remark", value=_ra.get(f"{_riep['col']} Remark",""),
+                                            placeholder="Optional remark…",
+                                            key=f"rie_rmk_{_ra_id}_{_riep['col'][:18].replace(' ','_')}",
+                                            label_visibility="collapsed",
+                                        )
+
+                            _rie_save = st.form_submit_button("💾 Save Changes", type="primary", use_container_width=True)
+
+                        if _rie_save:
+                            _upd = dict(_ra)
+                            _upd.update({
+                                "Client": _rie_client, "Campaign Name": _rie_campaign,
+                                "QA": _rie_qa, "PM / CSM": _rie_pm, "Bot Name": _rie_bot,
+                                "Disposition": _rie_disp if _rie_disp != "— select —" else _ra.get("Disposition",""),
+                                "Lead Number": _rie_lead, "Conversation Link": _rie_conv,
+                            })
+                            _upd.update(_rie_pv)
+                            _upd.update(_compute_qa_score(_upd))
+                            _rie_err = audit_store.update(_ra_id, _upd)
+                            if _rie_err:
+                                st.error(f"Save failed: {_rie_err}")
+                            else:
+                                _audit_log_load.clear()
+                                st.session_state["sense_audit_log"] = _audit_log_load()
+                                st.success("✅ Audit updated.")
+                                st.rerun()
 
     # ── Admin tab (email credentials) ─────────────────────────────────────────
     if _is_reg_admin:
@@ -14346,331 +14445,8 @@ def _render_audit_form(legend_map, fname):
     _tier_html += '</div>'
     st.markdown(_tier_html, unsafe_allow_html=True)
 
-    # ── Admin Audit Management (admin only) ────────────────────────────────────
     _sense_role = auth.current_user().get("role", "admin")
     _sense_qa_name = auth.current_name()
-    _show_admin_mgmt = (_sense_role == "admin")
-
-    if _sense_role == "admin" and _show_admin_mgmt:
-        st.markdown('<div class="section-chip">⚙️ Admin Audit Management</div>', unsafe_allow_html=True)
-
-        # Load all audits
-        _all_audits = audit_store.load()
-
-        if _all_audits:
-            # Search and filter
-            _search_col, _filter_col = st.columns([2, 1])
-            with _search_col:
-                _audit_search = st.text_input("🔍 Search audits (Client, Campaign, QA, Bot Name)", key="audit_search_input")
-            with _filter_col:
-                _show_limit = st.number_input("Show last N audits", min_value=5, max_value=100, value=20, step=5)
-
-            # Filter audits based on search and limit
-            _filtered_audits = _all_audits[:_show_limit]
-            if _audit_search.strip():
-                _search_lower = _audit_search.lower()
-                _filtered_audits = [
-                    a for a in _filtered_audits
-                    if any(_search_lower in str(a.get(field, "")).lower()
-                           for field in ["Client", "Campaign Name", "QA", "Bot Name"])
-                ]
-
-            if _filtered_audits:
-                st.markdown("##### Recent Audits")
-
-                # ── Bulk selection controls ────────────────────────────────────
-                _bulk_col1, _bulk_col2, _bulk_col3 = st.columns([2, 1, 1])
-                with _bulk_col1:
-                    if st.button("☑️ Select All", use_container_width=True, key="select_all_audits"):
-                        if "selected_audits" not in st.session_state:
-                            st.session_state["selected_audits"] = set()
-                        for _a in _filtered_audits:
-                            st.session_state["selected_audits"].add(_a.get("_row_id", ""))
-                        st.rerun()
-                with _bulk_col2:
-                    if st.button("☐ Deselect All", use_container_width=True, key="deselect_all_audits"):
-                        st.session_state["selected_audits"] = set()
-                        st.rerun()
-                with _bulk_col3:
-                    if st.session_state.get("selected_audits"):
-                        if st.button(f"🗑️ Delete {len(st.session_state['selected_audits'])}", use_container_width=True, key="bulk_delete_btn", type="secondary"):
-                            st.session_state["confirm_bulk_delete"] = True
-
-                # ── Bulk delete confirmation ───────────────────────────────────
-                if st.session_state.get("confirm_bulk_delete"):
-                    st.warning(f"⚠️ Delete {len(st.session_state['selected_audits'])} selected audits? This cannot be undone!")
-                    _confirm_col1, _confirm_col2 = st.columns(2)
-                    with _confirm_col1:
-                        if st.button("✅ Yes, Delete All", key="confirm_bulk_del_yes", use_container_width=True, type="primary"):
-                            _del_count = 0
-                            for _del_id in st.session_state["selected_audits"]:
-                                _err = audit_store.delete(_del_id)
-                                if not _err:
-                                    _del_count += 1
-                            _audit_log_load.clear()
-                            st.session_state["selected_audits"] = set()
-                            st.session_state.pop("confirm_bulk_delete", None)
-                            st.success(f"✅ Deleted {_del_count} audits")
-                            st.rerun()
-                    with _confirm_col2:
-                        if st.button("❌ Cancel", key="confirm_bulk_del_no", use_container_width=True):
-                            st.session_state.pop("confirm_bulk_delete", None)
-                            st.rerun()
-
-                st.markdown("---")
-
-                # ── Audit list with checkboxes ────────────────────────────────
-                if "selected_audits" not in st.session_state:
-                    st.session_state["selected_audits"] = set()
-
-                for _audit in _filtered_audits:
-                    _audit_id = _audit.get("_row_id", "?")
-                    _client   = _audit.get("Client", "—")
-                    _campaign = _audit.get("Campaign Name", "—")
-                    _qa       = _audit.get("QA", "—")
-                    _bot      = _audit.get("Bot Name", "—")
-                    _date     = _audit.get("Audit Date", "—")
-                    _disp     = _audit.get("Disposition", "—")
-                    _score    = _audit.get("Bot Score", "")
-                    _status   = _audit.get("Status", "")
-
-                    _acol0, _acol1, _acol2 = st.columns([0.5, 4.5, 1])
-                    with _acol0:
-                        _is_selected = _audit_id in st.session_state["selected_audits"]
-                        if st.checkbox("", value=_is_selected, key=f"audit_check_{_audit_id}"):
-                            st.session_state["selected_audits"].add(_audit_id)
-                        else:
-                            st.session_state["selected_audits"].discard(_audit_id)
-                    with _acol1:
-                        st.markdown(
-                            f'<div style="font-size:0.78rem;color:#0d1d3a;padding:6px 0;">'
-                            f'<strong>{_client}</strong> · {_campaign}<br/>'
-                            f'<span style="font-size:0.70rem;color:#667085;">'
-                            f'QA: {_qa} | Bot: {_bot} | {_date} | {_disp}'
-                            f'{(" | Score: " + str(_score)) if _score != "" else ""}'
-                            f'{(" | " + str(_status)) if _status else ""}'
-                            f'</span></div>',
-                            unsafe_allow_html=True,
-                        )
-                    with _acol2:
-                        if st.button("🗑️ Del", key=f"audit_del_{_audit_id}", use_container_width=True):
-                            st.session_state["audit_del_confirm"] = _audit_id
-
-                    if st.session_state.get("audit_del_confirm") == _audit_id:
-                        _del_yes, _del_no = st.columns(2)
-                        with _del_yes:
-                            if st.button("✅ Confirm Delete", key=f"audit_del_yes_{_audit_id}", use_container_width=True, type="primary"):
-                                _del_err = audit_store.delete(_audit_id)
-                                if _del_err:
-                                    st.error(f"Delete failed: {_del_err}")
-                                else:
-                                    _audit_log_load.clear()
-                                    st.session_state["selected_audits"].discard(_audit_id)
-                                    st.session_state.pop("audit_del_confirm", None)
-                                    st.success(f"✅ Audit {_audit_id} deleted")
-                                    st.rerun()
-                        with _del_no:
-                            if st.button("❌ Cancel", key=f"audit_del_no_{_audit_id}", use_container_width=True):
-                                st.session_state.pop("audit_del_confirm", None)
-                                st.rerun()
-
-                    # ── Inline edit expander ──────────────────────────────────
-                    with st.expander(f"✏️ Edit Audit — {_client} · {_campaign} · {_date}", expanded=False):
-                        with st.form(key=f"inline_edit_form_{_audit_id}"):
-                            st.markdown(
-                                '<div style="font-size:0.68rem;font-weight:700;color:#2a5080;'
-                                'letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">'
-                                '📋 Audit Details</div>',
-                                unsafe_allow_html=True,
-                            )
-                            _ie1, _ie2, _ie3, _ie4 = st.columns(4)
-                            with _ie1:
-                                _reg_cl = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
-                                _ie_client = st.selectbox("Client *", _reg_cl,
-                                    index=_reg_cl.index(_audit.get("Client","")) if _audit.get("Client","") in _reg_cl else 0,
-                                    key=f"ie_client_{_audit_id}")
-                            with _ie2:
-                                _ie_campaign = st.text_input("Campaign Name *", value=_audit.get("Campaign Name",""), key=f"ie_campaign_{_audit_id}")
-                            with _ie3:
-                                _ie_qa = st.text_input("QA / Auditor *", value=_audit.get("QA",""), key=f"ie_qa_{_audit_id}")
-                            with _ie4:
-                                _pm_list = st.session_state.get("sense_registry_pms", _SENSE_PM_LIST)
-                                _ie_pm = st.selectbox("PM / CSM", _pm_list,
-                                    index=_pm_list.index(_audit.get("PM / CSM","")) if _audit.get("PM / CSM","") in _pm_list else 0,
-                                    key=f"ie_pm_{_audit_id}")
-
-                            _ie5, _ie6, _ie7, _ie8 = st.columns(4)
-                            with _ie5:
-                                _bot_list = st.session_state.get("sense_registry_cms", [])
-                                _bot_opts_ie = ([""] + _bot_list) if _bot_list else _SENSE_BOT_LIST
-                                _ie_bot = st.selectbox("Bot Name *", _bot_opts_ie,
-                                    index=_bot_opts_ie.index(_audit.get("Bot Name","")) if _audit.get("Bot Name","") in _bot_opts_ie else 0,
-                                    key=f"ie_bot_{_audit_id}")
-                            with _ie6:
-                                _disp_opts_ie = ["— select —","Hot","Warm","Cold","Interested","Warm Follow-up","Not Interested","Converted","DNC","Wrong Number","Language Barrier","Voicemail / No Answer","Other"]
-                                _saved_disp = _audit.get("Disposition","— select —")
-                                _ie_disp = st.selectbox("Disposition *", _disp_opts_ie,
-                                    index=_disp_opts_ie.index(_saved_disp) if _saved_disp in _disp_opts_ie else 0,
-                                    key=f"ie_disp_{_audit_id}")
-                            with _ie7:
-                                _ie_lead = st.text_input("Lead Number", value=_audit.get("Lead Number",""), key=f"ie_lead_{_audit_id}")
-                            with _ie8:
-                                _ie_conv = st.text_input("Conversation Link", value=_audit.get("Conversation Link",""), key=f"ie_conv_{_audit_id}")
-
-                            st.markdown(
-                                '<div style="font-size:0.68rem;font-weight:700;color:#2a5080;'
-                                'letter-spacing:0.08em;text-transform:uppercase;margin:12px 0 6px;">'
-                                '⚖️ Parameters</div>',
-                                unsafe_allow_html=True,
-                            )
-                            _ie_pv = {}
-                            for _iet in _QA_SCHEMA["tiers"]:
-                                _tc_ie = _iet["color"]
-                                st.markdown(
-                                    f'<div style="font-size:0.62rem;font-weight:800;letter-spacing:0.1em;'
-                                    f'text-transform:uppercase;color:{_tc_ie};margin:8px 0 4px;">'
-                                    f'{_iet["label"]}</div>',
-                                    unsafe_allow_html=True,
-                                )
-                                for _iep in _iet["params"]:
-                                    _opts_ie  = _iep["options"] + ["NA"]
-                                    _saved_v  = _audit.get(_iep["col"], "NA")
-                                    _def_idx  = _opts_ie.index(_saved_v) if _saved_v in _opts_ie else len(_opts_ie) - 1
-                                    _saved_rmk = _audit.get(f"{_iep['col']} Remark", "")
-                                    _wt_ie = f" ({int(_iep['weight']*100)}%)" if _iep["weight"] > 0 else (" ⚠️ FATAL" if _iep.get("fatal") else "")
-                                    _pc1, _pc2 = st.columns([2, 3])
-                                    with _pc1:
-                                        _ie_pv[_iep["col"]] = st.selectbox(
-                                            f"{_iep['col']}{_wt_ie}",
-                                            _opts_ie,
-                                            index=_def_idx,
-                                            key=f"ie_p_{_audit_id}_{_iep['col'][:18].replace(' ','_')}",
-                                        )
-                                    with _pc2:
-                                        _ie_pv[f"{_iep['col']} Remark"] = st.text_input(
-                                            "Remark",
-                                            value=_saved_rmk,
-                                            placeholder="Optional remark…",
-                                            key=f"ie_rmk_{_audit_id}_{_iep['col'][:18].replace(' ','_')}",
-                                            label_visibility="collapsed",
-                                        )
-
-                            _ie_save = st.form_submit_button("💾 Save Changes", type="primary", use_container_width=True)
-
-                        if _ie_save:
-                            _updated_rec = dict(_audit)
-                            _updated_rec.update({
-                                "Client":            _ie_client,
-                                "Campaign Name":     _ie_campaign,
-                                "QA":                _ie_qa,
-                                "PM / CSM":          _ie_pm,
-                                "Bot Name":          _ie_bot,
-                                "Disposition":       _ie_disp if _ie_disp != "— select —" else _audit.get("Disposition",""),
-                                "Lead Number":       _ie_lead,
-                                "Conversation Link": _ie_conv,
-                            })
-                            _updated_rec.update(_ie_pv)
-                            # Recompute scores
-                            _recomp = _compute_qa_score(_updated_rec)
-                            _updated_rec.update(_recomp)
-                            _ie_err = audit_store.update(_audit_id, _updated_rec)
-                            if _ie_err:
-                                st.error(f"Save failed: {_ie_err}")
-                            else:
-                                _audit_log_load.clear()
-                                st.session_state["sense_audit_log"] = _audit_log_load()
-                                st.success("✅ Audit updated successfully.")
-                                st.rerun()
-
-                st.markdown('<hr style="border:none;border-top:1px solid #e4e7ec;margin:12px 0 8px;">', unsafe_allow_html=True)
-            else:
-                st.info("No audits match your search.")
-        else:
-            st.info("No audits created yet.")
-
-        st.markdown("##### Add New Audit")
-
-    # ── Admin Editable Audit Sheet ────────────────────────────────────────────
-    if _sense_role == "admin":
-        st.markdown('<div class="section-chip">📋 Audit Sheet (Admin Edit)</div>', unsafe_allow_html=True)
-        _sheet_all = audit_store.load()
-        if _sheet_all:
-            _sheet_df_raw = pd.DataFrame(_sheet_all)
-            _sheet_row_ids = _sheet_df_raw["_row_id"].tolist() if "_row_id" in _sheet_df_raw.columns else []
-            _sheet_edit_df = _sheet_df_raw.drop(
-                columns=[c for c in ["_row_id"] if c in _sheet_df_raw.columns], errors="ignore"
-            )
-
-            # ── Column ordering: metadata → params → scores ───────────────────
-            _meta_cols   = [c for c in ["Audit Date", "QA", "Client", "Campaign Name",
-                                        "PM / CSM", "Bot Name", "Disposition",
-                                        "Lead Number", "Conversation Link", "Lead Link"]
-                            if c in _sheet_edit_df.columns]
-            _score_cols  = [c for c in ["Bot Score", "Lead Score", "Lead Composite",
-                                        "Intelligence Score", "Status", "Fatal?"]
-                            if c in _sheet_edit_df.columns]
-            _other_cols  = [c for c in _sheet_edit_df.columns
-                            if c not in _meta_cols and c not in _score_cols]
-            _sheet_edit_df = _sheet_edit_df[_meta_cols + _other_cols + _score_cols]
-
-            # ── Filter row ────────────────────────────────────────────────────
-            _sf1, _sf2, _sf3 = st.columns(3)
-            with _sf1:
-                _sf_clients = ["All"] + sorted(_sheet_edit_df["Client"].dropna().unique().tolist()) if "Client" in _sheet_edit_df.columns else ["All"]
-                _sf_client  = st.selectbox("Filter Client", _sf_clients, key="as_filter_client")
-            with _sf2:
-                _sf_qas = ["All"] + sorted(_sheet_edit_df["QA"].dropna().unique().tolist()) if "QA" in _sheet_edit_df.columns else ["All"]
-                _sf_qa  = st.selectbox("Filter QA", _sf_qas, key="as_filter_qa")
-            with _sf3:
-                _sf_limit = st.number_input("Show last N rows", min_value=10, max_value=500, value=50, step=10, key="as_limit")
-
-            _mask = pd.Series([True] * len(_sheet_edit_df))
-            if _sf_client != "All" and "Client" in _sheet_edit_df.columns:
-                _mask &= _sheet_edit_df["Client"] == _sf_client
-            if _sf_qa != "All" and "QA" in _sheet_edit_df.columns:
-                _mask &= _sheet_edit_df["QA"] == _sf_qa
-            _sheet_view = _sheet_edit_df[_mask].head(int(_sf_limit)).copy()
-            _sheet_view_ids = [_sheet_row_ids[i] for i in _sheet_edit_df[_mask].head(int(_sf_limit)).index]
-
-            _edited_sheet = st.data_editor(
-                _sheet_view,
-                use_container_width=True,
-                num_rows="fixed",
-                key="admin_sheet_editor",
-                height=420,
-            )
-
-            _save_col, _dl_col = st.columns([1, 1])
-            with _save_col:
-                if st.button("💾 Save Changes to Supabase", key="admin_sheet_save", type="primary", use_container_width=True):
-                    _save_errs = []
-                    for _si, (_rid, (_, _row)) in enumerate(zip(_sheet_view_ids, _edited_sheet.iterrows())):
-                        if _rid:
-                            _err = audit_store.update(_rid, _row.to_dict())
-                            if _err:
-                                _save_errs.append(f"Row {_si+1}: {_err}")
-                    if _save_errs:
-                        st.error("\n".join(_save_errs))
-                    else:
-                        _audit_log_load.clear()
-                        st.session_state["sense_audit_log"] = _audit_log_load()
-                        st.success(f"✅ {len(_sheet_view_ids)} record(s) updated.")
-                        st.rerun()
-            with _dl_col:
-                import io as _sio
-                _dl_buf = _sio.BytesIO()
-                _sheet_edit_df.to_csv(_dl_buf, index=False)
-                st.download_button(
-                    "⬇️ Download Full Dump (CSV)",
-                    data=_dl_buf.getvalue(),
-                    file_name=f"audit_full_dump_{pd.Timestamp.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                    key="admin_full_dump_dl",
-                )
-        else:
-            st.info("No audit records found.")
-        st.markdown('<hr style="border:none;border-top:1px solid #e4e7ec;margin:16px 0 8px;">', unsafe_allow_html=True)
 
     # ── Audit form ────────────────────────────────────────────────────────────
     st.markdown("""
