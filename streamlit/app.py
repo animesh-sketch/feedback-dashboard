@@ -10881,6 +10881,42 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         f'</div></div>',
         unsafe_allow_html=True
     )
+    # ── Email section selector ────────────────────────────────────────────────
+    _DASH_SEC_DEFS = [
+        ("kpi",              "📊 KPI Overview"),
+        ("status_dist",      "📊 Status Distribution"),
+        ("score_trend",      "📈 Score Trend"),
+        ("campaign_lb",      "🎯 Campaign Rankings"),
+        ("tier_breakdown",   "🏗️ Tier Breakdown"),
+        ("disposition",      "📂 Disposition"),
+        ("lead_stage",       "🔥 Lead Stage"),
+        ("client_health",    "🏢 Client Health"),
+        ("params",           "📊 Parameter Scores"),
+        ("camp_div",         "↔️ Camp. Divergence"),
+        ("call_insights",    "📞 Call Insights"),
+        ("actions",          "🎯 Priority Actions"),
+        ("score_dist_chart", "📊 Score Dist. Chart"),
+        ("param_chart",      "📊 Param. Chart"),
+        ("bot_checks",       "🤖 Bot Checks"),
+        ("custom_params",    "⭐ Custom Params"),
+    ]
+    with st.expander("📧 Select sections for email report", expanded=False):
+        _esel_c1, _esel_c2, _esel_gap = st.columns([1, 1, 4])
+        if _esel_c1.button("☑ Select All", key="dash_sel_all_top", use_container_width=True):
+            for _esid, _ in _DASH_SEC_DEFS:
+                st.session_state[f"dbsec_{_esid}"] = True
+            st.rerun()
+        if _esel_c2.button("☐ Deselect All", key="dash_desel_all_top", use_container_width=True):
+            for _esid, _ in _DASH_SEC_DEFS:
+                st.session_state[f"dbsec_{_esid}"] = False
+            st.rerun()
+        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+        _esel_rows = [_DASH_SEC_DEFS[i:i+4] for i in range(0, len(_DASH_SEC_DEFS), 4)]
+        for _esel_row in _esel_rows:
+            _esc1, _esc2, _esc3, _esc4 = st.columns(4)
+            for (_esid, _eslbl), _escol in zip(_esel_row, [_esc1, _esc2, _esc3, _esc4]):
+                _escol.checkbox(_eslbl, value=st.session_state.get(f"dbsec_{_esid}", True), key=f"dbsec_{_esid}")
+
     _tab_analytics = st.container()
     _tab_email = st.container()
 
@@ -11067,43 +11103,8 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         except Exception:
             pass
 
-        # ── Section 4 — QA Leaderboard + Campaign Rankings ───────────────────────
-        _s4l, _s4r = st.columns(2)
-        with _s4l:
-            st.markdown('<div class="section-chip">👤 QA Leaderboard</div>', unsafe_allow_html=True)
-            if "QA" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-                _lb_rows = []
-                for _qa_n, _qa_g in _dash_df.groupby("QA"):
-                    _qa_bs = pd.to_numeric(_qa_g["Bot Score"], errors="coerce").dropna()
-                    _qa_st = _qa_g["Status"].astype(str).str.strip() if "Status" in _qa_g.columns else pd.Series([])
-                    _lb_rows.append({
-                        "QA": str(_qa_n),
-                        "Audits": len(_qa_g),
-                        "Avg Score": round(_qa_bs.mean(), 1) if not _qa_bs.empty else 0,
-                        "Pass Rate": f"{round(int((_qa_st=='Pass').sum())/len(_qa_g)*100,1) if len(_qa_g) else 0}%",
-                        "Auto-Fails": int((_qa_st == "Auto-Fail").sum()),
-                    })
-                _lb_rows.sort(key=lambda x: -x["Avg Score"])
-                _lb_html = '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">'
-                _lb_html += ('<tr style="background:linear-gradient(135deg,#0B1F3A,#1e3a8a);">'
-                             + "".join(f'<th style="padding:9px 10px;text-align:left;color:rgba(255,255,255,0.85);font-weight:700;font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;">{h}</th>' for h in ["QA", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"])
-                             + "</tr>")
-                for _ri, _r in enumerate(_lb_rows):
-                    _medal = ["🥇", "🥈", "🥉"][_ri] if _ri < 3 else ""
-                    _rb = "#f8faff" if _ri % 2 == 0 else "#fff"
-                    _lb_html += (f'<tr style="background:{_rb};">'
-                                 f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_medal} {_r["QA"]}</td>'
-                                 f'<td style="padding:8px 10px;font-weight:900;color:#1e40af;font-size:0.82rem;">{_r["Audits"]}</td>'
-                                 f'<td style="padding:8px 10px;font-weight:900;color:#059669;font-size:0.82rem;">{_r["Avg Score"]}</td>'
-                                 f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">{_r["Pass Rate"]}</td>'
-                                 f'<td style="padding:8px 10px;font-weight:900;color:#dc2626;font-size:0.82rem;">{_r["Auto-Fails"]}</td>'
-                                 f'</tr>')
-                _lb_html += "</table>"
-                st.markdown(f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(11,31,58,0.07);">{_lb_html}</div>', unsafe_allow_html=True)
-            else:
-                st.info("No QA/Bot Score columns available.")
-
-        with _s4r:
+        # ── Section 4 — Campaign Rankings ────────────────────────────────────────
+        with st.container():
             st.markdown('<div class="section-chip">🎯 Campaign Rankings</div>', unsafe_allow_html=True)
             if "Campaign Name" in _dash_df.columns and "Bot Score" in _dash_df.columns:
                 _cr_rows = []
@@ -11159,47 +11160,8 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         except Exception:
             pass
 
-        # ── Section 5 — Auditor Calibration (std dev) + Tier Breakdown ──────────
-        _s5a, _s5b = st.columns(2)
-        with _s5a:
-            st.markdown('<div class="section-chip">📐 Auditor Calibration (Score Consistency)</div>', unsafe_allow_html=True)
-            if "QA" in _dash_df.columns and "Bot Score" in _dash_df.columns:
-                try:
-                    _cal_rows = []
-                    for _qn, _qg in _dash_df.groupby("QA"):
-                        _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
-                        if len(_qbs) >= 2:
-                            _cal_rows.append({"QA": str(_qn), "Audits": len(_qbs),
-                                              "Avg": round(_qbs.mean(), 1), "StdDev": round(_qbs.std(), 1),
-                                              "Min": int(_qbs.min()), "Max": int(_qbs.max())})
-                    _cal_rows.sort(key=lambda x: x["StdDev"])
-                    if _cal_rows:
-                        _cal_fig = go.Figure()
-                        _cal_fig.add_trace(go.Bar(
-                            x=[r["QA"] for r in _cal_rows],
-                            y=[r["Avg"] for r in _cal_rows],
-                            name="Avg Score",
-                            marker_color="#2563EB",
-                            error_y=dict(type="data", array=[r["StdDev"] for r in _cal_rows],
-                                         visible=True, color="#64748b", thickness=1.5, width=6),
-                            text=[f"{r['Avg']}±{r['StdDev']}" for r in _cal_rows],
-                            textposition="outside",
-                        ))
-                        _cal_fig.add_hline(y=80, line_dash="dot", line_color="#dc2626")
-                        _cal_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                            font=dict(family="Inter,sans-serif", size=11),
-                            margin=dict(l=10, r=10, t=30, b=10), height=280,
-                            showlegend=False, xaxis_title="QA Auditor", yaxis_title="Avg Score (±StdDev)",
-                            xaxis=dict(tickangle=-20))
-                        st.plotly_chart(_cal_fig, use_container_width=True, config={"displayModeBar": False})
-                        _cal_note = min(_cal_rows, key=lambda x: x["StdDev"])
-                        st.markdown(f'<div style="font-size:0.68rem;color:#059669;margin-top:-8px;">Most consistent: <b>{_cal_note["QA"]}</b> (σ={_cal_note["StdDev"]})</div>', unsafe_allow_html=True)
-                except Exception:
-                    pass
-            else:
-                st.info("No QA/Bot Score columns.")
-
-        with _s5b:
+        # ── Section 5 — Tier Breakdown ────────────────────────────────────────────
+        with st.container():
             st.markdown('<div class="section-chip">🏗️ Tier Breakdown (Avg %)</div>', unsafe_allow_html=True)
             try:
                 _tier_rows = []
@@ -12337,45 +12299,6 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             return _s3_data, _em_insight_callout(_ins3_txt, _ins3_col)
         _add_section("score_trend", "Score Trend", "📈", True, _s3_prev, _s3_eml)
 
-        # ── S4: QA Leaderboard ────────────────────────────────────────────────────
-        def _s4_prev_fn():
-            if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
-                return '<div style="font-size:0.70rem;color:#64748b;">No QA data.</div>'
-            _rows3 = []
-            for _qn, _qg in _dash_df.groupby("QA"):
-                _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
-                _qst = _qg["Status"].astype(str).str.strip() if "Status" in _qg.columns else pd.Series([])
-                _rows3.append({"n": str(_qn), "avg": round(_qbs.mean(),1) if len(_qbs) else 0,
-                               "cnt": len(_qg), "pr": round(int((_qst=="Pass").sum())/len(_qg)*100,1) if len(_qg) else 0,
-                               "af": int((_qst=="Auto-Fail").sum())})
-            _rows3.sort(key=lambda x: -x["avg"])
-            _h2 = '<table style="width:100%;border-collapse:collapse;font-size:0.68rem;">'
-            for _mi, _r in enumerate(_rows3[:6]):
-                _bg3 = "#f8faff" if _mi % 2 == 0 else "#fff"
-                _mdl = ["🥇","🥈","🥉"][_mi] if _mi < 3 else ""
-                _h2 += (f'<tr style="background:{_bg3};">'
-                        f'<td style="padding:5px 8px;font-weight:600;">{_mdl} {_r["n"]}</td>'
-                        f'<td style="padding:5px 8px;color:#2563EB;">{_r["cnt"]}</td>'
-                        f'<td style="padding:5px 8px;font-weight:700;color:#059669;">{_r["avg"]}%</td>'
-                        f'<td style="padding:5px 8px;">{_r["pr"]}%</td>'
-                        f'<td style="padding:5px 8px;color:#dc2626;">{_r["af"]}</td></tr>')
-            _h2 += "</table>"
-            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h2}</div>'
-
-        def _s4_eml_fn():
-            if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
-                return ""
-            _erows = []
-            for _qn, _qg in _dash_df.groupby("QA"):
-                _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
-                _qst = _qg["Status"].astype(str).str.strip() if "Status" in _qg.columns else pd.Series([])
-                _erows.append((str(_qn), str(len(_qg)), f"{round(_qbs.mean(),1) if len(_qbs) else 0}%",
-                               f"{round(int((_qst=='Pass').sum())/len(_qg)*100,1) if len(_qg) else 0}%",
-                               str(int((_qst=="Auto-Fail").sum()))))
-            _erows.sort(key=lambda x: -float(x[2].rstrip("%")))
-            return _em_tbl("QA Leaderboard", "👤", ["QA Auditor", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"], _erows, "#059669")
-        _add_section("qa_lb", "QA Leaderboard", "👤", True, _s4_prev_fn, _s4_eml_fn)
-
         # ── S5: Campaign Rankings ─────────────────────────────────────────────────
         def _s5_prev_fn():
             if "Campaign Name" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
@@ -12413,42 +12336,6 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             _erows5.sort(key=lambda x: -float(x[2].rstrip("%")))
             return _em_tbl("Campaign Rankings", "🎯", ["Campaign", "Audits", "Avg Score", "Pass Rate", "Auto-Fails"], _erows5, "#1a62f2")
         _add_section("campaign_lb", "Campaign Rankings", "🎯", True, _s5_prev_fn, _s5_eml_fn)
-
-        # ── S6: Auditor Calibration ───────────────────────────────────────────────
-        def _s6_prev_fn():
-            if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
-                return '<div style="font-size:0.70rem;color:#64748b;">No QA data.</div>'
-            _rows6 = []
-            for _qn, _qg in _dash_df.groupby("QA"):
-                _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
-                if len(_qbs) >= 2:
-                    _rows6.append({"n": str(_qn), "avg": round(_qbs.mean(),1), "std": round(_qbs.std(),1), "cnt": len(_qbs)})
-            _rows6.sort(key=lambda x: x["std"])
-            _h6 = '<table style="width:100%;border-collapse:collapse;font-size:0.68rem;">'
-            for _mi6, _r6 in enumerate(_rows6[:6]):
-                _bg6 = "#f8faff" if _mi6 % 2 == 0 else "#fff"
-                _cc6 = "#059669" if _r6["std"] < 8 else "#d97706" if _r6["std"] < 15 else "#dc2626"
-                _h6 += (f'<tr style="background:{_bg6};">'
-                        f'<td style="padding:5px 8px;font-weight:600;">{_r6["n"]}</td>'
-                        f'<td style="padding:5px 8px;color:#2563EB;">{_r6["cnt"]}</td>'
-                        f'<td style="padding:5px 8px;font-weight:700;color:#059669;">{_r6["avg"]}%</td>'
-                        f'<td style="padding:5px 8px;font-weight:700;color:{_cc6};">σ {_r6["std"]}</td></tr>')
-            _h6 += "</table>"
-            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;overflow:hidden;">{_h6}</div>'
-
-        def _s6_eml_fn():
-            if "QA" not in _dash_df.columns or "Bot Score" not in _dash_df.columns:
-                return ""
-            _erows6 = []
-            for _qn, _qg in _dash_df.groupby("QA"):
-                _qbs = pd.to_numeric(_qg["Bot Score"], errors="coerce").dropna()
-                if len(_qbs) >= 2:
-                    _std6 = round(_qbs.std(), 1)
-                    _cons = "✅ Consistent" if _std6 < 8 else "🟡 Moderate" if _std6 < 15 else "🔴 High Variance"
-                    _erows6.append((str(_qn), str(len(_qbs)), f"{round(_qbs.mean(),1)}%", f"σ={_std6}", _cons))
-            _erows6.sort(key=lambda x: float(x[3].lstrip("σ=")))
-            return _em_tbl("Auditor Calibration", "📐", ["QA Auditor", "Audits", "Avg Score", "Std Dev", "Consistency"], _erows6, "#7c3aed")
-        _add_section("auditor_cal", "Auditor Calibration", "📐", True, _s6_prev_fn, _s6_eml_fn)
 
         # ── S7: Tier Breakdown ────────────────────────────────────────────────────
         def _s7_data():
@@ -13169,21 +13056,22 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     st.session_state[f"dbins_{_s['id']}"] = False
                 st.rerun()
 
-            _selected_section_ids = []
+            # Section selection is controlled by the "Select sections for email" expander above the charts.
+            # Here we just read the state and show previews for selected sections.
+            _selected_section_ids = [s["id"] for s in _ALL_SECTIONS
+                                      if st.session_state.get(f"dbsec_{s['id']}", s["default"])]
             _chunks = [_ALL_SECTIONS[i:i+2] for i in range(0, len(_ALL_SECTIONS), 2)]
             for _chunk in _chunks:
                 _rc1, _rc2 = st.columns(2)
                 for _s, _rc in zip(_chunk, [_rc1, _rc2]):
+                    _is_checked = _s["id"] in _selected_section_ids
                     with _rc:
-                        _default_val = st.session_state.get(f"dbsec_{_s['id']}", _s["default"])
-                        _is_checked = st.checkbox(
-                            f'{_s["icon"]} {_s["label"]}',
-                            value=_default_val,
-                            key=f"dbsec_{_s['id']}",
+                        _badge_clr = "#059669" if _is_checked else "#94a3b8"
+                        st.markdown(
+                            f'<div style="font-size:0.70rem;font-weight:700;color:{_badge_clr};margin-bottom:4px;">'
+                            f'{"✅" if _is_checked else "☐"} {_s["icon"]} {_s["label"]}</div>',
+                            unsafe_allow_html=True
                         )
-                        if _is_checked:
-                            _selected_section_ids.append(_s["id"])
-                        # per-section insight toggle (only shown when section is checked and has insight)
                         if _is_checked and _s.get("insight_html"):
                             _ins_default = st.session_state.get(f"dbins_{_s['id']}", True)
                             st.checkbox(
@@ -13191,7 +13079,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                                 value=_ins_default,
                                 key=f"dbins_{_s['id']}",
                             )
-                        if _is_checked or _s["default"]:
+                        if _is_checked:
                             st.markdown(
                                 f'<div style="background:#f8faff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;margin-bottom:4px;">'
                                 f'{_s["preview"]}</div>',
@@ -13207,7 +13095,8 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             st.markdown(
                 f'<div style="font-size:0.68rem;color:#64748b;margin-bottom:8px;">'
                 f'{len(_sel_sections_c)} of {len(_ALL_SECTIONS)} sections · '
-                f'{_ins_count} insight callout{"s" if _ins_count != 1 else ""} included</div>',
+                f'{_ins_count} insight callout{"s" if _ins_count != 1 else ""} included — '
+                f'<span style="color:#2563EB;">change selection using the ▲ expander above the charts</span></div>',
                 unsafe_allow_html=True
             )
 
