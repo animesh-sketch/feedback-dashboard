@@ -7161,28 +7161,6 @@ def _render_sense_scorecard(sheets, legend_map):
                 )
 
 
-    # ── Email Section Selector (Dashboard) ───────────────────────────────────
-    if _has_qa_schema:
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-        with st.expander("📧 Select Sections for Email Report", expanded=False):
-            st.markdown('<div style="font-size:0.72rem;color:#475569;margin-bottom:10px;">Tick what you want to include when you generate the email in the Insights tab.</div>', unsafe_allow_html=True)
-            _de_c1, _de_c2, _de_c3 = st.columns(3)
-            with _de_c1:
-                st.checkbox("📊 KPI Summary", value=True, key="em_kpis")
-                st.checkbox("🟢 Status Mix", value=True, key="em_status")
-                st.checkbox("🎯 Disposition Mix", value=True, key="em_disp")
-            with _de_c2:
-                st.checkbox("✅ What Went Right", value=True, key="em_wr")
-                st.checkbox("⚠️ What Went Wrong", value=True, key="em_ww")
-                st.checkbox("🏅 Top 5 Best Calls", value=True, key="em_best5")
-                st.checkbox("🚨 Top 5 Worst Calls", value=True, key="em_worst5")
-            with _de_c3:
-                st.checkbox("🎯 Campaign Breakdown", value=True, key="em_camp")
-                st.checkbox("🔬 Parameter Details", value=True, key="em_params")
-                st.checkbox("⭐ Custom Parameters", value=True, key="em_custom_ps")
-                st.checkbox("💬 Remarks Summary", value=False, key="em_remarks")
-        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-
     # ── All Parameter Performance ─────────────────────────────────────────────
     st.markdown('<div class="section-chip">📊 All Parameter Performance</div>', unsafe_allow_html=True)
 
@@ -8476,14 +8454,9 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                         unsafe_allow_html=True
                     )
 
-            # ── Build & Send One-Pager Email ──────────────────────────────────
-            st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-            st.markdown('<div class="section-chip">📧 Build One-Pager Email</div>', unsafe_allow_html=True)
-            st.markdown(
-                '<div style="font-size:0.72rem;color:#475569;margin-bottom:12px;">'
-                'Tick the sections you want in the email report, then generate and send.</div>',
-                unsafe_allow_html=True)
-            if True:  # always visible — no expander
+            if False:  # Build One-Pager Email moved to Send Report section
+                pass
+            if False:
                 _now_str   = pd.Timestamp.now().strftime("%d %b %Y")
                 _cli_label  = _ins_cli  if _ins_cli  != "All Clients"   else "All Clients"
                 _camp_label = _ins_camp if _ins_camp != "All Campaigns" else "All Campaigns"
@@ -10262,6 +10235,81 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                 unsafe_allow_html=True,
             )
 
+            # ── Analytics Preview + Section Selector ─────────────────────────
+            st.markdown('<div class="section-chip">📊 Analytics Preview</div>', unsafe_allow_html=True)
+
+            # Status distribution
+            _sd_preview = [("✅ Pass","#059669",_sr_pass),("🟡 Needs Review","#d97706",_sr_review),
+                           ("❌ Fail","#ef4444",_sr_fail),("🚨 Auto-Fail","#dc2626",_sr_fatal)]
+            _sd_html_p = ""
+            for _sn_p, _sc_p, _sv_p in _sd_preview:
+                _sp_p = round(_sv_p / _sr_total * 100, 1) if _sr_total else 0
+                _sd_html_p += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+                               f'<div style="width:120px;font-size:0.69rem;font-weight:600;color:#0d1d3a;flex-shrink:0;">{_sn_p}</div>'
+                               f'<div style="flex:1;height:12px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
+                               f'<div style="width:{_sp_p}%;height:100%;background:{_sc_p};border-radius:3px;"></div></div>'
+                               f'<div style="width:80px;text-align:right;font-size:0.69rem;font-weight:700;color:{_sc_p};flex-shrink:0;">{_sv_p} ({_sp_p}%)</div>'
+                               f'</div>')
+
+            # Top weaknesses preview
+            _pw_html = ""
+            for _pw in _sr_weaknesses[:3]:
+                _pw_c = "#dc2626" if _pw["pct"] < 50 else "#d97706"
+                _pw_html += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+                             f'<div style="flex:1;font-size:0.67rem;font-weight:600;color:#0B1F3A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_pw["col"]}</div>'
+                             f'<div style="width:60px;height:10px;background:#fee2e2;border-radius:3px;overflow:hidden;flex-shrink:0;">'
+                             f'<div style="width:{_pw["pct"]}%;height:100%;background:{_pw_c};border-radius:3px;"></div></div>'
+                             f'<div style="font-size:0.69rem;font-weight:800;color:{_pw_c};flex-shrink:0;width:36px;text-align:right;">{_pw["pct"]}%</div>'
+                             f'</div>')
+
+            _prev_l, _prev_r = st.columns(2)
+            with _prev_l:
+                st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:14px 16px;margin-bottom:10px;">'
+                            f'<div style="font-size:0.62rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Status Distribution</div>'
+                            f'{_sd_html_p}</div>', unsafe_allow_html=True)
+            with _prev_r:
+                if _pw_html:
+                    st.markdown(f'<div style="background:#fff;border:1px solid #fecdd3;border-left:3px solid #dc2626;border-radius:10px;padding:14px 16px;margin-bottom:10px;">'
+                                f'<div style="font-size:0.62rem;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Top Parameters Needing Attention</div>'
+                                f'{_pw_html}</div>', unsafe_allow_html=True)
+
+            # Campaign mini-table
+            if _sr_total and "Campaign Name" in _sr_df.columns:
+                _sr_camps_p = []
+                for _cn_p, _cg_p in _sr_df.groupby("Campaign Name"):
+                    _cbs_p = pd.to_numeric(_cg_p["Bot Score"], errors="coerce").dropna()
+                    if len(_cbs_p):
+                        _sr_camps_p.append({"name": str(_cn_p), "avg": round(_cbs_p.mean(),1), "n": len(_cg_p)})
+                if len(_sr_camps_p) >= 2:
+                    _sr_camps_p.sort(key=lambda x: -x["avg"])
+                    _camp_html_p = ""
+                    for _cp_row in _sr_camps_p[:6]:
+                        _cp_clr = "#059669" if _cp_row["avg"] >= 80 else "#d97706" if _cp_row["avg"] >= 65 else "#dc2626"
+                        _camp_html_p += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+                                         f'<div style="flex:1;font-size:0.69rem;font-weight:600;color:#0B1F3A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_cp_row["name"]}</div>'
+                                         f'<div style="width:80px;height:10px;background:#f0f2f5;border-radius:3px;overflow:hidden;flex-shrink:0;">'
+                                         f'<div style="width:{min(100,_cp_row["avg"])}%;height:100%;background:{_cp_clr};border-radius:3px;"></div></div>'
+                                         f'<div style="font-size:0.69rem;font-weight:800;color:{_cp_clr};flex-shrink:0;width:38px;text-align:right;">{_cp_row["avg"]}%</div>'
+                                         f'</div>')
+                    st.markdown(f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:10px;padding:14px 16px;margin-bottom:14px;">'
+                                f'<div style="font-size:0.62rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Campaign Performance</div>'
+                                f'{_camp_html_p}</div>', unsafe_allow_html=True)
+
+            # ── Tick/Untick Section Selector ──────────────────────────────────
+            st.markdown('<div class="section-chip">✅ Select Sections for Email</div>', unsafe_allow_html=True)
+            _sel_c1, _sel_c2, _sel_c3 = st.columns(3)
+            with _sel_c1:
+                _sr_inc_kpi      = st.checkbox("📊 KPI Summary", value=True, key="sr_em_kpi")
+                _sr_inc_status   = st.checkbox("🟢 Status Breakdown", value=True, key="sr_em_status")
+                _sr_inc_campaign = st.checkbox("🎯 Campaign Breakdown", value=bool(_sr_camps_p if _sr_total and "Campaign Name" in _sr_df.columns else []), key="sr_em_campaign")
+            with _sel_c2:
+                _sr_inc_entity   = st.checkbox("🤖 Bot Behaviour Checks", value=bool(_sr_entity_rows), key="sr_em_entity")
+                _sr_inc_sw       = st.checkbox("📈 Strengths & Weaknesses", value=bool(_sr_pavgs), key="sr_em_sw")
+                _sr_inc_custom   = st.checkbox("⭐ Custom Parameters", value=bool(_sr_custom_rows), key="sr_em_custom")
+            with _sel_c3:
+                _sr_inc_insights = st.checkbox("💡 Key Insights", value=bool(_sr_insights), key="sr_em_insights")
+                _sr_inc_actions  = st.checkbox("🎯 Priority Actions", value=bool(_sr_actions), key="sr_em_actions")
+
             # ── Build report HTML ─────────────────────────────────────────────
             def _build_sr_html():
                 _now_s  = pd.Timestamp.now().strftime("%d %b %Y")
@@ -10288,41 +10336,43 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                 )
 
                 # KPI grid
-                H += (
-                    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:22px;">'
-                    f'<div style="background:#EFF6FF;border-radius:12px;padding:14px 12px;text-align:center;border:1px solid #BFDBFE;">'
-                    f'<div style="font-size:1.8rem;font-weight:900;color:#1D4ED8;">{_sr_total}</div>'
-                    f'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Total Audits</div></div>'
-                    f'<div style="background:#F0FDF4;border-radius:12px;padding:14px 12px;text-align:center;border:1px solid #BBF7D0;">'
-                    f'<div style="font-size:1.8rem;font-weight:900;color:{_bc_s};">{_sr_avg or "—"}%</div>'
-                    f'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Avg Bot Score</div></div>'
-                    f'<div style="background:#F0FDF4;border-radius:12px;padding:14px 12px;text-align:center;border:1px solid #BBF7D0;">'
-                    f'<div style="font-size:1.8rem;font-weight:900;color:#059669;">{_sr_pr}%</div>'
-                    f'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Pass Rate</div></div>'
-                    f'<div style="background:#FFF1F2;border-radius:12px;padding:14px 12px;text-align:center;border:1px solid #FECDD3;">'
-                    f'<div style="font-size:1.8rem;font-weight:900;color:#dc2626;">{_sr_fatal}</div>'
-                    f'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Auto-Fails</div></div>'
-                    '</div>'
-                )
+                if _sr_inc_kpi:
+                    H += (
+                        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:22px;">'
+                        f'<div style="background:#EFF6FF;border-radius:12px;padding:14px 12px;text-align:center;border:1px solid #BFDBFE;">'
+                        f'<div style="font-size:1.8rem;font-weight:900;color:#1D4ED8;">{_sr_total}</div>'
+                        f'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Total Audits</div></div>'
+                        f'<div style="background:#F0FDF4;border-radius:12px;padding:14px 12px;text-align:center;border:1px solid #BBF7D0;">'
+                        f'<div style="font-size:1.8rem;font-weight:900;color:{_bc_s};">{_sr_avg or "—"}%</div>'
+                        f'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Avg Bot Score</div></div>'
+                        f'<div style="background:#F0FDF4;border-radius:12px;padding:14px 12px;text-align:center;border:1px solid #BBF7D0;">'
+                        f'<div style="font-size:1.8rem;font-weight:900;color:#059669;">{_sr_pr}%</div>'
+                        f'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Pass Rate</div></div>'
+                        f'<div style="background:#FFF1F2;border-radius:12px;padding:14px 12px;text-align:center;border:1px solid #FECDD3;">'
+                        f'<div style="font-size:1.8rem;font-weight:900;color:#dc2626;">{_sr_fatal}</div>'
+                        f'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Auto-Fails</div></div>'
+                        '</div>'
+                    )
 
                 # Status distribution
-                _sd = [("✅ Pass","#059669",_sr_pass),("🟡 Needs Review","#f59e0b",_sr_review),
-                       ("❌ Fail","#ef4444",_sr_fail),("🚨 Auto-Fail","#dc2626",_sr_fatal)]
-                H += ('<div style="margin-bottom:22px;">'
-                      '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;'
-                      'color:#0B1F3A;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #EFF6FF;">📊 Status Breakdown</div>')
-                for _sn2, _sc2, _sv2 in _sd:
-                    _sp2 = round(_sv2 / _sr_total * 100, 1) if _sr_total else 0
-                    H += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
-                          f'<div style="width:130px;font-size:12px;font-weight:600;color:#0d1d3a;flex-shrink:0;">{_sn2}</div>'
-                          f'<div style="flex:1;height:12px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
-                          f'<div style="width:{_sp2}%;height:100%;background:{_sc2};border-radius:3px;"></div></div>'
-                          f'<div style="width:80px;text-align:right;font-size:12px;font-weight:700;color:{_sc2};flex-shrink:0;">{_sv2} ({_sp2}%)</div>'
-                          f'</div>')
-                H += '</div>'
+                if _sr_inc_status:
+                    _sd = [("✅ Pass","#059669",_sr_pass),("🟡 Needs Review","#f59e0b",_sr_review),
+                           ("❌ Fail","#ef4444",_sr_fail),("🚨 Auto-Fail","#dc2626",_sr_fatal)]
+                    H += ('<div style="margin-bottom:22px;">'
+                          '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;'
+                          'color:#0B1F3A;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #EFF6FF;">📊 Status Breakdown</div>')
+                    for _sn2, _sc2, _sv2 in _sd:
+                        _sp2 = round(_sv2 / _sr_total * 100, 1) if _sr_total else 0
+                        H += (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+                              f'<div style="width:130px;font-size:12px;font-weight:600;color:#0d1d3a;flex-shrink:0;">{_sn2}</div>'
+                              f'<div style="flex:1;height:12px;background:#f0f2f5;border-radius:3px;overflow:hidden;">'
+                              f'<div style="width:{_sp2}%;height:100%;background:{_sc2};border-radius:3px;"></div></div>'
+                              f'<div style="width:80px;text-align:right;font-size:12px;font-weight:700;color:{_sc2};flex-shrink:0;">{_sv2} ({_sp2}%)</div>'
+                              f'</div>')
+                    H += '</div>'
 
                 # Entity / bot behaviour checks (binary Yes/No params)
-                if _sr_entity_rows:
+                if _sr_entity_rows and _sr_inc_entity:
                     H += (
                         '<div style="margin-bottom:22px;">'
                         '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;'
@@ -10355,7 +10405,7 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     H += '</div></div>'
 
                 # Custom parameters (⭐ user-defined Yes/No/NA checks)
-                if _sr_custom_rows:
+                if _sr_custom_rows and _sr_inc_custom:
                     H += (
                         '<div style="margin-bottom:22px;">'
                         '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;'
@@ -10435,36 +10485,35 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     H += '</div></div>'
 
                 # Strengths / weaknesses two-column
-                H += ('<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;">')
-                # Strengths
-                H += ('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:14px 16px;">'
-                      '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#059669;margin-bottom:10px;">✅ Top Strengths</div>')
-                if _sr_strengths:
-                    for _ss in _sr_strengths:
-                        H += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-                              f'<div style="flex:1;font-size:12px;font-weight:600;color:#064E3B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_ss["col"]}</div>'
-                              f'<div style="font-size:11px;font-weight:800;color:#059669;flex-shrink:0;">{_ss["pct"]}%</div>'
-                              f'</div>')
-                else:
-                    H += '<div style="font-size:12px;color:#94a3b8;">No data yet</div>'
-                H += '</div>'
-                # Weaknesses
-                H += ('<div style="background:#FFF1F2;border:1px solid #FECDD3;border-radius:12px;padding:14px 16px;">'
-                      '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#dc2626;margin-bottom:10px;">⚠️ Needs Improvement</div>')
-                if _sr_weaknesses:
-                    for _sw in _sr_weaknesses:
-                        _sw_c = "#dc2626" if _sw["pct"] < 50 else "#d97706"
-                        H += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-                              f'<div style="flex:1;font-size:12px;font-weight:600;color:#7F1D1D;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_sw["col"]}</div>'
-                              f'<div style="font-size:11px;font-weight:800;color:{_sw_c};flex-shrink:0;">{_sw["pct"]}%</div>'
-                              f'</div>')
-                else:
-                    H += '<div style="font-size:12px;color:#94a3b8;">All parameters healthy 🎉</div>'
-                H += '</div>'
-                H += '</div>'
+                if _sr_inc_sw:
+                    _sw_html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;">'
+                    _sw_html += ('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:14px 16px;">'
+                                 '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#059669;margin-bottom:10px;">✅ Top Strengths</div>')
+                    if _sr_strengths:
+                        for _ss in _sr_strengths:
+                            _sw_html += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                                         f'<div style="flex:1;font-size:12px;font-weight:600;color:#064E3B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_ss["col"]}</div>'
+                                         f'<div style="font-size:11px;font-weight:800;color:#059669;flex-shrink:0;">{_ss["pct"]}%</div>'
+                                         f'</div>')
+                    else:
+                        _sw_html += '<div style="font-size:12px;color:#94a3b8;">No data yet</div>'
+                    _sw_html += '</div>'
+                    _sw_html += ('<div style="background:#FFF1F2;border:1px solid #FECDD3;border-radius:12px;padding:14px 16px;">'
+                                 '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#dc2626;margin-bottom:10px;">⚠️ Needs Improvement</div>')
+                    if _sr_weaknesses:
+                        for _sw_item in _sr_weaknesses:
+                            _sw_c = "#dc2626" if _sw_item["pct"] < 50 else "#d97706"
+                            _sw_html += (f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+                                         f'<div style="flex:1;font-size:12px;font-weight:600;color:#7F1D1D;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_sw_item["col"]}</div>'
+                                         f'<div style="font-size:11px;font-weight:800;color:{_sw_c};flex-shrink:0;">{_sw_item["pct"]}%</div>'
+                                         f'</div>')
+                    else:
+                        _sw_html += '<div style="font-size:12px;color:#94a3b8;">All parameters healthy 🎉</div>'
+                    _sw_html += '</div></div>'
+                    H += _sw_html
 
                 # Key insights
-                if _sr_insights:
+                if _sr_insights and _sr_inc_insights:
                     _ti_bg  = {"critical":"#FFF1F2","warning":"#FFFBEB","success":"#ECFDF5","info":"#EBF5FF"}
                     _ti_bc  = {"critical":"#dc2626","warning":"#D97706","success":"#059669","info":"#2563EB"}
                     _ti_tc  = {"critical":"#7F1D1D","warning":"#78350F","success":"#064E3B","info":"#1e3a5f"}
@@ -10483,7 +10532,7 @@ def _render_sense_insights(df, fname, sheets=None, legend_map=None):
                     H += '</div>'
 
                 # Priority actions
-                if _sr_actions:
+                if _sr_actions and _sr_inc_actions:
                     _pa_bg  = {"high":"#FFF1F2","medium":"#FFFBEB","low":"#ECFDF5"}
                     _pa_bc  = {"high":"#dc2626","medium":"#D97706","low":"#059669"}
                     _pa_lbl = {"high":"🔴 HIGH","medium":"🟡 MED","low":"🟢 LOW"}
