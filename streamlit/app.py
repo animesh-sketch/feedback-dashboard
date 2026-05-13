@@ -14222,8 +14222,9 @@ def _render_param_manager(key_sfx=""):
     """Custom parameter manager — add/edit/delete persisted custom audit params with input types."""
     if "sense_custom_audit_params" not in st.session_state:
         st.session_state["sense_custom_audit_params"] = param_store.load()
-    _ks  = key_sfx
-    _cps = st.session_state["sense_custom_audit_params"]
+    _ks       = key_sfx
+    _cps      = st.session_state["sense_custom_audit_params"]
+    _pm_is_admin = auth.current_user().get("role", "admin") == "admin"
 
     st.markdown('<div class="section-chip">⭐ Custom Parameters</div>', unsafe_allow_html=True)
 
@@ -14234,7 +14235,7 @@ def _render_param_manager(key_sfx=""):
             _lbl     = _TYPE_LABELS.get(_itype, _itype)
             _editing = st.session_state.get(f"pm_editing_{_cpi}{_ks}", False)
 
-            _ca, _cb, _cc = st.columns([5, 1, 1])
+            _ca, _cb, _cc = st.columns([5, 1, 1] if _pm_is_admin else [5, 1, 0.01])
             with _ca:
                 _guide_txt = f' <span style="color:#94a3b8;font-size:0.7rem;">— {_cp["guide"]}</span>' if _cp.get("guide") else ""
                 _badge_col = {"dropdown": "#dbeafe", "scoring": "#fef9c3", "number": "#f0fdf4", "text": "#f3e8ff"}.get(_itype, "#f1f5f9")
@@ -14253,16 +14254,17 @@ def _render_param_manager(key_sfx=""):
                     st.session_state[f"pm_editing_{_cpi}{_ks}"] = not _editing
                     st.rerun()
             with _cc:
-                if st.button("🗑", key=f"pm_del_{_cpi}{_ks}", help=f"Delete '{_cp['name']}'", use_container_width=True):
-                    _del_err = param_store.remove(_cp["name"])
-                    if _del_err:
-                        st.error(f"Delete failed: {_del_err}")
-                    else:
-                        st.session_state["sense_custom_audit_params"] = [
-                            p for p in _cps if p["name"] != _cp["name"]
-                        ]
-                        st.session_state.pop(f"pm_editing_{_cpi}{_ks}", None)
-                        st.rerun()
+                if _pm_is_admin:
+                    if st.button("🗑", key=f"pm_del_{_cpi}{_ks}", help=f"Delete '{_cp['name']}'", use_container_width=True):
+                        _del_err = param_store.remove(_cp["name"])
+                        if _del_err:
+                            st.error(f"Delete failed: {_del_err}")
+                        else:
+                            st.session_state["sense_custom_audit_params"] = [
+                                p for p in _cps if p["name"] != _cp["name"]
+                            ]
+                            st.session_state.pop(f"pm_editing_{_cpi}{_ks}", None)
+                            st.rerun()
 
             if st.session_state.get(f"pm_editing_{_cpi}{_ks}", False):
                 with st.container():
