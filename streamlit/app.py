@@ -14349,13 +14349,7 @@ def _render_audit_form(legend_map, fname):
     # ── Admin Audit Management (admin only) ────────────────────────────────────
     _sense_role = auth.current_user().get("role", "admin")
     _sense_qa_name = auth.current_name()
-
-    # Add sidebar toggle for admin management
-    if _sense_role == "admin":
-        st.sidebar.markdown("---")
-        _show_admin_mgmt = st.sidebar.checkbox("⚙️ Show Admin Audit Management", value=False, key="show_admin_audit_mgmt")
-    else:
-        _show_admin_mgmt = False
+    _show_admin_mgmt = (_sense_role == "admin")
 
     if _sense_role == "admin" and _show_admin_mgmt:
         st.markdown('<div class="section-chip">⚙️ Admin Audit Management</div>', unsafe_allow_html=True)
@@ -14431,64 +14425,162 @@ def _render_audit_form(legend_map, fname):
 
                 for _audit in _filtered_audits:
                     _audit_id = _audit.get("_row_id", "?")
-                    _client = _audit.get("Client", "—")
+                    _client   = _audit.get("Client", "—")
                     _campaign = _audit.get("Campaign Name", "—")
-                    _qa = _audit.get("QA", "—")
-                    _bot = _audit.get("Bot Name", "—")
-                    _date = _audit.get("Audit Date", "—")
-                    _disp = _audit.get("Disposition", "—")
+                    _qa       = _audit.get("QA", "—")
+                    _bot      = _audit.get("Bot Name", "—")
+                    _date     = _audit.get("Audit Date", "—")
+                    _disp     = _audit.get("Disposition", "—")
+                    _score    = _audit.get("Bot Score", "")
+                    _status   = _audit.get("Status", "")
 
-                    _acol0, _acol1, _acol2, _acol3, _acol4 = st.columns([0.5, 3.5, 1, 1, 1])
-
+                    _acol0, _acol1, _acol2 = st.columns([0.5, 4.5, 1])
                     with _acol0:
                         _is_selected = _audit_id in st.session_state["selected_audits"]
                         if st.checkbox("", value=_is_selected, key=f"audit_check_{_audit_id}"):
                             st.session_state["selected_audits"].add(_audit_id)
                         else:
                             st.session_state["selected_audits"].discard(_audit_id)
-
                     with _acol1:
                         st.markdown(
-                            f'<div style="font-size:0.78rem;color:#0d1d3a;padding:8px 0;">'
+                            f'<div style="font-size:0.78rem;color:#0d1d3a;padding:6px 0;">'
                             f'<strong>{_client}</strong> · {_campaign}<br/>'
-                            f'<span style="font-size:0.70rem;color:#667085;">QA: {_qa} | Bot: {_bot} | {_date} | {_disp}</span>'
-                            f'</div>',
+                            f'<span style="font-size:0.70rem;color:#667085;">'
+                            f'QA: {_qa} | Bot: {_bot} | {_date} | {_disp}'
+                            f'{(" | Score: " + str(_score)) if _score != "" else ""}'
+                            f'{(" | " + str(_status)) if _status else ""}'
+                            f'</span></div>',
                             unsafe_allow_html=True,
                         )
-
                     with _acol2:
-                        if st.button("✏️ Edit", key=f"audit_edit_{_audit_id}", use_container_width=True):
-                            st.session_state["audit_edit_mode"] = True
-                            st.session_state["audit_edit_id"] = _audit_id
-                            st.session_state["audit_edit_data"] = _audit
-                            st.rerun()
-
-                    with _acol3:
                         if st.button("🗑️ Del", key=f"audit_del_{_audit_id}", use_container_width=True):
                             st.session_state["audit_del_confirm"] = _audit_id
 
-                    with _acol4:
-                        if st.session_state.get("audit_del_confirm") == _audit_id:
+                    if st.session_state.get("audit_del_confirm") == _audit_id:
+                        _del_yes, _del_no = st.columns(2)
+                        with _del_yes:
+                            if st.button("✅ Confirm Delete", key=f"audit_del_yes_{_audit_id}", use_container_width=True, type="primary"):
+                                _del_err = audit_store.delete(_audit_id)
+                                if _del_err:
+                                    st.error(f"Delete failed: {_del_err}")
+                                else:
+                                    _audit_log_load.clear()
+                                    st.session_state["selected_audits"].discard(_audit_id)
+                                    st.session_state.pop("audit_del_confirm", None)
+                                    st.success(f"✅ Audit {_audit_id} deleted")
+                                    st.rerun()
+                        with _del_no:
+                            if st.button("❌ Cancel", key=f"audit_del_no_{_audit_id}", use_container_width=True):
+                                st.session_state.pop("audit_del_confirm", None)
+                                st.rerun()
+
+                    # ── Inline edit expander ──────────────────────────────────
+                    with st.expander(f"✏️ Edit Audit — {_client} · {_campaign} · {_date}", expanded=False):
+                        with st.form(key=f"inline_edit_form_{_audit_id}"):
                             st.markdown(
-                                f'<div style="font-size:0.70rem;color:#dc2626;font-weight:700;padding:8px 0;">Confirm?</div>',
+                                '<div style="font-size:0.68rem;font-weight:700;color:#2a5080;'
+                                'letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">'
+                                '📋 Audit Details</div>',
                                 unsafe_allow_html=True,
                             )
-                            _del_yes, _del_no = st.columns(2)
-                            with _del_yes:
-                                if st.button("Yes", key=f"audit_del_yes_{_audit_id}", use_container_width=True):
-                                    _del_err = audit_store.delete(_audit_id)
-                                    if _del_err:
-                                        st.error(f"Delete failed: {_del_err}")
-                                    else:
-                                        _audit_log_load.clear()
-                                        st.session_state["selected_audits"].discard(_audit_id)
-                                        st.session_state.pop("audit_del_confirm", None)
-                                        st.success(f"✅ Audit {_audit_id} deleted")
-                                        st.rerun()
-                            with _del_no:
-                                if st.button("No", key=f"audit_del_no_{_audit_id}", use_container_width=True):
-                                    st.session_state.pop("audit_del_confirm", None)
-                                    st.rerun()
+                            _ie1, _ie2, _ie3, _ie4 = st.columns(4)
+                            with _ie1:
+                                _reg_cl = [""] + [c["client"] for c in st.session_state.get("sense_registry_clients", _SENSE_CLIENTS)]
+                                _ie_client = st.selectbox("Client *", _reg_cl,
+                                    index=_reg_cl.index(_audit.get("Client","")) if _audit.get("Client","") in _reg_cl else 0,
+                                    key=f"ie_client_{_audit_id}")
+                            with _ie2:
+                                _ie_campaign = st.text_input("Campaign Name *", value=_audit.get("Campaign Name",""), key=f"ie_campaign_{_audit_id}")
+                            with _ie3:
+                                _ie_qa = st.text_input("QA / Auditor *", value=_audit.get("QA",""), key=f"ie_qa_{_audit_id}")
+                            with _ie4:
+                                _pm_list = st.session_state.get("sense_registry_pms", _SENSE_PM_LIST)
+                                _ie_pm = st.selectbox("PM / CSM", _pm_list,
+                                    index=_pm_list.index(_audit.get("PM / CSM","")) if _audit.get("PM / CSM","") in _pm_list else 0,
+                                    key=f"ie_pm_{_audit_id}")
+
+                            _ie5, _ie6, _ie7, _ie8 = st.columns(4)
+                            with _ie5:
+                                _bot_list = st.session_state.get("sense_registry_cms", [])
+                                _bot_opts_ie = ([""] + _bot_list) if _bot_list else _SENSE_BOT_LIST
+                                _ie_bot = st.selectbox("Bot Name *", _bot_opts_ie,
+                                    index=_bot_opts_ie.index(_audit.get("Bot Name","")) if _audit.get("Bot Name","") in _bot_opts_ie else 0,
+                                    key=f"ie_bot_{_audit_id}")
+                            with _ie6:
+                                _disp_opts_ie = ["— select —","Hot","Warm","Cold","Interested","Warm Follow-up","Not Interested","Converted","DNC","Wrong Number","Language Barrier","Voicemail / No Answer","Other"]
+                                _saved_disp = _audit.get("Disposition","— select —")
+                                _ie_disp = st.selectbox("Disposition *", _disp_opts_ie,
+                                    index=_disp_opts_ie.index(_saved_disp) if _saved_disp in _disp_opts_ie else 0,
+                                    key=f"ie_disp_{_audit_id}")
+                            with _ie7:
+                                _ie_lead = st.text_input("Lead Number", value=_audit.get("Lead Number",""), key=f"ie_lead_{_audit_id}")
+                            with _ie8:
+                                _ie_conv = st.text_input("Conversation Link", value=_audit.get("Conversation Link",""), key=f"ie_conv_{_audit_id}")
+
+                            st.markdown(
+                                '<div style="font-size:0.68rem;font-weight:700;color:#2a5080;'
+                                'letter-spacing:0.08em;text-transform:uppercase;margin:12px 0 6px;">'
+                                '⚖️ Parameters</div>',
+                                unsafe_allow_html=True,
+                            )
+                            _ie_pv = {}
+                            for _iet in _QA_SCHEMA["tiers"]:
+                                _tc_ie = _iet["color"]
+                                st.markdown(
+                                    f'<div style="font-size:0.62rem;font-weight:800;letter-spacing:0.1em;'
+                                    f'text-transform:uppercase;color:{_tc_ie};margin:8px 0 4px;">'
+                                    f'{_iet["label"]}</div>',
+                                    unsafe_allow_html=True,
+                                )
+                                for _iep in _iet["params"]:
+                                    _opts_ie  = _iep["options"] + ["NA"]
+                                    _saved_v  = _audit.get(_iep["col"], "NA")
+                                    _def_idx  = _opts_ie.index(_saved_v) if _saved_v in _opts_ie else len(_opts_ie) - 1
+                                    _saved_rmk = _audit.get(f"{_iep['col']} Remark", "")
+                                    _wt_ie = f" ({int(_iep['weight']*100)}%)" if _iep["weight"] > 0 else (" ⚠️ FATAL" if _iep.get("fatal") else "")
+                                    _pc1, _pc2 = st.columns([2, 3])
+                                    with _pc1:
+                                        _ie_pv[_iep["col"]] = st.selectbox(
+                                            f"{_iep['col']}{_wt_ie}",
+                                            _opts_ie,
+                                            index=_def_idx,
+                                            key=f"ie_p_{_audit_id}_{_iep['col'][:18].replace(' ','_')}",
+                                        )
+                                    with _pc2:
+                                        _ie_pv[f"{_iep['col']} Remark"] = st.text_input(
+                                            "Remark",
+                                            value=_saved_rmk,
+                                            placeholder="Optional remark…",
+                                            key=f"ie_rmk_{_audit_id}_{_iep['col'][:18].replace(' ','_')}",
+                                            label_visibility="collapsed",
+                                        )
+
+                            _ie_save = st.form_submit_button("💾 Save Changes", type="primary", use_container_width=True)
+
+                        if _ie_save:
+                            _updated_rec = dict(_audit)
+                            _updated_rec.update({
+                                "Client":            _ie_client,
+                                "Campaign Name":     _ie_campaign,
+                                "QA":                _ie_qa,
+                                "PM / CSM":          _ie_pm,
+                                "Bot Name":          _ie_bot,
+                                "Disposition":       _ie_disp if _ie_disp != "— select —" else _audit.get("Disposition",""),
+                                "Lead Number":       _ie_lead,
+                                "Conversation Link": _ie_conv,
+                            })
+                            _updated_rec.update(_ie_pv)
+                            # Recompute scores
+                            _recomp = _compute_qa_score(_updated_rec)
+                            _updated_rec.update(_recomp)
+                            _ie_err = audit_store.update(_audit_id, _updated_rec)
+                            if _ie_err:
+                                st.error(f"Save failed: {_ie_err}")
+                            else:
+                                _audit_log_load.clear()
+                                st.session_state["sense_audit_log"] = _audit_log_load()
+                                st.success("✅ Audit updated successfully.")
+                                st.rerun()
 
                 st.markdown('<hr style="border:none;border-top:1px solid #e4e7ec;margin:12px 0 8px;">', unsafe_allow_html=True)
             else:
