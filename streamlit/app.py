@@ -2889,11 +2889,8 @@ def render_email_maker():
         d["scoreboard_enabled"] = _sb_enabled
 
         if _sb_enabled:
-            # Load params
-            if "sense_custom_audit_params" not in st.session_state:
-                st.session_state["sense_custom_audit_params"] = param_store.load()
-            _param_names = [p["name"] for p in st.session_state["sense_custom_audit_params"]]
-            _param_map   = {p["name"]: p for p in st.session_state["sense_custom_audit_params"]}
+            _param_names = []
+            _param_map   = {}
 
             if "sb_rows" not in d or not isinstance(d.get("sb_rows"), list):
                 d["sb_rows"] = []
@@ -3037,7 +3034,7 @@ def render_email_maker():
 
         # ── Step 2b: Dashboard Key Insights ────────────────────────────────
         st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">③ Dashboard Key Insights</div>', unsafe_allow_html=True)
-        st.markdown('<div style="color:#94a3b8;font-size:0.72rem;margin-bottom:10px;">Custom parameter scores are always included. Tick any section to add it to the email.</div>', unsafe_allow_html=True)
+        st.markdown('<div style="color:#94a3b8;font-size:0.72rem;margin-bottom:10px;">Tick any section to add it to the email.</div>', unsafe_allow_html=True)
 
         # Load audit data once per session; Refresh button forces reload
         _ds_refresh_col, _ds_status_col = st.columns([1, 4])
@@ -3083,81 +3080,6 @@ def render_email_maker():
             # ── Recompute insights live on every render ────────────────────
             _live_sections = []
 
-            # ALWAYS: Custom Parameter Performance (QA schema tiers)
-            try:
-                _cp_rows = []
-                for _tt in _QA_SCHEMA.get("tiers", []):
-                    for _tp in _tt.get("params", []):
-                        if _tp["col"] in _ec_df.columns:
-                            _pmx = max([int(o) for o in _tp.get("options", []) if str(o).lstrip("-").isdigit()], default=2)
-                            _pv = pd.to_numeric(_ec_df[_tp["col"]].astype(str).str.strip().replace(
-                                {"NA": "", "nan": "", "Fatal": "", "Yes": "0", "No": str(_pmx)}), errors="coerce").dropna()
-                            if len(_pv):
-                                _pct = round(_pv.mean() / _pmx * 100, 1)
-                                _cp_rows.append({"label": _tp["col"], "value": f"{_pct}%", "highlight": _pct >= 75})
-                if _cp_rows:
-                    _live_sections.append({"icon": "🔧", "title": "Custom Parameter Performance", "rows": _cp_rows})
-            except Exception:
-                pass
-
-            # ALWAYS: User-defined custom params (param_store)
-            try:
-                if "sense_custom_audit_params" not in st.session_state:
-                    st.session_state["sense_custom_audit_params"] = param_store.load()
-                _ucp_rows = []
-                for _ucp in st.session_state["sense_custom_audit_params"]:
-                    _ucp_col  = _ucp["name"]
-                    _ucp_type = _ucp.get("input_type", "dropdown")
-                    _ucp_opts = _ucp.get("options", ["Yes", "No"])
-                    if _ucp_col not in _ec_df.columns:
-                        continue
-                    _ucp_raw = _ec_df[_ucp_col].astype(str).str.strip()
-                    _ucp_raw = _ucp_raw[~_ucp_raw.str.lower().isin(["nan", "na", ""])]
-                    if not len(_ucp_raw):
-                        continue
-                    if _ucp_type == "scoring":
-                        _ucp_num = pd.to_numeric(_ucp_raw, errors="coerce").dropna()
-                        if len(_ucp_num):
-                            _ucp_avg = round(_ucp_num.mean(), 1)
-                            _ucp_pct = round(_ucp_avg / 5 * 100, 1)
-                            _ucp_rows.append({"label": _ucp_col, "value": f"{_ucp_avg}/5  ({_ucp_pct}%)", "highlight": _ucp_pct >= 75})
-                    elif _ucp_type == "number":
-                        _ucp_num = pd.to_numeric(_ucp_raw, errors="coerce").dropna()
-                        if len(_ucp_num):
-                            _ucp_rows.append({"label": _ucp_col, "value": str(round(_ucp_num.mean(), 1))})
-                    elif _ucp_type == "dropdown":
-                        _pos_opt = next((o for o in _ucp_opts if o.lower() == "yes"), _ucp_opts[0] if _ucp_opts else "Yes")
-                        _ucp_pos = int((_ucp_raw == _pos_opt).sum())
-                        _ucp_tot = len(_ucp_raw)
-                        _ucp_pct = round(_ucp_pos / _ucp_tot * 100, 1) if _ucp_tot else 0
-                        _ucp_rows.append({"label": _ucp_col, "value": f"{_ucp_pct}%  ({_ucp_pos}/{_ucp_tot})", "highlight": _ucp_pct >= 75})
-                    else:
-                        _ucp_filled = int((_ucp_raw.str.len() > 0).sum())
-                        _ucp_rows.append({"label": _ucp_col, "value": f"{_ucp_filled}/{len(_ucp_raw)} filled"})
-                if _ucp_rows:
-                    _live_sections.append({"icon": "⭐", "title": "Custom Parameters", "rows": _ucp_rows})
-
-                # ALWAYS: Custom param remarks
-                _ucp_rmk_rows = []
-                for _ucp in st.session_state["sense_custom_audit_params"]:
-                    _ucp_cmt_col = f"{_ucp['name']} Comment"
-                    if _ucp_cmt_col not in _ec_df.columns:
-                        continue
-                    _ucp_rmks = _ec_df[_ucp_cmt_col].replace("", None).dropna().astype(str).str.strip()
-                    _ucp_rmks = _ucp_rmks[_ucp_rmks.str.len() > 0]
-                    _ucp_rmks = _ucp_rmks[~_ucp_rmks.str.lower().isin(["nan", "none"])]
-                    if _ucp_rmks.empty:
-                        continue
-                    _ucp_sample = _ucp_rmks.iloc[0]
-                    _ucp_sample = (_ucp_sample[:100] + "…") if len(_ucp_sample) > 100 else _ucp_sample
-                    _ucp_rmk_rows.append({
-                        "label": f"{_ucp['name']}  ({len(_ucp_rmks)} remark{'s' if len(_ucp_rmks) != 1 else ''})",
-                        "value": _ucp_sample,
-                    })
-                if _ucp_rmk_rows:
-                    _live_sections.append({"icon": "💬", "title": "Custom Param Remarks", "rows": _ucp_rmk_rows})
-            except Exception:
-                pass
 
             _ds_total = len(_ec_df)
             _ds_bs    = pd.to_numeric(_ec_df.get("Bot Score", pd.Series(dtype=float)), errors="coerce")
