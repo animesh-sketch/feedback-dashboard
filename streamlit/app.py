@@ -885,139 +885,140 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
 
-    # ── Custom Parameters Manager ──────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">Custom Audit Parameters</div>', unsafe_allow_html=True)
+    # ── Custom Parameters Manager (hidden in CDL mode) ────────────────────────
+    if st.session_state.get("app_mode", "Home") != "CDL":
+        st.markdown("---")
+        st.markdown('<div style="color:#64748b;font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">Custom Audit Parameters</div>', unsafe_allow_html=True)
 
-    if "sense_custom_audit_params" not in st.session_state:
-        st.session_state["sense_custom_audit_params"] = param_store.load()
-    _sb_cps = st.session_state["sense_custom_audit_params"]
+        if "sense_custom_audit_params" not in st.session_state:
+            st.session_state["sense_custom_audit_params"] = param_store.load()
+        _sb_cps = st.session_state["sense_custom_audit_params"]
 
-    if _sb_cps:
-        st.caption(f"{len(_sb_cps)} parameters configured")
-    else:
-        st.caption("No custom parameters yet")
-
-    with st.expander("➕ Manage Parameters", expanded=False):
-        # Existing params
         if _sb_cps:
-            for _sbcpi, _sbcp in enumerate(_sb_cps):
-                _sb_itype   = _sbcp.get("input_type", "dropdown")
-                _sb_lbl     = _TYPE_LABELS.get(_sb_itype, _sb_itype)
-                _sb_editing = st.session_state.get(f"sbpm_editing_{_sbcpi}", False)
+            st.caption(f"{len(_sb_cps)} parameters configured")
+        else:
+            st.caption("No custom parameters yet")
 
-                _sb_ca, _sb_cb, _sb_cc = st.columns([5, 1, 1])
-                with _sb_ca:
-                    _sb_guide_txt = f' — {_sbcp["guide"]}' if _sbcp.get("guide") else ""
-                    st.markdown(f'⭐ **{_sbcp["name"]}** {_sb_lbl}{_sb_guide_txt}', help=_sbcp.get("guide", ""))
-                with _sb_cb:
-                    if st.button("✏️", key=f"sbpm_edit_{_sbcpi}", help="Edit", use_container_width=True):
-                        st.session_state[f"sbpm_editing_{_sbcpi}"] = not _sb_editing
-                        st.rerun()
-                with _sb_cc:
-                    if st.button("🗑", key=f"sbpm_del_{_sbcpi}", help=f"Delete '{_sbcp['name']}'", use_container_width=True):
-                        _del_err = param_store.remove(_sbcp["name"])
-                        if _del_err:
-                            st.error(f"Delete failed: {_del_err}")
-                        else:
-                            st.session_state["sense_custom_audit_params"] = [
-                                p for p in _sb_cps if p["name"] != _sbcp["name"]
-                            ]
-                            st.session_state.pop(f"sbpm_editing_{_sbcpi}", None)
+        with st.expander("➕ Manage Parameters", expanded=False):
+            # Existing params
+            if _sb_cps:
+                for _sbcpi, _sbcp in enumerate(_sb_cps):
+                    _sb_itype   = _sbcp.get("input_type", "dropdown")
+                    _sb_lbl     = _TYPE_LABELS.get(_sb_itype, _sb_itype)
+                    _sb_editing = st.session_state.get(f"sbpm_editing_{_sbcpi}", False)
+
+                    _sb_ca, _sb_cb, _sb_cc = st.columns([5, 1, 1])
+                    with _sb_ca:
+                        _sb_guide_txt = f' — {_sbcp["guide"]}' if _sbcp.get("guide") else ""
+                        st.markdown(f'⭐ **{_sbcp["name"]}** {_sb_lbl}{_sb_guide_txt}', help=_sbcp.get("guide", ""))
+                    with _sb_cb:
+                        if st.button("✏️", key=f"sbpm_edit_{_sbcpi}", help="Edit", use_container_width=True):
+                            st.session_state[f"sbpm_editing_{_sbcpi}"] = not _sb_editing
                             st.rerun()
-
-                if st.session_state.get(f"sbpm_editing_{_sbcpi}", False):
-                    st.divider()
-                    _sb_e1, _sb_e2 = st.columns([1, 1])
-                    with _sb_e1:
-                        _sb_e_type = st.selectbox(
-                            "Type",
-                            _TYPE_KEYS,
-                            index=_TYPE_KEYS.index(_sb_itype) if _sb_itype in _TYPE_KEYS else 0,
-                            format_func=lambda k: _TYPE_LABELS[k],
-                            key=f"sbpm_e_type_{_sbcpi}",
-                            label_visibility="collapsed",
-                        )
-                    with _sb_e2:
-                        _sb_e_guide = st.text_input("Remarks", value=_sbcp.get("guide", ""), key=f"sbpm_e_guide_{_sbcpi}", placeholder="Guidance", label_visibility="collapsed")
-                    if _sb_e_type == "dropdown":
-                        _sb_e_opts_raw = st.text_input(
-                            "Options",
-                            value=", ".join(_sbcp.get("options", ["Yes", "No"])),
-                            key=f"sbpm_e_opts_{_sbcpi}",
-                            placeholder="Yes, No, NA",
-                            label_visibility="collapsed",
-                        )
-                        _sb_e_opts = [o.strip() for o in _sb_e_opts_raw.split(",") if o.strip()] or ["Yes", "No"]
-                    else:
-                        _sb_e_opts = _sbcp.get("options", ["Yes", "No"])
-
-                    _sb_save_col, _sb_cancel_col = st.columns([1, 1])
-                    with _sb_save_col:
-                        if st.button("💾 Save", key=f"sbpm_e_save_{_sbcpi}", use_container_width=True, type="primary"):
-                            _upd_err = param_store.update(_sbcp["name"], _sb_e_opts, _sb_e_guide, _sb_e_type)
-                            if _upd_err:
-                                st.error(f"Save failed: {_upd_err}")
+                    with _sb_cc:
+                        if st.button("🗑", key=f"sbpm_del_{_sbcpi}", help=f"Delete '{_sbcp['name']}'", use_container_width=True):
+                            _del_err = param_store.remove(_sbcp["name"])
+                            if _del_err:
+                                st.error(f"Delete failed: {_del_err}")
                             else:
-                                st.session_state["sense_custom_audit_params"][_sbcpi] = {
-                                    **_sbcp,
-                                    "options":    _sb_e_opts,
-                                    "guide":      _sb_e_guide,
-                                    "input_type": _sb_e_type,
-                                }
+                                st.session_state["sense_custom_audit_params"] = [
+                                    p for p in _sb_cps if p["name"] != _sbcp["name"]
+                                ]
+                                st.session_state.pop(f"sbpm_editing_{_sbcpi}", None)
+                                st.rerun()
+
+                    if st.session_state.get(f"sbpm_editing_{_sbcpi}", False):
+                        st.divider()
+                        _sb_e1, _sb_e2 = st.columns([1, 1])
+                        with _sb_e1:
+                            _sb_e_type = st.selectbox(
+                                "Type",
+                                _TYPE_KEYS,
+                                index=_TYPE_KEYS.index(_sb_itype) if _sb_itype in _TYPE_KEYS else 0,
+                                format_func=lambda k: _TYPE_LABELS[k],
+                                key=f"sbpm_e_type_{_sbcpi}",
+                                label_visibility="collapsed",
+                            )
+                        with _sb_e2:
+                            _sb_e_guide = st.text_input("Remarks", value=_sbcp.get("guide", ""), key=f"sbpm_e_guide_{_sbcpi}", placeholder="Guidance", label_visibility="collapsed")
+                        if _sb_e_type == "dropdown":
+                            _sb_e_opts_raw = st.text_input(
+                                "Options",
+                                value=", ".join(_sbcp.get("options", ["Yes", "No"])),
+                                key=f"sbpm_e_opts_{_sbcpi}",
+                                placeholder="Yes, No, NA",
+                                label_visibility="collapsed",
+                            )
+                            _sb_e_opts = [o.strip() for o in _sb_e_opts_raw.split(",") if o.strip()] or ["Yes", "No"]
+                        else:
+                            _sb_e_opts = _sbcp.get("options", ["Yes", "No"])
+
+                        _sb_save_col, _sb_cancel_col = st.columns([1, 1])
+                        with _sb_save_col:
+                            if st.button("💾 Save", key=f"sbpm_e_save_{_sbcpi}", use_container_width=True, type="primary"):
+                                _upd_err = param_store.update(_sbcp["name"], _sb_e_opts, _sb_e_guide, _sb_e_type)
+                                if _upd_err:
+                                    st.error(f"Save failed: {_upd_err}")
+                                else:
+                                    st.session_state["sense_custom_audit_params"][_sbcpi] = {
+                                        **_sbcp,
+                                        "options":    _sb_e_opts,
+                                        "guide":      _sb_e_guide,
+                                        "input_type": _sb_e_type,
+                                    }
+                                    st.session_state[f"sbpm_editing_{_sbcpi}"] = False
+                                    st.rerun()
+                        with _sb_cancel_col:
+                            if st.button("✕ Cancel", key=f"sbpm_e_cancel_{_sbcpi}", use_container_width=True):
                                 st.session_state[f"sbpm_editing_{_sbcpi}"] = False
                                 st.rerun()
-                    with _sb_cancel_col:
-                        if st.button("✕ Cancel", key=f"sbpm_e_cancel_{_sbcpi}", use_container_width=True):
-                            st.session_state[f"sbpm_editing_{_sbcpi}"] = False
-                            st.rerun()
-                    st.divider()
+                        st.divider()
 
-        # Add form
-        st.markdown("**Add New Parameter**", help="Create a new custom audit parameter")
-        _sbpa, _sbpb = st.columns([1, 1])
-        with _sbpa:
-            _sb_new_name = st.text_input("Name", placeholder="e.g. Empathy Check", key="sbpm_new_name", label_visibility="collapsed")
-        with _sbpb:
-            _sb_new_type = st.selectbox(
-                "Type",
-                _TYPE_KEYS,
-                format_func=lambda k: _TYPE_LABELS[k],
-                key="sbpm_new_type",
-                label_visibility="collapsed",
-            )
+            # Add form
+            st.markdown("**Add New Parameter**", help="Create a new custom audit parameter")
+            _sbpa, _sbpb = st.columns([1, 1])
+            with _sbpa:
+                _sb_new_name = st.text_input("Name", placeholder="e.g. Empathy Check", key="sbpm_new_name", label_visibility="collapsed")
+            with _sbpb:
+                _sb_new_type = st.selectbox(
+                    "Type",
+                    _TYPE_KEYS,
+                    format_func=lambda k: _TYPE_LABELS[k],
+                    key="sbpm_new_type",
+                    label_visibility="collapsed",
+                )
 
-        _sb_new_remarks = st.text_input("Remarks (optional)", placeholder="Auditor guidance", key="sbpm_new_remarks", label_visibility="collapsed")
+            _sb_new_remarks = st.text_input("Remarks (optional)", placeholder="Auditor guidance", key="sbpm_new_remarks", label_visibility="collapsed")
 
-        if _sb_new_type == "dropdown":
-            _sb_new_opts_raw = st.text_input(
-                "Options",
-                placeholder="Yes, No, NA",
-                key="sbpm_new_opts",
-                help="Comma-separated values",
-                label_visibility="collapsed",
-            )
-            _sb_new_opts = [o.strip() for o in _sb_new_opts_raw.split(",") if o.strip()] or ["Yes", "No"]
-        else:
-            _sb_new_opts = ["Yes", "No"]
-
-        if st.button("➕ Add", key="sbpm_add_param", use_container_width=True, type="primary"):
-            if not _sb_new_name.strip():
-                st.warning("Enter a parameter name.")
-            elif _sb_new_name.strip().lower() in [p["name"].lower() for p in _sb_cps]:
-                st.warning("A parameter with that name already exists.")
+            if _sb_new_type == "dropdown":
+                _sb_new_opts_raw = st.text_input(
+                    "Options",
+                    placeholder="Yes, No, NA",
+                    key="sbpm_new_opts",
+                    help="Comma-separated values",
+                    label_visibility="collapsed",
+                )
+                _sb_new_opts = [o.strip() for o in _sb_new_opts_raw.split(",") if o.strip()] or ["Yes", "No"]
             else:
-                _err = param_store.add(_sb_new_name.strip(), _sb_new_opts, _sb_new_remarks.strip(), _sb_new_type)
-                if _err:
-                    st.error(f"Could not save: {_err}")
+                _sb_new_opts = ["Yes", "No"]
+
+            if st.button("➕ Add", key="sbpm_add_param", use_container_width=True, type="primary"):
+                if not _sb_new_name.strip():
+                    st.warning("Enter a parameter name.")
+                elif _sb_new_name.strip().lower() in [p["name"].lower() for p in _sb_cps]:
+                    st.warning("A parameter with that name already exists.")
                 else:
-                    st.session_state["sense_custom_audit_params"].append({
-                        "name":       _sb_new_name.strip(),
-                        "options":    _sb_new_opts,
-                        "guide":      _sb_new_remarks.strip(),
-                        "input_type": _sb_new_type,
-                    })
-                    st.rerun()
+                    _err = param_store.add(_sb_new_name.strip(), _sb_new_opts, _sb_new_remarks.strip(), _sb_new_type)
+                    if _err:
+                        st.error(f"Could not save: {_err}")
+                    else:
+                        st.session_state["sense_custom_audit_params"].append({
+                            "name":       _sb_new_name.strip(),
+                            "options":    _sb_new_opts,
+                            "guide":      _sb_new_remarks.strip(),
+                            "input_type": _sb_new_type,
+                        })
+                        st.rerun()
 
     st.markdown("---")
     st.markdown('<div style="color:#444460;font-size:0.68rem;font-weight:500;">Feb 2026 · v1.0</div>', unsafe_allow_html=True)
