@@ -10558,6 +10558,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
     # ── Email section selector ────────────────────────────────────────────────
     _DASH_SEC_DEFS = [
         ("kpi",              "📊 KPI Overview"),
+        ("deduct_pts",       "🚨 Deducted Points"),
         ("status_dist",      "📊 Status Distribution"),
         ("score_trend",      "📈 Score Trend"),
         ("campaign_lb",      "🎯 Campaign Rankings"),
@@ -10598,6 +10599,149 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
     with _tab_analytics:
         st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+        # ── Section 1b — Deducted Points Breakdown ───────────────────────────────
+        if st.session_state.get("dbsec_deduct_pts", True):
+            try:
+                _dp_rows = []
+                _dp_total_weight = sum(
+                    p["weight"] for t in _QA_SCHEMA.get("tiers", [])
+                    for p in t.get("params", []) if p["weight"] > 0
+                ) * 2.0
+                for _dp_tier in _QA_SCHEMA.get("tiers", []):
+                    _dp_tlabel = _dp_tier["label"].split("·")[1].strip() if "·" in _dp_tier["label"] else _dp_tier["label"]
+                    _dp_tc = _dp_tier.get("color", "#2563EB")
+                    for _dp_p in _dp_tier.get("params", []):
+                        if _dp_p["col"] not in _dash_df.columns:
+                            continue
+                        _dp_opts = _dp_p.get("options", [])
+                        if not _dp_opts:
+                            continue
+                        _dp_worst = str(_dp_opts[0]).strip()
+                        _dp_col_s = _dash_df[_dp_p["col"]].astype(str).str.strip()
+                        _dp_appl = _dp_col_s[~_dp_col_s.str.upper().isin(["NA", "NAN", ""])]
+                        if _dp_appl.empty:
+                            continue
+                        _dp_fail_n = int((_dp_appl.str.lower() == _dp_worst.lower()).sum())
+                        _dp_fail_rt = round(_dp_fail_n / len(_dp_appl) * 100, 1)
+                        if _dp_fail_rt == 0:
+                            continue
+                        _dp_is_fatal = _dp_p.get("fatal", False)
+                        if _dp_is_fatal:
+                            _dp_pts = 0.0
+                            _dp_avg_ded = 0.0
+                        else:
+                            _dp_pts = round(_dp_p["weight"] * 2 / _dp_total_weight * 100, 1) if _dp_total_weight > 0 else 0.0
+                            _dp_avg_ded = round(_dp_pts * _dp_fail_rt / 100, 1)
+                        _dp_rows.append({
+                            "col": _dp_p["col"],
+                            "tier": _dp_tlabel,
+                            "tier_color": _dp_tc,
+                            "weight": _dp_p["weight"],
+                            "fatal": _dp_is_fatal,
+                            "worst_opt": _dp_worst,
+                            "fail_count": _dp_fail_n,
+                            "fail_rate": _dp_fail_rt,
+                            "pts_per_fail": _dp_pts,
+                            "avg_deduction": _dp_avg_ded,
+                            "total_applicable": len(_dp_appl),
+                        })
+                _dp_rows.sort(key=lambda x: (-x["avg_deduction"], -x["fail_rate"]))
+                _dp_fatal_rows = [r for r in _dp_rows if r["fatal"]]
+                _dp_scored_rows = [r for r in _dp_rows if not r["fatal"]]
+                _dp_total_ded = round(sum(r["avg_deduction"] for r in _dp_scored_rows), 1)
+                _dp_high = [r for r in _dp_scored_rows if r["avg_deduction"] >= 3 or r["fail_rate"] >= 50]
+                _dp_med = [r for r in _dp_scored_rows if r not in _dp_high and (r["avg_deduction"] >= 1 or r["fail_rate"] >= 25)]
+                if _dp_rows:
+                    st.markdown('<div class="section-chip">🚨 Deducted Points — What\'s Dragging Bot Score Down</div>', unsafe_allow_html=True)
+                    _dp_callout_color = "#dc2626" if _dp_total_ded >= 10 else "#d97706" if _dp_total_ded >= 5 else "#059669"
+                    _dp_callout_bg = "#fef2f2" if _dp_total_ded >= 10 else "#fffbeb" if _dp_total_ded >= 5 else "#f0fdf4"
+                    _dp_callout_border = "#fca5a5" if _dp_total_ded >= 10 else "#fde68a" if _dp_total_ded >= 5 else "#86efac"
+                    _dp_callout_icon = "🔴" if _dp_total_ded >= 10 else "🟡" if _dp_total_ded >= 5 else "🟢"
+                    _dp_fatal_callout = (
+                        f'  <span style="background:#7f1d1d;color:#fca5a5;font-size:0.65rem;font-weight:700;'
+                        f'padding:2px 10px;border-radius:20px;margin-left:8px;">⚡ {len(_dp_fatal_rows)} FATAL trigger(s)</span>'
+                    ) if _dp_fatal_rows else ""
+                    st.markdown(
+                        f'<div style="background:{_dp_callout_bg};border:1px solid {_dp_callout_border};'
+                        f'border-left:5px solid {_dp_callout_color};border-radius:12px;'
+                        f'padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px;">'
+                        f'<div style="font-size:2rem;">{_dp_callout_icon}</div>'
+                        f'<div>'
+                        f'<div style="font-size:0.85rem;font-weight:800;color:{_dp_callout_color};">'
+                        f'Avg <b>{_dp_total_ded} pts</b> deducted per audit from bot score{_dp_fatal_callout}</div>'
+                        f'<div style="font-size:0.70rem;color:#64748b;margin-top:3px;">'
+                        f'{len(_dp_high)} critical · {len(_dp_med)} moderate · {len(_dp_fatal_rows)} fatal triggers — '
+                        f'fix these to directly lift the avg bot score.</div>'
+                        f'</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                    _dp_tbl = (
+                        '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">'
+                        '<thead><tr style="background:linear-gradient(135deg,#7f1d1d,#dc2626);">'
+                        + "".join(
+                            f'<th style="padding:9px 10px;text-align:left;color:rgba(255,255,255,0.9);'
+                            f'font-weight:700;font-size:0.60rem;letter-spacing:0.08em;text-transform:uppercase;">{h}</th>'
+                            for h in ["Parameter", "Tier", "Wrong Answer", "Fail Rate", "Pts/Fail", "Avg Deduction", "Severity"]
+                        )
+                        + "</tr></thead><tbody>"
+                    )
+                    for _dpi, _dp_r in enumerate(_dp_rows[:20]):
+                        _rb = "#fff8f8" if _dpi % 2 == 0 else "#fff"
+                        if _dp_r["fatal"]:
+                            _sev_html = '<span style="background:#7f1d1d;color:#fca5a5;font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:20px;">⚡ FATAL</span>'
+                            _ded_html = '<span style="color:#7f1d1d;font-weight:700;">Auto-Fail</span>'
+                            _pts_html = '<span style="color:#7f1d1d;">—</span>'
+                            _fr_color = "#7f1d1d"
+                        elif _dp_r["avg_deduction"] >= 3 or _dp_r["fail_rate"] >= 50:
+                            _sev_html = '<span style="background:#dc2626;color:#fff;font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:20px;">🔴 Critical</span>'
+                            _ded_html = f'<span style="color:#dc2626;font-weight:900;font-size:0.82rem;">−{_dp_r["avg_deduction"]}pts</span>'
+                            _pts_html = f'<span style="color:#dc2626;font-weight:700;">{_dp_r["pts_per_fail"]}pts</span>'
+                            _fr_color = "#dc2626"
+                        elif _dp_r["avg_deduction"] >= 1 or _dp_r["fail_rate"] >= 25:
+                            _sev_html = '<span style="background:#d97706;color:#fff;font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:20px;">🟡 Moderate</span>'
+                            _ded_html = f'<span style="color:#d97706;font-weight:900;font-size:0.82rem;">−{_dp_r["avg_deduction"]}pts</span>'
+                            _pts_html = f'<span style="color:#d97706;font-weight:700;">{_dp_r["pts_per_fail"]}pts</span>'
+                            _fr_color = "#d97706"
+                        else:
+                            _sev_html = '<span style="background:#94a3b8;color:#fff;font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:20px;">⚪ Low</span>'
+                            _ded_html = f'<span style="color:#64748b;font-weight:700;">−{_dp_r["avg_deduction"]}pts</span>'
+                            _pts_html = f'<span style="color:#64748b;">{_dp_r["pts_per_fail"]}pts</span>'
+                            _fr_color = "#64748b"
+                        _dp_tbl += (
+                            f'<tr style="background:{_rb};">'
+                            f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;max-width:280px;">'
+                            f'<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;" title="{_dp_r["col"]}">'
+                            f'{_dp_r["col"]}</div></td>'
+                            f'<td style="padding:8px 10px;white-space:nowrap;">'
+                            f'<span style="background:{_dp_r["tier_color"]}22;color:{_dp_r["tier_color"]};'
+                            f'border:1px solid {_dp_r["tier_color"]}44;font-size:0.60rem;font-weight:700;'
+                            f'padding:2px 8px;border-radius:20px;">{_dp_r["tier"]}</span></td>'
+                            f'<td style="padding:8px 10px;font-size:0.72rem;color:#374151;">'
+                            f'<span style="background:#fee2e2;color:#991b1b;font-weight:700;'
+                            f'padding:2px 8px;border-radius:6px;">{_dp_r["worst_opt"]}</span></td>'
+                            f'<td style="padding:8px 10px;">'
+                            f'<div style="display:flex;align-items:center;gap:6px;">'
+                            f'<div style="width:48px;height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden;">'
+                            f'<div style="width:{min(_dp_r["fail_rate"],100)}%;height:100%;background:{_fr_color};border-radius:3px;"></div></div>'
+                            f'<span style="font-weight:900;color:{_fr_color};font-size:0.78rem;">{_dp_r["fail_rate"]}%</span>'
+                            f'<span style="font-size:0.62rem;color:#94a3b8;">({_dp_r["fail_count"]}/{_dp_r["total_applicable"]})</span>'
+                            f'</div></td>'
+                            f'<td style="padding:8px 10px;">{_pts_html}</td>'
+                            f'<td style="padding:8px 10px;">{_ded_html}</td>'
+                            f'<td style="padding:8px 10px;">{_sev_html}</td>'
+                            f'</tr>'
+                        )
+                    _dp_tbl += "</tbody></table>"
+                    st.markdown(
+                        f'<div style="background:#fff;border:1px solid #fecaca;border-radius:14px;'
+                        f'overflow:hidden;box-shadow:0 4px 18px rgba(220,38,38,0.10);">{_dp_tbl}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+            except Exception:
+                pass
 
         # ── Section 2 — Status Distribution + Score Histogram ────────────────────
         if st.session_state.get("dbsec_status_dist", True):
@@ -14333,7 +14477,7 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                     st.session_state["f_pm_csm_sel"] = _auto_pm
             _f_pm_csm = st.selectbox("PM / CSM *", _pm_opts, key="f_pm_csm_sel")
         with _ld2:
-            _f_lead_no   = st.text_input("Lead Number", key="f_lead_no", placeholder="e.g. LD-20250422")
+            _f_lead_no   = st.text_input("Lead Number *", key="f_lead_no", placeholder="e.g. LD-20250422")
         with _ld3:
             _bot_registry = st.session_state.get("sense_registry_cms", [])
             _bot_opts = [""] + _bot_registry if _bot_registry else _SENSE_BOT_LIST
@@ -14545,6 +14689,8 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 _errs.append("Bot Name is required")
             if not _f_pm_csm.strip():
                 _errs.append("PM / CSM is required")
+            if not _f_lead_no.strip():
+                _errs.append("Lead Number is required")
             if not _f_conv_link.strip():
                 _errs.append("Conversation Link is required")
             else:
