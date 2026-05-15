@@ -11677,13 +11677,21 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
 
             def _score_col_d(col, opts):
                 _pmx = [int(o) for o in opts if str(o).lstrip("-").isdigit()]
-                if not _pmx:
+                if _pmx:
+                    _pmax = max(_pmx)
+                    _pv = pd.to_numeric(
+                        _dash_df[col].astype(str).str.strip().replace({"NA": "", "nan": "", "Fatal": ""}),
+                        errors="coerce").dropna()
+                    return round(_pv.mean() / _pmax * 100, 1) if len(_pv) else None
+                # Non-numeric options (e.g. Yes/No): pass rate = % matching best answer (options[-1])
+                if not opts:
                     return None
-                _pmax = max(_pmx)
-                _pv = pd.to_numeric(
-                    _dash_df[col].astype(str).str.strip().replace({"NA": "", "nan": "", "Fatal": ""}),
-                    errors="coerce").dropna()
-                return round(_pv.mean() / _pmax * 100, 1) if len(_pv) else None
+                _best_ans = str(opts[-1]).strip()
+                _col_s = _dash_df[col].astype(str).str.strip()
+                _appl = _col_s[~_col_s.str.upper().isin(["NA", "NAN", ""])]
+                if _appl.empty:
+                    return None
+                return round((_appl.str.lower() == _best_ans.lower()).sum() / len(_appl) * 100, 1)
 
             for _tier_d in _QA_SCHEMA.get("tiers", []):
                 for _p_d in _tier_d.get("params", []):
@@ -13433,6 +13441,15 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     st.warning("Select at least one contact or enter a recipient email.")
                 else:
                     _full_em_html = _build_dashboard_email_html(_sel_sections_c, _em_client, _ins_on_ids)
+                    # ── Build audit dump CSV (filtered by current client + period) ──
+                    try:
+                        _dump_bytes = _dash_df.to_csv(index=False).encode("utf-8")
+                        _safe_client = (_sel_client or "all").replace(" ", "_").replace("/", "-")
+                        _safe_period = (_sel_period or "all").replace(" ", "_")
+                        _dump_name = f"audit_dump_{_safe_client}_{_safe_period}.csv"
+                    except Exception:
+                        _dump_bytes = None
+                        _dump_name = None
                     try:
                         import gmail_sender as _gs_em
                         _em_result = _gs_em.send_report_email(
@@ -13441,6 +13458,9 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                             subject=_em_subj,
                             html_body=_full_em_html,
                             from_email=st.session_state.get("user_email", "convinlabs@convin.ai"),
+                            attachment_name=_dump_name,
+                            attachment_data=_dump_bytes,
+                            attachment_mime="text/csv",
                         )
                         if _em_result.get("sent"):
                             st.success(f"✅ Sent to: {', '.join(_em_result['sent'])}  ({len(_sel_sections_c)} sections)")
