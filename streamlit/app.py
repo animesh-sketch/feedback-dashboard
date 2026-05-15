@@ -10601,14 +10601,10 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
     with _tab_analytics:
         st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-        # ── Section 1b — Deducted Points Breakdown ───────────────────────────────
+        # ── Section 1b — Fail Rate Breakdown (Yes / No QA scoring) ──────────────
         if st.session_state.get("dbsec_deduct_pts", True):
             try:
                 _dp_rows = []
-                _dp_total_weight = sum(
-                    p["weight"] for t in _QA_SCHEMA.get("tiers", [])
-                    for p in t.get("params", []) if p["weight"] > 0
-                ) * 2.0
                 for _dp_tier in _QA_SCHEMA.get("tiers", []):
                     _dp_tlabel = _dp_tier["label"].split("·")[1].strip() if "·" in _dp_tier["label"] else _dp_tier["label"]
                     _dp_tc = _dp_tier.get("color", "#2563EB")
@@ -10618,128 +10614,131 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                         _dp_opts = _dp_p.get("options", [])
                         if not _dp_opts:
                             continue
-                        _dp_worst = str(_dp_opts[0]).strip()
+                        # industry standard: index-0 option = fail answer, last option = pass answer
+                        _dp_fail_ans = str(_dp_opts[0]).strip()
+                        _dp_pass_ans = str(_dp_opts[-1]).strip()
                         _dp_col_s = _dash_df[_dp_p["col"]].astype(str).str.strip()
                         _dp_appl = _dp_col_s[~_dp_col_s.str.upper().isin(["NA", "NAN", ""])]
                         if _dp_appl.empty:
                             continue
-                        _dp_fail_n = int((_dp_appl.str.lower() == _dp_worst.lower()).sum())
+                        _dp_fail_n = int((_dp_appl.str.lower() == _dp_fail_ans.lower()).sum())
+                        _dp_pass_n = int((_dp_appl.str.lower() == _dp_pass_ans.lower()).sum())
                         _dp_fail_rt = round(_dp_fail_n / len(_dp_appl) * 100, 1)
                         if _dp_fail_rt == 0:
                             continue
-                        _dp_is_fatal = _dp_p.get("fatal", False)
-                        if _dp_is_fatal:
-                            _dp_pts = 0.0
-                            _dp_avg_ded = 0.0
-                        else:
-                            _dp_pts = round(_dp_p["weight"] * 2 / _dp_total_weight * 100, 1) if _dp_total_weight > 0 else 0.0
-                            _dp_avg_ded = round(_dp_pts * _dp_fail_rt / 100, 1)
                         _dp_rows.append({
                             "col": _dp_p["col"],
                             "tier": _dp_tlabel,
                             "tier_color": _dp_tc,
-                            "weight": _dp_p["weight"],
-                            "fatal": _dp_is_fatal,
-                            "worst_opt": _dp_worst,
+                            "fatal": _dp_p.get("fatal", False),
+                            "fail_ans": _dp_fail_ans,
+                            "pass_ans": _dp_pass_ans,
                             "fail_count": _dp_fail_n,
+                            "pass_count": _dp_pass_n,
                             "fail_rate": _dp_fail_rt,
-                            "pts_per_fail": _dp_pts,
-                            "avg_deduction": _dp_avg_ded,
-                            "total_applicable": len(_dp_appl),
+                            "total": len(_dp_appl),
                         })
-                _dp_rows.sort(key=lambda x: (-x["avg_deduction"], -x["fail_rate"]))
+                _dp_rows.sort(key=lambda x: -x["fail_rate"])
                 _dp_fatal_rows = [r for r in _dp_rows if r["fatal"]]
-                _dp_scored_rows = [r for r in _dp_rows if not r["fatal"]]
-                _dp_total_ded = round(sum(r["avg_deduction"] for r in _dp_scored_rows), 1)
-                _dp_high = [r for r in _dp_scored_rows if r["avg_deduction"] >= 3 or r["fail_rate"] >= 50]
-                _dp_med = [r for r in _dp_scored_rows if r not in _dp_high and (r["avg_deduction"] >= 1 or r["fail_rate"] >= 25)]
+                _dp_critical = [r for r in _dp_rows if not r["fatal"] and r["fail_rate"] >= 50]
+                _dp_watch    = [r for r in _dp_rows if not r["fatal"] and 25 <= r["fail_rate"] < 50]
+                _dp_good     = [r for r in _dp_rows if not r["fatal"] and r["fail_rate"] < 25]
                 if _dp_rows:
-                    st.markdown('<div class="section-chip">🚨 Deducted Points — What\'s Dragging Bot Score Down</div>', unsafe_allow_html=True)
-                    _dp_callout_color = "#dc2626" if _dp_total_ded >= 10 else "#d97706" if _dp_total_ded >= 5 else "#059669"
-                    _dp_callout_bg = "#fef2f2" if _dp_total_ded >= 10 else "#fffbeb" if _dp_total_ded >= 5 else "#f0fdf4"
-                    _dp_callout_border = "#fca5a5" if _dp_total_ded >= 10 else "#fde68a" if _dp_total_ded >= 5 else "#86efac"
-                    _dp_callout_icon = "🔴" if _dp_total_ded >= 10 else "🟡" if _dp_total_ded >= 5 else "🟢"
-                    _dp_fatal_callout = (
-                        f'  <span style="background:#7f1d1d;color:#fca5a5;font-size:0.65rem;font-weight:700;'
-                        f'padding:2px 10px;border-radius:20px;margin-left:8px;">⚡ {len(_dp_fatal_rows)} FATAL trigger(s)</span>'
-                    ) if _dp_fatal_rows else ""
-                    st.markdown(
-                        f'<div style="background:{_dp_callout_bg};border:1px solid {_dp_callout_border};'
-                        f'border-left:5px solid {_dp_callout_color};border-radius:12px;'
-                        f'padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px;">'
-                        f'<div style="font-size:2rem;">{_dp_callout_icon}</div>'
-                        f'<div>'
-                        f'<div style="font-size:0.85rem;font-weight:800;color:{_dp_callout_color};">'
-                        f'Avg <b>{_dp_total_ded} pts</b> deducted per audit from bot score{_dp_fatal_callout}</div>'
-                        f'<div style="font-size:0.70rem;color:#64748b;margin-top:3px;">'
-                        f'{len(_dp_high)} critical · {len(_dp_med)} moderate · {len(_dp_fatal_rows)} fatal triggers — '
-                        f'fix these to directly lift the avg bot score.</div>'
-                        f'</div>'
-                        f'</div>',
-                        unsafe_allow_html=True,
+                    st.markdown('<div class="section-chip">🚨 Parameter Fail Rates — What\'s Going Wrong</div>', unsafe_allow_html=True)
+                    # ── Summary pills ─────────────────────────────────────────────
+                    _dp_pill_html = (
+                        f'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">'
+                        f'<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:10px 16px;min-width:110px;text-align:center;">'
+                        f'<div style="font-size:1.6rem;font-weight:900;color:#dc2626;">{len(_dp_critical)}</div>'
+                        f'<div style="font-size:0.60rem;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.08em;">🔴 Critical ≥50%</div></div>'
+                        f'<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 16px;min-width:110px;text-align:center;">'
+                        f'<div style="font-size:1.6rem;font-weight:900;color:#d97706;">{len(_dp_watch)}</div>'
+                        f'<div style="font-size:0.60rem;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:0.08em;">🟡 Watch 25–49%</div></div>'
+                        f'<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:10px 16px;min-width:110px;text-align:center;">'
+                        f'<div style="font-size:1.6rem;font-weight:900;color:#059669;">{len(_dp_good)}</div>'
+                        f'<div style="font-size:0.60rem;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:0.08em;">✅ Good &lt;25%</div></div>'
                     )
+                    if _dp_fatal_rows:
+                        _dp_pill_html += (
+                            f'<div style="background:#1c0a0a;border:1px solid #7f1d1d;border-radius:10px;padding:10px 16px;min-width:110px;text-align:center;">'
+                            f'<div style="font-size:1.6rem;font-weight:900;color:#fca5a5;">{len(_dp_fatal_rows)}</div>'
+                            f'<div style="font-size:0.60rem;font-weight:700;color:#fca5a5;text-transform:uppercase;letter-spacing:0.08em;">⚡ Fatal Triggers</div></div>'
+                        )
+                    _dp_pill_html += '</div>'
+                    st.markdown(_dp_pill_html, unsafe_allow_html=True)
+                    # ── Table ─────────────────────────────────────────────────────
                     _dp_tbl = (
                         '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">'
-                        '<thead><tr style="background:linear-gradient(135deg,#7f1d1d,#dc2626);">'
+                        '<thead><tr style="background:linear-gradient(135deg,#0B1F3A,#1e3a8a);">'
                         + "".join(
                             f'<th style="padding:9px 10px;text-align:left;color:rgba(255,255,255,0.9);'
                             f'font-weight:700;font-size:0.60rem;letter-spacing:0.08em;text-transform:uppercase;">{h}</th>'
-                            for h in ["Parameter", "Tier", "Wrong Answer", "Fail Rate", "Pts/Fail", "Avg Deduction", "Severity"]
+                            for h in ["Parameter", "Tier", "Fail Answer", "Pass Answer", "Failed", "Passed", "Fail Rate", "Status"]
                         )
                         + "</tr></thead><tbody>"
                     )
-                    for _dpi, _dp_r in enumerate(_dp_rows[:20]):
-                        _rb = "#fff8f8" if _dpi % 2 == 0 else "#fff"
+                    for _dpi, _dp_r in enumerate(_dp_rows[:25]):
+                        _rb = "#fff8f8" if _dp_r["fail_rate"] >= 50 else "#fffdf5" if _dp_r["fail_rate"] >= 25 else "#fff"
                         if _dp_r["fatal"]:
-                            _sev_html = '<span style="background:#7f1d1d;color:#fca5a5;font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:20px;">⚡ FATAL</span>'
-                            _ded_html = '<span style="color:#7f1d1d;font-weight:700;">Auto-Fail</span>'
-                            _pts_html = '<span style="color:#7f1d1d;">—</span>'
+                            _st_html = '<span style="background:#7f1d1d;color:#fca5a5;font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:20px;">⚡ FATAL</span>'
                             _fr_color = "#7f1d1d"
-                        elif _dp_r["avg_deduction"] >= 3 or _dp_r["fail_rate"] >= 50:
-                            _sev_html = '<span style="background:#dc2626;color:#fff;font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:20px;">🔴 Critical</span>'
-                            _ded_html = f'<span style="color:#dc2626;font-weight:900;font-size:0.82rem;">−{_dp_r["avg_deduction"]}pts</span>'
-                            _pts_html = f'<span style="color:#dc2626;font-weight:700;">{_dp_r["pts_per_fail"]}pts</span>'
+                        elif _dp_r["fail_rate"] >= 50:
+                            _st_html = '<span style="background:#dc2626;color:#fff;font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:20px;">🔴 Critical</span>'
                             _fr_color = "#dc2626"
-                        elif _dp_r["avg_deduction"] >= 1 or _dp_r["fail_rate"] >= 25:
-                            _sev_html = '<span style="background:#d97706;color:#fff;font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:20px;">🟡 Moderate</span>'
-                            _ded_html = f'<span style="color:#d97706;font-weight:900;font-size:0.82rem;">−{_dp_r["avg_deduction"]}pts</span>'
-                            _pts_html = f'<span style="color:#d97706;font-weight:700;">{_dp_r["pts_per_fail"]}pts</span>'
+                        elif _dp_r["fail_rate"] >= 25:
+                            _st_html = '<span style="background:#d97706;color:#fff;font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:20px;">🟡 Watch</span>'
                             _fr_color = "#d97706"
                         else:
-                            _sev_html = '<span style="background:#94a3b8;color:#fff;font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:20px;">⚪ Low</span>'
-                            _ded_html = f'<span style="color:#64748b;font-weight:700;">−{_dp_r["avg_deduction"]}pts</span>'
-                            _pts_html = f'<span style="color:#64748b;">{_dp_r["pts_per_fail"]}pts</span>'
-                            _fr_color = "#64748b"
+                            _st_html = '<span style="background:#059669;color:#fff;font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:20px;">✅ Good</span>'
+                            _fr_color = "#059669"
                         _dp_tbl += (
                             f'<tr style="background:{_rb};">'
-                            f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;max-width:280px;">'
-                            f'<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;" title="{_dp_r["col"]}">'
+                            f'<td style="padding:8px 10px;font-weight:700;color:#0B1F3A;">'
+                            f'<div style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{_dp_r["col"]}">'
                             f'{_dp_r["col"]}</div></td>'
                             f'<td style="padding:8px 10px;white-space:nowrap;">'
                             f'<span style="background:{_dp_r["tier_color"]}22;color:{_dp_r["tier_color"]};'
                             f'border:1px solid {_dp_r["tier_color"]}44;font-size:0.60rem;font-weight:700;'
                             f'padding:2px 8px;border-radius:20px;">{_dp_r["tier"]}</span></td>'
-                            f'<td style="padding:8px 10px;font-size:0.72rem;color:#374151;">'
-                            f'<span style="background:#fee2e2;color:#991b1b;font-weight:700;'
-                            f'padding:2px 8px;border-radius:6px;">{_dp_r["worst_opt"]}</span></td>'
+                            f'<td style="padding:8px 10px;">'
+                            f'<span style="background:#fee2e2;color:#991b1b;font-weight:700;padding:2px 8px;border-radius:6px;">{_dp_r["fail_ans"]}</span></td>'
+                            f'<td style="padding:8px 10px;">'
+                            f'<span style="background:#dcfce7;color:#166534;font-weight:700;padding:2px 8px;border-radius:6px;">{_dp_r["pass_ans"]}</span></td>'
+                            f'<td style="padding:8px 10px;font-weight:900;color:{_fr_color};font-size:0.80rem;">{_dp_r["fail_count"]}</td>'
+                            f'<td style="padding:8px 10px;font-weight:700;color:#059669;">{_dp_r["pass_count"]}</td>'
                             f'<td style="padding:8px 10px;">'
                             f'<div style="display:flex;align-items:center;gap:6px;">'
-                            f'<div style="width:48px;height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden;">'
-                            f'<div style="width:{min(_dp_r["fail_rate"],100)}%;height:100%;background:{_fr_color};border-radius:3px;"></div></div>'
-                            f'<span style="font-weight:900;color:{_fr_color};font-size:0.78rem;">{_dp_r["fail_rate"]}%</span>'
-                            f'<span style="font-size:0.62rem;color:#94a3b8;">({_dp_r["fail_count"]}/{_dp_r["total_applicable"]})</span>'
+                            f'<div style="width:52px;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden;">'
+                            f'<div style="width:{min(_dp_r["fail_rate"],100)}%;height:100%;background:{_fr_color};border-radius:4px;"></div></div>'
+                            f'<span style="font-weight:900;color:{_fr_color};font-size:0.80rem;">{_dp_r["fail_rate"]}%</span>'
+                            f'<span style="font-size:0.60rem;color:#94a3b8;">/ {_dp_r["total"]}</span>'
                             f'</div></td>'
-                            f'<td style="padding:8px 10px;">{_pts_html}</td>'
-                            f'<td style="padding:8px 10px;">{_ded_html}</td>'
-                            f'<td style="padding:8px 10px;">{_sev_html}</td>'
+                            f'<td style="padding:8px 10px;">{_st_html}</td>'
                             f'</tr>'
                         )
                     _dp_tbl += "</tbody></table>"
                     st.markdown(
-                        f'<div style="background:#fff;border:1px solid #fecaca;border-radius:14px;'
-                        f'overflow:hidden;box-shadow:0 4px 18px rgba(220,38,38,0.10);">{_dp_tbl}</div>',
+                        f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:14px;'
+                        f'overflow:hidden;box-shadow:0 4px 18px rgba(11,31,58,0.07);">{_dp_tbl}</div>',
                         unsafe_allow_html=True,
                     )
+                    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+                    # ── Insight card ──────────────────────────────────────────────
+                    _dp_ins = []
+                    _dp_top = _dp_rows[0] if _dp_rows else None
+                    if _dp_fatal_rows:
+                        _dp_fnames = ", ".join(f"<b>{r['col'][:24]}</b>" for r in _dp_fatal_rows[:3])
+                        _dp_ins.append(("⚡", f"<b>{len(_dp_fatal_rows)} fatal parameter{'s' if len(_dp_fatal_rows)!=1 else ''}</b> triggered: {_dp_fnames}. Any fatal flag auto-fails the entire call — fix these first."))
+                    if _dp_critical:
+                        _dp_ins.append(("🔴", f"<b>{len(_dp_critical)} critical parameter{'s' if len(_dp_critical)!=1 else ''}</b> fail ≥50% of audits — bot consistently getting these wrong. Immediate coaching needed."))
+                    if _dp_top:
+                        _dp_ins.append(("📌", f"Top failure: <b>{_dp_top['col']}</b> fails in <b>{_dp_top['fail_rate']}%</b> of calls ({_dp_top['fail_count']}/{_dp_top['total']}). Expected answer: <b>{_dp_top['pass_ans']}</b>."))
+                    if _dp_watch:
+                        _dp_ins.append(("🟡", f"<b>{len(_dp_watch)} parameter{'s' if len(_dp_watch)!=1 else ''}</b> in watch zone (25–49% fail rate) — monitor closely to prevent them from becoming critical."))
+                    if _dp_good:
+                        _dp_ins.append(("✅", f"<b>{len(_dp_good)} parameter{'s' if len(_dp_good)!=1 else ''}</b> below 25% fail rate — these areas are performing well. Replicate the training approach used here."))
+                    if _dp_ins:
+                        st.markdown(_insight_card(_dp_ins), unsafe_allow_html=True)
                     st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
             except Exception:
                 pass
@@ -11239,6 +11238,42 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                 else:
                     st.info("No Lead Stage column found.")
 
+            # ── Insights: Disposition + Lead Stage ───────────────────────────────
+            try:
+                _dis_ins = []
+                _disp_col2 = next((c for c in ["Disposition", "Correct Disposition", "Correct Disposition (Expected)"] if c in _dash_df.columns), None)
+                if _disp_col2:
+                    _dc2 = _dash_df[_disp_col2].astype(str).str.strip().value_counts()
+                    _dc2 = _dc2[_dc2.index != "nan"]
+                    if not _dc2.empty:
+                        _dc2_top = _dc2.index[0]
+                        _dc2_top_pct = round(_dc2.iloc[0] / _dc2.sum() * 100, 1)
+                        _dis_ins.append(("📂", f"Most common disposition: <b>{_dc2_top}</b> ({_dc2_top_pct}% of calls). {'High concentration may indicate a narrow bot use case.' if _dc2_top_pct >= 60 else 'Disposition spread looks balanced across multiple outcomes.'}"))
+                        if len(_dc2) >= 3:
+                            _dis_ins.append(("📊", f"<b>{len(_dc2)} unique dispositions</b> logged across {_total_d} audits — review whether bot routing aligns with business intent."))
+                if "Lead Stage" in _dash_df.columns:
+                    _ls2 = _dash_df["Lead Stage"].astype(str).str.strip().value_counts()
+                    _ls2 = _ls2[_ls2.index != "nan"]
+                    _hot2 = int(_ls2.get("Hot", 0))
+                    _warm2 = int(_ls2.get("Warm", 0))
+                    _cold2 = int(_ls2.get("Cold", 0))
+                    _rnr2 = int(_ls2.get("RNR", 0))
+                    _ls_tot2 = _ls2.sum() or 1
+                    _hot_pct2 = round(_hot2 / _ls_tot2 * 100, 1)
+                    _cold_pct2 = round(_cold2 / _ls_tot2 * 100, 1)
+                    _rnr_pct2 = round(_rnr2 / _ls_tot2 * 100, 1)
+                    if _hot2 > 0:
+                        _dis_ins.append(("🔥", f"<b>{_hot2} Hot leads</b> ({_hot_pct2}%) in this period — ensure timely follow-up to avoid conversion loss."))
+                    if _rnr_pct2 >= 25:
+                        _dis_ins.append(("📵", f"RNR rate is <b>{_rnr_pct2}%</b> — high non-reach rate; check call timing strategy or lead list quality."))
+                    if _cold_pct2 >= 40:
+                        _dis_ins.append(("❄️", f"<b>{_cold_pct2}% Cold leads</b> — a large cold segment may be dragging down bot conversion quality metrics."))
+                if _dis_ins:
+                    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+                    st.markdown(_insight_card(_dis_ins), unsafe_allow_html=True)
+            except Exception:
+                pass
+
         # ── Section 7 — Client Health Matrix ─────────────────────────────────────
         if st.session_state.get("dbsec_client_health", True):
             if "Client" in _dash_df.columns and "Bot Score" in _dash_df.columns:
@@ -11426,6 +11461,39 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                             xaxis=dict(tickangle=-45, side="bottom", automargin=True),
                         )
                         st.plotly_chart(_hm_fig, use_container_width=True, config={"displayModeBar": False})
+                        # ── Insight: heatmap patterns ─────────────────────────────
+                        try:
+                            _hm_ins = []
+                            # Find QA with lowest average row score
+                            _hm_row_avgs = []
+                            for _hri, _qn2 in enumerate(_hm_qas):
+                                _row_vals = [v for v in _hm_z[_hri] if v is not None]
+                                if _row_vals:
+                                    _hm_row_avgs.append((_qn2, round(sum(_row_vals) / len(_row_vals), 1)))
+                            if _hm_row_avgs:
+                                _hm_row_avgs.sort(key=lambda x: x[1])
+                                _hm_worst_qa, _hm_worst_qa_score = _hm_row_avgs[0]
+                                _hm_best_qa, _hm_best_qa_score = _hm_row_avgs[-1]
+                                _hm_ins.append(("🔴", f"<b>{_hm_worst_qa}</b> has the lowest average param score at <b>{_hm_worst_qa_score}%</b> — this QA's audits show the most red cells. Prioritise coaching session."))
+                                if len(_hm_row_avgs) > 1:
+                                    _hm_ins.append(("🟢", f"<b>{_hm_best_qa}</b> scores highest at <b>{_hm_best_qa_score}%</b> on average — use their calibration approach as a benchmark."))
+                            # Find params with most red (<50%) across QAs
+                            _hm_col_reds = []
+                            for _hci, (_pcol2, _) in enumerate(_hm_params):
+                                _col_vals2 = [_hm_z[_hri][_hci] for _hri in range(len(_hm_qas)) if _hm_z[_hri][_hci] is not None]
+                                if _col_vals2:
+                                    _red_count2 = sum(1 for v in _col_vals2 if v < 50)
+                                    if _red_count2 > 0:
+                                        _hm_col_reds.append((_pcol2, _red_count2))
+                            if _hm_col_reds:
+                                _hm_col_reds.sort(key=lambda x: -x[1])
+                                _hm_worst_param = _hm_col_reds[0]
+                                _hm_ins.append(("🌡️", f"<b>{_hm_worst_param[0]}</b> shows red (<50%) for <b>{_hm_worst_param[1]}</b> QA{'s' if _hm_worst_param[1]!=1 else ''} — the most consistently weak parameter across auditors."))
+                            if _hm_ins:
+                                st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+                                st.markdown(_insight_card(_hm_ins), unsafe_allow_html=True)
+                        except Exception:
+                            pass
                 except Exception:
                     pass
 
@@ -11579,6 +11647,26 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
       <span style="color:#64748b;">{_worst["N"]} audits</span></div>
   </div>
 </div>""", unsafe_allow_html=True)
+
+                        # ── Insight: divergence summary ───────────────────────────
+                        try:
+                            _div_ins = []
+                            _div_gap = round(_best["Delta"] - _worst["Delta"], 1)
+                            _pct_below = round(len(_below) / len(_div_rows) * 100)
+                            if _pct_below >= 60:
+                                _div_ins.append(("🚨", f"<b>{len(_below)} of {len(_div_rows)} campaigns</b> ({_pct_below}%) are below portfolio average — systemic underperformance, not isolated cases."))
+                            elif _pct_below >= 40:
+                                _div_ins.append(("⚠️", f"<b>{len(_below)} campaigns</b> are below portfolio average — nearly half the portfolio needs performance review."))
+                            else:
+                                _div_ins.append(("✅", f"Most campaigns are at or above average — only <b>{len(_below)}</b> of <b>{len(_div_rows)}</b> campaigns are underperforming."))
+                            _div_ins.append(("↔️", f"Performance gap between best and worst campaign is <b>{_div_gap} pts</b> ({_best['Campaign'][:20]} vs {_worst['Campaign'][:20]}) — {'very high variance, investigate root causes.' if _div_gap >= 20 else 'moderate spread, focus on bringing laggards up.'}"))
+                            if _worst["Delta"] <= -10:
+                                _div_ins.append(("📌", f"<b>{_worst['Campaign']}</b> is <b>{abs(_worst['Delta'])} pts below average</b> — run a dedicated parameter breakdown to identify why this campaign is struggling."))
+                            if _div_ins:
+                                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+                                st.markdown(_insight_card(_div_ins), unsafe_allow_html=True)
+                        except Exception:
+                            pass
                 except Exception:
                     pass
 
@@ -13001,7 +13089,6 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
         # ── S20: Deducted Points Breakdown ────────────────────────────────────────
         def _s20_data():
             _r20 = []
-            _tw20 = sum(p["weight"] for t in _QA_SCHEMA.get("tiers",[]) for p in t.get("params",[]) if p["weight"] > 0) * 2.0
             for _t20 in _QA_SCHEMA.get("tiers", []):
                 _tl20 = _t20["label"].split("·")[1].strip() if "·" in _t20["label"] else _t20["label"]
                 for _p20 in _t20.get("params", []):
@@ -13010,63 +13097,63 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     _o20 = _p20.get("options", [])
                     if not _o20:
                         continue
-                    _w20 = str(_o20[0]).strip()
+                    _fail_ans20 = str(_o20[0]).strip()
+                    _pass_ans20 = str(_o20[-1]).strip()
                     _cs20 = _dash_df[_p20["col"]].astype(str).str.strip()
                     _ap20 = _cs20[~_cs20.str.upper().isin(["NA","NAN",""])]
                     if _ap20.empty:
                         continue
-                    _fn20 = int((_ap20.str.lower() == _w20.lower()).sum())
+                    _fn20 = int((_ap20.str.lower() == _fail_ans20.lower()).sum())
+                    _pn20 = int((_ap20.str.lower() == _pass_ans20.lower()).sum())
                     _fr20 = round(_fn20 / len(_ap20) * 100, 1)
                     if _fr20 == 0:
                         continue
-                    _fatal20 = _p20.get("fatal", False)
-                    if _fatal20:
-                        _pts20 = 0.0; _ded20 = 0.0
-                    else:
-                        _pts20 = round(_p20["weight"] * 2 / _tw20 * 100, 1) if _tw20 > 0 else 0.0
-                        _ded20 = round(_pts20 * _fr20 / 100, 1)
-                    _r20.append({"col": _p20["col"], "tier": _tl20, "fatal": _fatal20,
-                                  "worst_opt": _w20, "fail_rate": _fr20, "fail_count": _fn20,
-                                  "total_applicable": len(_ap20), "pts_per_fail": _pts20, "avg_deduction": _ded20})
-            return sorted(_r20, key=lambda x: (-x["avg_deduction"], -x["fail_rate"]))
+                    _r20.append({"col": _p20["col"], "tier": _tl20, "fatal": _p20.get("fatal", False),
+                                  "fail_ans": _fail_ans20, "pass_ans": _pass_ans20,
+                                  "fail_count": _fn20, "pass_count": _pn20,
+                                  "fail_rate": _fr20, "total": len(_ap20)})
+            return sorted(_r20, key=lambda x: -x["fail_rate"])
 
         def _s20_prev():
             _rows20 = _s20_data()
             if not _rows20:
-                return '<div style="font-size:0.70rem;color:#64748b;">No deduction data.</div>'
+                return '<div style="font-size:0.70rem;color:#64748b;">No fail-rate data.</div>'
             _h20 = '<table style="width:100%;border-collapse:collapse;">'
-            for _r in _rows20[:10]:
-                _c20 = "#7f1d1d" if _r["fatal"] else "#dc2626" if _r["avg_deduction"] >= 3 else "#d97706" if _r["avg_deduction"] >= 1 else "#64748b"
-                _ded_lbl = "FATAL" if _r["fatal"] else f"−{_r['avg_deduction']}pts"
-                _h20 += (f'<tr><td style="padding:4px 6px;font-size:0.65rem;font-weight:600;color:#0B1F3A;">{_r["col"][:34]}</td>'
+            for _r in _rows20[:12]:
+                _c20 = "#7f1d1d" if _r["fatal"] else "#dc2626" if _r["fail_rate"] >= 50 else "#d97706" if _r["fail_rate"] >= 25 else "#059669"
+                _st20 = "⚡ FATAL" if _r["fatal"] else ("🔴 Critical" if _r["fail_rate"] >= 50 else "🟡 Watch" if _r["fail_rate"] >= 25 else "✅ Good")
+                _h20 += (f'<tr><td style="padding:4px 6px;font-size:0.65rem;font-weight:600;color:#0B1F3A;">{_r["col"][:32]}</td>'
                          f'<td style="padding:4px 6px;font-size:0.65rem;font-weight:700;color:{_c20};text-align:right;white-space:nowrap;">'
-                         f'{_r["fail_rate"]}% fail &nbsp;·&nbsp; {_ded_lbl}</td></tr>')
+                         f'{_r["fail_rate"]}% &nbsp;{_st20}</td></tr>')
             _h20 += "</table>"
-            return f'<div style="background:#fff;border:1px solid #fecaca;border-radius:8px;padding:10px;">{_h20}</div>'
+            return f'<div style="background:#fff;border:1px solid #e0e7ff;border-radius:8px;padding:10px;">{_h20}</div>'
 
         def _s20_eml():
             _rows20 = _s20_data()
             if not _rows20:
                 return ""
-            _td20 = round(sum(r["avg_deduction"] for r in _rows20 if not r["fatal"]), 1)
+            _crit20 = [r for r in _rows20 if not r["fatal"] and r["fail_rate"] >= 50]
+            _watch20 = [r for r in _rows20 if not r["fatal"] and 25 <= r["fail_rate"] < 50]
+            _fatal20 = [r for r in _rows20 if r["fatal"]]
             _erows20 = []
             for _r in _rows20[:20]:
-                _sev20 = "⚡ FATAL" if _r["fatal"] else ("🔴 Critical" if (_r["avg_deduction"] >= 3 or _r["fail_rate"] >= 50) else "🟡 Moderate" if (_r["avg_deduction"] >= 1 or _r["fail_rate"] >= 25) else "⚪ Low")
-                _ded20 = "Auto-Fail" if _r["fatal"] else f"−{_r['avg_deduction']}pts"
+                _st20 = "⚡ FATAL" if _r["fatal"] else ("🔴 Critical" if _r["fail_rate"] >= 50 else "🟡 Watch" if _r["fail_rate"] >= 25 else "✅ Good")
                 _erows20.append((_r["col"][:40], _r["tier"],
-                                  f'{_r["worst_opt"]}',
-                                  f'{_r["fail_rate"]}%  ({_r["fail_count"]}/{_r["total_applicable"]})',
-                                  f'{_r["pts_per_fail"]}pts' if not _r["fatal"] else "—",
-                                  _ded20, _sev20))
-            _tbl20 = _em_tbl("Deducted Points — What's Dragging Bot Score Down", "🚨",
-                              ["Parameter", "Tier", "Wrong Answer", "Fail Rate", "Pts/Fail", "Avg Deduction", "Severity"],
-                              _erows20, "#7f1d1d")
-            _ins20_col = "#dc2626" if _td20 >= 10 else "#d97706" if _td20 >= 5 else "#059669"
-            _ins20 = (f"Avg <b>{_td20} pts</b> deducted per audit from the bot score across all failing parameters. "
-                      f"The top parameter alone accounts for <b>{_rows20[0]['avg_deduction']}pts</b> of loss — "
-                      f"fixing <b>{_rows20[0]['col'][:40]}</b> is the single highest-leverage action to improve the score.")
+                                  _r["fail_ans"], _r["pass_ans"],
+                                  str(_r["fail_count"]), str(_r["pass_count"]),
+                                  f'{_r["fail_rate"]}%  ({_r["fail_count"]}/{_r["total"]})',
+                                  _st20))
+            _tbl20 = _em_tbl("Parameter Fail Rates — What's Going Wrong", "🚨",
+                              ["Parameter", "Tier", "Fail Answer", "Pass Answer", "Failed", "Passed", "Fail Rate", "Status"],
+                              _erows20, "#0B1F3A")
+            _top20 = _rows20[0]
+            _ins20_col = "#dc2626" if _crit20 else "#d97706" if _watch20 else "#059669"
+            _ins20 = (f"<b>{len(_crit20)} parameter{'s' if len(_crit20) != 1 else ''}</b> failing in 50%+ of audits (Critical). "
+                      f"Highest fail rate: <b>{_top20['col'][:36]}</b> at <b>{_top20['fail_rate']}%</b> — "
+                      f"answered <b>'{_top20['fail_ans']}'</b> when <b>'{_top20['pass_ans']}'</b> is expected. "
+                      + (f"{len(_fatal20)} fatal trigger(s) detected." if _fatal20 else "No fatal triggers."))
             return _tbl20, _em_insight_callout(_ins20, _ins20_col)
-        _add_section("deduct_pts", "Deducted Points", "🚨", True, _s20_prev, _s20_eml)
+        _add_section("deduct_pts", "Parameter Fail Rates", "🚨", True, _s20_prev, _s20_eml)
 
         # ── S21: Pareto Chart (SVG horizontal bars + cumulative insight) ──────────
         def _s21_data():
