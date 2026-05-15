@@ -10559,6 +10559,7 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
     _DASH_SEC_DEFS = [
         ("kpi",              "📊 KPI Overview"),
         ("deduct_pts",       "🚨 Deducted Points"),
+        ("pareto",           "📊 Pareto Analysis"),
         ("status_dist",      "📊 Status Distribution"),
         ("score_trend",      "📈 Score Trend"),
         ("campaign_lb",      "🎯 Campaign Rankings"),
@@ -10737,6 +10738,110 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
                     st.markdown(
                         f'<div style="background:#fff;border:1px solid #fecaca;border-radius:14px;'
                         f'overflow:hidden;box-shadow:0 4px 18px rgba(220,38,38,0.10);">{_dp_tbl}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+            except Exception:
+                pass
+
+        # ── Section 1c — Pareto Chart ─────────────────────────────────────────────
+        if st.session_state.get("dbsec_pareto", True):
+            try:
+                _par_rows = []
+                _par_tw = sum(
+                    p["weight"] for t in _QA_SCHEMA.get("tiers", [])
+                    for p in t.get("params", []) if p["weight"] > 0
+                ) * 2.0
+                for _par_tier in _QA_SCHEMA.get("tiers", []):
+                    for _par_p in _par_tier.get("params", []):
+                        if (_par_p["col"] not in _dash_df.columns
+                                or _par_p["weight"] <= 0
+                                or _par_p.get("fatal")):
+                            continue
+                        _par_opts = _par_p.get("options", [])
+                        if not _par_opts:
+                            continue
+                        _par_worst = str(_par_opts[0]).strip()
+                        _par_col_s = _dash_df[_par_p["col"]].astype(str).str.strip()
+                        _par_appl = _par_col_s[~_par_col_s.str.upper().isin(["NA", "NAN", ""])]
+                        if _par_appl.empty:
+                            continue
+                        _par_fn = int((_par_appl.str.lower() == _par_worst.lower()).sum())
+                        _par_fr = round(_par_fn / len(_par_appl) * 100, 1)
+                        if _par_fr == 0:
+                            continue
+                        _par_pts = round(_par_p["weight"] * 2 / _par_tw * 100, 1) if _par_tw > 0 else 0.0
+                        _par_ded = round(_par_pts * _par_fr / 100, 1)
+                        _par_rows.append({"col": _par_p["col"], "avg_deduction": _par_ded, "fail_rate": _par_fr})
+                _par_rows.sort(key=lambda x: -x["avg_deduction"])
+                if _par_rows:
+                    _par_total = sum(r["avg_deduction"] for r in _par_rows) or 1
+                    _par_labels = [r["col"][:32] for r in _par_rows]
+                    _par_vals   = [r["avg_deduction"] for r in _par_rows]
+                    _par_cum    = []
+                    _par_running = 0.0
+                    for _pv in _par_vals:
+                        _par_running += _pv
+                        _par_cum.append(round(_par_running / _par_total * 100, 1))
+                    _par_colors = [
+                        "#dc2626" if v >= 3 else "#d97706" if v >= 1 else "#94a3b8"
+                        for v in _par_vals
+                    ]
+                    st.markdown('<div class="section-chip">📊 Pareto — 80/20 Score Loss Analysis</div>', unsafe_allow_html=True)
+                    _par_fig = go.Figure()
+                    _par_fig.add_trace(go.Bar(
+                        x=_par_labels, y=_par_vals,
+                        marker_color=_par_colors,
+                        name="Avg pts deducted",
+                        text=[f"−{v}pts" for v in _par_vals],
+                        textposition="outside",
+                        textfont=dict(size=10, color="#0B1F3A"),
+                    ))
+                    _par_fig.add_trace(go.Scatter(
+                        x=_par_labels, y=_par_cum,
+                        mode="lines+markers+text",
+                        name="Cumulative %",
+                        yaxis="y2",
+                        line=dict(color="#7c3aed", width=2.5),
+                        marker=dict(size=6, color="#7c3aed"),
+                        text=[f"{v}%" for v in _par_cum],
+                        textposition="top center",
+                        textfont=dict(size=9, color="#7c3aed"),
+                    ))
+                    _par_fig.add_shape(
+                        type="line", xref="paper", yref="y2",
+                        x0=0, x1=1, y0=80, y1=80,
+                        line=dict(color="#dc2626", width=1.5, dash="dot"),
+                    )
+                    _par_fig.add_annotation(
+                        xref="paper", yref="y2", x=1.01, y=80,
+                        text="80%", showarrow=False,
+                        font=dict(size=10, color="#dc2626"),
+                    )
+                    _par_fig.update_layout(
+                        plot_bgcolor="#f8faff", paper_bgcolor="#fff",
+                        font=dict(family="Inter,sans-serif", size=11),
+                        margin=dict(l=10, r=60, t=40, b=100),
+                        height=380,
+                        legend=dict(orientation="h", y=1.12, x=0, font=dict(size=10)),
+                        xaxis=dict(tickangle=-38, tickfont=dict(size=10, color="#374151")),
+                        yaxis=dict(title="Avg pts deducted", gridcolor="#e2e8f0"),
+                        yaxis2=dict(title="Cumulative %", overlaying="y", side="right",
+                                    range=[0, 115], ticksuffix="%", showgrid=False),
+                        bargap=0.3,
+                    )
+                    st.plotly_chart(_par_fig, use_container_width=True, config={"displayModeBar": False})
+                    _par_80_idx = next((i for i, c in enumerate(_par_cum) if c >= 80), len(_par_cum) - 1)
+                    _par_80_n = _par_80_idx + 1
+                    _par_80_pct = round(_par_80_n / len(_par_rows) * 100)
+                    _par_names_80 = ", ".join(f"<b>{r['col'][:28]}</b>" for r in _par_rows[:_par_80_n])
+                    st.markdown(
+                        f'<div style="background:#f5f3ff;border:1px solid #ddd6fe;'
+                        f'border-left:4px solid #7c3aed;border-radius:10px;'
+                        f'padding:12px 16px;font-size:0.72rem;color:#4c1d95;margin-top:-8px;">'
+                        f'<b>80/20 Finding:</b> <b>{_par_80_n} parameter{"s" if _par_80_n != 1 else ""}</b> '
+                        f'({_par_80_pct}% of failing params) cause <b>80%+ of total score loss</b>. '
+                        f'Fix these first: {_par_names_80}.</div>',
                         unsafe_allow_html=True,
                     )
                     st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
@@ -12892,6 +12997,147 @@ def _render_audit_dashboard(sheets=None, legend_map=None):
             return _eml19, _em_insight_callout(_ins19, _ohc19)
 
         _add_section("custom_params", "Custom Parameters", "⭐", True, _s19_prev, _s19_eml)
+
+        # ── S20: Deducted Points Breakdown ────────────────────────────────────────
+        def _s20_data():
+            _r20 = []
+            _tw20 = sum(p["weight"] for t in _QA_SCHEMA.get("tiers",[]) for p in t.get("params",[]) if p["weight"] > 0) * 2.0
+            for _t20 in _QA_SCHEMA.get("tiers", []):
+                _tl20 = _t20["label"].split("·")[1].strip() if "·" in _t20["label"] else _t20["label"]
+                for _p20 in _t20.get("params", []):
+                    if _p20["col"] not in _dash_df.columns:
+                        continue
+                    _o20 = _p20.get("options", [])
+                    if not _o20:
+                        continue
+                    _w20 = str(_o20[0]).strip()
+                    _cs20 = _dash_df[_p20["col"]].astype(str).str.strip()
+                    _ap20 = _cs20[~_cs20.str.upper().isin(["NA","NAN",""])]
+                    if _ap20.empty:
+                        continue
+                    _fn20 = int((_ap20.str.lower() == _w20.lower()).sum())
+                    _fr20 = round(_fn20 / len(_ap20) * 100, 1)
+                    if _fr20 == 0:
+                        continue
+                    _fatal20 = _p20.get("fatal", False)
+                    if _fatal20:
+                        _pts20 = 0.0; _ded20 = 0.0
+                    else:
+                        _pts20 = round(_p20["weight"] * 2 / _tw20 * 100, 1) if _tw20 > 0 else 0.0
+                        _ded20 = round(_pts20 * _fr20 / 100, 1)
+                    _r20.append({"col": _p20["col"], "tier": _tl20, "fatal": _fatal20,
+                                  "worst_opt": _w20, "fail_rate": _fr20, "fail_count": _fn20,
+                                  "total_applicable": len(_ap20), "pts_per_fail": _pts20, "avg_deduction": _ded20})
+            return sorted(_r20, key=lambda x: (-x["avg_deduction"], -x["fail_rate"]))
+
+        def _s20_prev():
+            _rows20 = _s20_data()
+            if not _rows20:
+                return '<div style="font-size:0.70rem;color:#64748b;">No deduction data.</div>'
+            _h20 = '<table style="width:100%;border-collapse:collapse;">'
+            for _r in _rows20[:10]:
+                _c20 = "#7f1d1d" if _r["fatal"] else "#dc2626" if _r["avg_deduction"] >= 3 else "#d97706" if _r["avg_deduction"] >= 1 else "#64748b"
+                _ded_lbl = "FATAL" if _r["fatal"] else f"−{_r['avg_deduction']}pts"
+                _h20 += (f'<tr><td style="padding:4px 6px;font-size:0.65rem;font-weight:600;color:#0B1F3A;">{_r["col"][:34]}</td>'
+                         f'<td style="padding:4px 6px;font-size:0.65rem;font-weight:700;color:{_c20};text-align:right;white-space:nowrap;">'
+                         f'{_r["fail_rate"]}% fail &nbsp;·&nbsp; {_ded_lbl}</td></tr>')
+            _h20 += "</table>"
+            return f'<div style="background:#fff;border:1px solid #fecaca;border-radius:8px;padding:10px;">{_h20}</div>'
+
+        def _s20_eml():
+            _rows20 = _s20_data()
+            if not _rows20:
+                return ""
+            _td20 = round(sum(r["avg_deduction"] for r in _rows20 if not r["fatal"]), 1)
+            _erows20 = []
+            for _r in _rows20[:20]:
+                _sev20 = "⚡ FATAL" if _r["fatal"] else ("🔴 Critical" if (_r["avg_deduction"] >= 3 or _r["fail_rate"] >= 50) else "🟡 Moderate" if (_r["avg_deduction"] >= 1 or _r["fail_rate"] >= 25) else "⚪ Low")
+                _ded20 = "Auto-Fail" if _r["fatal"] else f"−{_r['avg_deduction']}pts"
+                _erows20.append((_r["col"][:40], _r["tier"],
+                                  f'{_r["worst_opt"]}',
+                                  f'{_r["fail_rate"]}%  ({_r["fail_count"]}/{_r["total_applicable"]})',
+                                  f'{_r["pts_per_fail"]}pts' if not _r["fatal"] else "—",
+                                  _ded20, _sev20))
+            _tbl20 = _em_tbl("Deducted Points — What's Dragging Bot Score Down", "🚨",
+                              ["Parameter", "Tier", "Wrong Answer", "Fail Rate", "Pts/Fail", "Avg Deduction", "Severity"],
+                              _erows20, "#7f1d1d")
+            _ins20_col = "#dc2626" if _td20 >= 10 else "#d97706" if _td20 >= 5 else "#059669"
+            _ins20 = (f"Avg <b>{_td20} pts</b> deducted per audit from the bot score across all failing parameters. "
+                      f"The top parameter alone accounts for <b>{_rows20[0]['avg_deduction']}pts</b> of loss — "
+                      f"fixing <b>{_rows20[0]['col'][:40]}</b> is the single highest-leverage action to improve the score.")
+            return _tbl20, _em_insight_callout(_ins20, _ins20_col)
+        _add_section("deduct_pts", "Deducted Points", "🚨", True, _s20_prev, _s20_eml)
+
+        # ── S21: Pareto Chart (SVG horizontal bars + cumulative insight) ──────────
+        def _s21_data():
+            _r21 = []
+            _tw21 = sum(p["weight"] for t in _QA_SCHEMA.get("tiers",[]) for p in t.get("params",[]) if p["weight"] > 0) * 2.0
+            for _t21 in _QA_SCHEMA.get("tiers", []):
+                for _p21 in _t21.get("params", []):
+                    if (_p21["col"] not in _dash_df.columns or _p21["weight"] <= 0 or _p21.get("fatal")):
+                        continue
+                    _o21 = _p21.get("options", [])
+                    if not _o21: continue
+                    _w21 = str(_o21[0]).strip()
+                    _cs21 = _dash_df[_p21["col"]].astype(str).str.strip()
+                    _ap21 = _cs21[~_cs21.str.upper().isin(["NA","NAN",""])]
+                    if _ap21.empty: continue
+                    _fn21 = int((_ap21.str.lower() == _w21.lower()).sum())
+                    _fr21 = round(_fn21 / len(_ap21) * 100, 1)
+                    if _fr21 == 0: continue
+                    _pts21 = round(_p21["weight"] * 2 / _tw21 * 100, 1) if _tw21 > 0 else 0.0
+                    _ded21 = round(_pts21 * _fr21 / 100, 1)
+                    _r21.append({"col": _p21["col"], "avg_deduction": _ded21, "fail_rate": _fr21})
+            return sorted(_r21, key=lambda x: -x["avg_deduction"])
+
+        def _s21_prev():
+            _rows21 = _s21_data()
+            if not _rows21:
+                return '<div style="font-size:0.70rem;color:#64748b;">No data.</div>'
+            _mx21 = max(r["avg_deduction"] for r in _rows21) or 1
+            _tot21 = sum(r["avg_deduction"] for r in _rows21) or 1
+            _h21 = ""
+            _running21 = 0.0
+            for _r in _rows21[:12]:
+                _running21 += _r["avg_deduction"]
+                _cum21 = round(_running21 / _tot21 * 100, 1)
+                _c21 = "#dc2626" if _r["avg_deduction"] >= 3 else "#d97706" if _r["avg_deduction"] >= 1 else "#94a3b8"
+                _w21pct = round(_r["avg_deduction"] / _mx21 * 100)
+                _h21 += (f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'
+                         f'<span style="font-size:0.62rem;font-weight:600;color:#0B1F3A;width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{_r["col"][:22]}</span>'
+                         f'<div style="flex:1;height:8px;background:#f0f2f5;border-radius:4px;">'
+                         f'<div style="width:{_w21pct}%;height:100%;background:{_c21};border-radius:4px;"></div></div>'
+                         f'<span style="font-size:0.62rem;font-weight:700;color:{_c21};width:38px;text-align:right;">−{_r["avg_deduction"]}pts</span>'
+                         f'<span style="font-size:0.58rem;color:#94a3b8;width:32px;text-align:right;">{_cum21}%</span></div>')
+            return f'<div style="background:#fff;border:1px solid #E2EAF6;border-radius:8px;padding:10px;">{_h21}</div>'
+
+        def _s21_eml():
+            _rows21 = _s21_data()
+            if not _rows21:
+                return ""
+            _tot21 = sum(r["avg_deduction"] for r in _rows21) or 1
+            _lbls21 = [r["col"][:22] for r in _rows21]
+            _vals21 = [r["avg_deduction"] for r in _rows21]
+            _cols21 = ["#dc2626" if v >= 3 else "#d97706" if v >= 1 else "#94a3b8" for v in _vals21]
+            _chart21 = _svg_hbars(_lbls21, _vals21, _cols21)
+            _cum21 = []
+            _run21 = 0.0
+            for v in _vals21:
+                _run21 += v
+                _cum21.append(round(_run21 / _tot21 * 100, 1))
+            _par80_idx21 = next((i for i, c in enumerate(_cum21) if c >= 80), len(_cum21) - 1)
+            _par80_n21 = _par80_idx21 + 1
+            _par80_pct21 = round(_par80_n21 / len(_rows21) * 100)
+            _par_names21 = ", ".join(r["col"][:30] for r in _rows21[:_par80_n21])
+            _s21_html = (f'<div style="font-family:Arial,sans-serif;background:#4c1d95;padding:10px 14px;'
+                         f'border-radius:8px 8px 0 0;color:#fff;font-size:13px;font-weight:700;">📊 Pareto — 80/20 Score Loss Analysis</div>'
+                         f'<div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;'
+                         f'padding:14px 10px 6px;margin-bottom:8px;background:#fff;">{_chart21}</div>')
+            _ins21 = (f"<b>{_par80_n21} parameter{'s' if _par80_n21 != 1 else ''}</b> ({_par80_pct21}% of failing params) "
+                      f"drive <b>80%+ of total score loss</b>. "
+                      f"Fix these to unlock the biggest bot score gains: <b>{_par_names21}</b>.")
+            return _s21_html, _em_insight_callout(_ins21, "#7c3aed")
+        _add_section("pareto", "Pareto Analysis", "📊", True, _s21_prev, _s21_eml)
 
         # ── Render sections + tabs (Compose | Preview | Gallery) ────────────────
         st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
