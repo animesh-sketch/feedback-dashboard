@@ -14119,7 +14119,7 @@ def _render_registry():
                 # ── Filters ───────────────────────────────────────────────────
                 _raf1, _raf2, _raf3 = st.columns([2, 2, 1])
                 with _raf1:
-                    _ra_search = st.text_input("🔍 Search (Client, Campaign, QA, Bot)", key="reg_audit_search", placeholder="type to filter…")
+                    _ra_search = st.text_input("🔍 Search (Client, Campaign, QA, Bot, Lead Number)", key="reg_audit_search", placeholder="type to filter…")
                 with _raf2:
                     _ra_clients = ["All"] + sorted(set(a.get("Client","") for a in _reg_all_audits if a.get("Client","")))
                     _ra_cli_fil = st.selectbox("Client", _ra_clients, key="reg_audit_client_filter")
@@ -14130,7 +14130,7 @@ def _render_registry():
                 if _ra_search.strip():
                     _q = _ra_search.lower()
                     _ra_filtered = [a for a in _ra_filtered if any(_q in str(a.get(f, "")).lower()
-                                    for f in ["Client", "Campaign Name", "QA", "Bot Name"])]
+                                    for f in ["Client", "Campaign Name", "QA", "Bot Name", "Lead Number"])]
                 if _ra_cli_fil != "All":
                     _ra_filtered = [a for a in _ra_filtered if a.get("Client","") == _ra_cli_fil]
 
