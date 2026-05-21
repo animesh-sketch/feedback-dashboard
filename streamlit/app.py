@@ -4268,22 +4268,22 @@ _SENSE_BUILTIN_PARAMS = {
         "guide":       "Yes = All required entities captured correctly  |  No = Entity capture incomplete or inaccurate",
     },
     "Was WhatsApp/message delivery successful?": {
-        "description": "WhatsApp / message delivery success status",
+        "description": "Checks if the WhatsApp message or outbound communication was successfully delivered to the customer — covers delivery status, read receipts, and channel reachability",
         "options":     ["No", "Yes"],
         "inverted":    False,
         "weight":      0.01,
         "color":       "#2563EB",
         "icon":        "📲",
-        "guide":       "Yes = Message delivered successfully to the customer  |  No = Delivery failed or unconfirmed",
+        "guide":       "Yes = Message was successfully delivered and received by the customer  |  No = Delivery failed, bounced, or delivery status could not be confirmed — indicates a channel or connectivity issue",
     },
     "Was any technical/platform issue observed during the interaction?": {
-        "description": "Technical or platform-level issues observed during the interaction",
+        "description": "Flags any technical or platform-side problems during the bot interaction — such as errors, unexpected restarts, API failures, integration issues, or any behavior that disrupted the conversation flow",
         "options":     ["Yes", "No"],
         "inverted":    False,
         "weight":      0.01,
         "color":       "#7c3aed",
         "icon":        "🛠️",
-        "guide":       "No = No technical or platform issue observed  |  Yes = Technical or platform issue detected during interaction",
+        "guide":       "No = Interaction ran smoothly with no technical or platform-level issues detected  |  Yes = A technical issue was observed (e.g. bot error, platform crash, API failure, integration problem, or unexpected bot behavior)",
     },
 }
 _DEFAULT_PARAM_WEIGHT = 1.0   # weight for any legend param not listed above
@@ -4448,14 +4448,14 @@ _QA_SCHEMA = {
                     "weight": 0.01,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = Message delivered successfully to the customer  |  No = Delivery failed or unconfirmed",
+                    "guide": "Yes = Message was successfully delivered and received by the customer  |  No = Delivery failed, bounced, or delivery status could not be confirmed — indicates a channel or connectivity issue",
                 },
                 {
                     "col": "Was any technical/platform issue observed during the interaction?",
                     "weight": 0.01,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = No technical or platform issue observed  |  Yes = Technical or platform issue detected during interaction",
+                    "guide": "No = Interaction ran smoothly with no technical or platform-level issues detected  |  Yes = A technical issue was observed (e.g. bot error, platform crash, API failure, integration problem, or unexpected bot behavior)",
                 },
                 {
                     "col": "Was there an abrupt disconnection before logical closure?",
