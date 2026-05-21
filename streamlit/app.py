@@ -4235,7 +4235,7 @@ _SENSE_BUILTIN_PARAMS = {
         "description": "Bot repeated same message / looped responses",
         "options":     ["Yes", "No"],  # Yes = repetition detected (bad), No = no repetition (good)
         "inverted":    False,
-        "weight":      0.07,
+        "weight":      0.06,
         "color":       "#7c3aed",
         "icon":        "🔄",
         "guide":       "Yes = Repetition detected (breaks scoring)  |  No = No repetition",
@@ -4244,7 +4244,7 @@ _SENSE_BUILTIN_PARAMS = {
         "description": "Bot response latency / delay during conversation",
         "options":     ["Yes", "No"],  # Yes = latency issue present (bad), No = no issue (good)
         "inverted":    False,
-        "weight":      0.05,
+        "weight":      0.04,
         "color":       "#0891b2",
         "icon":        "⚡",
         "guide":       "No = No latency issue (response ≤2.5s)  |  Yes = Latency issue detected (response >2.5s)",
@@ -4267,6 +4267,24 @@ _SENSE_BUILTIN_PARAMS = {
         "icon":        "⭐",
         "guide":       "Yes = All required entities captured correctly  |  No = Entity capture incomplete or inaccurate",
     },
+    "Was WhatsApp/message delivery successful?": {
+        "description": "WhatsApp / message delivery success status",
+        "options":     ["No", "Yes"],
+        "inverted":    False,
+        "weight":      0.01,
+        "color":       "#2563EB",
+        "icon":        "📲",
+        "guide":       "Yes = Message delivered successfully to the customer  |  No = Delivery failed or unconfirmed",
+    },
+    "Was any technical/platform issue observed during the interaction?": {
+        "description": "Technical or platform-level issues observed during the interaction",
+        "options":     ["Yes", "No"],
+        "inverted":    False,
+        "weight":      0.01,
+        "color":       "#7c3aed",
+        "icon":        "🛠️",
+        "guide":       "No = No technical or platform issue observed  |  Yes = Technical or platform issue detected during interaction",
+    },
 }
 _DEFAULT_PARAM_WEIGHT = 1.0   # weight for any legend param not listed above
 
@@ -4275,12 +4293,12 @@ _QA_SCHEMA = {
     "tiers": [
         {
             "label": "TIER 1 · CRITICAL",
-            "weight_pct": 68,
+            "weight_pct": 64,
             "color": "#dc2626",
             "params": [
                 {
                     "col": "Was the disposition accurately selected?",
-                    "weight": 0.14,
+                    "weight": 0.13,
                     "options": ["No", "Yes"],
                     "fatal": False,
                     "guide": "Yes = Correct disposition selected based on conversation outcome  |  No = Incorrect or mismatched disposition",
@@ -4294,7 +4312,7 @@ _QA_SCHEMA = {
                 },
                 {
                     "col": "Was context passed correctly across conversation turns?",
-                    "weight": 0.13,
+                    "weight": 0.12,
                     "options": ["No", "Yes"],
                     "fatal": False,
                     "guide": "Yes = Context maintained across all turns / channels  |  No = Context not maintained; customer had to repeat information",
@@ -4322,14 +4340,14 @@ _QA_SCHEMA = {
                 },
                 {
                     "col": "Was the follow-up completed within the specified time?",
-                    "weight": 0.05,
+                    "weight": 0.04,
                     "options": ["No", "Yes"],
                     "fatal": False,
                     "guide": "Yes = Follow-up completed within SLA  |  No = Follow-up missed or exceeded SLA timeline",
                 },
                 {
                     "col": "Was there any latency issue during the conversation?",
-                    "weight": 0.05,
+                    "weight": 0.04,
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = No latency issue (response ≤2.5s)  |  Yes = Latency issue detected (response >2.5s)",
@@ -4338,12 +4356,12 @@ _QA_SCHEMA = {
         },
         {
             "label": "TIER 2 · IMPORTANT",
-            "weight_pct": 32,
+            "weight_pct": 30,
             "color": "#f59e0b",
             "params": [
                 {
                     "col": "Did the bot repeat responses or questions unnecessarily?",
-                    "weight": 0.07,
+                    "weight": 0.06,
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = No repetition  |  Yes = Bot repeated same message or question (duplicate script loops)",
@@ -4357,7 +4375,7 @@ _QA_SCHEMA = {
                 },
                 {
                     "col": "Were there any unnecessary repeated calls to the customer?",
-                    "weight": 0.05,
+                    "weight": 0.04,
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = No repeated calls  |  Yes = Multiple calls placed to customer within short duration",
@@ -4399,14 +4417,14 @@ _QA_SCHEMA = {
             "params": [
                 {
                     "col": "Did the bot switch language correctly per customer preference?",
-                    "weight": 0.02,
+                    "weight": 0.01,
                     "options": ["No", "Yes"],
                     "fatal": False,
                     "guide": "Yes = Switched language correctly per customer preference  |  No = Failed to switch despite customer indication  |  NA = No language switch required",
                 },
                 {
                     "col": "Were there any script issues in the transcript?",
-                    "weight": 0.02,
+                    "weight": 0.01,
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = Approved script followed correctly  |  Yes = Bot deviated from script or used incorrect phrasing",
@@ -4424,6 +4442,20 @@ _QA_SCHEMA = {
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = Pronunciation clear and understandable  |  Yes = Pronunciation issues impacted customer understanding",
+                },
+                {
+                    "col": "Was WhatsApp/message delivery successful?",
+                    "weight": 0.01,
+                    "options": ["No", "Yes"],
+                    "fatal": False,
+                    "guide": "Yes = Message delivered successfully to the customer  |  No = Delivery failed or unconfirmed",
+                },
+                {
+                    "col": "Was any technical/platform issue observed during the interaction?",
+                    "weight": 0.01,
+                    "options": ["Yes", "No"],
+                    "fatal": False,
+                    "guide": "No = No technical or platform issue observed  |  Yes = Technical or platform issue detected during interaction",
                 },
                 {
                     "col": "Was there an abrupt disconnection before logical closure?",
