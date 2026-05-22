@@ -15354,15 +15354,15 @@ def _render_legend_page():
     # ── Page header ───────────────────────────────────────────────────────────
     st.markdown(
         '<div style="display:flex;align-items:center;justify-content:space-between;'
-        'margin-bottom:1.2rem;flex-wrap:wrap;gap:8px;">'
+        'margin-bottom:1.4rem;flex-wrap:wrap;gap:8px;">'
         '<div>'
-        '<div style="font-size:1.05rem;font-weight:800;color:#0d1d3a;letter-spacing:-0.01em;">'
+        '<div style="font-size:1.45rem;font-weight:800;color:#0d1d3a;letter-spacing:-0.01em;">'
         '📖 Sense Audit — Parameter Legend & Scoring Guide</div>'
-        '<div style="font-size:0.72rem;color:#5588bb;margin-top:2px;">'
+        '<div style="font-size:0.9rem;color:#1e4d8c;margin-top:4px;font-weight:500;">'
         'Complete reference for all QA parameters, weights, scoring options and definitions</div>'
         '</div>'
-        f'<div style="font-size:0.65rem;color:#aabbcc;background:#fff;'
-        f'border:1px solid #e4e7ec;border-radius:8px;padding:4px 10px;">'
+        f'<div style="font-size:0.78rem;color:#4a6080;background:#fff;font-weight:600;'
+        f'border:1px solid #e4e7ec;border-radius:8px;padding:6px 14px;">'
         f'Last updated · {pd.Timestamp.now().strftime("%d %b %Y")}</div>'
         '</div>',
         unsafe_allow_html=True,
@@ -15375,26 +15375,26 @@ def _render_legend_page():
     _t2_params  = len(_QA_SCHEMA["tiers"][1]["params"])
     _t3_params  = len(_QA_SCHEMA["tiers"][2]["params"])
     st.markdown(
-        f'<div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.4rem;">'
-        f'<div class="stat-card" style="border-top:2px solid #0B1F3A;">'
-        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Total Parameters</div>'
-        f'<div style="color:#0B1F3A;font-size:1.6rem;font-weight:800;">{len(_all_params)}</div>'
+        f'<div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.6rem;">'
+        f'<div class="stat-card" style="border-top:3px solid #0B1F3A;">'
+        f'<div style="color:#1e4d8c;font-size:0.72rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Total Parameters</div>'
+        f'<div style="color:#0B1F3A;font-size:2rem;font-weight:800;">{len(_all_params)}</div>'
         f'</div>'
-        f'<div class="stat-card" style="border-top:2px solid #dc2626;">'
-        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Tier 1 · Critical</div>'
-        f'<div style="color:#dc2626;font-size:1.6rem;font-weight:800;">{_t1_params}</div>'
+        f'<div class="stat-card" style="border-top:3px solid #dc2626;">'
+        f'<div style="color:#1e4d8c;font-size:0.72rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Tier 1 · Critical</div>'
+        f'<div style="color:#dc2626;font-size:2rem;font-weight:800;">{_t1_params}</div>'
         f'</div>'
-        f'<div class="stat-card" style="border-top:2px solid #f59e0b;">'
-        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Tier 2 · Important</div>'
-        f'<div style="color:#f59e0b;font-size:1.6rem;font-weight:800;">{_t2_params}</div>'
+        f'<div class="stat-card" style="border-top:3px solid #f59e0b;">'
+        f'<div style="color:#1e4d8c;font-size:0.72rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Tier 2 · Important</div>'
+        f'<div style="color:#f59e0b;font-size:2rem;font-weight:800;">{_t2_params}</div>'
         f'</div>'
-        f'<div class="stat-card" style="border-top:2px solid #2563EB;">'
-        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Tier 3 · Quality</div>'
-        f'<div style="color:#2563EB;font-size:1.6rem;font-weight:800;">{_t3_params}</div>'
+        f'<div class="stat-card" style="border-top:3px solid #2563EB;">'
+        f'<div style="color:#1e4d8c;font-size:0.72rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Tier 3 · Quality</div>'
+        f'<div style="color:#2563EB;font-size:2rem;font-weight:800;">{_t3_params}</div>'
         f'</div>'
-        f'<div class="stat-card" style="border-top:2px solid #059669;">'
-        f'<div style="color:#2a5080;font-size:0.58rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Pass Threshold</div>'
-        f'<div style="color:#059669;font-size:1.6rem;font-weight:800;">≥ 80%</div>'
+        f'<div class="stat-card" style="border-top:3px solid #059669;">'
+        f'<div style="color:#1e4d8c;font-size:0.72rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Pass Threshold</div>'
+        f'<div style="color:#059669;font-size:2rem;font-weight:800;">≥ 80%</div>'
         f'</div>'
         f'</div>',
         unsafe_allow_html=True,
@@ -15404,29 +15404,28 @@ def _render_legend_page():
     _ROW_COLORS = {"0/1/2": "#2563EB", "0/2": "#f59e0b", "0/Fatal": "#dc2626", "Fatal": "#7f1d1d"}
 
     for _tier_idx, _tier in enumerate(_QA_SCHEMA["tiers"], 1):
-        _ip = None  # intelligence params are now standard tier params
+        _ip = None
         _tc = _tier["color"]
         _tier_params = _tier["params"]
         _ip_hdr = ""
         st.markdown(
-            f'<div style="display:flex;align-items:center;gap:12px;margin:1.2rem 0 0.6rem;flex-wrap:wrap;">'
-            f'<div style="background:{_tc};color:#fff;font-size:0.62rem;font-weight:800;'
-            f'letter-spacing:0.12em;text-transform:uppercase;border-radius:6px;padding:4px 12px;">'
+            f'<div style="display:flex;align-items:center;gap:12px;margin:1.4rem 0 0.8rem;flex-wrap:wrap;">'
+            f'<div style="background:{_tc};color:#fff;font-size:0.8rem;font-weight:800;'
+            f'letter-spacing:0.08em;text-transform:uppercase;border-radius:6px;padding:6px 16px;">'
             f'{_tier["label"]}</div>'
-            f'<div style="font-size:0.7rem;color:#5588bb;">'
+            f'<div style="font-size:0.88rem;color:#1e4d8c;font-weight:500;">'
             f'{len(_tier_params)} param{"s" if len(_tier_params)!=1 else ""}'
             f'{_ip_hdr}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
 
-        # Table — shared columns for tier params + intelligence row
         _tbl = (
-            '<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;overflow:hidden;margin-bottom:0.8rem;">'
-            '<div style="display:grid;grid-template-columns:2rem 1fr 0.55fr 0.55fr 2.8fr;'
-            'gap:0;padding:8px 16px;background:rgba(61,130,245,0.06);'
-            'font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5588bb;">'
-            '<div>#</div><div>Parameter</div><div>Legend</div><div>Scoring</div><div>Definition &amp; Guide</div>'
+            '<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;overflow:hidden;margin-bottom:1rem;">'
+            '<div style="display:grid;grid-template-columns:2.5rem 1fr 0.6fr 0.65fr 2.8fr;'
+            'gap:0;padding:10px 18px;background:rgba(61,130,245,0.07);'
+            'font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#1e4d8c;">'
+            '<div>#</div><div>Parameter</div><div>Weight</div><div>Scoring</div><div>Definition &amp; Guide</div>'
             '</div>'
         )
 
@@ -15435,41 +15434,40 @@ def _render_legend_page():
             _opts_c   = _ROW_COLORS.get(_opts_str, "#2563EB")
             _w_pct    = f'{int(_p["weight"]*100)}%' if _p["weight"] > 0 else ("FATAL" if _p.get("fatal") else "—")
             _w_c      = "#dc2626" if _p.get("fatal") else "#0d1d3a"
-            _bg       = "#fff" if _pi % 2 == 1 else "#f9fbff"
+            _bg       = "#fff" if _pi % 2 == 1 else "#f4f8ff"
             _guide    = _p.get("guide", "")
             _guide_html = _guide
             for _opt in _p["options"]:
                 _guide_html = _guide_html.replace(
                     f"{_opt} =",
                     f'<span style="background:{_opts_c}18;border:1px solid {_opts_c}55;'
-                    f'border-radius:4px;padding:0 5px;font-weight:700;color:{_opts_c};">{_opt}</span> =',
+                    f'border-radius:4px;padding:1px 6px;font-weight:700;color:{_opts_c};">{_opt}</span> =',
                 )
             _fatal_badge = (
                 '  <span style="background:#dc262618;color:#dc2626;border-radius:4px;'
-                'padding:1px 6px;font-size:0.58rem;font-weight:700;">FATAL</span>'
+                'padding:2px 8px;font-size:0.72rem;font-weight:700;">FATAL</span>'
                 if _p.get("fatal") else ""
             )
             _tbl += (
-                f'<div style="display:grid;grid-template-columns:2rem 1fr 0.55fr 0.55fr 2.8fr;'
-                f'gap:0;padding:10px 16px;background:{_bg};'
-                f'border-top:1px solid rgba(61,130,245,0.06);align-items:start;">'
-                f'<div style="font-size:0.68rem;color:#aabbcc;font-weight:600;">{_pi}</div>'
-                f'<div style="font-size:0.78rem;font-weight:700;color:#0d1d3a;">{_p["col"]}{_fatal_badge}</div>'
-                f'<div style="font-size:0.75rem;font-weight:800;color:{_w_c};">{_w_pct}</div>'
-                f'<div><span style="background:{_opts_c}18;border:1px solid {_opts_c}55;'
-                f'border-radius:6px;padding:2px 9px;font-size:0.68rem;font-weight:700;color:{_opts_c};">'
+                f'<div style="display:grid;grid-template-columns:2.5rem 1fr 0.6fr 0.65fr 2.8fr;'
+                f'gap:0;padding:13px 18px;background:{_bg};'
+                f'border-top:1px solid rgba(61,130,245,0.07);align-items:start;">'
+                f'<div style="font-size:0.8rem;color:#6b82a0;font-weight:600;padding-top:2px;">{_pi}</div>'
+                f'<div style="font-size:0.9rem;font-weight:700;color:#0d1d3a;line-height:1.4;">{_p["col"]}{_fatal_badge}</div>'
+                f'<div style="font-size:0.88rem;font-weight:800;color:{_w_c};padding-top:2px;">{_w_pct}</div>'
+                f'<div style="padding-top:2px;"><span style="background:{_opts_c}18;border:1px solid {_opts_c}55;'
+                f'border-radius:6px;padding:3px 10px;font-size:0.8rem;font-weight:700;color:{_opts_c};">'
                 f'{_opts_str}</span></div>'
-                f'<div style="font-size:0.7rem;color:#5588bb;line-height:1.55;">{_guide_html}</div>'
+                f'<div style="font-size:0.84rem;color:#1e3a5f;line-height:1.6;">{_guide_html}</div>'
                 f'</div>'
             )
-
 
         _tbl += '</div>'
         st.markdown(_tbl, unsafe_allow_html=True)
 
     # ── Status bands ─────────────────────────────────────────────────────────
     st.markdown('<div class="section-chip">🎨 Status Bands</div>', unsafe_allow_html=True)
-    _bands_html = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.2rem;">'
+    _bands_html = '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1.4rem;">'
     _band_defs = [
         {"label": "Pass",         "range": "Bot Score ≥ 80",  "color": "#0ebc6e", "desc": "All critical parameters met; high-quality interaction"},
         {"label": "Needs Review", "range": "Bot Score 60–79", "color": "#f59e0b", "desc": "Acceptable but improvement areas exist; flag for coaching"},
@@ -15479,14 +15477,14 @@ def _render_legend_page():
     for _bd in _band_defs:
         _c = _bd["color"]
         _bands_html += (
-            f'<div style="flex:1;min-width:180px;background:#fff;border:1px solid {_c}33;'
-            f'border-top:4px solid {_c};border-radius:10px;padding:14px 16px;">'
-            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-            f'<div style="width:12px;height:12px;border-radius:50%;background:{_c};flex-shrink:0;"></div>'
-            f'<div style="font-size:0.78rem;font-weight:800;color:{_c};">{_bd["label"]}</div>'
+            f'<div style="flex:1;min-width:200px;background:#fff;border:1px solid {_c}33;'
+            f'border-top:4px solid {_c};border-radius:10px;padding:16px 18px;">'
+            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+            f'<div style="width:13px;height:13px;border-radius:50%;background:{_c};flex-shrink:0;"></div>'
+            f'<div style="font-size:0.95rem;font-weight:800;color:{_c};">{_bd["label"]}</div>'
             f'</div>'
-            f'<div style="font-size:0.68rem;font-weight:700;color:#0d1d3a;margin-bottom:4px;">{_bd["range"]}</div>'
-            f'<div style="font-size:0.65rem;color:#5588bb;line-height:1.5;">{_bd["desc"]}</div>'
+            f'<div style="font-size:0.85rem;font-weight:700;color:#0d1d3a;margin-bottom:6px;">{_bd["range"]}</div>'
+            f'<div style="font-size:0.82rem;color:#1e4d8c;line-height:1.55;">{_bd["desc"]}</div>'
             f'</div>'
         )
     _bands_html += '</div>'
@@ -15495,14 +15493,14 @@ def _render_legend_page():
     # ── Lead stage colour key ─────────────────────────────────────────────────
     st.markdown('<div class="section-chip">🏷️ Lead Stage Reference</div>', unsafe_allow_html=True)
     _lead_colors = {"Hot": "#dc2626", "Warm": "#f59e0b", "Cold": "#2563EB", "Not Interested": "#6b7280", "RNR": "#9ca3af"}
-    _lead_html = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.2rem;">'
+    _lead_html = '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1.4rem;">'
     for _stage, _lc in _lead_colors.items():
         _ls = _QA_SCHEMA["lead_stage_scores"].get(_stage, 0)
         _lead_html += (
             f'<div style="background:#fff;border:1px solid {_lc}33;border-left:4px solid {_lc};'
-            f'border-radius:8px;padding:8px 14px;min-width:120px;">'
-            f'<div style="font-size:0.75rem;font-weight:700;color:{_lc};">{_stage}</div>'
-            f'<div style="font-size:0.65rem;color:#5588bb;margin-top:2px;">Lead Score = {_ls}</div>'
+            f'border-radius:8px;padding:12px 18px;min-width:130px;">'
+            f'<div style="font-size:0.92rem;font-weight:700;color:{_lc};">{_stage}</div>'
+            f'<div style="font-size:0.82rem;color:#1e4d8c;margin-top:4px;font-weight:500;">Lead Score = {_ls}</div>'
             f'</div>'
         )
     _lead_html += '</div>'
@@ -15511,32 +15509,32 @@ def _render_legend_page():
     # ── Scoring formula ───────────────────────────────────────────────────────
     st.markdown('<div class="section-chip">🔢 Scoring Formulas</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:20px 24px;margin-bottom:1rem;">'
-        '<div style="display:flex;flex-direction:column;gap:14px;">'
+        '<div style="background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:24px 28px;margin-bottom:1rem;">'
+        '<div style="display:flex;flex-direction:column;gap:20px;">'
 
-        '<div><div style="font-size:0.68rem;font-weight:700;color:#2563EB;text-transform:uppercase;'
-        'letter-spacing:0.08em;margin-bottom:4px;">Bot Score</div>'
-        '<div style="font-family:monospace;font-size:0.82rem;color:#0d1d3a;background:#fff;'
-        'border:1px solid rgba(61,130,245,0.15);border-radius:6px;padding:8px 14px;">'
+        '<div><div style="font-size:0.82rem;font-weight:700;color:#2563EB;text-transform:uppercase;'
+        'letter-spacing:0.08em;margin-bottom:6px;">Bot Score</div>'
+        '<div style="font-family:monospace;font-size:0.92rem;color:#0d1d3a;background:#f4f8ff;'
+        'border:1px solid rgba(61,130,245,0.2);border-radius:6px;padding:10px 16px;">'
         'Bot Score = Σ (param_score × weight) / (Σ weight × 2) × 100</div>'
-        '<div style="font-size:0.65rem;color:#5588bb;margin-top:4px;">'
+        '<div style="font-size:0.82rem;color:#1e4d8c;margin-top:6px;line-height:1.6;">'
         'Each param scored 0–2. Max possible per param = weight × 2. '
         'If Abrupt Disconnection = Fatal → Bot Score forced to 0.</div></div>'
 
-        '<div><div style="font-size:0.68rem;font-weight:700;color:#7c3aed;text-transform:uppercase;'
-        'letter-spacing:0.08em;margin-bottom:4px;">Intelligence Score</div>'
-        '<div style="font-family:monospace;font-size:0.82rem;color:#0d1d3a;background:#fff;'
-        'border:1px solid rgba(124,58,237,0.15);border-radius:6px;padding:8px 14px;">'
+        '<div><div style="font-size:0.82rem;font-weight:700;color:#7c3aed;text-transform:uppercase;'
+        'letter-spacing:0.08em;margin-bottom:6px;">Intelligence Score</div>'
+        '<div style="font-family:monospace;font-size:0.92rem;color:#0d1d3a;background:#faf5ff;'
+        'border:1px solid rgba(124,58,237,0.2);border-radius:6px;padding:10px 16px;">'
         'Intelligence Score = Σ (mapped_score × weight) / (Σ weight × 2) × 100</div>'
-        '<div style="font-size:0.65rem;color:#5588bb;margin-top:4px;">'
+        '<div style="font-size:0.82rem;color:#1e4d8c;margin-top:6px;line-height:1.6;">'
         'Separate metric — does not affect Bot Score. Weights are relative multipliers (1.5×, 1.2×, 1.0×).</div></div>'
 
-        '<div><div style="font-size:0.68rem;font-weight:700;color:#0ebc6e;text-transform:uppercase;'
-        'letter-spacing:0.08em;margin-bottom:4px;">Lead Composite</div>'
-        '<div style="font-family:monospace;font-size:0.82rem;color:#0d1d3a;background:#fff;'
-        'border:1px solid rgba(14,188,110,0.15);border-radius:6px;padding:8px 14px;">'
+        '<div><div style="font-size:0.82rem;font-weight:700;color:#0ebc6e;text-transform:uppercase;'
+        'letter-spacing:0.08em;margin-bottom:6px;">Lead Composite</div>'
+        '<div style="font-family:monospace;font-size:0.92rem;color:#0d1d3a;background:#f0fdf6;'
+        'border:1px solid rgba(14,188,110,0.2);border-radius:6px;padding:10px 16px;">'
         'Lead Composite = (Lead Score + (PI + FR + DM) / 6 × 100) / 2</div>'
-        '<div style="font-size:0.65rem;color:#5588bb;margin-top:4px;">'
+        '<div style="font-size:0.82rem;color:#1e4d8c;margin-top:6px;line-height:1.6;">'
         'PI = Product Interest · FR = Follow-up Readiness · DM = DM Confirmed (each 0–2). '
         'Lead Score from stage mapping.</div></div>'
 
