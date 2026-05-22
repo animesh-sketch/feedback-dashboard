@@ -4214,76 +4214,76 @@ _SENSE_BOT_LIST = ["", "Tara", "Mmyra"]
 # Automatically injected into every audit sheet if not already present.
 _SENSE_BUILTIN_PARAMS = {
     "Was there any flow issue during the conversation?": {
-        "description": "Conversation flow quality — logical gaps / breakdowns",
+        "description": "Checks whether the bot followed the correct conversation path from start to finish without jumping steps, getting stuck, or breaking out of the intended script",
         "options":     ["Yes", "No"],  # Yes = issue present (bad), No = no issue (good)
         "inverted":    False,
         "weight":      0.11,
         "color":       "#dc2626",
         "icon":        "🔍",
-        "guide":       "Yes = Flow issue detected (breaks scoring)  |  No = No flow issue",
+        "guide":       "No = The bot followed the conversation flow correctly from start to finish without any breaks or detours  |  Yes = A flow issue was detected — the bot exited the intended script path, skipped steps, or behaved unexpectedly",
     },
     "Did the bot restart or repeat the conversation unnecessarily?": {
-        "description": "Bot forced a conversation restart",
+        "description": "Checks if the bot reset or restarted the entire conversation without any valid reason, forcing the customer to start over and repeat themselves",
         "options":     ["Yes", "No"],  # Yes = restart happened (bad), No = no restart (good)
         "inverted":    False,
         "weight":      0.09,
         "color":       "#d97706",
         "icon":        "🔁",
-        "guide":       "Yes = Bot restarted conversation (breaks scoring)  |  No = No restart",
+        "guide":       "No = The conversation continued smoothly without any restarts  |  Yes = The bot unnecessarily restarted the conversation, forcing the customer to repeat their information from the beginning",
     },
     "Did the bot repeat responses or questions unnecessarily?": {
-        "description": "Bot repeated same message / looped responses",
+        "description": "Checks whether the bot sent the same message or asked the same question more than once without a valid reason — indicating a script loop or response handling error",
         "options":     ["Yes", "No"],  # Yes = repetition detected (bad), No = no repetition (good)
         "inverted":    False,
         "weight":      0.06,
         "color":       "#7c3aed",
         "icon":        "🔄",
-        "guide":       "Yes = Repetition detected (breaks scoring)  |  No = No repetition",
+        "guide":       "No = Every bot response was unique and relevant — no repeated messages or questions  |  Yes = The bot repeated the same message or question more than once without reason, indicating a script loop or error",
     },
     "Was there any latency issue during the conversation?": {
-        "description": "Bot response latency / delay during conversation",
+        "description": "Checks whether the bot responded within an acceptable time. Responses taking longer than 2.5 seconds are considered a latency issue and can confuse or frustrate the customer",
         "options":     ["Yes", "No"],  # Yes = latency issue present (bad), No = no issue (good)
         "inverted":    False,
         "weight":      0.04,
         "color":       "#0891b2",
         "icon":        "⚡",
-        "guide":       "No = No latency issue (response ≤2.5s)  |  Yes = Latency issue detected (response >2.5s)",
+        "guide":       "No = The bot responded quickly (within 2.5 seconds) — no noticeable delay  |  Yes = The bot took too long to respond (more than 2.5 seconds), which may have confused or frustrated the customer",
     },
     "Was the TTS (Text-to-Speech) quality clear and understandable?": {
-        "description": "Text-to-Speech output quality — clarity, naturalness, understandability",
+        "description": "Rates the quality of the bot's voice output. A good TTS voice should sound clear, natural, and easy for the customer to understand without any confusion",
         "options":     ["0", "1", "2", "NA"],
         "inverted":    False,
         "weight":      0.03,
         "color":       "#7c3aed",
         "icon":        "🔊",
-        "guide":       "2 = TTS clear, natural & easily understandable  |  1 = Minor mispronunciation or unnatural pause  |  0 = TTS significantly impacted clarity  |  NA = Not applicable / not assessable",
+        "guide":       "2 = Voice was clear, natural, and easy to understand throughout the call  |  1 = Minor issue noticed (slight mispronunciation or unnatural pause) but still understandable  |  0 = Voice quality was poor and significantly impacted the customer's ability to understand the bot  |  NA = Not applicable — this was a text-based interaction (WhatsApp, chat, etc.)",
     },
     "Were all required entities captured correctly?": {
-        "description": "Entity capture accuracy — all required slots (name, amount, reference etc.) captured",
+        "description": "Checks whether the bot correctly captured all the important details provided by the customer — such as name, phone number, loan amount, reference number, or any other required information",
         "options":     ["No", "Yes"],
         "inverted":    False,
         "weight":      0.04,
         "color":       "#f59e0b",
         "icon":        "⭐",
-        "guide":       "Yes = All required entities captured correctly  |  No = Entity capture incomplete or inaccurate",
+        "guide":       "Yes = The bot correctly identified and recorded all required customer details (name, amount, reference, etc.)  |  No = One or more required details were missed, misheard, or captured incorrectly",
     },
     "Was WhatsApp/message delivery successful?": {
-        "description": "Checks if the WhatsApp message or outbound communication was successfully delivered to the customer — covers delivery status, read receipts, and channel reachability",
+        "description": "Checks if the WhatsApp message or outbound communication was actually delivered to the customer — covers delivery status, read receipts, and whether the channel was reachable at the time",
         "options":     ["No", "Yes"],
         "inverted":    False,
         "weight":      0.01,
         "color":       "#2563EB",
         "icon":        "📲",
-        "guide":       "Yes = Message was successfully delivered and received by the customer  |  No = Delivery failed, bounced, or delivery status could not be confirmed — indicates a channel or connectivity issue",
+        "guide":       "Yes = The message was successfully delivered and reached the customer  |  No = The message failed to deliver, bounced, or the delivery status could not be confirmed — this indicates a channel or connectivity problem",
     },
     "Was any technical/platform issue observed during the interaction?": {
-        "description": "Flags any technical or platform-side problems during the bot interaction — such as errors, unexpected restarts, API failures, integration issues, or any behavior that disrupted the conversation flow",
+        "description": "Flags any technical or platform-side problems that occurred during the bot interaction — such as errors, unexpected restarts, API failures, integration issues, or any behavior that disrupted the conversation",
         "options":     ["Yes", "No"],
         "inverted":    False,
         "weight":      0.01,
         "color":       "#7c3aed",
         "icon":        "🛠️",
-        "guide":       "No = Interaction ran smoothly with no technical or platform-level issues detected  |  Yes = A technical issue was observed (e.g. bot error, platform crash, API failure, integration problem, or unexpected bot behavior)",
+        "guide":       "No = The interaction ran smoothly with no technical or platform-level issues detected  |  Yes = A technical issue was observed during the interaction (e.g. bot error, platform crash, API failure, integration problem, or unexpected bot behavior)",
     },
 }
 _DEFAULT_PARAM_WEIGHT = 1.0   # weight for any legend param not listed above
@@ -4301,56 +4301,56 @@ _QA_SCHEMA = {
                     "weight": 0.13,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = Correct disposition selected based on conversation outcome  |  No = Incorrect or mismatched disposition",
+                    "guide": "Yes = The bot selected the correct call outcome (disposition) that accurately reflects what happened in the conversation  |  No = The disposition selected does not match the actual conversation outcome — it is incorrect or mismatched",
                 },
                 {
                     "col": "Were all required entities captured correctly?",
                     "weight": 0.04,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = All required entities captured correctly  |  No = Entity capture incomplete or inaccurate",
+                    "guide": "Yes = All important customer details (name, amount, reference number, etc.) were correctly identified and recorded by the bot  |  No = One or more required details were missed, misheard, or captured incorrectly",
                 },
                 {
                     "col": "Was context passed correctly across conversation turns?",
                     "weight": 0.12,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = Context maintained across all turns / channels  |  No = Context not maintained; customer had to repeat information",
+                    "guide": "Yes = The bot remembered and correctly used information shared earlier in the conversation — the customer did not need to repeat themselves  |  No = The bot lost track of earlier information and the customer had to repeat their details again",
                 },
                 {
                     "col": "Was there any flow issue during the conversation?",
                     "weight": 0.11,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = No flow issue  |  Yes = Flow issue detected (bot exited intended script path)",
+                    "guide": "No = The bot followed the conversation script correctly from start to finish  |  Yes = The bot deviated from the intended script path — it jumped steps, got stuck, or behaved outside the designed flow",
                 },
                 {
                     "col": "Did the bot restart the conversation unnecessarily?",
                     "weight": 0.09,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = No restart  |  Yes = Bot restarted conversation (customer had to repeat themselves)",
+                    "guide": "No = The conversation continued smoothly without any unnecessary restarts  |  Yes = The bot restarted the conversation without a valid reason, forcing the customer to repeat their information from the beginning",
                 },
                 {
                     "col": "Was the message content appropriate and well understood?",
                     "weight": 0.07,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = Bot fully understood intent and responded appropriately  |  No = Bot misunderstood or ignored customer intent",
+                    "guide": "Yes = The bot correctly understood what the customer said and replied with an appropriate and relevant message  |  No = The bot misunderstood the customer's message and gave an incorrect, irrelevant, or confusing response",
                 },
                 {
                     "col": "Was the follow-up completed within the specified time?",
                     "weight": 0.04,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = Follow-up completed within SLA  |  No = Follow-up missed or exceeded SLA timeline",
+                    "guide": "Yes = The required follow-up action (call, message, or task) was completed within the agreed time limit (SLA)  |  No = The follow-up was missed or completed late, exceeding the allowed time window",
                 },
                 {
                     "col": "Was there any latency issue during the conversation?",
                     "weight": 0.04,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = No latency issue (response ≤2.5s)  |  Yes = Latency issue detected (response >2.5s)",
+                    "guide": "No = The bot responded promptly within 2.5 seconds — no noticeable delay for the customer  |  Yes = The bot's response was slow (over 2.5 seconds), which may have confused or frustrated the customer",
                 },
             ],
         },
@@ -4364,49 +4364,49 @@ _QA_SCHEMA = {
                     "weight": 0.06,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = No repetition  |  Yes = Bot repeated same message or question (duplicate script loops)",
+                    "guide": "No = Every bot response was unique and relevant — no repeated messages or questions were sent  |  Yes = The bot repeated the same message or question more than once without a valid reason, indicating a script loop or response error",
                 },
                 {
                     "col": "Was there any dead air or blank space in the conversation?",
                     "weight": 0.06,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = No dead air  |  Yes = Silence/blank space detected (>3s pause that impacted call quality)",
+                    "guide": "No = The conversation flowed continuously with no unexplained silences or gaps  |  Yes = There was a noticeable silence or blank pause lasting more than 3 seconds — this can make the customer feel the call dropped or the bot has stopped working",
                 },
                 {
                     "col": "Were there any unnecessary repeated calls to the customer?",
                     "weight": 0.04,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = No repeated calls  |  Yes = Multiple calls placed to customer within short duration",
+                    "guide": "No = The customer was contacted only the appropriate number of times — no excess or duplicate calls  |  Yes = The bot or system placed multiple calls to the same customer in a short period without a valid reason, which can irritate the customer",
                 },
                 {
                     "col": "Did the bot provide a proper introduction?",
                     "weight": 0.05,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = Bot introduced itself, company name & purpose correctly  |  No = Introduction missing or key details absent",
+                    "guide": "Yes = The bot clearly introduced itself, stated the company name, and explained the purpose of the call at the very start  |  No = The introduction was missing or incomplete — the bot did not state who it is, the company name, or why it is calling",
                 },
                 {
                     "col": "Was there any background noise affecting audio clarity?",
                     "weight": 0.03,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = Audio clear, no background noise  |  Yes = Background noise affected call clarity",
+                    "guide": "No = The call audio was clean and free from any background noise or disturbances  |  Yes = Background noise was present during the call and made it difficult to hear or understand the conversation clearly",
                 },
                 {
                     "col": "Were there any transcription issues affecting audit reliability?",
                     "weight": 0.03,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = Transcription accurate and complete  |  Yes = Inaccuracies impacted audit reliability",
+                    "guide": "No = The conversation was transcribed accurately — the written text closely matches what was actually said during the call  |  Yes = The transcription contained errors, missing words, or garbled text that makes it unreliable for auditing purposes",
                 },
                 {
                     "col": "Was the TTS (Text-to-Speech) quality clear and understandable?",
                     "weight": 0.03,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = TTS clear, natural & easily understandable  |  No = TTS issues impacted clarity or naturalness  |  NA = Not applicable (non-voice channel)",
+                    "guide": "Yes = The bot's voice was clear, natural-sounding, and easy for the customer to understand throughout the call  |  No = The bot's voice had quality issues such as mispronunciations, robotic tone, or unclear speech that affected the interaction  |  NA = Not applicable — this was a text-based interaction (WhatsApp, chat, etc.)",
                 },
             ],
         },
@@ -4420,56 +4420,56 @@ _QA_SCHEMA = {
                     "weight": 0.01,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = Switched language correctly per customer preference  |  No = Failed to switch despite customer indication  |  NA = No language switch required",
+                    "guide": "Yes = The bot correctly detected the customer's preferred language and switched to it without any issues  |  No = The customer indicated a language preference but the bot failed to switch and continued in the wrong language  |  NA = No language switch was required during this interaction",
                 },
                 {
                     "col": "Were there any script issues in the transcript?",
                     "weight": 0.01,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = Approved script followed correctly  |  Yes = Bot deviated from script or used incorrect phrasing",
+                    "guide": "No = The bot followed the approved conversation script correctly throughout the interaction  |  Yes = The bot deviated from the approved script — it used incorrect phrasing, skipped mandatory lines, or said something outside the approved content",
                 },
                 {
                     "col": "Were there any template issues in the conversation?",
                     "weight": 0.01,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = Correct template followed  |  Yes = Incorrect or outdated template used",
+                    "guide": "No = The correct and up-to-date message template was used throughout the conversation  |  Yes = An incorrect or outdated template was used — the message content did not match the approved version for this campaign",
                 },
                 {
                     "col": "Were there any pronunciation issues affecting clarity?",
                     "weight": 0.01,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = Pronunciation clear and understandable  |  Yes = Pronunciation issues impacted customer understanding",
+                    "guide": "No = All words were pronounced clearly and the customer could easily understand everything the bot said  |  Yes = The bot mispronounced words (e.g. names, numbers, or key terms) in a way that may have confused or misled the customer",
                 },
                 {
                     "col": "Was WhatsApp/message delivery successful?",
                     "weight": 0.01,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = Message was successfully delivered and received by the customer  |  No = Delivery failed, bounced, or delivery status could not be confirmed — indicates a channel or connectivity issue",
+                    "guide": "Yes = The message was successfully delivered and reached the customer  |  No = The message failed to deliver, bounced, or the delivery status could not be confirmed — this indicates a channel or connectivity problem",
                 },
                 {
                     "col": "Was any technical/platform issue observed during the interaction?",
                     "weight": 0.01,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = Interaction ran smoothly with no technical or platform-level issues detected  |  Yes = A technical issue was observed (e.g. bot error, platform crash, API failure, integration problem, or unexpected bot behavior)",
+                    "guide": "No = The interaction ran smoothly with no technical or platform-level issues detected  |  Yes = A technical issue was observed during the interaction (e.g. bot error, platform crash, API failure, integration problem, or unexpected bot behavior)",
                 },
                 {
                     "col": "Was there an abrupt disconnection before logical closure?",
                     "weight": 0.00,
                     "options": ["No", "Fatal"],
                     "fatal": True,
-                    "guide": "No = Call ended smoothly as per designed flow  |  Fatal = Call ended abruptly before logical closure (Auto-Fail)",
+                    "guide": "No = The conversation ended naturally and smoothly as per the designed flow — the bot completed its script before ending the call  |  Fatal = The call ended abruptly before the conversation reached a logical conclusion — this is an Auto-Fail and requires immediate review",
                 },
                 {
                     "col": "Was the Next Best Action (NBA) executed correctly?",
                     "weight": 0.00,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = Required Next Best Action executed correctly  |  No = NBA was generated but not executed by bot",
+                    "guide": "Yes = After the conversation, the bot correctly triggered the required next action (e.g. sending a follow-up message, scheduling a callback, or updating the lead status)  |  No = The required next action was identified but the bot failed to execute it — the follow-up task was left incomplete",
                 },
             ],
         },
@@ -14616,7 +14616,7 @@ def _render_audit_form(legend_map, fname):
     # ── Audit form ────────────────────────────────────────────────────────────
     st.markdown("""
 <style>
-/* Tick-mark style for QA scoring radio buttons */
+/* QA scoring radio buttons — dark pill */
 div[data-testid="stRadio"] > div[role="radiogroup"] {
     display: flex !important;
     flex-wrap: wrap !important;
@@ -14624,81 +14624,83 @@ div[data-testid="stRadio"] > div[role="radiogroup"] {
     margin-top: 4px !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label {
-    background: #ffffff !important;
-    border: 1.5px solid #bfdbfe !important;
+    background: rgba(13,21,38,0.85) !important;
+    border: 1.5px solid rgba(56,189,248,0.2) !important;
     border-radius: 8px !important;
     padding: 5px 14px !important;
     font-size: 0.82rem !important;
     font-weight: 700 !important;
-    color: #0d1d3a !important;
+    color: #64748B !important;
     cursor: pointer !important;
-    transition: background 0.15s, border-color 0.15s !important;
+    transition: all 0.15s ease !important;
     min-width: 44px !important;
     text-align: center !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:last-child {
-    color: #0d1d3a !important;
+    color: #64748B !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {
-    background: #e0f2fe !important;
-    border-color: #38bdf8 !important;
-    color: #0d1d3a !important;
+    background: rgba(0,214,143,0.1) !important;
+    border-color: rgba(0,214,143,0.45) !important;
+    color: #00D68F !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) {
-    background: #7dd3fc !important;
-    border-color: #0ea5e9 !important;
-    color: #0d1d3a !important;
-    box-shadow: 0 2px 8px rgba(14,165,233,0.28) !important;
+    background: linear-gradient(135deg, #00A36B, #00D68F) !important;
+    border-color: #00D68F !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 10px rgba(0,214,143,0.45) !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) > div:last-child {
-    color: #0d1d3a !important;
+    color: #ffffff !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
     display: none !important;
 }
-/* NA option — muted, clearly not applicable */
+/* NA option — muted */
 div[data-testid="stRadio"][aria-label="Correct Disposition? *"] > div[role="radiogroup"] > label:nth-child(3),
 div[data-testid="stForm"] div[data-testid="stRadio"]:has(label[data-testid]) > div[role="radiogroup"] > label:nth-child(3) {
-    background: #f1f5f9 !important;
-    border-color: #cbd5e1 !important;
-    color: #94a3b8 !important;
+    background: rgba(30,41,59,0.5) !important;
+    border-color: rgba(100,116,139,0.25) !important;
+    color: #475569 !important;
 }
 div[data-testid="stForm"] div[data-testid="stRadio"]:has(label[data-testid]) > div[role="radiogroup"] > label:nth-child(3) > div:last-child {
-    color: #94a3b8 !important;
+    color: #475569 !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:nth-child(3):has(input:checked) {
-    background: #e2e8f0 !important;
-    border-color: #94a3b8 !important;
-    color: #64748b !important;
+    background: rgba(71,85,105,0.4) !important;
+    border-color: #64748B !important;
+    color: #94A3B8 !important;
 }
-/* Dropdowns inside audit form — clean white, dark text, clear border */
+/* Dropdowns inside audit form */
 div[data-testid="stForm"] [data-testid="stSelectbox"] > div > div {
-    background: #ffffff !important;
-    border: 1.5px solid #cbd5e1 !important;
+    background: rgba(13,21,38,0.85) !important;
+    border: 1.5px solid rgba(56,189,248,0.2) !important;
     border-radius: 8px !important;
-    color: #0d1d3a !important;
+    color: #E2E8F0 !important;
 }
 div[data-testid="stForm"] [data-testid="stSelectbox"] > div > div:focus-within {
-    border-color: #2563EB !important;
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.12) !important;
+    border-color: #0EA5E9 !important;
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.15) !important;
 }
 div[data-testid="stForm"] [data-testid="stSelectbox"] > div > div > div,
 div[data-testid="stForm"] [data-testid="stSelectbox"] span,
 div[data-testid="stForm"] [data-testid="stSelectbox"] p {
-    color: #0d1d3a !important;
+    color: #E2E8F0 !important;
     font-weight: 500 !important;
 }
-/* Submit audit button — blue bg white text */
+/* Submit audit button — green→blue gradient */
 div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
 div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button {
-    background: linear-gradient(135deg,#1a62f2,#2563EB) !important;
+    background: linear-gradient(135deg, #00A36B, #0EA5E9) !important;
     color: #ffffff !important;
     border: none !important;
     font-weight: 700 !important;
     letter-spacing: 0.02em !important;
+    box-shadow: 0 4px 16px rgba(0,214,143,0.32) !important;
 }
 div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
-    background: linear-gradient(135deg,#1550d4,#1d4ed8) !important;
+    box-shadow: 0 8px 24px rgba(0,214,143,0.48) !important;
+    transform: translateY(-2px) !important;
     color: #ffffff !important;
 }
 </style>""", unsafe_allow_html=True)
@@ -15550,7 +15552,7 @@ def render_convin_sense():
     # ── Convin premium brand UI ────────────────────────────────────────────────
     st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap');
 
 @keyframes fadeUp {
   from { opacity:0; transform:translateY(10px); }
@@ -15560,16 +15562,23 @@ def render_convin_sense():
   0%   { background-position: -400px 0; }
   100% { background-position: 400px 0; }
 }
-@keyframes pulseBlue {
-  0%,100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.25); }
-  50%      { box-shadow: 0 0 0 6px rgba(37,99,235,0); }
+@keyframes pulseGreen {
+  0%,100% { box-shadow: 0 0 0 0 rgba(0,214,143,0.3); }
+  50%      { box-shadow: 0 0 0 6px rgba(0,214,143,0); }
+}
+@keyframes pulsePink {
+  0%,100% { box-shadow: 0 0 0 0 rgba(244,114,182,0.3); }
+  50%      { box-shadow: 0 0 0 6px rgba(244,114,182,0); }
 }
 
 /* ── Base ── */
-.stApp, .stApp > div, section.main > div { background: #F0F4F9 !important; font-family: 'Inter', sans-serif !important; }
-.block-container { background: #F0F4F9 !important; padding-top: 1.5rem !important; }
+.stApp, .stApp > div, section.main > div {
+    background: #070B14 !important;
+    font-family: 'Inter', sans-serif !important;
+}
+.block-container { background: #070B14 !important; padding-top: 1.5rem !important; }
 
-/* ── Section chip: Convin branded pill ── */
+/* ── Section chip ── */
 .section-chip {
     display: inline-flex !important;
     align-items: center !important;
@@ -15579,32 +15588,32 @@ def render_convin_sense():
     letter-spacing: 0.11em !important;
     text-transform: uppercase !important;
     color: #ffffff !important;
-    background: linear-gradient(135deg,#0B1F3A,#2563EB) !important;
+    background: linear-gradient(135deg, #00A36B, #0EA5E9, #EC4899) !important;
     border: none !important;
     border-radius: 6px !important;
     padding: 5px 14px !important;
     margin-bottom: 16px !important;
-    box-shadow: 0 2px 8px rgba(37,99,235,0.28) !important;
+    box-shadow: 0 2px 12px rgba(0,214,143,0.3), 0 0 20px rgba(14,165,233,0.15) !important;
     transition: box-shadow 0.2s, transform 0.15s !important;
 }
 .section-chip:hover {
-    box-shadow: 0 4px 14px rgba(37,99,235,0.38) !important;
+    box-shadow: 0 4px 18px rgba(0,214,143,0.45) !important;
     transform: translateY(-1px) !important;
 }
 
-/* ── Audit form radio buttons: large pill-shaped hit targets ── */
+/* ── Audit form radio: dark pill buttons ── */
 div[data-testid="stForm"] .stRadio > div[role="radiogroup"] {
     gap: 6px !important;
     flex-wrap: wrap !important;
 }
 div[data-testid="stForm"] .stRadio label {
-    background: #f1f5f9 !important;
-    border: 1.5px solid #cbd5e1 !important;
+    background: rgba(13,21,38,0.8) !important;
+    border: 1.5px solid rgba(56,189,248,0.2) !important;
     border-radius: 99px !important;
     padding: 6px 16px !important;
     font-size: 0.78rem !important;
     font-weight: 600 !important;
-    color: #334155 !important;
+    color: #64748B !important;
     cursor: pointer !important;
     transition: all 0.15s ease !important;
     min-width: 52px !important;
@@ -15613,17 +15622,16 @@ div[data-testid="stForm"] .stRadio label {
     -webkit-user-select: none !important;
 }
 div[data-testid="stForm"] .stRadio label:hover {
-    background: #e0e7ff !important;
-    border-color: #6366f1 !important;
-    color: #4338ca !important;
+    background: rgba(0,214,143,0.1) !important;
+    border-color: rgba(0,214,143,0.45) !important;
+    color: #00D68F !important;
 }
 div[data-testid="stForm"] .stRadio label:has(input:checked) {
-    background: linear-gradient(135deg,#1d4ed8,#2563EB) !important;
-    border-color: #1d4ed8 !important;
+    background: linear-gradient(135deg, #00A36B, #00D68F) !important;
+    border-color: #00D68F !important;
     color: #ffffff !important;
-    box-shadow: 0 2px 8px rgba(37,99,235,0.4) !important;
+    box-shadow: 0 2px 10px rgba(0,214,143,0.45) !important;
 }
-/* Hide the native radio circle — the pill IS the button */
 div[data-testid="stForm"] .stRadio input[type="radio"] {
     position: absolute !important;
     opacity: 0 !important;
@@ -15631,19 +15639,19 @@ div[data-testid="stForm"] .stRadio input[type="radio"] {
     height: 0 !important;
 }
 
-/* ── Tabs: dark navy bar with bright active pill ── */
+/* ── Tabs: dark bar, multi-colour active pill ── */
 .stTabs [data-baseweb="tab-list"] {
-    background: linear-gradient(108deg,#040d1e,#0d1a3a) !important;
+    background: linear-gradient(108deg, #040d1e, #0d1a3a) !important;
     border-radius: 14px !important;
     padding: 6px 8px !important;
-    border-bottom: none !important;
+    border: 1px solid rgba(56,189,248,0.1) !important;
     gap: 4px !important;
-    box-shadow: 0 4px 20px rgba(4,13,30,0.45), inset 0 1px 0 rgba(255,255,255,0.04) !important;
+    box-shadow: 0 4px 24px rgba(4,13,30,0.6), inset 0 1px 0 rgba(255,255,255,0.04) !important;
 }
 .stTabs [data-baseweb="tab"] {
     font-size: 0.76rem !important;
     font-weight: 600 !important;
-    color: #ffffff !important;
+    color: #475569 !important;
     background: transparent !important;
     border: none !important;
     border-radius: 9px !important;
@@ -15654,80 +15662,84 @@ div[data-testid="stForm"] .stRadio input[type="radio"] {
 }
 .stTabs [data-baseweb="tab"] p,
 .stTabs [data-baseweb="tab"] span,
-.stTabs [data-baseweb="tab"] div { color: #ffffff !important; }
+.stTabs [data-baseweb="tab"] div { color: #475569 !important; }
 .stTabs [data-baseweb="tab"]:hover {
-    background: rgba(37,99,235,0.15) !important;
-    color: #93c5fd !important;
+    background: rgba(56,189,248,0.08) !important;
+    color: #38BDF8 !important;
 }
 .stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg,#1d4ed8,#2563EB) !important;
+    background: linear-gradient(135deg, rgba(14,165,233,0.25), rgba(0,214,143,0.15)) !important;
     color: #ffffff !important;
-    box-shadow: 0 3px 12px rgba(37,99,235,0.5), 0 1px 0 rgba(255,255,255,0.12) inset !important;
+    border: 1px solid rgba(56,189,248,0.35) !important;
+    box-shadow: 0 3px 14px rgba(14,165,233,0.3), 0 0 20px rgba(0,214,143,0.1) !important;
     font-weight: 700 !important;
 }
 .stTabs [aria-selected="true"] p,
 .stTabs [aria-selected="true"] span { color: #ffffff !important; }
 .stTabs [data-baseweb="tab-panel"] { padding-top: 20px !important; }
 
-/* ── Expanders: elevated card ── */
+/* ── Expanders: dark glass card ── */
 .streamlit-expanderHeader {
     font-size: 0.79rem !important;
     font-weight: 700 !important;
-    color: #0B1F3A !important;
-    background: #fff !important;
+    color: #94A3B8 !important;
+    background: rgba(13,21,38,0.85) !important;
     border-radius: 12px 12px 0 0 !important;
     padding: 14px 18px !important;
-    border-left: 3px solid #2563EB !important;
+    border: 1px solid rgba(56,189,248,0.15) !important;
+    border-left: 3px solid #38BDF8 !important;
     transition: background 0.15s !important;
 }
-.streamlit-expanderHeader:hover { background: #F8FAFF !important; }
+.streamlit-expanderHeader:hover {
+    background: rgba(14,165,233,0.08) !important;
+    color: #E2E8F0 !important;
+}
 .streamlit-expanderContent {
-    background: #fff !important;
-    border: 1px solid #E2EAF6 !important;
+    background: rgba(10,16,28,0.7) !important;
+    border: 1px solid rgba(56,189,248,0.12) !important;
     border-top: none !important;
     border-radius: 0 0 12px 12px !important;
     padding: 16px 18px !important;
     animation: fadeUp 0.2s ease !important;
 }
 
-/* ── Dataframe: premium header + hover rows ── */
-.stDataFrame table { border-collapse: separate !important; border-spacing: 0 !important; border-radius: 10px !important; overflow: hidden !important; box-shadow: 0 2px 8px rgba(11,31,58,0.08) !important; }
+/* ── Dataframe: dark premium header ── */
+.stDataFrame table { border-collapse: separate !important; border-spacing: 0 !important; border-radius: 10px !important; overflow: hidden !important; box-shadow: 0 4px 24px rgba(0,0,0,0.5) !important; border: 1px solid rgba(56,189,248,0.1) !important; }
 .stDataFrame table thead th {
-    background: linear-gradient(135deg,#0B1F3A 0%,#1D4ED8 100%) !important;
-    color: #fff !important;
+    background: linear-gradient(135deg, #0D1424, rgba(14,165,233,0.3)) !important;
+    color: #38BDF8 !important;
     font-size: 0.66rem !important;
     font-weight: 700 !important;
     letter-spacing: 0.08em !important;
     text-transform: uppercase !important;
-    border: none !important;
+    border-bottom: 1px solid rgba(56,189,248,0.2) !important;
     padding: 10px 14px !important;
 }
-.stDataFrame table tbody tr:nth-child(even) td { background: #F8FBFF !important; }
-.stDataFrame table tbody tr:nth-child(odd) td  { background: #fff !important; }
+.stDataFrame table tbody tr:nth-child(even) td { background: rgba(13,21,38,0.6) !important; }
+.stDataFrame table tbody tr:nth-child(odd) td  { background: rgba(7,11,20,0.8) !important; }
 .stDataFrame table tbody td {
     font-size: 0.77rem !important;
-    color: #1E293B !important;
-    border-color: #E8F0FB !important;
+    color: #94A3B8 !important;
+    border-color: rgba(56,189,248,0.06) !important;
     padding: 9px 14px !important;
     transition: background 0.15s !important;
 }
 .stDataFrame table tbody tr:hover td {
-    background: #EFF6FF !important;
-    color: #0B1F3A !important;
+    background: rgba(14,165,233,0.07) !important;
+    color: #E2E8F0 !important;
 }
 
-/* ── Inputs: refined ── */
+/* ── Inputs ── */
 .stSelectbox > div > div, .stTextInput > div > div, .stDateInput > div > div {
-    border: 1.5px solid #CBD5E8 !important;
+    border: 1.5px solid rgba(56,189,248,0.2) !important;
     border-radius: 10px !important;
-    background: #fff !important;
+    background: rgba(13,21,38,0.8) !important;
     transition: border-color 0.18s, box-shadow 0.18s !important;
-    box-shadow: 0 1px 3px rgba(11,31,58,0.06) !important;
 }
 .stSelectbox > div > div:focus-within,
 .stTextInput > div > div:focus-within {
-    border-color: #2563EB !important;
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.12) !important;
+    border-color: #0EA5E9 !important;
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.15) !important;
 }
 .stSelectbox label, .stTextInput label, .stDateInput label,
 .stRadio label, .stNumberInput label, .stTextArea label {
@@ -15747,82 +15759,81 @@ div[data-testid="stForm"] .stRadio input[type="radio"] {
     padding: 9px 22px !important;
 }
 .stButton > button[kind="primary"] {
-    background: linear-gradient(135deg,#0B1F3A 0%,#2563EB 100%) !important;
+    background: linear-gradient(135deg, #00A36B, #0EA5E9) !important;
     border: none !important;
     color: #fff !important;
-    box-shadow: 0 4px 14px rgba(37,99,235,0.35) !important;
+    box-shadow: 0 4px 16px rgba(0,214,143,0.32) !important;
 }
 .stButton > button[kind="primary"]:hover {
-    box-shadow: 0 8px 22px rgba(37,99,235,0.48) !important;
+    box-shadow: 0 8px 24px rgba(0,214,143,0.48) !important;
     transform: translateY(-2px) !important;
 }
 .stButton > button[kind="primary"]:active { transform: translateY(0) !important; }
 .stButton > button[kind="secondary"] {
-    background: #fff !important;
-    border: 1.5px solid #BFDBFE !important;
-    color: #2563EB !important;
-    box-shadow: 0 1px 4px rgba(37,99,235,0.10) !important;
+    background: rgba(13,21,38,0.8) !important;
+    border: 1.5px solid rgba(56,189,248,0.25) !important;
+    color: #38BDF8 !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
 }
 .stButton > button[kind="secondary"]:hover {
-    background: #EFF6FF !important;
-    border-color: #2563EB !important;
-    box-shadow: 0 3px 10px rgba(37,99,235,0.18) !important;
+    background: rgba(14,165,233,0.1) !important;
+    border-color: #38BDF8 !important;
+    box-shadow: 0 3px 12px rgba(14,165,233,0.22) !important;
     transform: translateY(-1px) !important;
 }
 .stButton > button:not([kind]) {
-    background: #fff !important;
-    border: 1.5px solid #CBD5E8 !important;
-    color: #374151 !important;
+    background: rgba(13,21,38,0.7) !important;
+    border: 1.5px solid rgba(56,189,248,0.18) !important;
+    color: #64748B !important;
 }
 .stButton > button:not([kind]):hover {
-    border-color: #2563EB !important;
-    color: #2563EB !important;
-    background: #EFF6FF !important;
+    border-color: #38BDF8 !important;
+    color: #E2E8F0 !important;
+    background: rgba(14,165,233,0.08) !important;
     transform: translateY(-1px) !important;
 }
 
-/* ── Radio: elevated pill toggle ── */
+/* ── Radio: dark pill toggle (outside forms) ── */
 .stRadio > div[role="radiogroup"] {
     gap: 8px !important;
     flex-wrap: wrap !important;
 }
 .stRadio > div[role="radiogroup"] > label {
-    background: #fff !important;
-    border: 1.5px solid #CBD5E8 !important;
+    background: rgba(13,21,38,0.8) !important;
+    border: 1.5px solid rgba(56,189,248,0.2) !important;
     border-radius: 24px !important;
     padding: 6px 18px !important;
     font-size: 0.75rem !important;
     font-weight: 600 !important;
-    color: #475569 !important;
+    color: #64748B !important;
     cursor: pointer !important;
     transition: all 0.18s ease !important;
-    box-shadow: 0 1px 3px rgba(11,31,58,0.06) !important;
 }
 .stRadio > div[role="radiogroup"] > label:hover {
-    border-color: #93C5FD !important;
-    color: #1D4ED8 !important;
-    background: #F0F7FF !important;
+    border-color: #38BDF8 !important;
+    color: #38BDF8 !important;
+    background: rgba(56,189,248,0.08) !important;
 }
 .stRadio > div[role="radiogroup"] > label:has(input:checked) {
-    background: linear-gradient(135deg,#0B1F3A,#2563EB) !important;
+    background: linear-gradient(135deg, #00A36B, #0EA5E9) !important;
     border-color: transparent !important;
     color: #fff !important;
-    box-shadow: 0 4px 12px rgba(37,99,235,0.32) !important;
-    animation: pulseBlue 1.8s ease-in-out !important;
+    box-shadow: 0 4px 14px rgba(0,214,143,0.32) !important;
+    animation: pulseGreen 1.8s ease-in-out !important;
 }
 
 /* ── Metric widgets ── */
 [data-testid="metric-container"] {
-    background: #fff !important;
-    border: 1px solid #E2EAF6 !important;
+    background: linear-gradient(135deg, rgba(13,21,38,0.9), rgba(7,11,20,0.95)) !important;
+    border: 1px solid rgba(56,189,248,0.15) !important;
     border-radius: 14px !important;
     padding: 16px 20px !important;
-    box-shadow: 0 2px 8px rgba(11,31,58,0.07) !important;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4) !important;
     transition: box-shadow 0.2s, transform 0.2s !important;
-    border-left: 3px solid #2563EB !important;
+    border-left: 3px solid #00D68F !important;
 }
 [data-testid="metric-container"]:hover {
-    box-shadow: 0 6px 20px rgba(37,99,235,0.14) !important;
+    box-shadow: 0 6px 24px rgba(0,214,143,0.18) !important;
     transform: translateY(-2px) !important;
 }
 [data-testid="metric-container"] label {
@@ -15830,23 +15841,23 @@ div[data-testid="stForm"] .stRadio input[type="radio"] {
     font-weight: 700 !important;
     letter-spacing: 0.08em !important;
     text-transform: uppercase !important;
-    color: #64748b !important;
+    color: #64748B !important;
 }
 [data-testid="stMetricValue"] {
     font-size: 1.85rem !important;
     font-weight: 900 !important;
-    color: #0B1F3A !important;
+    color: #E2E8F0 !important;
     letter-spacing: -0.03em !important;
 }
 
 /* ── Dividers ── */
-hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 18px 0 !important; }
+hr { border: none !important; border-top: 1px solid rgba(56,189,248,0.1) !important; margin: 18px 0 !important; }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #F0F4F9; border-radius: 3px; }
-::-webkit-scrollbar-thumb { background: #BFDBFE; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #2563EB; }
+::-webkit-scrollbar-track { background: #070B14; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.25); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #F472B6; }
 </style>""", unsafe_allow_html=True)
 
     st.markdown("""
@@ -15869,8 +15880,8 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
   to   { opacity:1; transform:translateY(0); }
 }
 @keyframes badgePulse {
-  0%,100% { box-shadow: 0 0 0 0 rgba(96,165,250,0.4); }
-  50%      { box-shadow: 0 0 0 7px rgba(96,165,250,0); }
+  0%,100% { box-shadow: 0 0 0 0 rgba(0,214,143,0.4); }
+  50%      { box-shadow: 0 0 0 7px rgba(0,214,143,0); }
 }
 @keyframes gridFade {
   from { opacity:0; }
@@ -15881,14 +15892,14 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
    FULL HERO  (empty state / landing)
 ════════════════════════════════════════ */
 .sense-hero-full {
-    background: linear-gradient(145deg, #061224 0%, #0B1F3A 45%, #0D2960 100%);
+    background: linear-gradient(145deg, #050C18 0%, #080F1E 50%, #0A0A1A 100%);
     border-radius: 24px;
     padding: 64px 56px 52px;
     margin-bottom: 28px;
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(37,99,235,0.22);
-    box-shadow: 0 24px 80px rgba(11,31,58,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+    border: 1px solid rgba(56,189,248,0.15);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);
     animation: fadeSlideUp 0.6s ease both;
 }
 /* Animated grid overlay */
@@ -15896,30 +15907,30 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     content: "";
     position: absolute; inset: 0;
     background-image:
-        linear-gradient(rgba(37,99,235,0.07) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(37,99,235,0.07) 1px, transparent 1px);
+        linear-gradient(rgba(56,189,248,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56,189,248,0.05) 1px, transparent 1px);
     background-size: 40px 40px;
     pointer-events: none;
     animation: gridFade 1.2s ease forwards;
 }
-/* Glow orb — top right */
+/* Glow orb — top right (pink) */
 .sense-hero-full::after {
     content: "";
     position: absolute;
     top: -100px; right: -80px;
     width: 420px; height: 420px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(37,99,235,0.22) 0%, rgba(96,165,250,0.08) 45%, transparent 70%);
+    background: radial-gradient(circle, rgba(244,114,182,0.18) 0%, rgba(236,72,153,0.06) 45%, transparent 70%);
     pointer-events: none;
     animation: heroFloat 7s ease-in-out infinite;
 }
-/* Second orb — bottom left */
+/* Second orb — bottom left (green) */
 .sense-hero-orb2 {
     position: absolute;
     bottom: -110px; left: -60px;
     width: 380px; height: 380px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(56,189,248,0.12) 0%, transparent 65%);
+    background: radial-gradient(circle, rgba(0,214,143,0.14) 0%, transparent 65%);
     pointer-events: none;
     animation: heroFloatB 9s ease-in-out infinite;
 }
@@ -15929,23 +15940,23 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    background: rgba(37,99,235,0.15);
-    border: 1px solid rgba(96,165,250,0.40);
+    background: rgba(0,214,143,0.1);
+    border: 1px solid rgba(0,214,143,0.35);
     border-radius: 99px;
     padding: 5px 16px;
     font-size: 0.63rem;
     font-weight: 800;
     letter-spacing: 0.13em;
     text-transform: uppercase;
-    color: #93C5FD;
+    color: #00D68F;
     margin-bottom: 22px;
     animation: badgePulse 2.5s ease-in-out infinite, fadeSlideUp 0.5s ease both;
 }
 .sense-badge .dot {
     width: 6px; height: 6px;
     border-radius: 50%;
-    background: #60A5FA;
-    box-shadow: 0 0 8px #60A5FA;
+    background: #00D68F;
+    box-shadow: 0 0 8px #00D68F;
 }
 
 /* Headline */
@@ -15959,7 +15970,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     animation: fadeSlideUp 0.6s 0.1s ease both;
 }
 .sense-headline .grad {
-    background: linear-gradient(110deg, #60A5FA 0%, #38BDF8 40%, #818CF8 80%);
+    background: linear-gradient(110deg, #00D68F 0%, #38BDF8 40%, #F472B6 80%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -16002,18 +16013,18 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     backdrop-filter: blur(4px);
 }
 .sense-feat:hover {
-    background: rgba(37,99,235,0.14);
-    border-color: rgba(96,165,250,0.45);
-    color: #DBEAFE;
+    background: rgba(0,214,143,0.1);
+    border-color: rgba(0,214,143,0.4);
+    color: #00D68F;
     transform: translateY(-2px);
-    box-shadow: 0 4px 14px rgba(37,99,235,0.18);
+    box-shadow: 0 4px 14px rgba(0,214,143,0.18);
 }
 .sense-feat .fi { font-size: 1rem; }
 
 /* Divider */
 .sense-divider {
     height: 1px;
-    background: linear-gradient(90deg, rgba(37,99,235,0.5), rgba(56,189,248,0.3), transparent 80%);
+    background: linear-gradient(90deg, rgba(0,214,143,0.6), rgba(56,189,248,0.4), rgba(244,114,182,0.3), transparent 80%);
     margin-bottom: 22px;
     animation: fadeSlideUp 0.6s 0.35s ease both;
 }
@@ -16038,8 +16049,8 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
    COMPACT HERO  (data loaded)
 ════════════════════════════════════════ */
 .sense-hero-compact {
-    background: linear-gradient(135deg, #061224 0%, #0B1F3A 60%, #0D2960 100%);
-    border: 1px solid rgba(37,99,235,0.25);
+    background: linear-gradient(135deg, #050C18 0%, #080F1E 60%, #0A0A1A 100%);
+    border: 1px solid rgba(56,189,248,0.15);
     border-radius: 16px;
     padding: 20px 30px;
     margin-bottom: 22px;
@@ -16050,14 +16061,14 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     gap: 14px;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 8px 32px rgba(11,31,58,0.4);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
 }
 .sense-hero-compact::before {
     content: "";
     position: absolute; inset: 0;
     background-image:
-        linear-gradient(rgba(37,99,235,0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(37,99,235,0.05) 1px, transparent 1px);
+        linear-gradient(rgba(56,189,248,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56,189,248,0.04) 1px, transparent 1px);
     background-size: 32px 32px;
     pointer-events: none;
 }
@@ -16067,7 +16078,7 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     top: -60px; right: -40px;
     width: 200px; height: 200px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 65%);
+    background: radial-gradient(circle, rgba(244,114,182,0.15) 0%, transparent 65%);
     pointer-events: none;
 }
 .sense-compact-left { position: relative; z-index: 1; }
@@ -16075,32 +16086,32 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: rgba(37,99,235,0.15);
-    border: 1px solid rgba(96,165,250,0.35);
+    background: rgba(0,214,143,0.1);
+    border: 1px solid rgba(0,214,143,0.3);
     border-radius: 99px;
     padding: 3px 12px;
     font-size: 0.6rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #93C5FD;
+    color: #00D68F;
     margin-bottom: 7px;
 }
 .sense-compact-badge .live-dot {
     width: 5px; height: 5px;
     border-radius: 50%;
-    background: #34D399;
-    box-shadow: 0 0 6px #34D399;
+    background: #00D68F;
+    box-shadow: 0 0 6px #00D68F;
     animation: badgePulse 1.8s ease-in-out infinite;
 }
 .sense-compact-title {
     font-size: 1.05rem;
     font-weight: 800;
     letter-spacing: -0.015em;
-    color: #EFF6FF;
+    color: #E2E8F0;
 }
 .sense-compact-title .grad {
-    background: linear-gradient(110deg, #60A5FA, #38BDF8 50%, #818CF8);
+    background: linear-gradient(110deg, #00D68F, #38BDF8 50%, #F472B6);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -16117,18 +16128,18 @@ hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 
 .sense-compact-pill {
     font-size: 0.68rem;
     font-weight: 600;
-    color: rgba(186,210,240,0.75);
-    background: rgba(37,99,235,0.10);
-    border: 1px solid rgba(96,165,250,0.22);
+    color: #64748B;
+    background: rgba(14,165,233,0.08);
+    border: 1px solid rgba(56,189,248,0.18);
     border-radius: 99px;
     padding: 4px 12px;
     white-space: nowrap;
     transition: all 0.18s ease;
 }
 .sense-compact-pill:hover {
-    background: rgba(37,99,235,0.20);
-    border-color: rgba(96,165,250,0.45);
-    color: #DBEAFE;
+    background: rgba(0,214,143,0.12);
+    border-color: rgba(0,214,143,0.35);
+    color: #00D68F;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -16540,7 +16551,7 @@ else:
     100% {{ background-position: 0% 50%; }}
 }}
 .sense-navbar {{
-    background: linear-gradient(108deg, #040d1e, #0d1230 40%, #1a0d30 70%, #040d1e);
+    background: linear-gradient(108deg, #040d1e, #060D1A 30%, #08101E 60%, #040d1e);
     background-size: 300% 300%;
     animation: navGradientSenseTop 10s ease infinite;
     padding: 0 28px;
@@ -16549,8 +16560,10 @@ else:
     align-items: center;
     justify-content: space-between;
     margin: -1rem -1rem 0 -1rem;
-    border-bottom: 1px solid rgba(37,99,235,0.3);
-    box-shadow: 0 4px 30px rgba(37,99,235,0.2), 0 1px 0 rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(56,189,248,0.15);
+    border-top: 2px solid transparent;
+    border-image: linear-gradient(90deg, #00D68F, #0EA5E9, #38BDF8, #F472B6) 1;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.03);
     position: sticky;
     top: 0;
     z-index: 1000;
@@ -16561,11 +16574,11 @@ else:
         <div style="filter:drop-shadow(0 2px 8px rgba(0,0,0,0.4));flex-shrink:0;">{_logo_img(38, 10)}</div>
         <div>
             <div style="color:#fff;font-weight:800;font-size:0.96rem;letter-spacing:-0.01em;line-height:1.1;text-shadow:0 1px 8px rgba(0,0,0,0.3);">Audit</div>
-            <div style="color:rgba(37,99,235,0.7);font-size:0.58rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;">QA &amp; Bot Intelligence</div>
+            <div style="font-size:0.58rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;background:linear-gradient(90deg,#00D68F,#38BDF8,#F472B6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">QA &amp; Bot Intelligence</div>
         </div>
     </div>
-    <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(37,99,235,0.25);border-radius:99px;padding:5px 14px 5px 8px;display:flex;align-items:center;gap:8px;">
-        <div style="width:26px;height:26px;border-radius:50%;background:rgba(37,99,235,0.2);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;color:#2563EB;border:1px solid rgba(37,99,235,0.3);">
+    <div style="background:rgba(0,0,0,0.35);border:1px solid rgba(56,189,248,0.2);border-radius:99px;padding:5px 14px 5px 8px;display:flex;align-items:center;gap:8px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(0,214,143,0.15);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;color:#00D68F;border:1px solid rgba(0,214,143,0.3);">
             {auth.current_name()[:1].upper() or "?"}
         </div>
         <div style="color:rgba(255,255,255,0.85);font-size:0.72rem;font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
@@ -16577,20 +16590,21 @@ else:
     st.markdown("""
 <style>
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_back_to_cdl"]) {
-    background: #06101f !important;
-    border-bottom: 1px solid rgba(37,99,235,0.15) !important;
+    background: #060D18 !important;
+    border-bottom: 1px solid rgba(56,189,248,0.1) !important;
     padding: 4px 0 6px !important;
     margin-bottom: 1.4rem !important;
 }
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_back_to_cdl"]) button[kind="secondary"] {
     background: transparent !important;
-    border: 1px solid rgba(37,99,235,0.3) !important;
-    color: rgba(37,99,235,0.8) !important;
+    border: 1px solid rgba(56,189,248,0.2) !important;
+    color: #38BDF8 !important;
     border-radius: 7px !important;
 }
 div[data-testid="stHorizontalBlock"]:has(button[key="nav_back_to_cdl"]) button[kind="secondary"]:hover {
-    background: rgba(37,99,235,0.08) !important;
-    color: #2563EB !important;
+    background: rgba(56,189,248,0.08) !important;
+    border-color: #38BDF8 !important;
+    color: #ffffff !important;
 }
 </style>""", unsafe_allow_html=True)
 
