@@ -14,18 +14,19 @@ import streamlit as st
 # Format: { "PIN": {"name": "...", "role": "admin"|"tl"|"qa"} }
 
 _DEFAULT_USERS = {
-    "1000": {"name": "Admin",   "role": "admin"},
-    "1011": {"name": "Aman",    "role": "tl"},
-    "1001": {"name": "Animesh",        "role": "qa"},
-    "1002": {"name": "Navya",          "role": "qa"},
-    "1003": {"name": "Shubham Sharma", "role": "qa"},
-    "1004": {"name": "Nora",           "role": "qa"},
-    "1005": {"name": "Alan",           "role": "qa"},
-    "1006": {"name": "Priya",          "role": "qa"},
-    "1007": {"name": "Raj",            "role": "qa"},
-    "1008": {"name": "Sara",           "role": "qa"},
-    "1009": {"name": "Mansi",          "role": "qa"},
-    "1010": {"name": "Sakshi",         "role": "qa"},
+    "1000": {"name": "Admin",           "role": "admin"},
+    "1011": {"name": "Aman",            "role": "admin"},
+    "1001": {"name": "Animesh",         "role": "admin"},
+    "1002": {"name": "Left - Navya",    "role": "qa"},
+    "1003": {"name": "Shubham Sharma",  "role": "qa"},
+    "1004": {"name": "Left - Nora",     "role": "qa"},
+    "1005": {"name": "Left - Alan",     "role": "qa"},
+    "1006": {"name": "Left - Priya",    "role": "qa"},
+    "1007": {"name": "Left - Raj",      "role": "qa"},
+    "1008": {"name": "Left - Sara",     "role": "qa"},
+    "1009": {"name": "Left - Mansi",    "role": "qa"},
+    "1010": {"name": "Sakshi",          "role": "qa"},
+    "1012": {"name": "Tabassum Arfeen", "role": "qa"},
 }
 
 _ROLE_LABELS = {
