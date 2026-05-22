@@ -14616,7 +14616,7 @@ def _render_audit_form(legend_map, fname):
     # ── Audit form ────────────────────────────────────────────────────────────
     st.markdown("""
 <style>
-/* QA scoring radio buttons — dark pill */
+/* QA scoring radio buttons */
 div[data-testid="stRadio"] > div[role="radiogroup"] {
     display: flex !important;
     flex-wrap: wrap !important;
@@ -14624,31 +14624,31 @@ div[data-testid="stRadio"] > div[role="radiogroup"] {
     margin-top: 4px !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label {
-    background: rgba(13,21,38,0.85) !important;
-    border: 1.5px solid rgba(56,189,248,0.2) !important;
+    background: #ffffff !important;
+    border: 1.5px solid #BFDBFE !important;
     border-radius: 8px !important;
     padding: 5px 14px !important;
     font-size: 0.82rem !important;
     font-weight: 700 !important;
-    color: #64748B !important;
+    color: #0B1F3A !important;
     cursor: pointer !important;
     transition: all 0.15s ease !important;
     min-width: 44px !important;
     text-align: center !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:last-child {
-    color: #64748B !important;
+    color: #0B1F3A !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {
-    background: rgba(0,214,143,0.1) !important;
-    border-color: rgba(0,214,143,0.45) !important;
-    color: #00D68F !important;
+    background: #EFF6FF !important;
+    border-color: #2563EB !important;
+    color: #1D4ED8 !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) {
-    background: linear-gradient(135deg, #00A36B, #00D68F) !important;
-    border-color: #00D68F !important;
+    background: linear-gradient(135deg, #1D4ED8, #2563EB) !important;
+    border-color: #2563EB !important;
     color: #ffffff !important;
-    box-shadow: 0 2px 10px rgba(0,214,143,0.45) !important;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.35) !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) > div:last-child {
     color: #ffffff !important;
@@ -14659,47 +14659,47 @@ div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
 /* NA option — muted */
 div[data-testid="stRadio"][aria-label="Correct Disposition? *"] > div[role="radiogroup"] > label:nth-child(3),
 div[data-testid="stForm"] div[data-testid="stRadio"]:has(label[data-testid]) > div[role="radiogroup"] > label:nth-child(3) {
-    background: rgba(30,41,59,0.5) !important;
-    border-color: rgba(100,116,139,0.25) !important;
-    color: #475569 !important;
+    background: #F1F5F9 !important;
+    border-color: #CBD5E1 !important;
+    color: #94A3B8 !important;
 }
 div[data-testid="stForm"] div[data-testid="stRadio"]:has(label[data-testid]) > div[role="radiogroup"] > label:nth-child(3) > div:last-child {
-    color: #475569 !important;
+    color: #94A3B8 !important;
 }
 div[data-testid="stRadio"] > div[role="radiogroup"] > label:nth-child(3):has(input:checked) {
-    background: rgba(71,85,105,0.4) !important;
-    border-color: #64748B !important;
-    color: #94A3B8 !important;
+    background: #E2E8F0 !important;
+    border-color: #94A3B8 !important;
+    color: #64748B !important;
 }
 /* Dropdowns inside audit form */
 div[data-testid="stForm"] [data-testid="stSelectbox"] > div > div {
-    background: rgba(13,21,38,0.85) !important;
-    border: 1.5px solid rgba(56,189,248,0.2) !important;
+    background: #ffffff !important;
+    border: 1.5px solid #CBD5E1 !important;
     border-radius: 8px !important;
-    color: #E2E8F0 !important;
+    color: #0B1F3A !important;
 }
 div[data-testid="stForm"] [data-testid="stSelectbox"] > div > div:focus-within {
-    border-color: #0EA5E9 !important;
-    box-shadow: 0 0 0 3px rgba(14,165,233,0.15) !important;
+    border-color: #2563EB !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12) !important;
 }
 div[data-testid="stForm"] [data-testid="stSelectbox"] > div > div > div,
 div[data-testid="stForm"] [data-testid="stSelectbox"] span,
 div[data-testid="stForm"] [data-testid="stSelectbox"] p {
-    color: #E2E8F0 !important;
+    color: #0B1F3A !important;
     font-weight: 500 !important;
 }
-/* Submit audit button — green→blue gradient */
+/* Submit audit button */
 div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
 div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button {
-    background: linear-gradient(135deg, #00A36B, #0EA5E9) !important;
+    background: linear-gradient(135deg, #1A62F2, #2563EB) !important;
     color: #ffffff !important;
     border: none !important;
     font-weight: 700 !important;
     letter-spacing: 0.02em !important;
-    box-shadow: 0 4px 16px rgba(0,214,143,0.32) !important;
+    box-shadow: 0 4px 14px rgba(37,99,235,0.35) !important;
 }
 div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
-    box-shadow: 0 8px 24px rgba(0,214,143,0.48) !important;
+    box-shadow: 0 8px 22px rgba(37,99,235,0.48) !important;
     transform: translateY(-2px) !important;
     color: #ffffff !important;
 }
@@ -15552,31 +15552,20 @@ def render_convin_sense():
     # ── Convin premium brand UI ────────────────────────────────────────────────
     st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @keyframes fadeUp {
   from { opacity:0; transform:translateY(10px); }
   to   { opacity:1; transform:translateY(0); }
 }
-@keyframes shimmer {
-  0%   { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
-}
-@keyframes pulseGreen {
-  0%,100% { box-shadow: 0 0 0 0 rgba(0,214,143,0.3); }
-  50%      { box-shadow: 0 0 0 6px rgba(0,214,143,0); }
-}
-@keyframes pulsePink {
-  0%,100% { box-shadow: 0 0 0 0 rgba(244,114,182,0.3); }
-  50%      { box-shadow: 0 0 0 6px rgba(244,114,182,0); }
+@keyframes pulseBlue {
+  0%,100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.25); }
+  50%      { box-shadow: 0 0 0 6px rgba(37,99,235,0); }
 }
 
 /* ── Base ── */
-.stApp, .stApp > div, section.main > div {
-    background: #070B14 !important;
-    font-family: 'Inter', sans-serif !important;
-}
-.block-container { background: #070B14 !important; padding-top: 1.5rem !important; }
+.stApp, .stApp > div, section.main > div { background: #F0F4F9 !important; font-family: 'Inter', sans-serif !important; }
+.block-container { background: #F0F4F9 !important; padding-top: 1.5rem !important; }
 
 /* ── Section chip ── */
 .section-chip {
@@ -15588,32 +15577,32 @@ def render_convin_sense():
     letter-spacing: 0.11em !important;
     text-transform: uppercase !important;
     color: #ffffff !important;
-    background: linear-gradient(135deg, #00A36B, #0EA5E9, #EC4899) !important;
+    background: linear-gradient(135deg, #0B1F3A, #2563EB) !important;
     border: none !important;
     border-radius: 6px !important;
     padding: 5px 14px !important;
     margin-bottom: 16px !important;
-    box-shadow: 0 2px 12px rgba(0,214,143,0.3), 0 0 20px rgba(14,165,233,0.15) !important;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.28) !important;
     transition: box-shadow 0.2s, transform 0.15s !important;
 }
 .section-chip:hover {
-    box-shadow: 0 4px 18px rgba(0,214,143,0.45) !important;
+    box-shadow: 0 4px 14px rgba(37,99,235,0.4) !important;
     transform: translateY(-1px) !important;
 }
 
-/* ── Audit form radio: dark pill buttons ── */
+/* ── Audit form radio: pill buttons ── */
 div[data-testid="stForm"] .stRadio > div[role="radiogroup"] {
     gap: 6px !important;
     flex-wrap: wrap !important;
 }
 div[data-testid="stForm"] .stRadio label {
-    background: rgba(13,21,38,0.8) !important;
-    border: 1.5px solid rgba(56,189,248,0.2) !important;
+    background: #ffffff !important;
+    border: 1.5px solid #BFDBFE !important;
     border-radius: 99px !important;
     padding: 6px 16px !important;
     font-size: 0.78rem !important;
     font-weight: 600 !important;
-    color: #64748B !important;
+    color: #334155 !important;
     cursor: pointer !important;
     transition: all 0.15s ease !important;
     min-width: 52px !important;
@@ -15622,15 +15611,15 @@ div[data-testid="stForm"] .stRadio label {
     -webkit-user-select: none !important;
 }
 div[data-testid="stForm"] .stRadio label:hover {
-    background: rgba(0,214,143,0.1) !important;
-    border-color: rgba(0,214,143,0.45) !important;
-    color: #00D68F !important;
+    background: #EFF6FF !important;
+    border-color: #2563EB !important;
+    color: #1D4ED8 !important;
 }
 div[data-testid="stForm"] .stRadio label:has(input:checked) {
-    background: linear-gradient(135deg, #00A36B, #00D68F) !important;
-    border-color: #00D68F !important;
+    background: linear-gradient(135deg, #1D4ED8, #2563EB) !important;
+    border-color: #1D4ED8 !important;
     color: #ffffff !important;
-    box-shadow: 0 2px 10px rgba(0,214,143,0.45) !important;
+    box-shadow: 0 2px 10px rgba(37,99,235,0.4) !important;
 }
 div[data-testid="stForm"] .stRadio input[type="radio"] {
     position: absolute !important;
@@ -15639,19 +15628,19 @@ div[data-testid="stForm"] .stRadio input[type="radio"] {
     height: 0 !important;
 }
 
-/* ── Tabs: dark bar, multi-colour active pill ── */
+/* ── Tabs: dark navy bar, bright active pill ── */
 .stTabs [data-baseweb="tab-list"] {
     background: linear-gradient(108deg, #040d1e, #0d1a3a) !important;
     border-radius: 14px !important;
     padding: 6px 8px !important;
-    border: 1px solid rgba(56,189,248,0.1) !important;
+    border-bottom: none !important;
     gap: 4px !important;
-    box-shadow: 0 4px 24px rgba(4,13,30,0.6), inset 0 1px 0 rgba(255,255,255,0.04) !important;
+    box-shadow: 0 4px 20px rgba(4,13,30,0.45), inset 0 1px 0 rgba(255,255,255,0.04) !important;
 }
 .stTabs [data-baseweb="tab"] {
     font-size: 0.76rem !important;
     font-weight: 600 !important;
-    color: #475569 !important;
+    color: #ffffff !important;
     background: transparent !important;
     border: none !important;
     border-radius: 9px !important;
@@ -15662,84 +15651,74 @@ div[data-testid="stForm"] .stRadio input[type="radio"] {
 }
 .stTabs [data-baseweb="tab"] p,
 .stTabs [data-baseweb="tab"] span,
-.stTabs [data-baseweb="tab"] div { color: #475569 !important; }
-.stTabs [data-baseweb="tab"]:hover {
-    background: rgba(56,189,248,0.08) !important;
-    color: #38BDF8 !important;
-}
+.stTabs [data-baseweb="tab"] div { color: #ffffff !important; }
+.stTabs [data-baseweb="tab"]:hover { background: rgba(37,99,235,0.15) !important; }
 .stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, rgba(14,165,233,0.25), rgba(0,214,143,0.15)) !important;
+    background: linear-gradient(135deg, #1D4ED8, #2563EB) !important;
     color: #ffffff !important;
-    border: 1px solid rgba(56,189,248,0.35) !important;
-    box-shadow: 0 3px 14px rgba(14,165,233,0.3), 0 0 20px rgba(0,214,143,0.1) !important;
+    box-shadow: 0 3px 12px rgba(37,99,235,0.5), inset 0 1px 0 rgba(255,255,255,0.12) !important;
     font-weight: 700 !important;
 }
 .stTabs [aria-selected="true"] p,
 .stTabs [aria-selected="true"] span { color: #ffffff !important; }
 .stTabs [data-baseweb="tab-panel"] { padding-top: 20px !important; }
 
-/* ── Expanders: dark glass card ── */
+/* ── Expanders ── */
 .streamlit-expanderHeader {
     font-size: 0.79rem !important;
     font-weight: 700 !important;
-    color: #94A3B8 !important;
-    background: rgba(13,21,38,0.85) !important;
+    color: #0B1F3A !important;
+    background: #ffffff !important;
     border-radius: 12px 12px 0 0 !important;
     padding: 14px 18px !important;
-    border: 1px solid rgba(56,189,248,0.15) !important;
-    border-left: 3px solid #38BDF8 !important;
+    border-left: 3px solid #2563EB !important;
     transition: background 0.15s !important;
 }
-.streamlit-expanderHeader:hover {
-    background: rgba(14,165,233,0.08) !important;
-    color: #E2E8F0 !important;
-}
+.streamlit-expanderHeader:hover { background: #F0F7FF !important; }
 .streamlit-expanderContent {
-    background: rgba(10,16,28,0.7) !important;
-    border: 1px solid rgba(56,189,248,0.12) !important;
+    background: #ffffff !important;
+    border: 1px solid #E2EAF6 !important;
     border-top: none !important;
     border-radius: 0 0 12px 12px !important;
     padding: 16px 18px !important;
     animation: fadeUp 0.2s ease !important;
 }
 
-/* ── Dataframe: dark premium header ── */
-.stDataFrame table { border-collapse: separate !important; border-spacing: 0 !important; border-radius: 10px !important; overflow: hidden !important; box-shadow: 0 4px 24px rgba(0,0,0,0.5) !important; border: 1px solid rgba(56,189,248,0.1) !important; }
+/* ── Dataframe ── */
+.stDataFrame table { border-collapse: separate !important; border-spacing: 0 !important; border-radius: 10px !important; overflow: hidden !important; box-shadow: 0 2px 8px rgba(11,31,58,0.08) !important; }
 .stDataFrame table thead th {
-    background: linear-gradient(135deg, #0D1424, rgba(14,165,233,0.3)) !important;
-    color: #38BDF8 !important;
+    background: linear-gradient(135deg, #0B1F3A 0%, #1D4ED8 100%) !important;
+    color: #fff !important;
     font-size: 0.66rem !important;
     font-weight: 700 !important;
     letter-spacing: 0.08em !important;
     text-transform: uppercase !important;
-    border-bottom: 1px solid rgba(56,189,248,0.2) !important;
+    border: none !important;
     padding: 10px 14px !important;
 }
-.stDataFrame table tbody tr:nth-child(even) td { background: rgba(13,21,38,0.6) !important; }
-.stDataFrame table tbody tr:nth-child(odd) td  { background: rgba(7,11,20,0.8) !important; }
+.stDataFrame table tbody tr:nth-child(even) td { background: #F8FBFF !important; }
+.stDataFrame table tbody tr:nth-child(odd) td  { background: #ffffff !important; }
 .stDataFrame table tbody td {
     font-size: 0.77rem !important;
-    color: #94A3B8 !important;
-    border-color: rgba(56,189,248,0.06) !important;
+    color: #1E293B !important;
+    border-color: #E8F0FB !important;
     padding: 9px 14px !important;
     transition: background 0.15s !important;
 }
-.stDataFrame table tbody tr:hover td {
-    background: rgba(14,165,233,0.07) !important;
-    color: #E2E8F0 !important;
-}
+.stDataFrame table tbody tr:hover td { background: #EFF6FF !important; color: #0B1F3A !important; }
 
 /* ── Inputs ── */
 .stSelectbox > div > div, .stTextInput > div > div, .stDateInput > div > div {
-    border: 1.5px solid rgba(56,189,248,0.2) !important;
+    border: 1.5px solid #CBD5E8 !important;
     border-radius: 10px !important;
-    background: rgba(13,21,38,0.8) !important;
+    background: #ffffff !important;
     transition: border-color 0.18s, box-shadow 0.18s !important;
+    box-shadow: 0 1px 3px rgba(11,31,58,0.06) !important;
 }
 .stSelectbox > div > div:focus-within,
 .stTextInput > div > div:focus-within {
-    border-color: #0EA5E9 !important;
-    box-shadow: 0 0 0 3px rgba(14,165,233,0.15) !important;
+    border-color: #2563EB !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12) !important;
 }
 .stSelectbox label, .stTextInput label, .stDateInput label,
 .stRadio label, .stNumberInput label, .stTextArea label {
@@ -15759,81 +15738,79 @@ div[data-testid="stForm"] .stRadio input[type="radio"] {
     padding: 9px 22px !important;
 }
 .stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, #00A36B, #0EA5E9) !important;
+    background: linear-gradient(135deg, #0B1F3A 0%, #2563EB 100%) !important;
     border: none !important;
     color: #fff !important;
-    box-shadow: 0 4px 16px rgba(0,214,143,0.32) !important;
+    box-shadow: 0 4px 14px rgba(37,99,235,0.35) !important;
 }
 .stButton > button[kind="primary"]:hover {
-    box-shadow: 0 8px 24px rgba(0,214,143,0.48) !important;
+    box-shadow: 0 8px 22px rgba(37,99,235,0.48) !important;
     transform: translateY(-2px) !important;
 }
 .stButton > button[kind="primary"]:active { transform: translateY(0) !important; }
 .stButton > button[kind="secondary"] {
-    background: rgba(13,21,38,0.8) !important;
-    border: 1.5px solid rgba(56,189,248,0.25) !important;
-    color: #38BDF8 !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
+    background: #ffffff !important;
+    border: 1.5px solid #BFDBFE !important;
+    color: #2563EB !important;
+    box-shadow: 0 1px 4px rgba(37,99,235,0.10) !important;
 }
 .stButton > button[kind="secondary"]:hover {
-    background: rgba(14,165,233,0.1) !important;
-    border-color: #38BDF8 !important;
-    box-shadow: 0 3px 12px rgba(14,165,233,0.22) !important;
+    background: #EFF6FF !important;
+    border-color: #2563EB !important;
+    box-shadow: 0 3px 10px rgba(37,99,235,0.18) !important;
     transform: translateY(-1px) !important;
 }
 .stButton > button:not([kind]) {
-    background: rgba(13,21,38,0.7) !important;
-    border: 1.5px solid rgba(56,189,248,0.18) !important;
-    color: #64748B !important;
+    background: #ffffff !important;
+    border: 1.5px solid #CBD5E8 !important;
+    color: #374151 !important;
 }
 .stButton > button:not([kind]):hover {
-    border-color: #38BDF8 !important;
-    color: #E2E8F0 !important;
-    background: rgba(14,165,233,0.08) !important;
+    border-color: #2563EB !important;
+    color: #2563EB !important;
+    background: #EFF6FF !important;
     transform: translateY(-1px) !important;
 }
 
-/* ── Radio: dark pill toggle (outside forms) ── */
-.stRadio > div[role="radiogroup"] {
-    gap: 8px !important;
-    flex-wrap: wrap !important;
-}
+/* ── Radio: pill toggle ── */
+.stRadio > div[role="radiogroup"] { gap: 8px !important; flex-wrap: wrap !important; }
 .stRadio > div[role="radiogroup"] > label {
-    background: rgba(13,21,38,0.8) !important;
-    border: 1.5px solid rgba(56,189,248,0.2) !important;
+    background: #ffffff !important;
+    border: 1.5px solid #CBD5E8 !important;
     border-radius: 24px !important;
     padding: 6px 18px !important;
     font-size: 0.75rem !important;
     font-weight: 600 !important;
-    color: #64748B !important;
+    color: #475569 !important;
     cursor: pointer !important;
     transition: all 0.18s ease !important;
+    box-shadow: 0 1px 3px rgba(11,31,58,0.06) !important;
 }
 .stRadio > div[role="radiogroup"] > label:hover {
-    border-color: #38BDF8 !important;
-    color: #38BDF8 !important;
-    background: rgba(56,189,248,0.08) !important;
+    border-color: #93C5FD !important;
+    color: #1D4ED8 !important;
+    background: #F0F7FF !important;
 }
 .stRadio > div[role="radiogroup"] > label:has(input:checked) {
-    background: linear-gradient(135deg, #00A36B, #0EA5E9) !important;
+    background: linear-gradient(135deg, #0B1F3A, #2563EB) !important;
     border-color: transparent !important;
     color: #fff !important;
-    box-shadow: 0 4px 14px rgba(0,214,143,0.32) !important;
-    animation: pulseGreen 1.8s ease-in-out !important;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.32) !important;
+    animation: pulseBlue 1.8s ease-in-out !important;
 }
 
 /* ── Metric widgets ── */
 [data-testid="metric-container"] {
-    background: linear-gradient(135deg, rgba(13,21,38,0.9), rgba(7,11,20,0.95)) !important;
-    border: 1px solid rgba(56,189,248,0.15) !important;
+    background: #ffffff !important;
+    border: 1px solid #E2EAF6 !important;
     border-radius: 14px !important;
     padding: 16px 20px !important;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.4) !important;
+    box-shadow: 0 2px 8px rgba(11,31,58,0.07) !important;
     transition: box-shadow 0.2s, transform 0.2s !important;
-    border-left: 3px solid #00D68F !important;
+    border-left: 3px solid #2563EB !important;
 }
 [data-testid="metric-container"]:hover {
-    box-shadow: 0 6px 24px rgba(0,214,143,0.18) !important;
+    box-shadow: 0 6px 20px rgba(37,99,235,0.14) !important;
     transform: translateY(-2px) !important;
 }
 [data-testid="metric-container"] label {
@@ -15841,23 +15818,23 @@ div[data-testid="stForm"] .stRadio input[type="radio"] {
     font-weight: 700 !important;
     letter-spacing: 0.08em !important;
     text-transform: uppercase !important;
-    color: #64748B !important;
+    color: #64748b !important;
 }
 [data-testid="stMetricValue"] {
     font-size: 1.85rem !important;
     font-weight: 900 !important;
-    color: #E2E8F0 !important;
+    color: #0B1F3A !important;
     letter-spacing: -0.03em !important;
 }
 
 /* ── Dividers ── */
-hr { border: none !important; border-top: 1px solid rgba(56,189,248,0.1) !important; margin: 18px 0 !important; }
+hr { border: none !important; border-top: 1px solid #E2EAF6 !important; margin: 18px 0 !important; }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #070B14; border-radius: 3px; }
-::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.25); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #F472B6; }
+::-webkit-scrollbar-track { background: #F0F4F9; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: #BFDBFE; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2563EB; }
 </style>""", unsafe_allow_html=True)
 
     st.markdown("""
@@ -16574,11 +16551,11 @@ else:
         <div style="filter:drop-shadow(0 2px 8px rgba(0,0,0,0.4));flex-shrink:0;">{_logo_img(38, 10)}</div>
         <div>
             <div style="color:#fff;font-weight:800;font-size:0.96rem;letter-spacing:-0.01em;line-height:1.1;text-shadow:0 1px 8px rgba(0,0,0,0.3);">Audit</div>
-            <div style="font-size:0.58rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;background:linear-gradient(90deg,#00D68F,#38BDF8,#F472B6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">QA &amp; Bot Intelligence</div>
+            <div style="color:rgba(37,99,235,0.7);font-size:0.58rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;">QA &amp; Bot Intelligence</div>
         </div>
     </div>
-    <div style="background:rgba(0,0,0,0.35);border:1px solid rgba(56,189,248,0.2);border-radius:99px;padding:5px 14px 5px 8px;display:flex;align-items:center;gap:8px;">
-        <div style="width:26px;height:26px;border-radius:50%;background:rgba(0,214,143,0.15);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;color:#00D68F;border:1px solid rgba(0,214,143,0.3);">
+    <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(37,99,235,0.25);border-radius:99px;padding:5px 14px 5px 8px;display:flex;align-items:center;gap:8px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(37,99,235,0.2);display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;color:#2563EB;border:1px solid rgba(37,99,235,0.3);">
             {auth.current_name()[:1].upper() or "?"}
         </div>
         <div style="color:rgba(255,255,255,0.85);font-size:0.72rem;font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
