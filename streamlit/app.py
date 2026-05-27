@@ -4305,7 +4305,7 @@ _QA_SCHEMA = {
                     "weight": 0.12,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = The bot selected the correct call outcome (disposition / lead metric) that accurately reflects what happened in the conversation  |  No = The disposition selected does not match the actual conversation outcome — it is incorrect or mismatched",
+                    "guide": "Yes = Bot selected the correct call outcome matching actual customer intent  |  No = Lead metric is incorrect or mismatched. Add remarks.",
                 },
                 # 2 — Lead qualified accurately? (8%) — NEW in v0.3
                 {
@@ -4313,7 +4313,7 @@ _QA_SCHEMA = {
                     "weight": 0.08,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = The bot correctly assessed and qualified the lead based on the defined criteria — the lead stage assigned matches the customer's actual intent and situation  |  No = The bot misqualified the lead — the stage assigned does not match the customer's actual intent, leading to incorrect follow-up actions",
+                    "guide": "Yes = Bot selected the correct lead qualification per criteria  |  No = Lead is not qualified as per qualification criteria.",
                 },
                 # 3 — All required entities captured correctly? (4%)
                 {
@@ -4321,7 +4321,7 @@ _QA_SCHEMA = {
                     "weight": 0.04,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = All important customer details (name, amount, reference number, etc.) were correctly identified and recorded by the bot  |  No = One or more required details were missed, misheard, or captured incorrectly",
+                    "guide": "Yes = All customer details (name, amount, reference number, etc.) correctly recorded  |  No = One or more details missed, misheard, or captured incorrectly. Add remarks.",
                 },
                 # 4 — Context passed correctly across conversation turns? (11%)
                 {
@@ -4329,7 +4329,7 @@ _QA_SCHEMA = {
                     "weight": 0.11,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = The bot remembered and correctly used information shared earlier in the conversation — the customer did not need to repeat themselves  |  No = The bot lost track of earlier information and the customer had to repeat their details again",
+                    "guide": "Yes = Bot remembered earlier info — customer did not need to repeat themselves  |  No = Bot lost context — customer had to repeat information.",
                 },
                 # 5 — Any flow issue during the conversation? (10%)
                 {
@@ -4337,7 +4337,7 @@ _QA_SCHEMA = {
                     "weight": 0.10,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = The bot followed the conversation script correctly from start to finish  |  Yes = The bot deviated from the intended script path — it jumped steps, got stuck, or behaved outside the designed flow",
+                    "guide": "No = Bot followed script correctly start to finish. (NO = good outcome)  |  Yes = Bot deviated — jumped steps, got stuck, or behaved outside designed flow.",
                 },
                 # 6 — Bot restarted conversation unnecessarily? (8%)
                 {
@@ -4345,7 +4345,7 @@ _QA_SCHEMA = {
                     "weight": 0.08,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = The conversation continued smoothly without any unnecessary restarts  |  Yes = The bot restarted the conversation without a valid reason, forcing the customer to repeat their information from the beginning",
+                    "guide": "No = Conversation continued smoothly without unnecessary restarts. (NO = good)  |  Yes = Bot restarted without valid reason — customer forced to repeat from beginning.",
                 },
                 # 7 — WhatsApp message content appropriate and well understood? (5%)
                 {
@@ -4353,7 +4353,7 @@ _QA_SCHEMA = {
                     "weight": 0.05,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = The bot correctly understood what the customer said and replied with an appropriate and relevant message  |  No = The bot misunderstood the customer's message and gave an incorrect, irrelevant, or confusing response",
+                    "guide": "Yes = WhatsApp content was relevant to the customer conversation  |  No = WhatsApp content was not relevant to the conversation.",
                 },
                 # 8 — Follow-up completed within specified time? (4%)
                 {
@@ -4361,7 +4361,7 @@ _QA_SCHEMA = {
                     "weight": 0.04,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = The required follow-up action (call, message, or task) was completed within the agreed time limit (SLA)  |  No = The follow-up was missed or completed late, exceeding the allowed time window",
+                    "guide": "Yes = Required follow-up (call / message / task) completed within SLA  |  No = Follow-up missed or completed late beyond the allowed time window.",
                 },
                 # 9 — Any latency issue during the conversation? (3%)
                 {
@@ -4369,7 +4369,7 @@ _QA_SCHEMA = {
                     "weight": 0.03,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = The bot responded promptly within 2.5 seconds — no noticeable delay for the customer  |  Yes = The bot's response was slow (over 2.5 seconds), which may have confused or frustrated the customer",
+                    "guide": "No = Bot responded within 3 seconds — no noticeable delay. (NO = good)  |  Yes = Bot response was slow (over 3 seconds), potentially confusing or frustrating the customer.",
                 },
             ],
         },
@@ -4384,7 +4384,7 @@ _QA_SCHEMA = {
                     "weight": 0.05,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = Every bot response was unique and relevant — no repeated messages or questions were sent  |  Yes = The bot repeated the same message or question more than once without a valid reason, indicating a script loop or response error",
+                    "guide": "No = Every response was unique and relevant. (NO = good)  |  Yes = Bot repeated same message / question without valid reason — indicates script loop or response error.",
                 },
                 # 11 — Unnecessary repeated calls in short timeframe? (3%)
                 {
@@ -4392,7 +4392,7 @@ _QA_SCHEMA = {
                     "weight": 0.03,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = The customer was contacted only the appropriate number of times — no excess or duplicate calls  |  Yes = The bot or system placed multiple calls to the same customer in a short period without a valid reason, which can irritate the customer",
+                    "guide": "No = Customer contacted appropriate number of times. (NO = good)  |  Yes = Multiple calls placed in short period without valid reason — potential customer irritation.",
                 },
                 # 12 — Background noise affecting audio clarity? (2%)
                 {
@@ -4400,7 +4400,7 @@ _QA_SCHEMA = {
                     "weight": 0.02,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = The call audio was clean and free from any background noise or disturbances  |  Yes = Background noise was present during the call and made it difficult to hear or understand the conversation clearly",
+                    "guide": "Yes = Background noise from customer end causing undesired bot performance  |  No = No background noise observed. (NO = good)",
                 },
                 # 13 — Any STT issues observed? (3%)
                 {
@@ -4408,7 +4408,7 @@ _QA_SCHEMA = {
                     "weight": 0.03,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = The conversation was transcribed accurately — the written text closely matches what was actually said during the call  |  Yes = The transcription contained errors, missing words, or garbled text that makes it unreliable for auditing purposes",
+                    "guide": "Yes = STT issues causing words to be skipped or captured wrongly  |  No = No STT issues observed. (NO = good)",
                 },
                 # 14 — TTS quality clear and understandable? (3%)
                 {
@@ -4416,7 +4416,7 @@ _QA_SCHEMA = {
                     "weight": 0.03,
                     "options": ["No", "Yes", "NA"],
                     "fatal": False,
-                    "guide": "Yes = The bot's voice was clear, natural-sounding, and easy for the customer to understand throughout the call  |  No = The bot's voice had quality issues such as mispronunciations, robotic tone, or unclear speech that affected the interaction  |  NA = Not applicable — this was a text-based interaction (WhatsApp, chat, etc.)",
+                    "guide": "Yes = Bot voice was clear, natural-sounding, and easy to understand  |  No = Mispronunciations, robotic tone, or unclear speech observed  |  NA = Text-based interaction (WhatsApp / chat) — not applicable.",
                 },
                 # 15 — Bot switched language correctly per customer preference? (3%)
                 {
@@ -4424,7 +4424,7 @@ _QA_SCHEMA = {
                     "weight": 0.03,
                     "options": ["No", "Yes", "NA"],
                     "fatal": False,
-                    "guide": "Yes = The bot correctly detected the customer's preferred language and switched to it without any issues  |  No = The customer indicated a language preference but the bot failed to switch and continued in the wrong language  |  NA = No language switch was required during this interaction",
+                    "guide": "Yes = Bot detected preferred language and switched correctly  |  No = Customer indicated language preference but bot failed to switch — OR bot incorrectly switched based on just one word from the customer  |  NA = No language switch was required during this interaction.",
                 },
                 # 16 — Bot handled interruption well? (3%) — NEW in v0.3
                 {
@@ -4432,7 +4432,7 @@ _QA_SCHEMA = {
                     "weight": 0.03,
                     "options": ["No", "Yes", "NA"],
                     "fatal": False,
-                    "guide": "Yes = The bot correctly paused, acknowledged, or adapted when the customer interrupted — without losing context or repeating itself  |  No = The bot failed to handle the interruption — it continued speaking, ignored the customer, or lost the conversation context after the interruption  |  NA = No interruption occurred during this interaction",
+                    "guide": "Yes = Bot handled customer interruption correctly  |  No = Bot did not handle interruption properly  |  NA = No interruption occurred during this interaction.",
                 },
                 # 17 — Any AI Call Failed? (3%) — NEW in v0.3
                 {
@@ -4440,7 +4440,7 @@ _QA_SCHEMA = {
                     "weight": 0.03,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = The AI call completed successfully without any system-level failure, drop, or error  |  Yes = The AI call experienced a failure — such as an unexpected drop, a system error, or the bot becoming unresponsive mid-call — that prevented the conversation from completing normally",
+                    "guide": "Yes = AI call failed to initiate. Mention specific error in Remarks  |  No = No AI call attempt failed. (NO = good)",
                 },
             ],
         },
@@ -4455,7 +4455,7 @@ _QA_SCHEMA = {
                     "weight": 0.02,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = The bot followed the approved conversation script correctly throughout the interaction  |  Yes = The bot deviated from the approved script — it used incorrect phrasing, skipped mandatory lines, or said something outside the approved content",
+                    "guide": "No = Bot followed approved script correctly throughout. (NO = good)  |  Yes = Bot deviated — incorrect phrasing, skipped mandatory lines, or used unapproved content.",
                 },
                 # 19 — Any bot pronunciation issues affecting clarity? (2%)
                 {
@@ -4463,7 +4463,7 @@ _QA_SCHEMA = {
                     "weight": 0.02,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = All words were pronounced clearly and the customer could easily understand everything the bot said  |  Yes = The bot mispronounced words (e.g. names, numbers, or key terms) in a way that may have confused or misled the customer",
+                    "guide": "Yes = Pronunciation issues observed from the bot's end  |  No = No pronunciation issues. (NO = good)",
                 },
                 # 20 — Any WhatsApp template issues? (2%)
                 {
@@ -4471,7 +4471,7 @@ _QA_SCHEMA = {
                     "weight": 0.02,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = The correct and up-to-date message template was used throughout the conversation  |  Yes = An incorrect or outdated template was used — the message content did not match the approved version for this campaign",
+                    "guide": "Yes = Templates not approved, wrong template used, or marked as spam by META  |  No = No template issues. (NO = good)",
                 },
                 # 21 — WhatsApp/message delivery successful? (2%)
                 {
@@ -4479,7 +4479,7 @@ _QA_SCHEMA = {
                     "weight": 0.02,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = The message was successfully delivered and reached the customer  |  No = The message failed to deliver, bounced, or the delivery status could not be confirmed — this indicates a channel or connectivity problem",
+                    "guide": "Yes = No issue in message delivery  |  No = Delivery failed or red cross visible on WhatsApp message.",
                 },
                 # 22 — Any technical/platform issue observed? (2%)
                 {
@@ -4487,7 +4487,7 @@ _QA_SCHEMA = {
                     "weight": 0.02,
                     "options": ["Yes", "No"],
                     "fatal": False,
-                    "guide": "No = The interaction ran smoothly with no technical or platform-level issues detected  |  Yes = A technical issue was observed during the interaction (e.g. bot error, platform crash, API failure, integration problem, or unexpected bot behavior)",
+                    "guide": "No = Interaction ran smoothly — no technical issues detected. (NO = good)  |  Yes = Platform crash, API failure, or integration problem observed.",
                 },
                 # 23 — Abrupt disconnection before logical closure? (FATAL)
                 {
@@ -4495,7 +4495,7 @@ _QA_SCHEMA = {
                     "weight": 0.00,
                     "options": ["No", "Fatal"],
                     "fatal": True,
-                    "guide": "No = The conversation ended naturally and smoothly as per the designed flow — the bot completed its script before ending the call  |  Fatal = The call ended abruptly before the conversation reached a logical conclusion — this is an Auto-Fail and requires immediate review",
+                    "guide": "No = Conversation ended naturally per designed flow  |  Fatal = Call ended abruptly before logical conclusion. AUTO-FAIL — immediate review required.",
                 },
                 # 24 — Next Best Action (NBA) executed correctly? (FATAL) — promoted to FATAL in v0.3
                 {
@@ -4503,7 +4503,7 @@ _QA_SCHEMA = {
                     "weight": 0.00,
                     "options": ["No", "Yes"],
                     "fatal": True,
-                    "guide": "Yes = After the conversation, the bot correctly triggered the required next action (e.g. sending a follow-up message, scheduling a callback, or updating the lead status)  |  No = The required next action was identified but the bot failed to execute it — the follow-up task was left incomplete. This is an Auto-Fail in v0.3",
+                    "guide": "Yes = Bot correctly triggered required next action (follow-up message, callback scheduling, lead status update)  |  No = Required next action identified but bot failed to execute it. AUTO-FAIL.",
                 },
                 # 25 — Call/Message triggered in DND hours? (FATAL) — NEW in v0.3
                 {
@@ -4511,7 +4511,7 @@ _QA_SCHEMA = {
                     "weight": 0.00,
                     "options": ["Yes", "No"],
                     "fatal": True,
-                    "guide": "No = The call or message was sent within the permitted contact hours — DND regulations were respected  |  Yes = The call or message was sent outside permitted hours or to a DND-registered number — this is an Auto-Fail compliance violation and requires immediate escalation",
+                    "guide": "No = All outreach was within permitted campaign hours. (NO = good)  |  Yes = Call or message triggered during DND hours defined in campaign settings. AUTO-FAIL.",
                 },
             ],
         },
