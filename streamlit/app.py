@@ -4209,42 +4209,42 @@ _SENSE_CLIENT_NAMES = [""] + [r["client"] for r in _SENSE_CLIENTS]
 _SENSE_PM_LIST = [""] + sorted(set(list(set(r["pm"] for r in _SENSE_CLIENTS)) + ["Sayani", "Utsav"]))
 _SENSE_BOT_LIST = ["", "Tara", "Mmyra"]
 
-# ── Convin Sense built-in tier parameters (formerly "intelligence") ──────────
-# Now scored 0–2 like all tier params: 2 = best, 0 = worst.
+# ── Convin Sense built-in tier parameters — v0.3 ─────────────────────────────
+# Scored 0–2 like all tier params: 2 = best, 0 = worst.
 # Automatically injected into every audit sheet if not already present.
 _SENSE_BUILTIN_PARAMS = {
     "Was there any flow issue during the conversation?": {
         "description": "Checks whether the bot followed the correct conversation path from start to finish without jumping steps, getting stuck, or breaking out of the intended script",
-        "options":     ["Yes", "No"],  # Yes = issue present (bad), No = no issue (good)
+        "options":     ["Yes", "No"],
         "inverted":    False,
-        "weight":      0.11,
+        "weight":      0.10,
         "color":       "#dc2626",
         "icon":        "🔍",
         "guide":       "No = The bot followed the conversation flow correctly from start to finish without any breaks or detours  |  Yes = A flow issue was detected — the bot exited the intended script path, skipped steps, or behaved unexpectedly",
     },
     "Did the bot restart or repeat the conversation unnecessarily?": {
         "description": "Checks if the bot reset or restarted the entire conversation without any valid reason, forcing the customer to start over and repeat themselves",
-        "options":     ["Yes", "No"],  # Yes = restart happened (bad), No = no restart (good)
+        "options":     ["Yes", "No"],
         "inverted":    False,
-        "weight":      0.09,
+        "weight":      0.08,
         "color":       "#d97706",
         "icon":        "🔁",
         "guide":       "No = The conversation continued smoothly without any restarts  |  Yes = The bot unnecessarily restarted the conversation, forcing the customer to repeat their information from the beginning",
     },
     "Did the bot repeat responses or questions unnecessarily?": {
         "description": "Checks whether the bot sent the same message or asked the same question more than once without a valid reason — indicating a script loop or response handling error",
-        "options":     ["Yes", "No"],  # Yes = repetition detected (bad), No = no repetition (good)
+        "options":     ["Yes", "No"],
         "inverted":    False,
-        "weight":      0.06,
+        "weight":      0.05,
         "color":       "#7c3aed",
         "icon":        "🔄",
         "guide":       "No = Every bot response was unique and relevant — no repeated messages or questions  |  Yes = The bot repeated the same message or question more than once without reason, indicating a script loop or error",
     },
     "Was there any latency issue during the conversation?": {
         "description": "Checks whether the bot responded within an acceptable time. Responses taking longer than 2.5 seconds are considered a latency issue and can confuse or frustrate the customer",
-        "options":     ["Yes", "No"],  # Yes = latency issue present (bad), No = no issue (good)
+        "options":     ["Yes", "No"],
         "inverted":    False,
-        "weight":      0.04,
+        "weight":      0.03,
         "color":       "#0891b2",
         "icon":        "⚡",
         "guide":       "No = The bot responded quickly (within 2.5 seconds) — no noticeable delay  |  Yes = The bot took too long to respond (more than 2.5 seconds), which may have confused or frustrated the customer",
@@ -4271,7 +4271,7 @@ _SENSE_BUILTIN_PARAMS = {
         "description": "Checks if the WhatsApp message or outbound communication was actually delivered to the customer — covers delivery status, read receipts, and whether the channel was reachable at the time",
         "options":     ["No", "Yes"],
         "inverted":    False,
-        "weight":      0.01,
+        "weight":      0.02,
         "color":       "#2563EB",
         "icon":        "📲",
         "guide":       "Yes = The message was successfully delivered and reached the customer  |  No = The message failed to deliver, bounced, or the delivery status could not be confirmed — this indicates a channel or connectivity problem",
@@ -4280,7 +4280,7 @@ _SENSE_BUILTIN_PARAMS = {
         "description": "Flags any technical or platform-side problems that occurred during the bot interaction — such as errors, unexpected restarts, API failures, integration issues, or any behavior that disrupted the conversation",
         "options":     ["Yes", "No"],
         "inverted":    False,
-        "weight":      0.01,
+        "weight":      0.02,
         "color":       "#7c3aed",
         "icon":        "🛠️",
         "guide":       "No = The interaction ran smoothly with no technical or platform-level issues detected  |  Yes = A technical issue was observed during the interaction (e.g. bot error, platform crash, API failure, integration problem, or unexpected bot behavior)",
@@ -4288,21 +4288,34 @@ _SENSE_BUILTIN_PARAMS = {
 }
 _DEFAULT_PARAM_WEIGHT = 1.0   # weight for any legend param not listed above
 
-# ── Convin Sense QA Audit Schema (Convin.ai standard sheet) ──────────────────
+# ── Convin Sense QA Audit Schema — v0.3 (25 parameters) ──────────────────────
+# Tier 1 CRITICAL: 9 params · 65% | Tier 2 IMPORTANT: 8 params · 25%
+# Tier 3 QUALITY: 5 weighted (10%) + 3 FATAL auto-fail
+# Pass threshold: Bot Score ≥ 80
 _QA_SCHEMA = {
     "tiers": [
         {
             "label": "TIER 1 · CRITICAL",
-            "weight_pct": 64,
+            "weight_pct": 65,
             "color": "#dc2626",
             "params": [
+                # 1 — Lead metrices accurately selected? (12%)
                 {
                     "col": "Was the disposition accurately selected?",
-                    "weight": 0.13,
+                    "weight": 0.12,
                     "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = The bot selected the correct call outcome (disposition) that accurately reflects what happened in the conversation  |  No = The disposition selected does not match the actual conversation outcome — it is incorrect or mismatched",
+                    "guide": "Yes = The bot selected the correct call outcome (disposition / lead metric) that accurately reflects what happened in the conversation  |  No = The disposition selected does not match the actual conversation outcome — it is incorrect or mismatched",
                 },
+                # 2 — Lead qualified accurately? (8%) — NEW in v0.3
+                {
+                    "col": "Was the lead qualified accurately?",
+                    "weight": 0.08,
+                    "options": ["No", "Yes"],
+                    "fatal": False,
+                    "guide": "Yes = The bot correctly assessed and qualified the lead based on the defined criteria — the lead stage assigned matches the customer's actual intent and situation  |  No = The bot misqualified the lead — the stage assigned does not match the customer's actual intent, leading to incorrect follow-up actions",
+                },
+                # 3 — All required entities captured correctly? (4%)
                 {
                     "col": "Were all required entities captured correctly?",
                     "weight": 0.04,
@@ -4310,34 +4323,39 @@ _QA_SCHEMA = {
                     "fatal": False,
                     "guide": "Yes = All important customer details (name, amount, reference number, etc.) were correctly identified and recorded by the bot  |  No = One or more required details were missed, misheard, or captured incorrectly",
                 },
+                # 4 — Context passed correctly across conversation turns? (11%)
                 {
                     "col": "Was context passed correctly across conversation turns?",
-                    "weight": 0.12,
+                    "weight": 0.11,
                     "options": ["No", "Yes"],
                     "fatal": False,
                     "guide": "Yes = The bot remembered and correctly used information shared earlier in the conversation — the customer did not need to repeat themselves  |  No = The bot lost track of earlier information and the customer had to repeat their details again",
                 },
+                # 5 — Any flow issue during the conversation? (10%)
                 {
                     "col": "Was there any flow issue during the conversation?",
-                    "weight": 0.11,
+                    "weight": 0.10,
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = The bot followed the conversation script correctly from start to finish  |  Yes = The bot deviated from the intended script path — it jumped steps, got stuck, or behaved outside the designed flow",
                 },
+                # 6 — Bot restarted conversation unnecessarily? (8%)
                 {
                     "col": "Did the bot restart the conversation unnecessarily?",
-                    "weight": 0.09,
+                    "weight": 0.08,
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = The conversation continued smoothly without any unnecessary restarts  |  Yes = The bot restarted the conversation without a valid reason, forcing the customer to repeat their information from the beginning",
                 },
+                # 7 — WhatsApp message content appropriate and well understood? (5%)
                 {
                     "col": "Was the message content appropriate and well understood?",
-                    "weight": 0.07,
+                    "weight": 0.05,
                     "options": ["No", "Yes"],
                     "fatal": False,
                     "guide": "Yes = The bot correctly understood what the customer said and replied with an appropriate and relevant message  |  No = The bot misunderstood the customer's message and gave an incorrect, irrelevant, or confusing response",
                 },
+                # 8 — Follow-up completed within specified time? (4%)
                 {
                     "col": "Was the follow-up completed within the specified time?",
                     "weight": 0.04,
@@ -4345,9 +4363,10 @@ _QA_SCHEMA = {
                     "fatal": False,
                     "guide": "Yes = The required follow-up action (call, message, or task) was completed within the agreed time limit (SLA)  |  No = The follow-up was missed or completed late, exceeding the allowed time window",
                 },
+                # 9 — Any latency issue during the conversation? (3%)
                 {
                     "col": "Was there any latency issue during the conversation?",
-                    "weight": 0.04,
+                    "weight": 0.03,
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = The bot responded promptly within 2.5 seconds — no noticeable delay for the customer  |  Yes = The bot's response was slow (over 2.5 seconds), which may have confused or frustrated the customer",
@@ -4356,44 +4375,34 @@ _QA_SCHEMA = {
         },
         {
             "label": "TIER 2 · IMPORTANT",
-            "weight_pct": 30,
+            "weight_pct": 25,
             "color": "#f59e0b",
             "params": [
+                # 10 — Bot repeated responses or questions unnecessarily? (5%)
                 {
                     "col": "Did the bot repeat responses or questions unnecessarily?",
-                    "weight": 0.06,
+                    "weight": 0.05,
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = Every bot response was unique and relevant — no repeated messages or questions were sent  |  Yes = The bot repeated the same message or question more than once without a valid reason, indicating a script loop or response error",
                 },
-                {
-                    "col": "Was there any dead air or blank space in the conversation?",
-                    "weight": 0.06,
-                    "options": ["Yes", "No"],
-                    "fatal": False,
-                    "guide": "No = The conversation flowed continuously with no unexplained silences or gaps  |  Yes = There was a noticeable silence or blank pause lasting more than 3 seconds — this can make the customer feel the call dropped or the bot has stopped working",
-                },
+                # 11 — Unnecessary repeated calls in short timeframe? (3%)
                 {
                     "col": "Were there any unnecessary repeated calls to the customer?",
-                    "weight": 0.04,
+                    "weight": 0.03,
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = The customer was contacted only the appropriate number of times — no excess or duplicate calls  |  Yes = The bot or system placed multiple calls to the same customer in a short period without a valid reason, which can irritate the customer",
                 },
-                {
-                    "col": "Did the bot provide a proper introduction?",
-                    "weight": 0.05,
-                    "options": ["No", "Yes"],
-                    "fatal": False,
-                    "guide": "Yes = The bot clearly introduced itself, stated the company name, and explained the purpose of the call at the very start  |  No = The introduction was missing or incomplete — the bot did not state who it is, the company name, or why it is calling",
-                },
+                # 12 — Background noise affecting audio clarity? (2%)
                 {
                     "col": "Was there any background noise affecting audio clarity?",
-                    "weight": 0.03,
+                    "weight": 0.02,
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = The call audio was clean and free from any background noise or disturbances  |  Yes = Background noise was present during the call and made it difficult to hear or understand the conversation clearly",
                 },
+                # 13 — Any STT issues observed? (3%)
                 {
                     "col": "Were there any transcription issues affecting audit reliability?",
                     "weight": 0.03,
@@ -4401,62 +4410,86 @@ _QA_SCHEMA = {
                     "fatal": False,
                     "guide": "No = The conversation was transcribed accurately — the written text closely matches what was actually said during the call  |  Yes = The transcription contained errors, missing words, or garbled text that makes it unreliable for auditing purposes",
                 },
+                # 14 — TTS quality clear and understandable? (3%)
                 {
                     "col": "Was the TTS (Text-to-Speech) quality clear and understandable?",
                     "weight": 0.03,
-                    "options": ["No", "Yes"],
+                    "options": ["No", "Yes", "NA"],
                     "fatal": False,
                     "guide": "Yes = The bot's voice was clear, natural-sounding, and easy for the customer to understand throughout the call  |  No = The bot's voice had quality issues such as mispronunciations, robotic tone, or unclear speech that affected the interaction  |  NA = Not applicable — this was a text-based interaction (WhatsApp, chat, etc.)",
+                },
+                # 15 — Bot switched language correctly per customer preference? (3%)
+                {
+                    "col": "Did the bot switch language correctly per customer preference?",
+                    "weight": 0.03,
+                    "options": ["No", "Yes", "NA"],
+                    "fatal": False,
+                    "guide": "Yes = The bot correctly detected the customer's preferred language and switched to it without any issues  |  No = The customer indicated a language preference but the bot failed to switch and continued in the wrong language  |  NA = No language switch was required during this interaction",
+                },
+                # 16 — Bot handled interruption well? (3%) — NEW in v0.3
+                {
+                    "col": "Did the bot handle interruptions well?",
+                    "weight": 0.03,
+                    "options": ["No", "Yes", "NA"],
+                    "fatal": False,
+                    "guide": "Yes = The bot correctly paused, acknowledged, or adapted when the customer interrupted — without losing context or repeating itself  |  No = The bot failed to handle the interruption — it continued speaking, ignored the customer, or lost the conversation context after the interruption  |  NA = No interruption occurred during this interaction",
+                },
+                # 17 — Any AI Call Failed? (3%) — NEW in v0.3
+                {
+                    "col": "Was there any AI call failure?",
+                    "weight": 0.03,
+                    "options": ["Yes", "No"],
+                    "fatal": False,
+                    "guide": "No = The AI call completed successfully without any system-level failure, drop, or error  |  Yes = The AI call experienced a failure — such as an unexpected drop, a system error, or the bot becoming unresponsive mid-call — that prevented the conversation from completing normally",
                 },
             ],
         },
         {
             "label": "TIER 3 · QUALITY",
-            "weight_pct": 6,
+            "weight_pct": 10,
             "color": "#2563EB",
             "params": [
-                {
-                    "col": "Did the bot switch language correctly per customer preference?",
-                    "weight": 0.01,
-                    "options": ["No", "Yes"],
-                    "fatal": False,
-                    "guide": "Yes = The bot correctly detected the customer's preferred language and switched to it without any issues  |  No = The customer indicated a language preference but the bot failed to switch and continued in the wrong language  |  NA = No language switch was required during this interaction",
-                },
+                # 18 — Any script issues in the transcript? (2%)
                 {
                     "col": "Were there any script issues in the transcript?",
-                    "weight": 0.01,
+                    "weight": 0.02,
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = The bot followed the approved conversation script correctly throughout the interaction  |  Yes = The bot deviated from the approved script — it used incorrect phrasing, skipped mandatory lines, or said something outside the approved content",
                 },
-                {
-                    "col": "Were there any template issues in the conversation?",
-                    "weight": 0.01,
-                    "options": ["Yes", "No"],
-                    "fatal": False,
-                    "guide": "No = The correct and up-to-date message template was used throughout the conversation  |  Yes = An incorrect or outdated template was used — the message content did not match the approved version for this campaign",
-                },
+                # 19 — Any bot pronunciation issues affecting clarity? (2%)
                 {
                     "col": "Were there any pronunciation issues affecting clarity?",
-                    "weight": 0.01,
+                    "weight": 0.02,
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = All words were pronounced clearly and the customer could easily understand everything the bot said  |  Yes = The bot mispronounced words (e.g. names, numbers, or key terms) in a way that may have confused or misled the customer",
                 },
+                # 20 — Any WhatsApp template issues? (2%)
+                {
+                    "col": "Were there any template issues in the conversation?",
+                    "weight": 0.02,
+                    "options": ["Yes", "No"],
+                    "fatal": False,
+                    "guide": "No = The correct and up-to-date message template was used throughout the conversation  |  Yes = An incorrect or outdated template was used — the message content did not match the approved version for this campaign",
+                },
+                # 21 — WhatsApp/message delivery successful? (2%)
                 {
                     "col": "Was WhatsApp/message delivery successful?",
-                    "weight": 0.01,
+                    "weight": 0.02,
                     "options": ["No", "Yes"],
                     "fatal": False,
                     "guide": "Yes = The message was successfully delivered and reached the customer  |  No = The message failed to deliver, bounced, or the delivery status could not be confirmed — this indicates a channel or connectivity problem",
                 },
+                # 22 — Any technical/platform issue observed? (2%)
                 {
                     "col": "Was any technical/platform issue observed during the interaction?",
-                    "weight": 0.01,
+                    "weight": 0.02,
                     "options": ["Yes", "No"],
                     "fatal": False,
                     "guide": "No = The interaction ran smoothly with no technical or platform-level issues detected  |  Yes = A technical issue was observed during the interaction (e.g. bot error, platform crash, API failure, integration problem, or unexpected bot behavior)",
                 },
+                # 23 — Abrupt disconnection before logical closure? (FATAL)
                 {
                     "col": "Was there an abrupt disconnection before logical closure?",
                     "weight": 0.00,
@@ -4464,25 +4497,32 @@ _QA_SCHEMA = {
                     "fatal": True,
                     "guide": "No = The conversation ended naturally and smoothly as per the designed flow — the bot completed its script before ending the call  |  Fatal = The call ended abruptly before the conversation reached a logical conclusion — this is an Auto-Fail and requires immediate review",
                 },
+                # 24 — Next Best Action (NBA) executed correctly? (FATAL) — promoted to FATAL in v0.3
                 {
                     "col": "Was the Next Best Action (NBA) executed correctly?",
                     "weight": 0.00,
                     "options": ["No", "Yes"],
-                    "fatal": False,
-                    "guide": "Yes = After the conversation, the bot correctly triggered the required next action (e.g. sending a follow-up message, scheduling a callback, or updating the lead status)  |  No = The required next action was identified but the bot failed to execute it — the follow-up task was left incomplete",
+                    "fatal": True,
+                    "guide": "Yes = After the conversation, the bot correctly triggered the required next action (e.g. sending a follow-up message, scheduling a callback, or updating the lead status)  |  No = The required next action was identified but the bot failed to execute it — the follow-up task was left incomplete. This is an Auto-Fail in v0.3",
+                },
+                # 25 — Call/Message triggered in DND hours? (FATAL) — NEW in v0.3
+                {
+                    "col": "Was the call/message triggered during DND hours?",
+                    "weight": 0.00,
+                    "options": ["Yes", "No"],
+                    "fatal": True,
+                    "guide": "No = The call or message was sent within the permitted contact hours — DND regulations were respected  |  Yes = The call or message was sent outside permitted hours or to a DND-registered number — this is an Auto-Fail compliance violation and requires immediate escalation",
                 },
             ],
         },
     ],
-    # Intelligence list is now empty — Flow Issue, Bot Restarted Conversation,
-    # and Bot Repetition are standard tier params (Tier 1 / Tier 2).
     "intelligence": [],
     "lead_stage_opts":   ["Cold", "Warm", "Hot", "Not Interested", "RNR"],
     "lead_stage_scores": {"Cold": 30, "Warm": 70, "Hot": 90, "Not Interested": 0, "RNR": 10},
     "lead_score_cols":   ["Lead Stage", "Correct Disposition", "Correct Disposition (Expected)"],
     "auto_cols":         ["Lead Score", "Lead Composite", "Bot Score", "Intelligence Score", "Status", "Fatal?"],
     "metadata_cols":     ["Audit Date", "QA", "Client", "Campaign Name", "PM / CSM", "Bot Name", "Disposition", "Lead Number", "Lead Link", "Conversation Link"],
-    # Status bands: Bot Score ≥ 80 Pass | 60–79 Needs Review | < 60 Fail | Fatal → Auto-Fail
+    # Status bands — Pass threshold: Bot Score ≥ 80 (Convin Sense v0.3)
     "status_bands": [
         {"min": 80,  "label": "Pass",         "color": "#0ebc6e"},
         {"min": 60,  "label": "Needs Review", "color": "#f59e0b"},
