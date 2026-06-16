@@ -4213,41 +4213,41 @@ _SENSE_BOT_LIST = ["", "Tara", "Mmyra"]
 # Scored 0–2 like all tier params: 2 = best, 0 = worst.
 # Automatically injected into every audit sheet if not already present.
 _SENSE_BUILTIN_PARAMS = {
-    "Was there any flow issue during the conversation?": {
+    "Was the conversation flow executed correctly?": {
         "description": "Checks whether the bot followed the correct conversation path from start to finish without jumping steps, getting stuck, or breaking out of the intended script",
-        "options":     ["Yes", "No"],
+        "options":     ["No", "Yes"],
         "inverted":    False,
         "weight":      0.10,
         "color":       "#dc2626",
         "icon":        "🔍",
-        "guide":       "No = The bot followed the conversation flow correctly from start to finish without any breaks or detours  |  Yes = A flow issue was detected — the bot exited the intended script path, skipped steps, or behaved unexpectedly",
+        "guide":       "Yes = The bot followed the conversation flow correctly from start to finish without any breaks or detours  |  No = A flow issue was detected — the bot exited the intended script path, skipped steps, or behaved unexpectedly",
     },
-    "Did the bot restart or repeat the conversation unnecessarily?": {
+    "Did the bot maintain conversation continuity correctly without unnecessary restart?": {
         "description": "Checks if the bot reset or restarted the entire conversation without any valid reason, forcing the customer to start over and repeat themselves",
-        "options":     ["Yes", "No"],
+        "options":     ["No", "Yes"],
         "inverted":    False,
         "weight":      0.08,
         "color":       "#d97706",
         "icon":        "🔁",
-        "guide":       "No = The conversation continued smoothly without any restarts  |  Yes = The bot unnecessarily restarted the conversation, forcing the customer to repeat their information from the beginning",
+        "guide":       "Yes = The conversation continued smoothly without any restarts  |  No = The bot unnecessarily restarted the conversation, forcing the customer to repeat their information from the beginning",
     },
-    "Did the bot repeat responses or questions unnecessarily?": {
+    "Did the bot avoid unnecessary repetition of responses or questions?": {
         "description": "Checks whether the bot sent the same message or asked the same question more than once without a valid reason — indicating a script loop or response handling error",
-        "options":     ["Yes", "No"],
+        "options":     ["No", "Yes"],
         "inverted":    False,
         "weight":      0.05,
         "color":       "#7c3aed",
         "icon":        "🔄",
-        "guide":       "No = Every bot response was unique and relevant — no repeated messages or questions  |  Yes = The bot repeated the same message or question more than once without reason, indicating a script loop or error",
+        "guide":       "Yes = Every bot response was unique and relevant — no repeated messages or questions  |  No = The bot repeated the same message or question more than once without reason, indicating a script loop or error",
     },
-    "Was there any latency issue during the conversation?": {
+    "Did the bot respond within acceptable latency limits?": {
         "description": "Checks whether the bot responded within an acceptable time. Responses taking longer than 2.5 seconds are considered a latency issue and can confuse or frustrate the customer",
-        "options":     ["Yes", "No"],
+        "options":     ["No", "Yes"],
         "inverted":    False,
         "weight":      0.03,
         "color":       "#0891b2",
         "icon":        "⚡",
-        "guide":       "No = The bot responded quickly (within 2.5 seconds) — no noticeable delay  |  Yes = The bot took too long to respond (more than 2.5 seconds), which may have confused or frustrated the customer",
+        "guide":       "Yes = The bot responded quickly (within 2.5 seconds) — no noticeable delay  |  No = The bot took too long to respond (more than 2.5 seconds), which may have confused or frustrated the customer",
     },
     "Was the TTS (Text-to-Speech) quality clear and understandable?": {
         "description": "Rates the quality of the bot's voice output. A good TTS voice should sound clear, natural, and easy for the customer to understand without any confusion",
@@ -4276,14 +4276,14 @@ _SENSE_BUILTIN_PARAMS = {
         "icon":        "📲",
         "guide":       "Yes = The message was successfully delivered and reached the customer  |  No = The message failed to deliver, bounced, or the delivery status could not be confirmed — this indicates a channel or connectivity problem",
     },
-    "Was any technical/platform issue observed during the interaction?": {
+    "Did the interaction run smoothly without technical/platform issues?": {
         "description": "Flags any technical or platform-side problems that occurred during the bot interaction — such as errors, unexpected restarts, API failures, integration issues, or any behavior that disrupted the conversation",
-        "options":     ["Yes", "No"],
+        "options":     ["No", "Yes"],
         "inverted":    False,
         "weight":      0.02,
         "color":       "#7c3aed",
         "icon":        "🛠️",
-        "guide":       "No = The interaction ran smoothly with no technical or platform-level issues detected  |  Yes = A technical issue was observed during the interaction (e.g. bot error, platform crash, API failure, integration problem, or unexpected bot behavior)",
+        "guide":       "Yes = The interaction ran smoothly with no technical or platform-level issues detected  |  No = A technical issue was observed during the interaction (e.g. bot error, platform crash, API failure, integration problem, or unexpected bot behavior)",
     },
 }
 _DEFAULT_PARAM_WEIGHT = 1.0   # weight for any legend param not listed above
@@ -4331,21 +4331,21 @@ _QA_SCHEMA = {
                     "fatal": False,
                     "guide": "Yes = Bot remembered earlier info — customer did not need to repeat themselves  |  No = Bot lost context — customer had to repeat information.",
                 },
-                # 5 — Any flow issue during the conversation? (10%)
+                # 5 — Flow executed correctly? (10%)
                 {
-                    "col": "Was there any flow issue during the conversation?",
+                    "col": "Was the conversation flow executed correctly?",
                     "weight": 0.10,
-                    "options": ["Yes", "No"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "No = Bot followed script correctly start to finish. (NO = good outcome)  |  Yes = Bot deviated — jumped steps, got stuck, or behaved outside designed flow.",
+                    "guide": "Yes = Bot followed script correctly start to finish.  |  No = Bot deviated — jumped steps, got stuck, or behaved outside designed flow.",
                 },
-                # 6 — Bot restarted conversation unnecessarily? (8%)
+                # 6 — Conversation continuity maintained correctly? (8%)
                 {
-                    "col": "Did the bot restart the conversation unnecessarily?",
+                    "col": "Did the bot maintain conversation continuity correctly without unnecessary restart?",
                     "weight": 0.08,
-                    "options": ["Yes", "No"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "No = Conversation continued smoothly without unnecessary restarts. (NO = good)  |  Yes = Bot restarted without valid reason — customer forced to repeat from beginning.",
+                    "guide": "Yes = Conversation continued smoothly without unnecessary restarts.  |  No = Bot restarted without valid reason — customer forced to repeat from beginning.",
                 },
                 # 7 — WhatsApp message content appropriate and well understood? (5%)
                 {
@@ -4363,13 +4363,13 @@ _QA_SCHEMA = {
                     "fatal": False,
                     "guide": "Yes = Required follow-up (call / message / task) completed within SLA  |  No = Follow-up missed or completed late beyond the allowed time window.",
                 },
-                # 9 — Any latency issue during the conversation? (3%)
+                # 9 — Bot responded within acceptable latency? (3%)
                 {
-                    "col": "Was there any latency issue during the conversation?",
+                    "col": "Did the bot respond within acceptable latency limits?",
                     "weight": 0.03,
-                    "options": ["Yes", "No"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "No = Bot responded within 3 seconds — no noticeable delay. (NO = good)  |  Yes = Bot response was slow (over 3 seconds), potentially confusing or frustrating the customer.",
+                    "guide": "Yes = Bot responded within 3 seconds — no noticeable delay.  |  No = Bot response was slow (over 3 seconds), potentially confusing or frustrating the customer.",
                 },
             ],
         },
@@ -4378,37 +4378,37 @@ _QA_SCHEMA = {
             "weight_pct": 25,
             "color": "#f59e0b",
             "params": [
-                # 10 — Bot repeated responses or questions unnecessarily? (5%)
+                # 10 — Bot avoided unnecessary repetition? (5%)
                 {
-                    "col": "Did the bot repeat responses or questions unnecessarily?",
+                    "col": "Did the bot avoid unnecessary repetition of responses or questions?",
                     "weight": 0.05,
-                    "options": ["Yes", "No"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "No = Every response was unique and relevant. (NO = good)  |  Yes = Bot repeated same message / question without valid reason — indicates script loop or response error.",
+                    "guide": "Yes = Every response was unique and relevant.  |  No = Bot repeated same message / question without valid reason — indicates script loop or response error.",
                 },
-                # 11 — Unnecessary repeated calls in short timeframe? (3%)
+                # 11 — Customer follow-ups managed appropriately? (3%)
                 {
-                    "col": "Were there any unnecessary repeated calls to the customer?",
+                    "col": "Were customer follow-ups managed appropriately without unnecessary repeated calls?",
                     "weight": 0.03,
-                    "options": ["Yes", "No"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "No = Customer contacted appropriate number of times. (NO = good)  |  Yes = Multiple calls placed in short period without valid reason — potential customer irritation.",
+                    "guide": "Yes = Customer contacted appropriate number of times.  |  No = Multiple calls placed in short period without valid reason — potential customer irritation.",
                 },
-                # 12 — Background noise affecting audio clarity? (2%)
+                # 12 — Audio clear without significant background noise? (2%)
                 {
-                    "col": "Was there any background noise affecting audio clarity?",
+                    "col": "Was the audio clear without significant background noise?",
                     "weight": 0.02,
-                    "options": ["Yes", "No"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = Background noise from customer end causing undesired bot performance  |  No = No background noise observed. (NO = good)",
+                    "guide": "Yes = No background noise observed.  |  No = Background noise from customer end causing undesired bot performance",
                 },
-                # 13 — Any STT issues observed? (3%)
+                # 13 — Transcription accurate and reliable? (3%)
                 {
-                    "col": "Were there any transcription issues affecting audit reliability?",
+                    "col": "Was the transcription accurate and reliable?",
                     "weight": 0.03,
-                    "options": ["Yes", "No"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = STT issues causing words to be skipped or captured wrongly  |  No = No STT issues observed. (NO = good)",
+                    "guide": "Yes = No STT issues observed.  |  No = STT issues causing words to be skipped or captured wrongly",
                 },
                 # 14 — TTS quality clear and understandable? (3%)
                 {
@@ -4434,13 +4434,13 @@ _QA_SCHEMA = {
                     "fatal": False,
                     "guide": "Yes = Bot handled customer interruption correctly  |  No = Bot did not handle interruption properly  |  NA = No interruption occurred during this interaction.",
                 },
-                # 17 — Any AI Call Failed? (3%) — NEW in v0.3
+                # 17 — AI call initiated and completed successfully? (3%)
                 {
-                    "col": "Was there any AI call failure?",
+                    "col": "Was the AI call initiated and completed successfully?",
                     "weight": 0.03,
-                    "options": ["Yes", "No"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = AI call failed to initiate. Mention specific error in Remarks  |  No = No AI call attempt failed. (NO = good)",
+                    "guide": "Yes = No AI call attempt failed.  |  No = AI call failed to initiate. Mention specific error in Remarks",
                 },
             ],
         },
@@ -4449,29 +4449,29 @@ _QA_SCHEMA = {
             "weight_pct": 10,
             "color": "#2563EB",
             "params": [
-                # 18 — Any script issues in the transcript? (2%)
+                # 18 — Bot followed approved script correctly? (2%)
                 {
-                    "col": "Were there any script issues in the transcript?",
+                    "col": "Did the bot follow the approved script correctly?",
                     "weight": 0.02,
-                    "options": ["Yes", "No"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "No = Bot followed approved script correctly throughout. (NO = good)  |  Yes = Bot deviated — incorrect phrasing, skipped mandatory lines, or used unapproved content.",
+                    "guide": "Yes = Bot followed approved script correctly throughout.  |  No = Bot deviated — incorrect phrasing, skipped mandatory lines, or used unapproved content.",
                 },
-                # 19 — Any bot pronunciation issues affecting clarity? (2%)
+                # 19 — Bot's pronunciation clear and accurate? (2%)
                 {
-                    "col": "Were there any pronunciation issues affecting clarity?",
+                    "col": "Was the bot's pronunciation clear and accurate?",
                     "weight": 0.02,
-                    "options": ["Yes", "No"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = Pronunciation issues observed from the bot's end  |  No = No pronunciation issues. (NO = good)",
+                    "guide": "Yes = No pronunciation issues.  |  No = Pronunciation issues observed from the bot's end",
                 },
-                # 20 — Any WhatsApp template issues? (2%)
+                # 20 — Templates correctly approved and used? (2%)
                 {
-                    "col": "Were there any template issues in the conversation?",
+                    "col": "Were the templates correctly approved and used?",
                     "weight": 0.02,
-                    "options": ["Yes", "No"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "Yes = Templates not approved, wrong template used, or marked as spam by META  |  No = No template issues. (NO = good)",
+                    "guide": "Yes = No template issues.  |  No = Templates not approved, wrong template used, or marked as spam by META",
                 },
                 # 21 — WhatsApp/message delivery successful? (2%)
                 {
@@ -4481,21 +4481,21 @@ _QA_SCHEMA = {
                     "fatal": False,
                     "guide": "Yes = No issue in message delivery  |  No = Delivery failed or red cross visible on WhatsApp message.",
                 },
-                # 22 — Any technical/platform issue observed? (2%)
+                # 22 — Interaction ran smoothly without technical issues? (2%)
                 {
-                    "col": "Was any technical/platform issue observed during the interaction?",
+                    "col": "Did the interaction run smoothly without technical/platform issues?",
                     "weight": 0.02,
-                    "options": ["Yes", "No"],
+                    "options": ["No", "Yes"],
                     "fatal": False,
-                    "guide": "No = Interaction ran smoothly — no technical issues detected. (NO = good)  |  Yes = Platform crash, API failure, or integration problem observed.",
+                    "guide": "Yes = Interaction ran smoothly — no technical issues detected.  |  No = Platform crash, API failure, or integration problem observed.",
                 },
-                # 23 — Abrupt disconnection before logical closure? (FATAL)
+                # 23 — Conversation reached logical closure successfully? (FATAL)
                 {
-                    "col": "Was there an abrupt disconnection before logical closure?",
+                    "col": "Did the conversation reach logical closure successfully?",
                     "weight": 0.00,
-                    "options": ["No", "Fatal"],
+                    "options": ["Fatal", "Yes"],
                     "fatal": True,
-                    "guide": "No = Conversation ended naturally per designed flow  |  Fatal = Call ended abruptly before logical conclusion. AUTO-FAIL — immediate review required.",
+                    "guide": "Yes = Conversation ended naturally per designed flow  |  Fatal = Call ended abruptly before logical conclusion. AUTO-FAIL — immediate review required.",
                 },
                 # 24 — Next Best Action (NBA) executed correctly? (FATAL) — promoted to FATAL in v0.3
                 {
@@ -4505,13 +4505,13 @@ _QA_SCHEMA = {
                     "fatal": True,
                     "guide": "Yes = Bot correctly triggered required next action (follow-up message, callback scheduling, lead status update)  |  No = Required next action identified but bot failed to execute it. AUTO-FAIL.",
                 },
-                # 25 — Call/Message triggered in DND hours? (FATAL) — NEW in v0.3
+                # 25 — Call/Message triggered within permitted hours? (FATAL)
                 {
-                    "col": "Was the call/message triggered during DND hours?",
+                    "col": "Was the call/message triggered within permitted hours?",
                     "weight": 0.00,
-                    "options": ["Yes", "No"],
+                    "options": ["No", "Yes"],
                     "fatal": True,
-                    "guide": "No = All outreach was within permitted campaign hours. (NO = good)  |  Yes = Call or message triggered during DND hours defined in campaign settings. AUTO-FAIL.",
+                    "guide": "Yes = All outreach was within permitted campaign hours.  |  No = Call or message triggered during DND hours defined in campaign settings. AUTO-FAIL.",
                 },
             ],
         },
@@ -5025,11 +5025,11 @@ def _gen_qa_insights(audit_df):
                     "action": "Compare latest 20% of audits against earlier batches — identify specific parameter drops that coincide with the decline.",
                     "impact": "Early detection of drift prevents a campaign-wide score degradation from compounding."})
 
-    # Tier-1 critical parameter deep-dive (Flow Issue, Bot Restarted, Bot Repetition)
+    # Tier-1 critical parameter deep-dive (Flow Execution, Conversation Continuity, Repetition Avoidance)
     _t1_alert_params = [
-        ("Was there any flow issue during the conversation?",        "No", "🔍", "flow disruptions — bot exited the intended script path"),
-        ("Did the bot restart the conversation unnecessarily?",       "No", "🔁", "conversation restarts — bot lost context mid-call"),
-        ("Did the bot repeat responses or questions unnecessarily?",  "No", "🔄", "repetitive bot responses — duplicate script loops detected"),
+        ("Was the conversation flow executed correctly?",        "Yes", "🔍", "flow disruptions — bot exited the intended script path"),
+        ("Did the bot maintain conversation continuity correctly without unnecessary restart?",       "Yes", "🔁", "conversation restarts — bot lost context mid-call"),
+        ("Did the bot avoid unnecessary repetition of responses or questions?",  "Yes", "🔄", "repetitive bot responses — duplicate script loops detected"),
     ]
     for _tpn, _best_val, _icon, _desc in _t1_alert_params:
         _tc = next((c for c in audit_df.columns if _tpn.lower() in str(c).lower()), None)
