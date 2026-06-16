@@ -27,6 +27,10 @@ _DEFAULT_USERS = {
     "1009": {"name": "Left - Mansi",    "role": "qa"},
     "1010": {"name": "Sakshi",          "role": "qa"},
     "1012": {"name": "Tabassum Arfeen", "role": "qa"},
+    "1013": {"name": "Bhavya",          "role": "qa"},
+    "1014": {"name": "Roshan",          "role": "qa"},
+    "1015": {"name": "Siddhi",          "role": "qa"},
+    "9999": {"name": "Test",            "role": "qa"},
 }
 
 _ROLE_LABELS = {
