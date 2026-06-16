@@ -2128,7 +2128,7 @@ def render_clients():
                                    file_name="convin_clients.csv", mime="text/csv",
                                    use_container_width=True)
                 import json as _json
-                _bak = _json.dumps(all_clients, indent=2, ensure_ascii=False)
+                _bak = _json.dumps(all_clients, ensure_ascii=False, separators=(',', ':'))
                 st.download_button("⬇️  Backup JSON", data=_bak,
                                    file_name="clients_backup.json", mime="application/json",
                                    use_container_width=True)
@@ -15313,7 +15313,9 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
         # ── Export (based on filtered set) ────────────────────────────────────
         _log_df = pd.DataFrame([{k: v for k, v in r.items() if k != "_row_id"} for r in _filtered_log])
         import io as _io
-        _ec1, _ec2 = st.columns(2)
+        import gzip as _gzip
+        import json as _json_exp
+        _ec1, _ec2, _ec3 = st.columns(3)
         with _ec1:
             st.download_button(
                 "⬇ Export CSV",
@@ -15333,6 +15335,20 @@ div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
                 file_name="convin_qa_audit_log.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 key="sense_dl_auditlog_xl",
+                use_container_width=True,
+            )
+        with _ec3:
+            _json_data = _json_exp.dumps(_filtered_log, ensure_ascii=False, separators=(',', ':'))
+            _gz_buf = _io.BytesIO()
+            with _gzip.GzipFile(fileobj=_gz_buf, mode='wb') as _gz:
+                _gz.write(_json_data.encode('utf-8'))
+            _gz_buf.seek(0)
+            st.download_button(
+                "⬇ Export JSON (compressed)",
+                data=_gz_buf.getvalue(),
+                file_name="convin_qa_audit_log.json.gz",
+                mime="application/gzip",
+                key="sense_dl_auditlog_json_gz",
                 use_container_width=True,
             )
 
